@@ -10,6 +10,7 @@ const en: LandingMessages = {
     cycle: "Current theme: {mode}. Click to cycle themes",
     modes: { light: "Light", dark: "Dark", system: "System" },
   },
+  language: { label: "Language", failed: "Could not change the language. Try again." },
   hero: {
     title: "The open-source management dashboard for small businesses.",
     lead: "Built for restaurants first, and designed so that a hair salon or a car repair workshop can run on the same modules.",
@@ -87,6 +88,7 @@ const es: LandingMessages = {
     cycle: "Apariencia: {mode}. Haz clic para cambiarla",
     modes: { light: "Claro", dark: "Oscuro", system: "Sistema" },
   },
+  language: { label: "Idioma", failed: "No se pudo cambiar el idioma. Inténtalo de nuevo." },
   hero: {
     title: "El panel de gestión de código abierto para pequeños negocios.",
     lead: "Pensado primero para restaurantes y diseñado para que una peluquería o un taller mecánico funcionen con los mismos módulos.",
@@ -164,6 +166,7 @@ const de: LandingMessages = {
     cycle: "Darstellung: {mode}. Klicken zum Wechseln",
     modes: { light: "Hell", dark: "Dunkel", system: "System" },
   },
+  language: { label: "Sprache", failed: "Die Sprache konnte nicht geändert werden. Bitte versuche es erneut." },
   hero: {
     title: "Das Open-Source-Verwaltungsdashboard für kleine Unternehmen.",
     lead: "Zuerst für Restaurants gebaut und so entworfen, dass ein Friseursalon oder eine Kfz-Werkstatt mit denselben Modulen läuft.",
@@ -242,6 +245,7 @@ const fr: LandingMessages = {
     cycle: "Apparence : {mode}. Cliquez pour la changer",
     modes: { light: "Clair", dark: "Sombre", system: "Système" },
   },
+  language: { label: "Langue", failed: "Impossible de changer la langue. Veuillez réessayer." },
   hero: {
     title: "Le tableau de bord de gestion open source pour les petites entreprises.",
     lead: "Conçu d’abord pour les restaurants, et pensé pour qu’un salon de coiffure ou un garage automobile fonctionne avec les mêmes modules.",

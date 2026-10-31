@@ -11,6 +11,7 @@ import { AppBackdrop } from "@/ds/shell";
 import { Features } from "./_components/features";
 import { Footer } from "./_components/footer";
 import { Intro } from "./_components/intro";
+import { LandingLanguageSwitcher } from "./_components/landing-language-switcher";
 import { LandingThemeSwitcher } from "./_components/landing-theme-switcher";
 import { landingMessages } from "./_components/messages.server";
 import { Project } from "./_components/project";
@@ -39,7 +40,7 @@ export default async function Home() {
       />
       <AppBackdrop />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:gap-8 sm:p-6 md:p-8">
-        <header className="flex items-start justify-between gap-4 sm:items-center sm:gap-6">
+        <header className="flex items-center justify-between gap-4 sm:gap-6">
           <Link
             className="inline-flex items-center gap-2 text-base font-medium tracking-tight"
             href="/"
@@ -49,7 +50,10 @@ export default async function Home() {
             <AppLogo className="size-4 shrink-0" viewBox="72 96 356 308" />
             <span>{APP_CONFIG.name}</span>
           </Link>
-          <LandingThemeSwitcher />
+          <div className="flex items-center gap-1">
+            <LandingLanguageSwitcher />
+            <LandingThemeSwitcher />
+          </div>
         </header>
         <Intro />
         <Showcase />

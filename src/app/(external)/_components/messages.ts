@@ -14,6 +14,11 @@ export interface LandingMessages {
     readonly cycle: string;
     readonly modes: { readonly light: string; readonly dark: string; readonly system: string };
   };
+  readonly language: {
+    /** Accessible name of the language picker; the options are each language's own name (`LOCALE_NAMES`). */
+    readonly label: string;
+    readonly failed: string;
+  };
   readonly hero: {
     readonly title: string;
     readonly lead: string;

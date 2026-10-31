@@ -19,7 +19,7 @@ const ROWS = [
   "accordion-trigger",
 ];
 const GLYPHS = ["checkbox", "radio-group-item", "switch", "slider-thumb"];
-const ROUTES = ["/dashboard/default", "/dashboard/invoice", "/dashboard/bookings"];
+const ROUTES = ["/", "/dashboard/default", "/dashboard/invoice", "/dashboard/bookings"];
 
 /** Smallest target among visible elements of the given slots: own box for rows, ::after box for glyphs. */
 const smallestTarget = (page: Page, rows: string[], glyphs: string[]) =>

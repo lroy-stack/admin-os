@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { watch } from "./watch";
+
 /**
  * Shell smoke (ADR 0008): every locale and role loads the dashboard shell in its own language, with no console
  * error, page error or failed request. The preset axis (`demo_preset`) and the account-menu demo switches (role,
@@ -31,21 +33,6 @@ const OTHER_LOCALES_PREFERENCES = Object.fromEntries(
     ),
   ]),
 ) as Record<(typeof LOCALES)[number], RegExp>;
-
-/** Collects what must stay empty: console errors, uncaught page errors and failed requests (aborted prefetches aside). */
-const watch = (page: Page) => {
-  const problems: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") problems.push(`console: ${message.text()}`);
-  });
-  page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
-  page.on("requestfailed", (request) => {
-    if (request.failure()?.errorText !== "net::ERR_ABORTED") {
-      problems.push(`requestfailed: ${request.url()} ${request.failure()?.errorText}`);
-    }
-  });
-  return problems;
-};
 
 // Parametrised tests: the loops generate one test per combination; no test body branches.
 for (const locale of LOCALES) {
