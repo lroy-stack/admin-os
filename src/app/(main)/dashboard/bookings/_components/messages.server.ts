@@ -272,7 +272,7 @@ const es: BookingsMessages = {
   views: { label: "Vista de las reservas", floor: "Sala", agenda: "Agenda", list: "Lista" },
   alerts: { label: "Alertas del servicio", unassigned: "sin mesa", late: "con retraso", pending: "por confirmar" },
   actions: {
-    walkIn: "Sin reserva",
+    walkIn: "Walk-in",
     newReservation: "Nueva reserva",
     arrivals: "Llegadas",
     tools: "Herramientas del servicio",
@@ -333,8 +333,8 @@ const es: BookingsMessages = {
   },
   nextAction: { confirm: "Confirmar", seat: "Sentar en {table}", complete: "Finalizar" },
   late: { short: "+{minutes} min", long: "+{minutes} min de retraso" },
-  channels: { web: "Web", phone: "Teléfono", "walk-in": "Sin reserva", assistant: "Asistente" },
-  walkInGuest: "Sin reserva",
+  channels: { web: "Web", phone: "Teléfono", "walk-in": "Walk-in", assistant: "Asistente" },
+  walkInGuest: "Walk-in",
   tagsLabel: "Notas",
   tags: {
     askedBill: "Ha pedido la cuenta",
@@ -528,7 +528,7 @@ const de: BookingsMessages = {
   views: { label: "Ansicht der Reservierungen", floor: "Raum", agenda: "Zeitplan", list: "Liste" },
   alerts: { label: "Hinweise zum Service", unassigned: "ohne Tisch", late: "verspätet", pending: "zu bestätigen" },
   actions: {
-    walkIn: "Laufkunde",
+    walkIn: "Walk-in",
     newReservation: "Neue Reservierung",
     arrivals: "Ankünfte",
     tools: "Service-Werkzeuge",
@@ -589,8 +589,8 @@ const de: BookingsMessages = {
   },
   nextAction: { confirm: "Bestätigen", seat: "An {table} setzen", complete: "Abschließen" },
   late: { short: "+{minutes} min", long: "+{minutes} min verspätet" },
-  channels: { web: "Web", phone: "Telefon", "walk-in": "Laufkunde", assistant: "Assistent" },
-  walkInGuest: "Laufkunde",
+  channels: { web: "Web", phone: "Telefon", "walk-in": "Walk-in", assistant: "Assistent" },
+  walkInGuest: "Walk-in",
   tagsLabel: "Notizen",
   tags: {
     askedBill: "Hat um die Rechnung gebeten",
@@ -784,7 +784,7 @@ const fr: BookingsMessages = {
   views: { label: "Affichage des réservations", floor: "Salle", agenda: "Planning", list: "Liste" },
   alerts: { label: "Alertes du service", unassigned: "sans table", late: "en retard", pending: "à confirmer" },
   actions: {
-    walkIn: "Sans réservation",
+    walkIn: "Walk-in",
     newReservation: "Nouvelle réservation",
     arrivals: "Arrivées",
     tools: "Outils du service",
@@ -850,8 +850,8 @@ const fr: BookingsMessages = {
   },
   nextAction: { confirm: "Confirmer", seat: "Installer à {table}", complete: "Terminer" },
   late: { short: "+{minutes} min", long: "+{minutes} min de retard" },
-  channels: { web: "Web", phone: "Téléphone", "walk-in": "Sans réservation", assistant: "Assistant" },
-  walkInGuest: "Sans réservation",
+  channels: { web: "Web", phone: "Téléphone", "walk-in": "Walk-in", assistant: "Assistant" },
+  walkInGuest: "Walk-in",
   tagsLabel: "Notes",
   tags: {
     askedBill: "A demandé l’addition",

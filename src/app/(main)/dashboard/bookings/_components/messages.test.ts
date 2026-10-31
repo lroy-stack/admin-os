@@ -8,6 +8,10 @@ import { bookingsMessages } from "./messages.server";
 
 // Identical on purpose: units and joins of values that no language writes differently, technical terms and loanwords.
 const SAME_EVERYWHERE = [
+  // The owner keeps "Walk-in" untranslated in every language: it is the term staff use, and translations confused them.
+  "actions.walkIn",
+  "channels.walk-in",
+  "walkInGuest",
   "late.short",
   "duration.minutes",
   "duration.hours",

@@ -124,6 +124,7 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | Booking, reservation | Reservation | Reserva | Reservierung | Réservation | "Booking" and "reservation" are one concept |
 | Table | Table | Mesa | Tisch | Table | |
 | Party size, covers | Covers | Comensales | Gedecke | Couverts | Restaurant preset vocabulary |
+| Walk-in | Walk-in | Walk-in | Walk-in | Walk-in | Never translated (owner): the term staff use; the button, the booking channel and a walk-in guest all say "Walk-in" |
 | Floor plan | Floor plan | Plano de sala | Raumplan | Plan de salle | |
 | Guest | Guest | Cliente | Gast | Client | es uses "cliente" for a person at the table |
 | Appointment | Appointment | Cita | Termin | Rendez-vous | Salon and workshop presets |
