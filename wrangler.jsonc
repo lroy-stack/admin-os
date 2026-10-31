@@ -1,11 +1,21 @@
-// Cloudflare Workers deployment through the OpenNext adapter (`npm run deploy`). Rename the worker, and its
-// self-reference below, for your own deployment.
+// Cloudflare Workers deployment of the public demo through the OpenNext adapter (`npm run deploy`). For your own
+// deployment, rename the worker and its self-reference, and replace the custom domain with one of your zones, or
+// remove `routes` and set `workers_dev` to true to serve it on your workers.dev subdomain.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "admin-os",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-23",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "routes": [
+    {
+      "pattern": "admin-os.lr0y.dev",
+      "custom_domain": true
+    }
+  ],
+  // The demo is served on its custom domain only.
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

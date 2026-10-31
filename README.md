@@ -4,7 +4,7 @@
 so that a hair salon or a car repair workshop can run on the same modules. No AI slop, no over-engineering: well
 designed, reusable at every level, and ready to be managed by an AI assistant through its own MCP server.
 
-**[Open the live demo →](https://admin-os.l-roy-lwe.workers.dev)** It runs on Cloudflare Workers with the demo data
+**[Open the live demo →](https://admin-os.lr0y.dev)** It runs on Cloudflare Workers with the demo data
 of the mock adapter, in English, Spanish, German or French.
 
 > [!NOTE]
@@ -164,12 +164,14 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 The live demo runs on Cloudflare Workers through the [OpenNext adapter](https://opennext.js.org/cloudflare). To
 deploy your own:
 
-1. Rename the worker in [`wrangler.jsonc`](wrangler.jsonc): its `name` and the `WORKER_SELF_REFERENCE` service.
+1. In [`wrangler.jsonc`](wrangler.jsonc), rename the worker (its `name` and the `WORKER_SELF_REFERENCE` service) and
+   replace the custom domain with a hostname on one of your Cloudflare zones. Without a zone, remove `routes` and set
+   `workers_dev` to `true` to serve it on your workers.dev subdomain.
 2. Log in once with `npx wrangler login`.
 3. Build and deploy with your public URL, which the build writes into canonical and Open Graph links:
 
    ```bash
-   NEXT_PUBLIC_SITE_URL=https://<worker>.<subdomain>.workers.dev npm run deploy
+   NEXT_PUBLIC_SITE_URL=https://admin-os.example.com npm run deploy
    ```
 
 On the mock adapter the MCP endpoint accepts the public demo tokens; set your own with
@@ -184,7 +186,7 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
 - **Streamable HTTP** at `/api/mcp`, with a bearer token. `MCP_TOKENS` maps tokens to roles (see
   [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`,
   `demo-manager-token` and `demo-staff-token` work. Each token has its own demo data. The live demo serves it at
-  `https://admin-os.l-roy-lwe.workers.dev/api/mcp` with the same demo tokens.
+  `https://admin-os.lr0y.dev/api/mcp` with the same demo tokens.
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
 
 Claude Code, from the repository root:
