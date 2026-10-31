@@ -1,0 +1,48 @@
+import {
+  AlertTriangleIcon,
+  ArrowUp,
+  Ban,
+  CheckCircle2,
+  Droplets,
+  Flame,
+  Forklift,
+  type LucideIcon,
+  PackageCheck,
+  PenLine,
+  ShieldCheck,
+  Snowflake,
+  Star,
+  Thermometer,
+  Truck,
+} from "lucide-react";
+
+import type { HandlingTagId } from "./shipment-data";
+
+/** Icons are components, so they stay on the client side of the boundary; the server sends only the tag id. */
+export const handlingTagIcons: Record<HandlingTagId, LucideIcon> = {
+  doNotStack: Ban,
+  keepUpright: ArrowUp,
+  signatureRequired: PenLine,
+  forkliftOnly: Forklift,
+  secureLoad: ShieldCheck,
+  doNotTip: Ban,
+  temperatureLog: Thermometer,
+  keepFrozen: Snowflake,
+  sealIntact: ShieldCheck,
+  keepDry: Droplets,
+  doNotCrush: Ban,
+  standardHandoff: PackageCheck,
+  heavyLift: Forklift,
+  callBeforeDelivery: Truck,
+  foodGrade: PackageCheck,
+  perishable: Thermometer,
+  ventilatedHold: PackageCheck,
+  inspectOnArrival: CheckCircle2,
+  highValue: Star,
+  countOnArrival: CheckCircle2,
+  twoPersonLift: Truck,
+  escalateDelay: AlertTriangleIcon,
+  securityHold: ShieldCheck,
+  hazmatReview: Flame,
+  restrictedHandling: ShieldCheck,
+};

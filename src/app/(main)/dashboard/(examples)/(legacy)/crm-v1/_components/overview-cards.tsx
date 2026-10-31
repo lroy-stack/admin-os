@@ -1,36 +1,64 @@
 "use client";
 
-import { format, subMonths } from "date-fns";
 import { BadgeDollarSign, Wallet } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, Line, LineChart, XAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import {
-  leadsChartConfig,
-  leadsChartData,
-  proposalsChartConfig,
-  proposalsChartData,
-  revenueChartConfig,
-  revenueChartData,
-} from "./crm.config";
+  formatAmount,
+  formatCalendarDate,
+  formatNumber,
+  format as formatText,
+  useChartFormatters,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
+import { CurrencyTooltipContent } from "@/ds/components";
 
-const lastMonth = format(subMonths(new Date(), 1), "LLLL");
+import { LAST_MONTH, leadsChartData, overviewFigures, proposalsChartData, revenueChartData } from "./crm.config";
+import { formatRate } from "./crm-format";
+import { crmV1MessageKey } from "./messages";
+
+const SIX_MONTHS = 6;
 
 export function OverviewCards() {
+  const text = useMessages(crmV1MessageKey).overview;
+  const locale = useLocale();
+  const currency = useCurrency();
+  const fmt = useChartFormatters();
+
+  const leadsChartConfig = {
+    newLeads: { label: text.newLeadsSeries, color: "var(--chart-1)" },
+    disqualified: { label: text.disqualifiedSeries, color: "var(--chart-3)" },
+    background: { color: "var(--primary)" },
+  } satisfies ChartConfig;
+  const proposalsChartConfig = {
+    proposalsSent: { label: text.proposals, color: "var(--chart-1)" },
+  } satisfies ChartConfig;
+  const revenueChartConfig = {
+    revenue: { label: text.revenue, color: "var(--chart-1)" },
+  } satisfies ChartConfig;
+
+  const lastMonth = formatCalendarDate(`${LAST_MONTH}-01`, locale, { month: "long" });
+  const rangeLabel = (label: unknown) =>
+    formatText(text.tooltipRange, locale, { month: lastMonth, range: String(label) });
+  const totalNewLeads = leadsChartData.reduce((sum, bucket) => sum + bucket.newLeads, 0);
+  const lastMonths = formatText(text.lastMonths, locale, { months: SIX_MONTHS });
+
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <Card>
         <CardHeader>
-          <CardTitle>New Leads</CardTitle>
-          <CardDescription>Last Month</CardDescription>
+          <CardTitle>{text.newLeads}</CardTitle>
+          <CardDescription>{text.lastMonth}</CardDescription>
         </CardHeader>
         <CardContent className="size-full">
           <ChartContainer className="size-full min-h-24" config={leadsChartConfig}>
             <BarChart accessibilityLayer data={leadsChartData} barSize={8}>
               <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} hide />
-              <ChartTooltip content={<ChartTooltipContent labelFormatter={(label) => `${lastMonth}: ${label}`} />} />
+              <ChartTooltip content={<ChartTooltipContent labelFormatter={rangeLabel} />} />
               <Bar
                 background={{ fill: "var(--color-background)", radius: 4, opacity: 0.07 }}
                 dataKey="newLeads"
@@ -42,16 +70,18 @@ export function OverviewCards() {
             </BarChart>
           </ChartContainer>
         </CardContent>
-        <CardFooter className="flex items-center justify-between">
-          <span className="text-xl font-semibold tabular-nums">635</span>
-          <span className="text-sm font-medium text-green-500">+54.6%</span>
+        <CardFooter className="flex items-center justify-between gap-2">
+          <span className="text-xl font-semibold tabular-nums">{formatNumber(totalNewLeads, locale)}</span>
+          <span className="text-sm font-medium text-green-500 tabular-nums">
+            {formatRate(overviewFigures.newLeadsChange, locale, { signed: true })}
+          </span>
         </CardFooter>
       </Card>
 
       <Card className="overflow-hidden pb-0">
         <CardHeader>
-          <CardTitle>Proposals Sent</CardTitle>
-          <CardDescription>Last Month</CardDescription>
+          <CardTitle>{text.proposals}</CardTitle>
+          <CardDescription>{text.lastMonth}</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 p-0">
           <ChartContainer className="size-full min-h-24" config={proposalsChartConfig}>
@@ -64,9 +94,7 @@ export function OverviewCards() {
               }}
             >
               <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} hide />
-              <ChartTooltip
-                content={<ChartTooltipContent labelFormatter={(label) => `${lastMonth}: ${label}`} hideIndicator />}
-              />
+              <ChartTooltip content={<ChartTooltipContent labelFormatter={rangeLabel} hideIndicator />} />
               <Area
                 dataKey="proposalsSent"
                 fill="var(--color-proposalsSent)"
@@ -86,13 +114,17 @@ export function OverviewCards() {
             <Wallet className="size-5 text-green-500" />
           </div>
         </CardHeader>
-        <CardContent className="flex size-full flex-col justify-between">
+        <CardContent className="flex size-full flex-col justify-between gap-2">
           <div className="space-y-1.5">
-            <CardTitle>Revenue</CardTitle>
-            <CardDescription>Last 6 Months</CardDescription>
+            <CardTitle className="break-words hyphens-auto">{text.revenue}</CardTitle>
+            <CardDescription>{lastMonths}</CardDescription>
           </div>
-          <p className="text-2xl font-medium tabular-nums">$56,050</p>
-          <div className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500">+22.2%</div>
+          <p className="text-2xl font-medium tabular-nums">
+            {formatAmount(overviewFigures.revenue, currency, locale, { fractionDigits: 0 })}
+          </p>
+          <div className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500 tabular-nums">
+            {formatRate(overviewFigures.revenueChange, locale, { signed: true })}
+          </div>
         </CardContent>
       </Card>
 
@@ -102,20 +134,22 @@ export function OverviewCards() {
             <BadgeDollarSign className="text-destructive size-5" />
           </div>
         </CardHeader>
-        <CardContent className="flex size-full flex-col justify-between">
+        <CardContent className="flex size-full flex-col justify-between gap-2">
           <div className="space-y-1.5">
-            <CardTitle>Projects Won</CardTitle>
-            <CardDescription>Last 6 Months</CardDescription>
+            <CardTitle className="break-words hyphens-auto">{text.projectsWon}</CardTitle>
+            <CardDescription>{lastMonths}</CardDescription>
           </div>
-          <p className="text-2xl font-medium tabular-nums">136</p>
-          <div className="bg-destructive/10 text-destructive w-fit rounded-md px-2 py-1 text-xs font-medium">-2.5%</div>
+          <p className="text-2xl font-medium tabular-nums">{formatNumber(overviewFigures.projectsWon, locale)}</p>
+          <div className="bg-destructive/10 text-destructive w-fit rounded-md px-2 py-1 text-xs font-medium tabular-nums">
+            {formatRate(overviewFigures.projectsWonChange, locale, { signed: true })}
+          </div>
         </CardContent>
       </Card>
 
       <Card className="col-span-1 xl:col-span-2">
         <CardHeader>
-          <CardTitle>Revenue Growth</CardTitle>
-          <CardDescription>Year to Date (YTD)</CardDescription>
+          <CardTitle>{text.revenueGrowth}</CardTitle>
+          <CardDescription>{text.yearToDate}</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={revenueChartConfig} className="h-24 w-full">
@@ -129,11 +163,20 @@ export function OverviewCards() {
               }}
             >
               <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} hide />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip
+                content={
+                  <CurrencyTooltipContent
+                    labelFormatter={(month) =>
+                      formatCalendarDate(`${String(month)}-01`, locale, { month: "short", year: "numeric" })
+                    }
+                  />
+                }
+              />
               <Line
                 type="monotone"
                 strokeWidth={2}
                 dataKey="revenue"
+                name={text.revenue}
                 stroke="var(--color-revenue)"
                 activeDot={{
                   r: 6,
@@ -143,7 +186,9 @@ export function OverviewCards() {
           </ChartContainer>
         </CardContent>
         <CardFooter>
-          <p className="text-muted-foreground text-sm">+35% growth since last year</p>
+          <p className="text-muted-foreground text-sm">
+            {formatText(text.sinceLastYear, locale, { growth: fmt.percent(overviewFigures.yearGrowth) })}
+          </p>
         </CardFooter>
       </Card>
     </div>

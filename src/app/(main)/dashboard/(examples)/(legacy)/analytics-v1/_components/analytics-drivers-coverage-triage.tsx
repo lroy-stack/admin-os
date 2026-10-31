@@ -1,89 +1,119 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
+import { format, formatAmount, formatPercent } from "@/core/i18n/client";
 
-export function DriversCoverageTriage() {
+import { coverageFigures } from "./analytics-data";
+import { formatDays, formatMultiple, formatPoints, formatSignedAmount } from "./analytics-format";
+import { analyticsV1Messages } from "./messages.server";
+
+export async function DriversCoverageTriage() {
+  const [locale, currency, text] = await Promise.all([getLocale(), getCurrency(), getMessages(analyticsV1Messages)]);
+  const t = text.coverage;
+  const { levers } = coverageFigures;
+  const whole = { fractionDigits: 0 };
+
   const leverOptions = [
     {
       key: "deal",
-      label: "+1 enterprise deal",
-      value: "+$72,133 weighted",
-      context: "32% of gap",
+      label: format(t.levers.deal, locale, { count: levers.enterpriseDeals.count }),
+      value: format(t.levers.dealValue, locale, {
+        amount: formatSignedAmount(levers.enterpriseDeals.weighted, currency, locale),
+      }),
+      share: levers.enterpriseDeals.share,
     },
     {
       key: "conversion",
-      label: "+5pp conversion",
-      value: "+$49,182/month",
-      context: "22% of gap",
+      label: format(t.levers.conversion, locale, {
+        points: formatPoints(text.percentagePoints, levers.conversion.points, locale, 0),
+      }),
+      value: format(t.levers.conversionValue, locale, {
+        amount: formatSignedAmount(levers.conversion.perMonth, currency, locale),
+      }),
+      share: levers.conversion.share,
     },
     {
       key: "cycle",
-      label: "-4d cycle",
-      value: "+$90,167/day",
-      context: "40% of gap",
+      label: format(t.levers.cycle, locale, { days: formatDays(levers.cycle.days, locale, { signed: true }) }),
+      value: format(t.levers.cycleValue, locale, {
+        amount: formatSignedAmount(levers.cycle.perDay, currency, locale),
+      }),
+      share: levers.cycle.share,
     },
-  ] as const;
+  ];
+  const fastest = leverOptions[2];
 
   return (
     <Card className="shadow-xs">
       <CardHeader>
-        <CardTitle>Coverage Triage</CardTitle>
-        <CardDescription>Decision ladder for this forecast cycle</CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="destructive" className="rounded-md font-medium">
-            At Risk
+            {t.atRisk}
           </Badge>
           <Badge variant="outline" className="font-medium tabular-nums">
-            1.9x / 3.0x
+            {format(t.multiple, locale, {
+              current: formatMultiple(coverageFigures.currentMultiple, locale),
+              target: formatMultiple(coverageFigures.targetMultiple, locale),
+            })}
           </Badge>
           <Badge variant="outline" className="font-medium tabular-nums">
-            Gap $222,930
+            {format(t.gap, locale, { amount: formatAmount(coverageFigures.gap, currency, locale, whole) })}
           </Badge>
-          <Badge variant="outline" className="font-medium tabular-nums">
-            4 deals • ETA 10d
+          <Badge variant="outline" className="h-auto font-medium whitespace-normal tabular-nums">
+            {format(t.deals, locale, {
+              count: coverageFigures.openDeals,
+              days: formatDays(coverageFigures.etaDays, locale),
+            })}
           </Badge>
         </div>
 
-        <p className="text-muted-foreground text-xs">
-          Coverage below target. Prioritize qualified volume and shorter cycle time.
-        </p>
+        <p className="text-muted-foreground text-xs">{t.summary}</p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {leverOptions.map((lever) => (
-            <div key={lever.key} className="bg-muted/20 space-y-1 rounded-md border px-2.5 py-2">
-              <p className="text-muted-foreground text-xs">{lever.label}</p>
+            <div key={lever.key} className="bg-muted/20 min-w-0 space-y-1 rounded-md border px-2.5 py-2">
+              <p className="text-muted-foreground text-xs break-words hyphens-auto">{lever.label}</p>
               <p className="text-sm font-semibold tabular-nums">{lever.value}</p>
-              <p className="text-muted-foreground text-xs">{lever.context}</p>
+              <p className="text-muted-foreground text-xs break-words">
+                {format(t.levers.context, locale, { share: formatPercent(lever.share, locale) })}
+              </p>
             </div>
           ))}
         </div>
 
         <div className="bg-muted/20 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-muted-foreground">
-              Owner: <span className="text-foreground font-medium">Leila Zhang</span>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span className="text-muted-foreground flex gap-1">
+              {t.owner}
+              <span className="text-foreground font-medium">{coverageFigures.owner}</span>
             </span>
-            <span className="text-muted-foreground">
-              Focus: <span className="text-foreground">top gap-filling deals</span>
+            <span className="text-muted-foreground flex gap-1">
+              {t.focus}
+              <span className="text-foreground">{t.focusValue}</span>
             </span>
-            <span className="text-muted-foreground">
-              Due: <span className="text-foreground">before next forecast call</span>
+            <span className="text-muted-foreground flex gap-1">
+              {t.due}
+              <span className="text-foreground">{t.dueValue}</span>
             </span>
           </div>
-          <Button variant="secondary" size="sm" className="h-7 px-3 text-xs">
-            Open top 5 deals
+          <Button variant="secondary" size="sm" className="h-auto min-h-7 px-3 py-1 text-xs whitespace-normal">
+            {format(t.openTopDeals, locale, { count: coverageFigures.topDeals })}
           </Button>
         </div>
 
         <div className="bg-muted/10 space-y-1 rounded-md border border-dashed px-3 py-2.5">
           <p className="text-muted-foreground text-xs">
-            Fastest path: <span className="text-foreground font-medium">-4d cycle</span> recovers 40% of gap.
+            {format(t.fastestPath, locale, {
+              lever: fastest?.label ?? "",
+              share: formatPercent(levers.cycle.share, locale),
+            })}
           </p>
-          <p className="text-muted-foreground text-xs">
-            Priority sequence: <span className="text-foreground">cycle time</span> before net-new volume.
-          </p>
+          <p className="text-muted-foreground text-xs">{t.prioritySequence}</p>
         </div>
       </CardContent>
     </Card>

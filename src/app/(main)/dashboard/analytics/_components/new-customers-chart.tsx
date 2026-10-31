@@ -5,28 +5,42 @@ import { Bar, BarChart, XAxis } from "recharts";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { useChartFormatters, useMessages } from "@/core/i18n/client";
 import { CardIconButton } from "@/ds/components";
 
 import type { GrowthReport } from "./growth-data";
-
-const chartConfig = {
-  customers: { label: "New customers", color: "var(--color-brand)" },
-} satisfies ChartConfig;
+import { growthMessageKey } from "./messages";
 
 export function NewCustomersChart({ report }: { report: GrowthReport }) {
+  const text = useMessages(growthMessageKey);
+  const fmt = useChartFormatters();
+  const chartConfig = {
+    customers: { label: text.newCustomers.series, color: "var(--color-brand)" },
+  } satisfies ChartConfig;
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-sm font-normal">New customers per month</CardTitle>
+        <CardTitle className="text-sm font-normal">{text.newCustomers.title}</CardTitle>
         <CardAction>
-          <CardIconButton icon={ArrowUpRight} label="Open customers" href="/dashboard/users" />
+          <CardIconButton icon={ArrowUpRight} label={text.openCustomers} href="/dashboard/users" />
         </CardAction>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="aspect-auto h-44 w-full">
           <BarChart data={report.newCustomers} barCategoryGap="22%" margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} interval={0} />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent hideIndicator />} />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              interval={0}
+              tickFormatter={(month: string) => fmt.month(month)}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideIndicator labelFormatter={(label) => fmt.month(String(label))} />}
+            />
             <Bar
               dataKey="customers"
               fill="var(--color-customers)"

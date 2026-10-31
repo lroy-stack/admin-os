@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
-import type { CardiacRhythm, PatientRecord } from "./data";
+import type { CardiacRhythm } from "./data";
+import type { PatientRecord } from "./patient-localize";
 import {
   COMPACT_WAVEFORM_TICK_INTERVAL_MS,
   DETAIL_WAVEFORM_TICK_INTERVAL_MS,
@@ -172,7 +173,6 @@ export function usePatientTrendSeries({ kind, patient }: PatientTrendSeriesOptio
   const data = useMemo(() => createTrendWindow(patient, definition, tick), [definition, patient, tick]);
 
   return {
-    ariaLabel: `${patient.bed} ${kind} trend`,
     data,
     domain: definition.domain,
     ticks: definition.ticks,
@@ -194,7 +194,6 @@ export function usePatientWaveformSeries({
   );
 
   return {
-    ariaLabel: `${patient.bed} ${lead} ${kind} waveform`,
     data,
     domain: getSignalDomain(patient, kind),
   };

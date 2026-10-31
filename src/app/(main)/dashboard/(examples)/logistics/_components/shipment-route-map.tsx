@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 import { type GeoPermissibleObjects, geoMercator, geoPath } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 
-import type { GeoCoordinate, Shipment } from "./shipment-data";
+import { useMessages } from "@/core/i18n/client";
+
+import { logisticsMessageKey } from "./messages";
+import type { GeoCoordinate } from "./shipment-data";
+import type { Shipment } from "./shipment-localize";
 
 type WorldTopology = {
   objects: {
@@ -18,7 +22,7 @@ type WorldTopology = {
 type RoutePoint = {
   coordinates: GeoCoordinate;
   country: string;
-  label: string;
+  kind: "origin" | "destination";
 };
 
 type ProjectedRoutePoint = RoutePoint & {
@@ -116,12 +120,12 @@ function buildMapGeometry(shipment: Shipment | null) {
           projectPoint({
             coordinates: shipment.origin.coordinates,
             country: shipment.origin.country,
-            label: "Origin",
+            kind: "origin",
           }),
           projectPoint({
             coordinates: shipment.destination.coordinates,
             country: shipment.destination.country,
-            label: "Destination",
+            kind: "destination",
           }),
         ]
       : [],
@@ -129,6 +133,7 @@ function buildMapGeometry(shipment: Shipment | null) {
 }
 
 export function ShipmentRouteMap({ shipment }: ShipmentRouteMapProps) {
+  const text = useMessages(logisticsMessageKey);
   const [borders, setBorders] = useState<GeoJSON.MultiLineString | null>(null);
   const [land, setLand] = useState<GeoJSON.FeatureCollection | null>(null);
 
@@ -175,7 +180,7 @@ export function ShipmentRouteMap({ shipment }: ShipmentRouteMapProps) {
   return (
     <div className="size-full min-h-0 overflow-hidden bg-[#d4dadc] dark:bg-[#2C353C]">
       <svg
-        aria-label="Southeast Asia shipment region map"
+        aria-label={text.mapLabel}
         className="block size-full bg-[#d4dadc] dark:bg-[#2C353C]"
         role="img"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -205,9 +210,9 @@ export function ShipmentRouteMap({ shipment }: ShipmentRouteMapProps) {
             strokeWidth={3}
           />
         )}
-        {routePoints.map(({ country, label, point }) =>
+        {routePoints.map(({ country, kind, point }) =>
           point ? (
-            <g key={label} transform={`translate(${point[0]}, ${point[1]})`}>
+            <g key={kind} transform={`translate(${point[0]}, ${point[1]})`}>
               <circle className="fill-background stroke-primary" r={8} strokeWidth={3} />
               <circle className="fill-primary" r={3} />
               <text className="fill-foreground text-[10px] font-medium" dy={-14} textAnchor="middle">

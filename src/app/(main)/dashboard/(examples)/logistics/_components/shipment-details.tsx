@@ -7,8 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-import type { Shipment } from "./shipment-data";
+import { handlingTagIcons } from "./handling-icons";
+import { logisticsMessageKey } from "./messages";
+import type { Shipment } from "./shipment-localize";
 import { ShipmentRouteMap } from "./shipment-route-map";
 
 const modeIcons = {
@@ -18,154 +21,150 @@ const modeIcons = {
 } as const;
 
 const progressRingClasses: Record<Shipment["status"], string> = {
-  Scheduled: "text-muted-foreground",
-  "In Transit": "text-primary",
-  "Out for Delivery": "text-primary",
-  Delivered: "text-green-600",
-  Delayed: "text-destructive",
-  "On Hold": "text-amber-500",
-  "Customs Hold": "text-amber-500",
+  scheduled: "text-muted-foreground",
+  inTransit: "text-primary",
+  outForDelivery: "text-primary",
+  delivered: "text-green-600",
+  delayed: "text-destructive",
+  onHold: "text-amber-500",
+  customsHold: "text-amber-500",
 };
 
 const statusBadgeClasses: Record<Shipment["status"], string> = {
-  Scheduled: "border-muted bg-muted/50 text-muted-foreground",
-  "In Transit": "border-primary/20 bg-primary/10 text-primary",
-  "Out for Delivery": "border-primary/20 bg-primary/10 text-primary",
-  Delivered: "border-green-600/20 bg-green-600/10 text-green-600",
-  Delayed: "border-destructive/20 bg-destructive/10 text-destructive",
-  "On Hold": "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  "Customs Hold": "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  scheduled: "border-muted bg-muted/50 text-muted-foreground",
+  inTransit: "border-primary/20 bg-primary/10 text-primary",
+  outForDelivery: "border-primary/20 bg-primary/10 text-primary",
+  delivered: "border-green-600/20 bg-green-600/10 text-green-600",
+  delayed: "border-destructive/20 bg-destructive/10 text-destructive",
+  onHold: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  customsHold: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
 type ShipmentDetailsProps = {
   shipment: Shipment | null;
 };
 
-function getContactLabel(mode: Shipment["mode"]) {
-  if (mode === "land") {
-    return "Call Driver";
-  }
-
-  if (mode === "air") {
-    return "Call Airline Support";
-  }
-
-  return "Call Captain";
-}
-
-function getTransportNumberLabel(mode: Shipment["mode"]) {
-  if (mode === "land") {
-    return "Vehicle number";
-  }
-
-  if (mode === "air") {
-    return "Flight number";
-  }
-
-  return "Vessel number";
+function ComingSoon({ children }: { children: string }) {
+  return (
+    <div className="text-muted-foreground grid h-full place-items-center rounded-md border border-dashed p-4 text-center text-sm">
+      {children}
+    </div>
+  );
 }
 
 function EmptyShipmentOverview() {
+  const text = useMessages(logisticsMessageKey).details;
   return (
-    <div className="text-muted-foreground grid min-h-48 place-items-center rounded-lg border border-dashed text-sm">
-      Select a shipment to view details.
+    <div className="text-muted-foreground grid min-h-48 place-items-center rounded-lg border border-dashed p-4 text-center text-sm">
+      {text.empty}
     </div>
   );
 }
 
 function ShipmentOverview({ shipment }: { shipment: Shipment }) {
+  const messages = useMessages(logisticsMessageKey);
+  const text = messages.details;
+  const locale = useLocale();
   const ContactIcon = modeIcons[shipment.mode];
-  const contactLabel = getContactLabel(shipment.mode);
-  const transportNumberLabel = getTransportNumberLabel(shipment.mode);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-medium tracking-tight tabular-nums sm:text-xl">#{shipment.id}</h1>
-          <Button variant="ghost" size="icon-sm" aria-label="Copy shipment ID">
+          <h1 className="text-lg font-medium tracking-tight tabular-nums sm:text-xl">
+            {format(messages.shipmentId, locale, { id: shipment.id })}
+          </h1>
+          <Button variant="ghost" size="icon-sm" aria-label={text.copyId}>
             <Copy />
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
           <Badge variant="outline" className={cn("gap-1.5", statusBadgeClasses[shipment.status])}>
             <span className={cn("size-1.5 rounded-full bg-current", progressRingClasses[shipment.status])} />
-            {shipment.status}
+            {shipment.statusLabel}
           </Badge>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-foreground tabular-nums">{shipment.progress}% complete</span>
-          <span className="text-muted-foreground">·</span>
+          <span aria-hidden="true" className="bg-border h-3 w-px" />
+          <span className="text-foreground tabular-nums">{shipment.complete}</span>
+          <span aria-hidden="true" className="bg-border h-3 w-px" />
           <span className="text-foreground tabular-nums">
-            ETA: {shipment.eta} {shipment.etaMeta}
+            {format(text.etaLine, locale, { eta: shipment.eta, meta: shipment.etaMeta })}
           </span>
         </div>
       </div>
 
       <Separator />
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Avatar className="size-9 after:rounded-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Avatar className="size-9 shrink-0 after:rounded-sm">
             <AvatarFallback className="rounded-sm">{shipment.customer.initials}</AvatarFallback>
           </Avatar>
 
-          <div className="flex flex-col gap-1">
-            <div className="text-sm leading-none font-medium">{shipment.customer.name}</div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="text-sm leading-tight font-medium break-words">{shipment.customer.name}</div>
             <div className="text-muted-foreground flex items-center gap-2">
-              <span className="text-xs leading-none tracking-tight tabular-nums">{shipment.customer.id}</span>{" "}
-              <Copy className="size-3" />
+              <span className="text-xs leading-none tracking-tight tabular-nums">{shipment.customer.id}</span>
+              <Copy className="size-3 shrink-0" />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
-          <Badge variant="secondary">
+        <div className="flex min-w-0 flex-col items-end gap-1 text-right">
+          <Badge variant="secondary" className="max-w-full">
             <Star />
-            {shipment.customer.tier}
+            <span className="truncate" title={shipment.customer.tierName}>
+              {shipment.customer.tierName}
+            </span>
           </Badge>
-          <div className="text-muted-foreground text-xs leading-none">{shipment.customer.tierLabel}</div>
+          <div className="text-muted-foreground text-xs leading-tight break-words hyphens-auto">
+            {shipment.customer.tierNote}
+          </div>
         </div>
       </div>
 
       <Separator />
 
       <div className="flex flex-col gap-8">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="font-medium">Cargo details</h2>
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <h2 className="min-w-0 font-medium break-words">{text.cargoDetails}</h2>
 
           <Button variant="outline" size="sm">
             <ContactIcon data-icon="inline-start" />
-            {contactLabel}
+            {text.contact[shipment.mode]}
           </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-[1.35fr_1fr_1.1fr_1.15fr_1fr]">
-          <div className="col-span-2 flex flex-col gap-1 md:col-span-1 md:gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">Cargo</div>
-            <div className="text-sm leading-none whitespace-nowrap">{shipment.cargo}</div>
+          <div className="col-span-2 flex min-w-0 flex-col gap-1 md:col-span-1 md:gap-2">
+            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">{text.tabs.cargo}</div>
+            <div className="text-sm leading-tight break-words hyphens-auto">{shipment.cargo}</div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Total weight</div>
-            <div className="text-sm leading-none">{shipment.weight}</div>
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="text-muted-foreground text-xs leading-tight break-words md:text-sm">{text.totalWeight}</div>
+            <div className="text-sm leading-tight tabular-nums">{shipment.weight}</div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Transport mode</div>
-            <div className="text-sm leading-none capitalize">
-              {shipment.mode} · {shipment.routeType}
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="text-muted-foreground text-xs leading-tight break-words md:text-sm">
+              {text.transportMode}
+            </div>
+            <div className="text-sm leading-tight break-words">
+              {format(text.modeRoute, locale, { mode: shipment.modeLabel, route: shipment.routeTypeLabel })}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">{transportNumberLabel}</div>
-            <div className="text-sm leading-none">{shipment.transportNumber}</div>
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="text-muted-foreground text-xs leading-tight break-words md:text-sm">
+              {text.transportNumber[shipment.mode]}
+            </div>
+            <div className="text-sm leading-tight break-words">{shipment.transportNumber}</div>
           </div>
 
-          <div className="flex flex-col gap-2 md:text-right">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Status</div>
-            <div className="text-sm leading-none">{shipment.progress}% complete</div>
+          <div className="flex min-w-0 flex-col gap-2 md:text-right">
+            <div className="text-muted-foreground text-xs leading-tight break-words md:text-sm">{text.status}</div>
+            <div className="text-sm leading-tight tabular-nums">{shipment.complete}</div>
           </div>
         </div>
       </div>
@@ -176,23 +175,26 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
         <AlertTriangleIcon />
         <AlertTitle>{shipment.handling.label}</AlertTitle>
         <AlertDescription className="space-y-2">
-          <div className="border-amber-900 leading-none text-amber-900 dark:border-amber-50 dark:text-amber-50">
+          <div className="border-amber-900 leading-snug text-amber-900 dark:border-amber-50 dark:text-amber-50">
             {shipment.handling.note}
           </div>
 
           <Separator className="bg-amber-800 dark:bg-amber-50" />
 
           <div className="flex flex-wrap gap-2">
-            {shipment.handling.tags.map(({ icon: TagIcon, label }) => (
-              <Badge
-                className="bg-background/50 rounded-sm border-amber-200 text-amber-900 dark:border-amber-900 dark:text-amber-50"
-                key={label}
-                variant="outline"
-              >
-                <TagIcon data-icon="inline-start" />
-                {label}
-              </Badge>
-            ))}
+            {shipment.handling.tags.map(({ id, label }) => {
+              const TagIcon = handlingTagIcons[id];
+              return (
+                <Badge
+                  className="bg-background/50 h-auto min-h-5 rounded-sm border-amber-200 py-0.5 text-amber-900 dark:border-amber-900 dark:text-amber-50"
+                  key={id}
+                  variant="outline"
+                >
+                  <TagIcon data-icon="inline-start" />
+                  {label}
+                </Badge>
+              );
+            })}
           </div>
         </AlertDescription>
       </Alert>
@@ -201,6 +203,8 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
 }
 
 export function ShipmentDetails({ shipment }: ShipmentDetailsProps) {
+  const text = useMessages(logisticsMessageKey).details;
+
   if (!shipment) {
     return (
       <div className="grid h-full min-h-0 grid-rows-[320px_1fr] overflow-hidden lg:grid-rows-[420px_1fr]">
@@ -223,47 +227,39 @@ export function ShipmentDetails({ shipment }: ShipmentDetailsProps) {
         <div className="h-full min-h-0 py-2">
           <Tabs defaultValue="overview" className="h-full gap-0">
             <TabsList
-              className="w-full justify-start gap-2 border-b px-4 **:data-[slot=tabs-trigger]:text-xs sm:gap-4 sm:**:data-[slot=tabs-trigger]:text-sm"
+              className="w-full justify-start gap-2 overflow-x-auto border-b px-4 **:data-[slot=tabs-trigger]:text-xs sm:gap-4 sm:**:data-[slot=tabs-trigger]:text-sm"
               variant="line"
             >
               <TabsTrigger className="flex-none" value="overview">
-                Overview
+                {text.tabs.overview}
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="route">
-                Route
+                {text.tabs.route}
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="cargo">
-                Cargo
+                {text.tabs.cargo}
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="documents">
-                Documents
+                {text.tabs.documents}
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="activity">
-                Activity
+                {text.tabs.activity}
               </TabsTrigger>
             </TabsList>
             <TabsContent className="min-h-0 overflow-auto p-4" value="overview">
               <ShipmentOverview shipment={shipment} />
             </TabsContent>
             <TabsContent className="p-4" value="route">
-              <div className="text-muted-foreground grid h-full place-items-center rounded-md border border-dashed text-sm">
-                Route view coming soon.
-              </div>
+              <ComingSoon>{text.comingSoon.route}</ComingSoon>
             </TabsContent>
             <TabsContent className="p-4" value="cargo">
-              <div className="text-muted-foreground grid h-full place-items-center rounded-md border border-dashed text-sm">
-                Cargo view coming soon.
-              </div>
+              <ComingSoon>{text.comingSoon.cargo}</ComingSoon>
             </TabsContent>
             <TabsContent className="p-4" value="documents">
-              <div className="text-muted-foreground grid h-full place-items-center rounded-md border border-dashed text-sm">
-                Documents view coming soon.
-              </div>
+              <ComingSoon>{text.comingSoon.documents}</ComingSoon>
             </TabsContent>
             <TabsContent className="p-4" value="activity">
-              <div className="text-muted-foreground grid h-full place-items-center rounded-md border border-dashed text-sm">
-                Activity view coming soon.
-              </div>
+              <ComingSoon>{text.comingSoon.activity}</ComingSoon>
             </TabsContent>
           </Tabs>
         </div>

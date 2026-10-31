@@ -5,26 +5,31 @@ import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "rec
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { format, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
 import { CardIconButton } from "@/ds/components";
 
 import type { GrowthReport } from "./growth-data";
-
-const chartConfig = {
-  rate: { label: "Win rate", color: "var(--color-brand)" },
-} satisfies ChartConfig;
+import { growthMessageKey } from "./messages";
 
 export function WinRateTrend({ report }: { report: GrowthReport }) {
-  const average = Math.round(report.winRate.reduce((total, point) => total + point.rate, 0) / report.winRate.length);
+  const text = useMessages(growthMessageKey);
+  const locale = useLocale();
+  const fmt = useChartFormatters();
+  const chartConfig = {
+    rate: { label: text.winRate.series, color: "var(--color-brand)" },
+  } satisfies ChartConfig;
+  const average = report.winRate.reduce((total, point) => total + point.rate, 0) / report.winRate.length;
 
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-sm font-normal">Win rate trend</CardTitle>
+        <CardTitle className="text-sm font-normal">{text.winRate.title}</CardTitle>
         <CardAction className="flex items-center gap-3">
-          <span className="text-muted-foreground text-[11px]">
-            Average <span className="text-foreground tabular-nums">{average}%</span>
+          <span className="text-muted-foreground flex gap-1 text-[11px]">
+            {text.winRate.average}
+            <span className="text-foreground tabular-nums">{fmt.percent(average)}</span>
           </span>
-          <CardIconButton icon={ArrowUpRight} label="Open pipeline" href="/dashboard/crm" />
+          <CardIconButton icon={ArrowUpRight} label={text.openPipeline} href="/dashboard/crm" />
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -37,18 +42,31 @@ export function WinRateTrend({ report }: { report: GrowthReport }) {
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} strokeOpacity={0.5} />
-            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} interval={0} />
-            <YAxis
-              width={36}
+            <XAxis
+              dataKey="month"
               tickLine={false}
               axisLine={false}
-              domain={[0, 100]}
-              ticks={[0, 50, 100]}
-              tickFormatter={(value: number) => `${value}%`}
+              tickMargin={8}
+              interval={0}
+              tickFormatter={(month: string) => fmt.month(month)}
+            />
+            <YAxis
+              width={44}
+              tickLine={false}
+              axisLine={false}
+              domain={[0, 1]}
+              ticks={[0, 0.5, 1]}
+              tickFormatter={(value: number) => fmt.percent(value)}
             />
             <ChartTooltip
               cursor={{ stroke: "var(--border)" }}
-              content={<ChartTooltipContent indicator="line" formatter={(value) => `Win rate ${value}%`} />}
+              content={
+                <ChartTooltipContent
+                  indicator="line"
+                  labelFormatter={(label) => fmt.month(String(label))}
+                  formatter={(value) => format(text.winRate.tooltip, locale, { rate: fmt.percent(Number(value)) })}
+                />
+              }
             />
             <ReferenceLine y={average} stroke="var(--foreground)" strokeOpacity={0.45} strokeDasharray="6 6" />
             <Area

@@ -1,5 +1,13 @@
-import type { ChartConfig } from "@/components/ui/chart";
+/**
+ * Demo figures of the CRM dashboard as numbers and ids. Labels, project and region names, action items and lead
+ * statuses live in the route dictionary; people, companies and deal codes are proper nouns and stay as they are.
+ */
+import type { LeadSource, RecentLeadRow } from "./recent-leads-table/schema";
 
+/** The month before the demo's "today" (2026-10-31), as an ISO year-month. */
+export const LAST_MONTH = "2026-09";
+
+/** Day ranges of the month, shown in tooltips as the demo data's buckets. */
 export const leadsChartData = [
   { date: "1-5", newLeads: 120, disqualified: 40 },
   { date: "6-10", newLeads: 95, disqualified: 30 },
@@ -8,20 +16,6 @@ export const leadsChartData = [
   { date: "21-25", newLeads: 150, disqualified: 70 },
   { date: "26-30", newLeads: 110, disqualified: 60 },
 ];
-
-export const leadsChartConfig = {
-  newLeads: {
-    label: "New Leads",
-    color: "var(--chart-1)",
-  },
-  disqualified: {
-    label: "Disqualified",
-    color: "var(--chart-3)",
-  },
-  background: {
-    color: "var(--primary)",
-  },
-} as ChartConfig;
 
 export const proposalsChartData = [
   { date: "1-5", proposalsSent: 9 },
@@ -32,300 +26,125 @@ export const proposalsChartData = [
   { date: "26-30", proposalsSent: 14 },
 ];
 
-export const proposalsChartConfig = {
-  proposalsSent: {
-    label: "Proposals Sent",
-    color: "var(--chart-1)",
-  },
-} as ChartConfig;
-
+/** `month` is an ISO year-month. */
 export const revenueChartData = [
-  { month: "Jul 2024", revenue: 6700 },
-  { month: "Aug 2024", revenue: 7100 },
-  { month: "Sep 2024", revenue: 6850 },
-  { month: "Oct 2024", revenue: 7500 },
-  { month: "Nov 2024", revenue: 8000 },
-  { month: "Dec 2024", revenue: 8300 },
-  { month: "Jan 2025", revenue: 7900 },
-  { month: "Feb 2025", revenue: 8400 },
-  { month: "Mar 2025", revenue: 8950 },
-  { month: "Apr 2025", revenue: 9700 },
-  { month: "May 2025", revenue: 11200 },
-  { month: "Jun 2025", revenue: 9500 },
+  { month: "2024-07", revenue: 6700 },
+  { month: "2024-08", revenue: 7100 },
+  { month: "2024-09", revenue: 6850 },
+  { month: "2024-10", revenue: 7500 },
+  { month: "2024-11", revenue: 8000 },
+  { month: "2024-12", revenue: 8300 },
+  { month: "2025-01", revenue: 7900 },
+  { month: "2025-02", revenue: 8400 },
+  { month: "2025-03", revenue: 8950 },
+  { month: "2025-04", revenue: 9700 },
+  { month: "2025-05", revenue: 11200 },
+  { month: "2025-06", revenue: 9500 },
 ];
 
-export const revenueChartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "var(--chart-1)",
-  },
-} as ChartConfig;
+export const overviewFigures = {
+  newLeadsChange: 0.546,
+  revenue: 56050,
+  revenueChange: 0.222,
+  projectsWon: 136,
+  projectsWonChange: -0.025,
+  yearGrowth: 0.35,
+} as const;
 
 export const leadsBySourceChartData = [
-  { source: "website", leads: 170, fill: "var(--color-website)" },
-  { source: "referral", leads: 105, fill: "var(--color-referral)" },
-  { source: "social", leads: 90, fill: "var(--color-social)" },
-  { source: "cold", leads: 62, fill: "var(--color-cold)" },
-  { source: "other", leads: 48, fill: "var(--color-other)" },
-];
+  { source: "website", leads: 170 },
+  { source: "referral", leads: 105 },
+  { source: "social", leads: 90 },
+  { source: "cold", leads: 62 },
+  { source: "other", leads: 48 },
+] as const satisfies readonly { source: LeadSource; leads: number }[];
 
-export const leadsBySourceChartConfig = {
-  leads: {
-    label: "Leads",
-  },
-  website: {
-    label: "Website",
-    color: "var(--chart-1)",
-  },
-  referral: {
-    label: "Referral",
-    color: "var(--chart-2)",
-  },
-  social: {
-    label: "Social Media",
-    color: "var(--chart-3)",
-  },
-  cold: {
-    label: "Cold Outreach",
-    color: "var(--chart-4)",
-  },
-  other: {
-    label: "Other",
-    color: "var(--chart-5)",
-  },
-} as ChartConfig;
+export const leadSourceColors: Record<LeadSource, string> = {
+  website: "var(--chart-1)",
+  referral: "var(--chart-2)",
+  social: "var(--chart-3)",
+  cold: "var(--chart-4)",
+  other: "var(--chart-5)",
+};
 
-export const projectRevenueChartData = [
-  { name: "MVP Development", actual: 82000, target: 90000 },
-  { name: "Consultation", actual: 48000, target: 65000 },
-  { name: "Framer Sites", actual: 34000, target: 45000 },
-  { name: "DevOps Support", actual: 77000, target: 90000 },
-  { name: "LLM Training", actual: 68000, target: 80000 },
-  { name: "Product Launch", actual: 52000, target: 70000 },
-].map((row) => ({
+export type ProjectId = "mvp" | "consultation" | "framer" | "devops" | "llm" | "launch";
+
+export const projectRevenueChartData = (
+  [
+    { project: "mvp", actual: 82000, target: 90000 },
+    { project: "consultation", actual: 48000, target: 65000 },
+    { project: "framer", actual: 34000, target: 45000 },
+    { project: "devops", actual: 77000, target: 90000 },
+    { project: "llm", actual: 68000, target: 80000 },
+    { project: "launch", actual: 52000, target: 70000 },
+  ] satisfies { project: ProjectId; actual: number; target: number }[]
+).map((row) => ({
   ...row,
   remaining: Math.max(0, row.target - row.actual),
 }));
 
-export const projectRevenueChartConfig = {
-  actual: {
-    label: "Actual",
-    color: "var(--chart-1)",
-  },
-  remaining: {
-    label: "Remaining",
-    color: "var(--chart-2)",
-  },
-  label: {
-    color: "var(--primary-foreground)",
-  },
-} as ChartConfig;
+export const projectRevenueSummary = { averageProgress: 0.78, aboveTarget: 2 } as const;
+
+export type PipelineStageId = "leads" | "qualified" | "proposalSent" | "negotiation" | "won";
 
 export const salesPipelineChartData = [
-  { stage: "Leads", value: 680, fill: "var(--chart-1)" },
-  { stage: "Qualified", value: 480, fill: "var(--chart-2)" },
-  { stage: "Proposal Sent", value: 210, fill: "var(--chart-3)" },
-  { stage: "Negotiation", value: 120, fill: "var(--chart-4)" },
-  { stage: "Won", value: 45, fill: "var(--chart-5)" },
-];
+  { stage: "leads", value: 680, fill: "var(--chart-1)" },
+  { stage: "qualified", value: 480, fill: "var(--chart-2)" },
+  { stage: "proposalSent", value: 210, fill: "var(--chart-3)" },
+  { stage: "negotiation", value: 120, fill: "var(--chart-4)" },
+  { stage: "won", value: 45, fill: "var(--chart-5)" },
+] as const satisfies readonly { stage: PipelineStageId; value: number; fill: string }[];
 
-export const salesPipelineChartConfig = {
-  value: {
-    label: "Leads",
-    color: "var(--chart-1)",
-  },
-  stage: {
-    label: "Stage",
-  },
-} as ChartConfig;
+export const pipelineLeadsChange = 0.182;
+
+export type RegionId = "northAmerica" | "europe" | "asiaPacific" | "latinAmerica" | "middleEastAfrica";
 
 export const regionSalesData = [
-  {
-    region: "North America",
-    sales: 37800,
-    percentage: 31,
-    growth: "-3.2%",
-    isPositive: false,
-  },
-  {
-    region: "Europe",
-    sales: 40100,
-    percentage: 34,
-    growth: "+9.4%",
-    isPositive: true,
-  },
-  {
-    region: "Asia Pacific",
-    sales: 30950,
-    percentage: 26,
-    growth: "+12.8%",
-    isPositive: true,
-  },
-  {
-    region: "Latin America",
-    sales: 12200,
-    percentage: 7,
-    growth: "-1.7%",
-    isPositive: false,
-  },
-  {
-    region: "Middle East & Africa",
-    sales: 2450,
-    percentage: 2,
-    growth: "+6.0%",
-    isPositive: true,
-  },
-];
+  { region: "northAmerica", sales: 37800, share: 0.31, growth: -0.032 },
+  { region: "europe", sales: 40100, share: 0.34, growth: 0.094 },
+  { region: "asiaPacific", sales: 30950, share: 0.26, growth: 0.128 },
+  { region: "latinAmerica", sales: 12200, share: 0.07, growth: -0.017 },
+  { region: "middleEastAfrica", sales: 2450, share: 0.02, growth: 0.06 },
+] as const satisfies readonly { region: RegionId; sales: number; share: number; growth: number }[];
+
+export type ActionItemId = "kickoff" | "demo" | "caseStudy";
+export type ActionPriority = "high" | "medium" | "low";
+export type ActionDue = "today" | "tomorrow" | "thisWeek";
 
 export const actionItems = [
-  {
-    id: 1,
-    title: "Send kickoff docs",
-    desc: "Send onboarding documents and timeline",
-    due: "Due today",
-    priority: "High",
-    priorityColor: "bg-red-100 text-red-700",
-    checked: false,
-  },
-  {
-    id: 2,
-    title: "Demo call for SaaS MVP",
-    desc: "Book Zoom call with client",
-    due: "Due tomorrow",
-    priority: "Medium",
-    priorityColor: "bg-yellow-100 text-yellow-700",
-    checked: true,
-  },
-  {
-    id: 3,
-    title: "Update case study",
-    desc: "Add latest LLM project",
-    due: "Due this week",
-    priority: "Low",
-    priorityColor: "bg-green-100 text-green-700",
-    checked: false,
-  },
-];
+  { id: "kickoff", priority: "high", due: "today", checked: false },
+  { id: "demo", priority: "medium", due: "tomorrow", checked: true },
+  { id: "caseStudy", priority: "low", due: "thisWeek", checked: false },
+] as const satisfies readonly { id: ActionItemId; priority: ActionPriority; due: ActionDue; checked: boolean }[];
 
-export const recentLeadsData = [
-  {
-    id: "L-1012",
-    name: "Guillermo Rauch",
-    company: "Vercel",
-    status: "Qualified",
-    source: "Website",
-    lastActivity: "30m ago",
-  },
-  {
-    id: "L-1018",
-    name: "Nizzy",
-    company: "Mail0",
-    status: "Qualified",
-    source: "Website",
-    lastActivity: "35m ago",
-  },
-  {
-    id: "L-1005",
-    name: "Sahaj",
-    company: "Tweakcn",
-    status: "Negotiation",
-    source: "Website",
-    lastActivity: "1h ago",
-  },
-  {
-    id: "L-1001",
-    name: "Shadcn",
-    company: "Shadcn/ui",
-    status: "Qualified",
-    source: "Website",
-    lastActivity: "2h ago",
-  },
-  {
-    id: "L-1003",
-    name: "Sam Altman",
-    company: "OpenAI",
-    status: "Proposal Sent",
-    source: "Social Media",
-    lastActivity: "4h ago",
-  },
+export const recentLeadsData: RecentLeadRow[] = [
+  { id: "L-1012", name: "Guillermo Rauch", company: "Vercel", status: "qualified", source: "website", minutesAgo: 30 },
+  { id: "L-1018", name: "Nizzy", company: "Mail0", status: "qualified", source: "website", minutesAgo: 35 },
+  { id: "L-1005", name: "Sahaj", company: "Tweakcn", status: "negotiation", source: "website", minutesAgo: 60 },
+  { id: "L-1001", name: "Shadcn", company: "Shadcn/ui", status: "qualified", source: "website", minutesAgo: 120 },
+  { id: "L-1003", name: "Sam Altman", company: "OpenAI", status: "proposalSent", source: "social", minutesAgo: 240 },
   {
     id: "L-1008",
     name: "Michael Andreuzza",
     company: "Lexington Themes",
-    status: "Contacted",
-    source: "Social Media",
-    lastActivity: "5h ago",
+    status: "contacted",
+    source: "social",
+    minutesAgo: 300,
   },
-  {
-    id: "L-1016",
-    name: "Skyleen",
-    company: "Animate UI",
-    status: "Proposal Sent",
-    source: "Referral",
-    lastActivity: "7h ago",
-  },
-  {
-    id: "L-1007",
-    name: "Alex Morgan",
-    company: "Weblabs Studio",
-    status: "Won",
-    source: "Website",
-    lastActivity: "6h ago",
-  },
+  { id: "L-1016", name: "Skyleen", company: "Animate UI", status: "proposalSent", source: "referral", minutesAgo: 420 },
+  { id: "L-1007", name: "Alex Morgan", company: "Weblabs Studio", status: "won", source: "website", minutesAgo: 360 },
   {
     id: "L-1011",
     name: "Sebastian Rindom",
     company: "Medusa",
-    status: "Proposal Sent",
-    source: "Referral",
-    lastActivity: "10h ago",
+    status: "proposalSent",
+    source: "referral",
+    minutesAgo: 600,
   },
-  {
-    id: "L-1014",
-    name: "Fred K. Schott",
-    company: "Astro",
-    status: "Contacted",
-    source: "Social Media",
-    lastActivity: "12h ago",
-  },
-  {
-    id: "L-1010",
-    name: "Peer Richelsen",
-    company: "Cal.com",
-    status: "New",
-    source: "Other",
-    lastActivity: "8h ago",
-  },
-  {
-    id: "L-1002",
-    name: "Ammar Khnz",
-    company: "BE",
-    status: "Contacted",
-    source: "Referral",
-    lastActivity: "1d ago",
-  },
-  {
-    id: "L-1015",
-    name: "Toby",
-    company: "Shadcn UI Kit ",
-    status: "Negotiation",
-    source: "Other",
-    lastActivity: "2d ago",
-  },
-  {
-    id: "L-1006",
-    name: "David Haz",
-    company: "React Bits",
-    status: "Qualified",
-    source: "Referral",
-    lastActivity: "2d ago",
-  },
-  {
-    id: "L-1004",
-    name: "Erşad",
-    company: "Align UI",
-    status: "New",
-    source: "Cold Outreach",
-    lastActivity: "3d ago",
-  },
+  { id: "L-1014", name: "Fred K. Schott", company: "Astro", status: "contacted", source: "social", minutesAgo: 720 },
+  { id: "L-1010", name: "Peer Richelsen", company: "Cal.com", status: "new", source: "other", minutesAgo: 480 },
+  { id: "L-1002", name: "Ammar Khnz", company: "BE", status: "contacted", source: "referral", minutesAgo: 1440 },
+  { id: "L-1015", name: "Toby", company: "Shadcn UI Kit", status: "negotiation", source: "other", minutesAgo: 2880 },
+  { id: "L-1006", name: "David Haz", company: "React Bits", status: "qualified", source: "referral", minutesAgo: 2880 },
+  { id: "L-1004", name: "Erşad", company: "Align UI", status: "new", source: "cold", minutesAgo: 4320 },
 ];

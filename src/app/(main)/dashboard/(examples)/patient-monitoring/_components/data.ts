@@ -1,3 +1,7 @@
+/**
+ * Demo patients as data: ids, enums and numbers only. Diagnoses, alarm and event wording live in the route
+ * dictionary and are written for one locale by `localizePatients`. Names and bed codes are proper nouns.
+ */
 type PatientStatus = "alarm" | "stable";
 
 export type CardiacRhythm =
@@ -10,54 +14,91 @@ export type CardiacRhythm =
   | "sinus-tachycardia"
   | "st-depression";
 
+export type DiagnosisId =
+  | "postCabg"
+  | "atrialFibrillation"
+  | "unstableAngina"
+  | "postPci"
+  | "postAblation"
+  | "acuteCoronarySyndrome"
+  | "heartFailure"
+  | "postAngiography"
+  | "postPacemakerInsertion"
+  | "nstemiObservation";
+
 interface SignalProfile {
   amplitude: number;
   phase: number;
   rhythm: CardiacRhythm;
 }
 
-interface PatientEvent {
-  label: string;
-  time: string;
+/** What happened; the sentence comes from the dictionary. `time` is a clock reading such as "01:24". */
+export type PatientEventSource =
+  | { kind: "nibp"; value: string; time: string }
+  | { kind: "leadSelected"; lead: string; time: string }
+  | { kind: "hrAbove"; limit: number; time: string }
+  | {
+      kind:
+        | "rhythmStripSaved"
+        | "ecg12Complete"
+        | "spo2ProbeChecked"
+        | "pacingOff"
+        | "stReviewComplete"
+        | "fluidBalanceUpdated"
+        | "accessSiteChecked"
+        | "pacingCaptureVerified"
+        | "cardiacEnzymesReviewed";
+      time: string;
+    };
+
+interface PatientAlarmSource {
+  kind: "hrHigh";
+  /** The alarm limit in beats per minute; the reading is the patient's heart rate. */
+  limit: number;
+  /** How long the alarm has been active, as minutes:seconds. */
+  duration: string;
 }
 
-export interface PatientRecord {
+export interface PatientSource {
   age: number;
-  alarm?: string;
-  alarmDuration?: string;
+  alarm?: PatientAlarmSource;
   arterialMap: number;
   arterialPressure: string;
   bed: string;
-  diagnosis: string;
+  diagnosis: DiagnosisId;
   heartRate: number;
   id: string;
   map: number;
   name: string;
   nibp: string;
-  recentEvents: PatientEvent[];
+  recentEvents: PatientEventSource[];
   respirationRate: number;
   sex: "F" | "M";
   signalProfile: SignalProfile;
   spo2: number;
   status: PatientStatus;
-  temperature: string;
+  /** Degrees Celsius. */
+  temperature: number;
 }
 
-export const patients = [
+/** The monitor's fixed trend scale: five hourly marks, as hours of the day. */
+export const trendHours = [21, 22, 23, 0, 1] as const;
+
+export const patientSources = [
   {
     age: 53,
     arterialMap: 92,
     arterialPressure: "124/76",
     bed: "C01",
-    diagnosis: "Post CABG",
+    diagnosis: "postCabg",
     heartRate: 72,
     id: "cardiac-01",
     map: 91,
     name: "Ethan Brooks",
     nibp: "122/76",
     recentEvents: [
-      { label: "NIBP 122/76", time: "01:24" },
-      { label: "Lead II selected", time: "00:51" },
+      { kind: "nibp", value: "122/76", time: "01:24" },
+      { kind: "leadSelected", lead: "II", time: "00:51" },
     ],
     respirationRate: 16,
     sex: "M",
@@ -68,22 +109,22 @@ export const patients = [
     },
     spo2: 98,
     status: "stable",
-    temperature: "36.8",
+    temperature: 36.8,
   },
   {
     age: 48,
     arterialMap: 87,
     arterialPressure: "116/72",
     bed: "C02",
-    diagnosis: "Atrial fibrillation",
+    diagnosis: "atrialFibrillation",
     heartRate: 68,
     id: "cardiac-02",
     map: 86,
     name: "Olivia Rhye",
     nibp: "118/70",
     recentEvents: [
-      { label: "Rhythm strip saved", time: "01:09" },
-      { label: "NIBP 118/70", time: "00:43" },
+      { kind: "rhythmStripSaved", time: "01:09" },
+      { kind: "nibp", value: "118/70", time: "00:43" },
     ],
     respirationRate: 17,
     sex: "F",
@@ -94,22 +135,22 @@ export const patients = [
     },
     spo2: 96,
     status: "stable",
-    temperature: "37.0",
+    temperature: 37.0,
   },
   {
     age: 70,
     arterialMap: 96,
     arterialPressure: "132/78",
     bed: "C03",
-    diagnosis: "Unstable angina",
+    diagnosis: "unstableAngina",
     heartRate: 76,
     id: "cardiac-03",
     map: 94,
     name: "Nico Arendt",
     nibp: "128/77",
     recentEvents: [
-      { label: "12-lead ECG complete", time: "01:15" },
-      { label: "NIBP 128/77", time: "00:47" },
+      { kind: "ecg12Complete", time: "01:15" },
+      { kind: "nibp", value: "128/77", time: "00:47" },
     ],
     respirationRate: 18,
     sex: "M",
@@ -120,25 +161,24 @@ export const patients = [
     },
     spo2: 97,
     status: "stable",
-    temperature: "36.9",
+    temperature: 36.9,
   },
   {
     age: 61,
-    alarm: "HR HIGH 104  > 100 bpm",
-    alarmDuration: "06:12",
+    alarm: { kind: "hrHigh", limit: 100, duration: "06:12" },
     arterialMap: 88,
     arterialPressure: "121/70",
     bed: "C04",
-    diagnosis: "Post PCI",
+    diagnosis: "postPci",
     heartRate: 104,
     id: "cardiac-04",
     map: 89,
     name: "Koray Okumus",
     nibp: "118/74",
     recentEvents: [
-      { label: "HR > 100", time: "01:26" },
-      { label: "NIBP 118/74", time: "01:18" },
-      { label: "SpO₂ probe checked", time: "00:48" },
+      { kind: "hrAbove", limit: 100, time: "01:26" },
+      { kind: "nibp", value: "118/74", time: "01:18" },
+      { kind: "spo2ProbeChecked", time: "00:48" },
     ],
     respirationRate: 20,
     sex: "M",
@@ -149,22 +189,22 @@ export const patients = [
     },
     spo2: 94,
     status: "alarm",
-    temperature: "37.1",
+    temperature: 37.1,
   },
   {
     age: 45,
     arterialMap: 84,
     arterialPressure: "112/69",
     bed: "C05",
-    diagnosis: "Post ablation",
+    diagnosis: "postAblation",
     heartRate: 64,
     id: "cardiac-05",
     map: 83,
     name: "Candice Wu",
     nibp: "110/70",
     recentEvents: [
-      { label: "NIBP 110/70", time: "01:02" },
-      { label: "Pacing off", time: "00:36" },
+      { kind: "nibp", value: "110/70", time: "01:02" },
+      { kind: "pacingOff", time: "00:36" },
     ],
     respirationRate: 15,
     sex: "F",
@@ -175,22 +215,22 @@ export const patients = [
     },
     spo2: 96,
     status: "stable",
-    temperature: "36.7",
+    temperature: 36.7,
   },
   {
     age: 66,
     arterialMap: 91,
     arterialPressure: "126/73",
     bed: "C06",
-    diagnosis: "Acute coronary syndrome",
+    diagnosis: "acuteCoronarySyndrome",
     heartRate: 80,
     id: "cardiac-06",
     map: 90,
     name: "Noah Pierre",
     nibp: "124/72",
     recentEvents: [
-      { label: "ST review complete", time: "01:11" },
-      { label: "NIBP 124/72", time: "00:40" },
+      { kind: "stReviewComplete", time: "01:11" },
+      { kind: "nibp", value: "124/72", time: "00:40" },
     ],
     respirationRate: 19,
     sex: "M",
@@ -201,22 +241,22 @@ export const patients = [
     },
     spo2: 95,
     status: "stable",
-    temperature: "37.2",
+    temperature: 37.2,
   },
   {
     age: 57,
     arterialMap: 86,
     arterialPressure: "118/68",
     bed: "C07",
-    diagnosis: "Heart failure",
+    diagnosis: "heartFailure",
     heartRate: 71,
     id: "cardiac-07",
     map: 85,
     name: "Lana Steiner",
     nibp: "116/68",
     recentEvents: [
-      { label: "NIBP 116/68", time: "01:21" },
-      { label: "Fluid balance updated", time: "00:57" },
+      { kind: "nibp", value: "116/68", time: "01:21" },
+      { kind: "fluidBalanceUpdated", time: "00:57" },
     ],
     respirationRate: 17,
     sex: "F",
@@ -227,22 +267,22 @@ export const patients = [
     },
     spo2: 98,
     status: "stable",
-    temperature: "36.8",
+    temperature: 36.8,
   },
   {
     age: 52,
     arterialMap: 90,
     arterialPressure: "123/71",
     bed: "C08",
-    diagnosis: "Post angiography",
+    diagnosis: "postAngiography",
     heartRate: 88,
     id: "cardiac-08",
     map: 88,
     name: "Steven Tey",
     nibp: "120/72",
     recentEvents: [
-      { label: "Access site checked", time: "01:16" },
-      { label: "NIBP 120/72", time: "00:49" },
+      { kind: "accessSiteChecked", time: "01:16" },
+      { kind: "nibp", value: "120/72", time: "00:49" },
     ],
     respirationRate: 18,
     sex: "M",
@@ -253,22 +293,22 @@ export const patients = [
     },
     spo2: 97,
     status: "stable",
-    temperature: "37.0",
+    temperature: 37.0,
   },
   {
     age: 59,
     arterialMap: 89,
     arterialPressure: "120/72",
     bed: "C09",
-    diagnosis: "Post pacemaker insertion",
+    diagnosis: "postPacemakerInsertion",
     heartRate: 74,
     id: "cardiac-09",
     map: 88,
     name: "Mia Romberg",
     nibp: "119/71",
     recentEvents: [
-      { label: "Pacing capture verified", time: "01:19" },
-      { label: "NIBP 119/71", time: "00:45" },
+      { kind: "pacingCaptureVerified", time: "01:19" },
+      { kind: "nibp", value: "119/71", time: "00:45" },
     ],
     respirationRate: 16,
     sex: "F",
@@ -279,22 +319,22 @@ export const patients = [
     },
     spo2: 97,
     status: "stable",
-    temperature: "36.9",
+    temperature: 36.9,
   },
   {
     age: 63,
     arterialMap: 93,
     arterialPressure: "128/75",
     bed: "C10",
-    diagnosis: "NSTEMI observation",
+    diagnosis: "nstemiObservation",
     heartRate: 82,
     id: "cardiac-10",
     map: 92,
     name: "Alec Whitten",
     nibp: "126/74",
     recentEvents: [
-      { label: "Cardiac enzymes reviewed", time: "01:13" },
-      { label: "NIBP 126/74", time: "00:41" },
+      { kind: "cardiacEnzymesReviewed", time: "01:13" },
+      { kind: "nibp", value: "126/74", time: "00:41" },
     ],
     respirationRate: 18,
     sex: "M",
@@ -305,6 +345,6 @@ export const patients = [
     },
     spo2: 96,
     status: "stable",
-    temperature: "37.1",
+    temperature: 37.1,
   },
-] satisfies PatientRecord[];
+] satisfies PatientSource[];

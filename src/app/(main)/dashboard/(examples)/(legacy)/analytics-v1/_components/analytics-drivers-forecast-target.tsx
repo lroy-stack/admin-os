@@ -4,72 +4,72 @@ import { Bar, CartesianGrid, ComposedChart, Dot, LabelList, Line, ReferenceLine,
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { formatAmount, format as formatText, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
 
-const forecastChartConfig = {
-  closedWon: {
-    label: "Closed Won",
-    color: "var(--chart-1)",
-  },
-  weightedPipeline: {
-    label: "Weighted Pipeline",
-    color: "var(--chart-2)",
-  },
-  target: {
-    label: "Target",
-    color: "var(--muted-foreground)",
-  },
-} satisfies ChartConfig;
+import { forecastFigures, forecastWeeks } from "./analytics-data";
+import { formatPoints, formatRate } from "./analytics-format";
+import { analyticsV1MessageKey } from "./messages";
 
-type TrendPoint = {
-  period: string;
-  closedWon: number;
-  weightedPipeline: number;
-  target: number;
-  deltaLabel?: string;
-};
-
-const CHART_DATA: TrendPoint[] = [
-  { period: "W1", closedWon: 68.6, weightedPipeline: 152.4, target: 100 },
-  { period: "W2", closedWon: 87.1, weightedPipeline: 158.1, target: 100 },
-  { period: "W3", closedWon: 77.1, weightedPipeline: 154.8, target: 100 },
-  { period: "W4", closedWon: 94.3, weightedPipeline: 162.2, target: 100 },
-  { period: "W5", closedWon: 80.6, weightedPipeline: 160.4, target: 100 },
-  { period: "W6", closedWon: 100, weightedPipeline: 168.5, target: 100 },
-  { period: "W7", closedWon: 87.5, weightedPipeline: 172.1, target: 100 },
-  { period: "W8", closedWon: 95.8, weightedPipeline: 178.3, target: 100 },
-  { period: "W9", closedWon: 100, weightedPipeline: 181.0, target: 100 },
-  { period: "W10", closedWon: 95.9, weightedPipeline: 185.4, target: 100 },
-  { period: "W11", closedWon: 104.1, weightedPipeline: 188.7, target: 100 },
-  { period: "W12", closedWon: 109.5, weightedPipeline: 192.1, target: 100, deltaLabel: "+9.5pp" },
-];
+const FORECAST_WEEKS = forecastWeeks.length;
 
 export function DriversForecastTarget() {
-  const chartData = CHART_DATA;
-  const pipelineMin = Math.min(...CHART_DATA.map((point) => point.weightedPipeline));
-  const pipelineMax = Math.max(...CHART_DATA.map((point) => point.weightedPipeline));
+  const text = useMessages(analyticsV1MessageKey);
+  const t = text.forecast;
+  const locale = useLocale();
+  const currency = useCurrency();
+  const weekLabel = (week: number | string) => formatText(t.weekShort, locale, { week: Number(week) });
+  const percentValue = (value: number) => formatRate(value / 100, locale, { digits: 0 });
+
+  const forecastChartConfig = {
+    closedWon: { label: t.closedWon, color: "var(--chart-1)" },
+    weightedPipeline: { label: t.weightedPipeline, color: "var(--chart-2)" },
+    target: { label: t.target, color: "var(--muted-foreground)" },
+  } satisfies ChartConfig;
+
+  const chartData = forecastWeeks.map((point) => ({
+    ...point,
+    deltaLabel:
+      point.deltaPoints === undefined ? undefined : formatPoints(text.percentagePoints, point.deltaPoints, locale),
+  }));
+  const pipelineMin = Math.min(...forecastWeeks.map((point) => point.weightedPipeline));
+  const pipelineMax = Math.max(...forecastWeeks.map((point) => point.weightedPipeline));
 
   return (
     <Card className="shadow-xs">
       <CardHeader>
-        <CardTitle>Forecast vs Target</CardTitle>
-        <CardDescription>12-week trend with attainment context</CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{formatText(t.description, locale, { weeks: FORECAST_WEEKS })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <MetricChip label="Attainment" value="72.4%" note="closed won / monthly target" />
-          <MetricChip label="Weighted Pipeline" value="$1,284,000" note="vs $668,000 remaining" />
-          <MetricChip label="Forecast Confidence" value="81.0%" note="volatility-adjusted confidence" />
+          <MetricChip
+            label={t.attainment}
+            value={formatRate(forecastFigures.attainment, locale)}
+            note={t.attainmentNote}
+          />
+          <MetricChip
+            label={t.weightedPipeline}
+            value={formatAmount(forecastFigures.weightedPipeline, currency, locale, { fractionDigits: 0 })}
+            note={formatText(t.weightedPipelineNote, locale, {
+              amount: formatAmount(forecastFigures.remaining, currency, locale, { fractionDigits: 0 }),
+            })}
+          />
+          <MetricChip
+            label={t.confidence}
+            value={formatRate(forecastFigures.confidence, locale)}
+            note={t.confidenceNote}
+          />
         </div>
         <ChartContainer config={forecastChartConfig} className="h-68 w-full">
           <ComposedChart data={chartData} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.25} />
-            <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={10} />
+            <XAxis dataKey="week" tickLine={false} axisLine={false} tickMargin={10} tickFormatter={weekLabel} />
             <YAxis
-              tickFormatter={(value) => `${Math.round(value)}%`}
+              tickFormatter={percentValue}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              width={44}
+              width={52}
               domain={[0, "auto"]}
               ticks={[0, 50, 100, 150, 200]}
             />
@@ -80,10 +80,11 @@ export function DriversForecastTarget() {
                 <ChartTooltipContent
                   active={props.active}
                   label={props.label}
-                  className="w-48"
+                  labelFormatter={(label) => weekLabel(label)}
+                  className="w-52"
                   payload={(props.payload ?? []).map((item) => ({
                     ...item,
-                    value: typeof item.value === "number" ? `${item.value.toFixed(1)}%` : item.value,
+                    value: typeof item.value === "number" ? formatRate(item.value / 100, locale) : item.value,
                   }))}
                 />
               )}
@@ -91,7 +92,7 @@ export function DriversForecastTarget() {
             <ReferenceLine y={100} stroke="var(--color-target)" strokeWidth={2} strokeDasharray="6 5" />
             <Bar
               dataKey="closedWon"
-              name="Closed won"
+              name={t.closedWon}
               fill="var(--color-closedWon)"
               fillOpacity={0.22}
               stroke="var(--color-closedWon)"
@@ -105,14 +106,14 @@ export function DriversForecastTarget() {
               type="monotone"
               yAxisId="pipeline"
               dataKey="weightedPipeline"
-              name="Pipeline vs target"
+              name={t.pipelineVsTarget}
               strokeOpacity={0}
               strokeWidth={0}
               stroke="var(--color-weightedPipeline)"
               isAnimationActive={false}
               dot={({ payload, ...props }) => (
                 <Dot
-                  key={`${payload.period}-weighted-pipeline`}
+                  key={`${payload.week}-weighted-pipeline`}
                   cx={props.cx}
                   cy={props.cy}
                   r={3.5}
@@ -133,10 +134,10 @@ export function DriversForecastTarget() {
 
 function MetricChip({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="bg-muted/35 rounded-md border px-3 py-2.5">
-      <p className="text-muted-foreground text-xs">{label}</p>
+    <div className="bg-muted/35 min-w-0 rounded-md border px-3 py-2.5">
+      <p className="text-muted-foreground text-xs break-words hyphens-auto">{label}</p>
       <p className="text-lg font-semibold tabular-nums">{value}</p>
-      <p className="text-muted-foreground text-xs">{note}</p>
+      <p className="text-muted-foreground text-xs break-words hyphens-auto">{note}</p>
     </div>
   );
 }

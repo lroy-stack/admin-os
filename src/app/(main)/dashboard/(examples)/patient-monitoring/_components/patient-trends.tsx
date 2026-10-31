@@ -2,10 +2,14 @@ import { cn } from "cn";
 import { CartesianGrid, Line, LineChart, YAxis } from "recharts";
 
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
 import { getInnerVerticalGridCoordinates } from "./chart-grid";
-import type { PatientRecord } from "./data";
+import { trendHours } from "./data";
+import { monitoringMessageKey } from "./messages";
+import type { PatientRecord } from "./patient-localize";
 import { type TrendKind, type TrendPoint, usePatientTrendSeries } from "./use-patient-vital-series";
+import { formatHourMark, unitSymbol } from "./vital-format";
 
 interface PatientTrendsProps {
   patient: PatientRecord;
@@ -21,7 +25,6 @@ interface VitalTrendChartProps {
 
 const trendChartConfig = {
   value: {
-    label: "Value",
     color: "currentColor",
   },
 } satisfies ChartConfig;
@@ -78,6 +81,8 @@ function TrendStrip({
   unit: string;
   value: number;
 }) {
+  const text = useMessages(monitoringMessageKey);
+  const locale = useLocale();
   const series = usePatientTrendSeries({ kind, patient });
   const scale = [...series.ticks].reverse();
   const color = cn(
@@ -89,8 +94,8 @@ function TrendStrip({
   return (
     <div className="border-border grid min-h-12 grid-cols-[4rem_2rem_minmax(0,1fr)_2.5rem] items-stretch gap-1 border-b">
       <div className="flex flex-col justify-start p-2">
-        <div className={cn("text-xs font-medium", color)}>{label}</div>
-        <div className="text-muted-foreground text-[10px]">{unit}</div>
+        <div className={cn("text-xs font-medium break-words", color)}>{label}</div>
+        <div className="text-muted-foreground text-[10px] break-words">{unit}</div>
       </div>
       <div className="text-muted-foreground flex h-full min-h-12 flex-col justify-between text-right text-[10px] tabular-nums">
         {scale.map((tick) => (
@@ -98,7 +103,7 @@ function TrendStrip({
         ))}
       </div>
       <VitalTrendChart
-        ariaLabel={series.ariaLabel}
+        ariaLabel={format(text.aria.trend, locale, { bed: patient.bed, vital: label })}
         data={series.data}
         domain={series.domain}
         kind={kind}
@@ -110,30 +115,49 @@ function TrendStrip({
 }
 
 export function PatientTrends({ patient }: PatientTrendsProps) {
+  const text = useMessages(monitoringMessageKey);
+  const locale = useLocale();
+
   return (
     <div className="grid h-full min-h-36 xl:grid-cols-[minmax(0,1fr)_13.5rem]">
       <div className="border-border min-w-0 xl:border-r">
-        <TrendStrip kind="heart-rate" label="HR" patient={patient} unit="bpm" value={patient.heartRate} />
-        <TrendStrip kind="spo2" label="SpO₂" patient={patient} unit="%" value={patient.spo2} />
-        <TrendStrip kind="map" label="MAP" patient={patient} unit="mmHg" value={patient.arterialMap} />
+        <TrendStrip
+          kind="heart-rate"
+          label={text.vitals.hr}
+          patient={patient}
+          unit={text.units.heartRate}
+          value={patient.heartRate}
+        />
+        <TrendStrip
+          kind="spo2"
+          label={text.vitals.spo2}
+          patient={patient}
+          unit={unitSymbol("percent", locale)}
+          value={patient.spo2}
+        />
+        <TrendStrip
+          kind="map"
+          label={text.vitals.map}
+          patient={patient}
+          unit={text.units.pressure}
+          value={patient.arterialMap}
+        />
         <div className="grid grid-cols-[4rem_2rem_minmax(0,1fr)_2.5rem] gap-1 py-0.5">
           <div className="col-span-2" />
           <div className="text-muted-foreground flex justify-between text-[10px] tabular-nums">
-            <span>21:00</span>
-            <span>22:00</span>
-            <span>23:00</span>
-            <span>00:00</span>
-            <span>01:00</span>
+            {trendHours.map((hour) => (
+              <span key={hour}>{formatHourMark(hour, locale)}</span>
+            ))}
           </div>
         </div>
       </div>
       <div className="px-3 py-2">
-        <div className="mb-2 text-xs font-medium">Recent events</div>
+        <div className="mb-2 text-xs font-medium">{text.events.recent}</div>
         <div className="flex flex-col gap-2">
           {patient.recentEvents.map((event) => (
-            <div className="grid grid-cols-[3rem_1fr] text-[11px]" key={`${event.time}-${event.label}`}>
+            <div className="grid grid-cols-[3rem_minmax(0,1fr)] text-[11px]" key={`${event.time}-${event.label}`}>
               <span className="text-muted-foreground tabular-nums">{event.time}</span>
-              <span>{event.label}</span>
+              <span className="break-words hyphens-auto">{event.label}</span>
             </div>
           ))}
         </div>

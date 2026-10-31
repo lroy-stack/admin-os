@@ -165,7 +165,12 @@
         "src/app/(main)/chat/**",
         "src/app/(main)/auth/**",
         "src/app/(main)/unauthorized/**",
-        "src/app/not-found*"
+        "src/app/not-found*",
+        "src/app/(main)/dashboard/analytics/**",
+        "src/app/(main)/dashboard/(examples)/logistics/**",
+        "src/app/(main)/dashboard/(examples)/patient-monitoring/**",
+        "src/app/(main)/dashboard/(examples)/(legacy)/analytics-v1/**",
+        "src/app/(main)/dashboard/(examples)/(legacy)/crm-v1/**"
       ],
       "plugins": ["./lint/no-visible-string-props.grit"],
       "linter": {

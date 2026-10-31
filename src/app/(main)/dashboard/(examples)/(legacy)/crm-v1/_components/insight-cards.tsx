@@ -4,23 +4,43 @@ import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, XAxis, Y
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { formatNumber, format as formatText, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
+import { CurrencyTooltipContent } from "@/ds/components";
 
-import {
-  leadsBySourceChartConfig,
-  leadsBySourceChartData,
-  projectRevenueChartConfig,
-  projectRevenueChartData,
-} from "./crm.config";
+import { leadSourceColors, leadsBySourceChartData, projectRevenueChartData, projectRevenueSummary } from "./crm.config";
+import { formatRate } from "./crm-format";
+import { crmV1MessageKey } from "./messages";
 
 export function InsightCards() {
+  const text = useMessages(crmV1MessageKey);
+  const t = text.insights;
+  const locale = useLocale();
+  const fmt = useChartFormatters();
   const totalLeads = leadsBySourceChartData.reduce((acc, curr) => acc + curr.leads, 0);
+
+  const leadsBySourceChartConfig = {
+    leads: { label: t.leads },
+    website: { label: text.sources.website, color: leadSourceColors.website },
+    referral: { label: text.sources.referral, color: leadSourceColors.referral },
+    social: { label: text.sources.social, color: leadSourceColors.social },
+    cold: { label: text.sources.cold, color: leadSourceColors.cold },
+    other: { label: text.sources.other, color: leadSourceColors.other },
+  } satisfies ChartConfig;
+  const projectRevenueChartConfig = {
+    actual: { label: t.actual, color: "var(--chart-1)" },
+    remaining: { label: t.remaining, color: "var(--chart-2)" },
+    label: { color: "var(--primary-foreground)" },
+  } satisfies ChartConfig;
+
+  const pieData = leadsBySourceChartData.map((item) => ({ ...item, fill: `var(--color-${item.source})` }));
+  const projectData = projectRevenueChartData.map((row) => ({ ...row, name: t.projects[row.project] }));
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 xl:grid-cols-5">
       <Card className="col-span-1 xl:col-span-2">
         <CardHeader>
-          <CardTitle>Leads by Source</CardTitle>
+          <CardTitle>{t.leadsBySource}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-6">
           <ChartContainer config={leadsBySourceChartConfig} className="mx-auto aspect-square max-h-48 flex-1">
@@ -35,7 +55,7 @@ export function InsightCards() {
             >
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
               <Pie
-                data={leadsBySourceChartData}
+                data={pieData}
                 dataKey="leads"
                 nameKey="source"
                 innerRadius={65}
@@ -53,10 +73,10 @@ export function InsightCards() {
                             y={viewBox.cy}
                             className="fill-foreground text-3xl font-bold tabular-nums"
                           >
-                            {totalLeads.toLocaleString()}
+                            {formatNumber(totalLeads, locale)}
                           </tspan>
                           <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground">
-                            Leads
+                            {t.leads}
                           </tspan>
                         </text>
                       );
@@ -67,56 +87,43 @@ export function InsightCards() {
             </PieChart>
           </ChartContainer>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="flex min-w-0 flex-col gap-3">
             {leadsBySourceChartData.map((item) => (
-              <li key={item.source} className="flex w-36 items-center justify-between">
-                <span className="flex items-center gap-2 text-xs capitalize">
+              <li key={item.source} className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-xs">
                   <span
-                    className="size-2.5 rounded-full"
-                    style={{
-                      background:
-                        "color" in leadsBySourceChartConfig[item.source]
-                          ? leadsBySourceChartConfig[item.source].color
-                          : undefined,
-                    }}
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ background: leadSourceColors[item.source] }}
                   />
-                  {leadsBySourceChartConfig[item.source].label}
+                  <span className="min-w-0 break-words">{leadsBySourceChartConfig[item.source].label}</span>
                 </span>
-                <span className="text-xs tabular-nums">{item.leads}</span>
+                <span className="shrink-0 text-xs tabular-nums">{formatNumber(item.leads, locale)}</span>
               </li>
             ))}
           </ul>
         </CardContent>
         <CardFooter className="gap-2">
-          <Button size="sm" variant="outline" className="basis-1/2">
-            View Full Report
+          <Button size="sm" variant="outline" className="h-auto min-h-8 basis-1/2 py-1 whitespace-normal">
+            {t.viewReport}
           </Button>
-          <Button size="sm" variant="outline" className="basis-1/2">
-            Download CSV
+          <Button size="sm" variant="outline" className="h-auto min-h-8 basis-1/2 py-1 whitespace-normal">
+            {t.downloadCsv}
           </Button>
         </CardFooter>
       </Card>
 
       <Card className="col-span-1 xl:col-span-3">
         <CardHeader>
-          <CardTitle>Project Revenue vs. Target</CardTitle>
+          <CardTitle>{t.projectRevenue}</CardTitle>
         </CardHeader>
         <CardContent className="size-full max-h-52">
           <ChartContainer config={projectRevenueChartConfig} className="size-full">
-            <BarChart accessibilityLayer data={projectRevenueChartData} layout="vertical">
+            <BarChart accessibilityLayer data={projectData} layout="vertical">
               <CartesianGrid horizontal={false} />
-              <YAxis
-                dataKey="name"
-                type="category"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
-                hide
-              />
+              <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} hide />
               <XAxis dataKey="actual" type="number" hide />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-              <Bar stackId="a" dataKey="actual" fill="var(--color-actual)">
+              <ChartTooltip cursor={false} content={<CurrencyTooltipContent indicator="line" />} />
+              <Bar stackId="a" dataKey="actual" name={t.actual} fill="var(--color-actual)">
                 <LabelList
                   dataKey="name"
                   position="insideLeft"
@@ -128,21 +135,34 @@ export function InsightCards() {
                   position="insideRight"
                   offset={8}
                   className="fill-primary-foreground text-xs tabular-nums"
+                  formatter={(value: unknown) => fmt.compact(Number(value))}
                 />
               </Bar>
-              <Bar stackId="a" dataKey="remaining" fill="var(--color-remaining)" radius={[0, 6, 6, 0]}>
+              <Bar
+                stackId="a"
+                dataKey="remaining"
+                name={t.remaining}
+                fill="var(--color-remaining)"
+                radius={[0, 6, 6, 0]}
+              >
                 <LabelList
                   dataKey="remaining"
                   position="insideRight"
                   offset={8}
                   className="fill-primary-foreground text-xs tabular-nums"
+                  formatter={(value: unknown) => fmt.compact(Number(value))}
                 />
               </Bar>
             </BarChart>
           </ChartContainer>
         </CardContent>
         <CardFooter>
-          <p className="text-muted-foreground text-xs">Average progress: 78% · 2 projects above target</p>
+          <p className="text-muted-foreground text-xs">
+            {formatText(t.projectSummary, locale, {
+              progress: formatRate(projectRevenueSummary.averageProgress, locale, { digits: 0 }),
+              count: projectRevenueSummary.aboveTarget,
+            })}
+          </p>
         </CardFooter>
       </Card>
     </div>

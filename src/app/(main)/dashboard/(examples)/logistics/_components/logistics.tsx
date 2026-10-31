@@ -3,15 +3,20 @@
 import * as React from "react";
 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-import { shipments } from "./shipment-data";
+import { logisticsMessageKey } from "./messages";
 import { ShipmentDetails } from "./shipment-details";
 import { ShipmentList } from "./shipment-list";
+import type { Shipment } from "./shipment-localize";
 
-export function Logistics() {
+/** `shipments` arrive written for the request's locale (`localizeShipments`). */
+export function Logistics({ shipments }: { shipments: Shipment[] }) {
+  const text = useMessages(logisticsMessageKey);
+  const locale = useLocale();
   const [detailsOpen, setDetailsOpen] = React.useState(false);
-  const [selectedShipmentId, setSelectedShipmentId] = React.useState<string | null>(shipments[0].id);
-  const selectedShipment = shipments.find((shipment) => shipment.id === selectedShipmentId) ?? shipments[0];
+  const [selectedShipmentId, setSelectedShipmentId] = React.useState<string | null>(shipments[0]?.id ?? null);
+  const selectedShipment = shipments.find((shipment) => shipment.id === selectedShipmentId) ?? shipments[0] ?? null;
 
   function handleSelectShipment(shipmentId: string) {
     setSelectedShipmentId(shipmentId);
@@ -45,8 +50,12 @@ export function Logistics() {
           className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:md:w-3/4"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>{selectedShipment ? `Shipment ${selectedShipment.id}` : "Shipment details"}</SheetTitle>
-            <SheetDescription>Selected shipment details and route map.</SheetDescription>
+            <SheetTitle>
+              {selectedShipment
+                ? format(text.sheet.title, locale, { id: selectedShipment.id })
+                : text.sheet.fallbackTitle}
+            </SheetTitle>
+            <SheetDescription>{text.sheet.description}</SheetDescription>
           </SheetHeader>
           <ShipmentDetails shipment={selectedShipment} />
         </SheetContent>

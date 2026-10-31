@@ -9,17 +9,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-import type { PatientRecord } from "./data";
+import { monitoringMessageKey } from "./messages";
 import { PatientCard } from "./patient-card";
 import { PatientDetail } from "./patient-detail";
+import type { PatientRecord } from "./patient-localize";
 import { PatientTrends } from "./patient-trends";
+
+const DISCLOSURE_HOURS = 24;
 
 interface PatientMonitoringProps {
   patients: PatientRecord[];
 }
 
 export function PatientMonitoring({ patients }: PatientMonitoringProps) {
+  const text = useMessages(monitoringMessageKey);
+  const locale = useLocale();
   const [selectedPatientId, setSelectedPatientId] = useState("cardiac-04");
   const [acknowledgedPatientIds, setAcknowledgedPatientIds] = useState<string[]>([]);
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId) ?? patients[0];
@@ -45,15 +51,19 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
       </div>
 
       <div className="border-border flex min-w-0 flex-col lg:border-l">
-        <div className="bg-muted/50 flex min-h-11 items-center gap-4 px-3">
-          <div className="flex items-center gap-3 font-medium">
+        <div className="bg-muted/50 flex min-h-11 flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1">
+          <div className="flex min-w-0 items-center gap-3 font-medium">
             <Badge className="rounded-none" variant="outline">
               {selectedPatient.bed}
             </Badge>
-            <span className="text-lg">{selectedPatient.name}</span>
+            <span className="min-w-0 text-lg break-words">{selectedPatient.name}</span>
           </div>
-          <div className="text-muted-foreground text-sm">
-            {selectedPatient.age} {selectedPatient.sex} · {selectedPatient.diagnosis}
+          <div className="text-muted-foreground min-w-0 text-sm break-words hyphens-auto">
+            {format(text.patientLine, locale, {
+              age: selectedPatient.age,
+              sex: selectedPatient.sexLabel,
+              diagnosis: selectedPatient.diagnosis,
+            })}
           </div>
         </div>
         <Separator />
@@ -61,19 +71,17 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
         {selectedPatient.alarm && (
           <Alert
             className={cn(
-              "min-h-9 rounded-none border-x-0 border-t-0 pr-32",
+              "min-h-9 rounded-none border-x-0 border-t-0 pr-36",
               hasActiveAlarm
                 ? "border-amber-500 bg-amber-400 text-amber-950"
                 : "border-border bg-muted text-foreground",
             )}
             variant="default"
           >
-            <AlertTitle>{selectedPatient.alarm}</AlertTitle>
-            {selectedPatient.alarmDuration && (
-              <AlertDescription className={cn(hasActiveAlarm && "text-amber-950")}>
-                Active for {selectedPatient.alarmDuration}
-              </AlertDescription>
-            )}
+            <AlertTitle>{selectedPatient.alarm.text}</AlertTitle>
+            <AlertDescription className={cn(hasActiveAlarm && "text-amber-950")}>
+              {selectedPatient.alarm.activeFor}
+            </AlertDescription>
             <AlertAction className="top-1/2 -translate-y-1/2">
               <Button
                 className="rounded-none"
@@ -82,7 +90,7 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
                 size="sm"
                 variant="secondary"
               >
-                {acknowledged ? "Acknowledged" : "Acknowledge"}
+                {acknowledged ? text.alarm.acknowledged : text.alarm.acknowledge}
               </Button>
             </AlertAction>
           </Alert>
@@ -92,34 +100,34 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
 
         <Tabs className="min-h-0 flex-1 gap-0" defaultValue="trends">
           <TabsList
-            className="*:border-border w-full justify-start gap-0 border-b p-0 *:h-full *:max-w-32 *:rounded-none *:border-0 *:border-r *:after:-bottom-px!"
+            className="*:border-border w-full justify-start gap-0 overflow-x-auto border-b p-0 *:h-full *:flex-none *:rounded-none *:border-0 *:border-r *:px-3 *:after:-bottom-px!"
             variant="line"
           >
-            <TabsTrigger value="real-time">Real time</TabsTrigger>
-            <TabsTrigger value="events">Event review</TabsTrigger>
-            <TabsTrigger value="trends">Trends</TabsTrigger>
-            <TabsTrigger value="disclosure">Full disclosure</TabsTrigger>
+            <TabsTrigger value="real-time">{text.tabs.realTime}</TabsTrigger>
+            <TabsTrigger value="events">{text.tabs.events}</TabsTrigger>
+            <TabsTrigger value="trends">{text.tabs.trends}</TabsTrigger>
+            <TabsTrigger value="disclosure">{text.tabs.disclosure}</TabsTrigger>
           </TabsList>
 
           <TabsContent
             className="m-0 flex flex-col items-center justify-center gap-1 px-4 text-center"
             value="real-time"
           >
-            <p className="text-sm font-medium">Live monitoring is active</p>
-            <p className="text-muted-foreground text-xs">Waveforms and vital signs update continuously above.</p>
+            <p className="text-sm font-medium">{text.realTime.title}</p>
+            <p className="text-muted-foreground text-xs">{text.realTime.description}</p>
           </TabsContent>
           <TabsContent className="m-0" value="events">
             <div className="min-h-44">
-              <div className="bg-muted/40 text-muted-foreground grid grid-cols-[4rem_1fr] px-4 py-2 text-xs font-medium">
-                <span>Time</span>
-                <span>Event</span>
+              <div className="bg-muted/40 text-muted-foreground grid grid-cols-[4rem_minmax(0,1fr)] px-4 py-2 text-xs font-medium">
+                <span>{text.events.time}</span>
+                <span>{text.events.event}</span>
               </div>
               <Separator />
               {selectedPatient.recentEvents.map((event, index) => (
                 <Fragment key={`${event.time}-${event.label}`}>
-                  <div className="grid min-h-11 grid-cols-[4rem_1fr] items-center px-4 py-2 text-sm">
+                  <div className="grid min-h-11 grid-cols-[4rem_minmax(0,1fr)] items-center px-4 py-2 text-sm">
                     <span className="text-muted-foreground tabular-nums">{event.time}</span>
-                    <span>{event.label}</span>
+                    <span className="min-w-0 break-words hyphens-auto">{event.label}</span>
                   </div>
                   {index < selectedPatient.recentEvents.length - 1 && <Separator />}
                 </Fragment>
@@ -133,9 +141,9 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
             className="m-0 flex flex-col items-center justify-center gap-1 px-4 text-center"
             value="disclosure"
           >
-            <p className="text-sm font-medium">Full disclosure recording is active</p>
+            <p className="text-sm font-medium">{text.disclosure.title}</p>
             <p className="text-muted-foreground text-xs">
-              Continuous waveform history is available for the last 24 hours.
+              {format(text.disclosure.description, locale, { hours: DISCLOSURE_HOURS })}
             </p>
           </TabsContent>
         </Tabs>

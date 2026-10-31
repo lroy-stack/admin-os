@@ -1,196 +1,242 @@
-import {
-  AlertTriangleIcon,
-  ArrowUp,
-  Ban,
-  CheckCircle2,
-  Droplets,
-  Flame,
-  Forklift,
-  type LucideIcon,
-  PackageCheck,
-  PenLine,
-  ShieldCheck,
-  Snowflake,
-  Star,
-  Thermometer,
-  Truck,
-} from "lucide-react";
+/**
+ * Demo shipments as data: ids, enums, numbers and coordinates only. Every sentence the screen shows (cargo, handling
+ * notes, statuses, places such as "Aeropuerto CGK", ETA wording) lives in the route dictionary and is resolved for
+ * one locale by `localizeShipments`. People, companies, cities and transport numbers are proper nouns and stay as
+ * they are.
+ */
 
 export type ShipmentStatus =
-  | "Scheduled"
-  | "In Transit"
-  | "Out for Delivery"
-  | "Delivered"
-  | "Delayed"
-  | "On Hold"
-  | "Customs Hold";
+  | "scheduled"
+  | "inTransit"
+  | "outForDelivery"
+  | "delivered"
+  | "delayed"
+  | "onHold"
+  | "customsHold";
 
 export type TransportMode = "land" | "air" | "sea";
 export type RouteType = "road" | "flight" | "ship";
-export type CustomerTier = "Priority" | "Standard" | "Non-priority";
+export type CustomerTier = "priority" | "standard" | "nonPriority";
+export type TierNote = "topVolume" | "recurring" | "managed" | "occasional";
 
 export type GeoCoordinate = [longitude: number, latitude: number];
 
-export type ShipmentLocation = {
-  coordinates: GeoCoordinate;
-  display: string;
-  country: string;
-  countryCode: string;
+/** How a place is named: "{name} Airport", "{name} Port", "Port of {name}", or the bare name of a city. */
+export type PlaceKind = "airport" | "port" | "portOf" | "city";
+
+export type EtaNote =
+  | "today"
+  | "tomorrow"
+  | "tonight"
+  | "deliveredToday"
+  | "deliveredYesterday"
+  | "departingToday"
+  | "departing"
+  | "pending"
+  | "nextWeek"
+  | "awaitingRelease"
+  | "customs"
+  | "warehouse"
+  | "security";
+
+/** One half of the ETA line: a wall-clock time ("14:50"), a weekday (0 is Sunday) or a dictionary note. */
+export type EtaPart =
+  | { readonly kind: "time"; readonly time: string }
+  | { readonly kind: "weekday"; readonly weekday: number }
+  | { readonly kind: "note"; readonly note: EtaNote };
+
+export type HandlingLabelId =
+  | "fragileElectronics"
+  | "heavyMachinery"
+  | "temperatureControlled"
+  | "standardFreight"
+  | "heavyBulk"
+  | "sensitiveMedical"
+  | "industrialParts"
+  | "highValueFragile"
+  | "foodGrade"
+  | "perishable"
+  | "highValue"
+  | "moistureSensitive"
+  | "standardPalletized"
+  | "fragileBulky"
+  | "highValuePrecision"
+  | "hazmatReview";
+
+export type HandlingTagId =
+  | "doNotStack"
+  | "keepUpright"
+  | "signatureRequired"
+  | "forkliftOnly"
+  | "secureLoad"
+  | "doNotTip"
+  | "temperatureLog"
+  | "keepFrozen"
+  | "sealIntact"
+  | "keepDry"
+  | "doNotCrush"
+  | "standardHandoff"
+  | "heavyLift"
+  | "callBeforeDelivery"
+  | "foodGrade"
+  | "perishable"
+  | "ventilatedHold"
+  | "inspectOnArrival"
+  | "highValue"
+  | "countOnArrival"
+  | "twoPersonLift"
+  | "escalateDelay"
+  | "securityHold"
+  | "hazmatReview"
+  | "restrictedHandling";
+
+export type PlaceSource = {
+  readonly kind: PlaceKind;
+  /** A proper noun: a city, an IATA airport code or a port name. */
+  readonly name: string;
+  /** ISO 3166-1 alpha-2; the country name comes from `Intl.DisplayNames`. */
+  readonly countryCode: string;
+  readonly coordinates: GeoCoordinate;
 };
 
-export type ShipmentCustomer = {
-  name: string;
-  initials: string;
-  id: string;
-  tier: CustomerTier;
-  tierLabel: string;
+export type CustomerSource = {
+  readonly name: string;
+  readonly initials: string;
+  readonly id: string;
+  readonly tier: CustomerTier;
+  readonly tierNote: TierNote;
 };
 
-export type HandlingTag = {
-  label: string;
-  icon: LucideIcon;
+export type ShipmentSource = {
+  readonly id: string;
+  readonly customer: CustomerSource;
+  readonly origin: PlaceSource;
+  readonly destination: PlaceSource;
+  readonly handling: { readonly label: HandlingLabelId; readonly tags: readonly HandlingTagId[] };
+  readonly weightKg: number;
+  readonly eta: EtaPart;
+  readonly etaMeta: EtaPart;
+  readonly status: ShipmentStatus;
+  /** Percent, 0 to 100. */
+  readonly progress: number;
+  readonly mode: TransportMode;
+  readonly routeType: RouteType;
+  readonly transportNumber: string;
 };
 
-export type ShipmentHandling = {
-  label: string;
-  note: string;
-  tags: HandlingTag[];
-};
-
-export type Shipment = {
-  id: string;
-  customer: ShipmentCustomer;
-  origin: ShipmentLocation;
-  destination: ShipmentLocation;
-  cargo: string;
-  handling: ShipmentHandling;
-  weight: string;
-  eta: string;
-  etaMeta: string;
-  status: ShipmentStatus;
-  progress: number;
-  mode: TransportMode;
-  routeType: RouteType;
-  transportNumber: string;
-};
+/** The tab counters of the shipment list (the fleet is larger than the demo list). */
+export const shipmentTotals = { all: 156, inTransit: 32, delivered: 98, delayed: 9 } as const;
 
 const customerAccounts = {
-  techCorp: {
-    name: "TechCorp",
-    initials: "TC",
-    id: "SDA-1001-2401-01",
-    tier: "Priority",
-    tierLabel: "Top 1% by shipment volume",
-  },
+  techCorp: { name: "TechCorp", initials: "TC", id: "SDA-1001-2401-01", tier: "priority", tierNote: "topVolume" },
   regionalRoadExpress: {
     name: "Regional Road Express",
     initials: "RR",
     id: "SDA-1002-2402-02",
-    tier: "Priority",
-    tierLabel: "Top 1% by shipment volume",
+    tier: "priority",
+    tierNote: "topVolume",
   },
-  sendWell: {
-    name: "SendWell B.V.",
-    initials: "SW",
-    id: "SDA-1003-2403-03",
-    tier: "Priority",
-    tierLabel: "Top 1% by shipment volume",
-  },
-  sourceDay: {
-    name: "SourceDay",
-    initials: "SD",
-    id: "SDA-1004-2404-04",
-    tier: "Standard",
-    tierLabel: "Recurring shipment account",
-  },
+  sendWell: { name: "SendWell B.V.", initials: "SW", id: "SDA-1003-2403-03", tier: "priority", tierNote: "topVolume" },
+  sourceDay: { name: "SourceDay", initials: "SD", id: "SDA-1004-2404-04", tier: "standard", tierNote: "recurring" },
   shippingEasy: {
     name: "ShippingEasy",
     initials: "SE",
     id: "SDA-1005-2405-05",
-    tier: "Standard",
-    tierLabel: "Recurring shipment account",
+    tier: "standard",
+    tierNote: "recurring",
   },
-  freightView: {
-    name: "FreightView",
-    initials: "FV",
-    id: "SDA-1006-2406-06",
-    tier: "Priority",
-    tierLabel: "Top 1% by shipment volume",
-  },
+  freightView: { name: "FreightView", initials: "FV", id: "SDA-1006-2406-06", tier: "priority", tierNote: "topVolume" },
   logisticsPlus: {
     name: "Logistics Plus",
     initials: "LP",
     id: "SDA-1007-2407-07",
-    tier: "Standard",
-    tierLabel: "Managed freight account",
+    tier: "standard",
+    tierNote: "managed",
   },
   transvirtual: {
     name: "Transvirtual",
     initials: "TV",
     id: "SDA-1008-2408-08",
-    tier: "Standard",
-    tierLabel: "Managed freight account",
+    tier: "standard",
+    tierNote: "managed",
   },
-  skyTrack: {
-    name: "SkyTrack",
-    initials: "ST",
-    id: "SDA-1009-2409-09",
-    tier: "Non-priority",
-    tierLabel: "Occasional shipment account",
-  },
-  maersk: {
-    name: "Maersk",
-    initials: "MK",
-    id: "SDA-1010-2410-10",
-    tier: "Priority",
-    tierLabel: "Top 1% by shipment volume",
-  },
-  flexport: {
-    name: "Flexport",
-    initials: "FX",
-    id: "SDA-1011-2411-11",
-    tier: "Priority",
-    tierLabel: "Top 1% by shipment volume",
-  },
+  skyTrack: { name: "SkyTrack", initials: "ST", id: "SDA-1009-2409-09", tier: "nonPriority", tierNote: "occasional" },
+  maersk: { name: "Maersk", initials: "MK", id: "SDA-1010-2410-10", tier: "priority", tierNote: "topVolume" },
+  flexport: { name: "Flexport", initials: "FX", id: "SDA-1011-2411-11", tier: "priority", tierNote: "topVolume" },
   piedPiper: {
     name: "Pied Piper",
     initials: "PP",
     id: "SDA-1012-2412-12",
-    tier: "Non-priority",
-    tierLabel: "Occasional shipment account",
+    tier: "nonPriority",
+    tierNote: "occasional",
   },
-} satisfies Record<string, ShipmentCustomer>;
+} as const satisfies Record<string, CustomerSource>;
 
-export const shipments: Shipment[] = [
+const places = {
+  cgk: { kind: "airport", name: "CGK", countryCode: "ID", coordinates: [106.6429036, -6.1238696] },
+  sin: { kind: "airport", name: "SIN", countryCode: "SG", coordinates: [103.9949824, 1.3510921] },
+  surabaya: { kind: "city", name: "Surabaya", countryCode: "ID", coordinates: [112.7377674, -7.2462836] },
+  semarang: { kind: "city", name: "Semarang", countryCode: "ID", coordinates: [110.4229104, -6.9903988] },
+  tanjungPriok: {
+    kind: "port",
+    name: "Tanjung Priok",
+    countryCode: "ID",
+    coordinates: [106.8805674, -6.1045642],
+  },
+  singaporePort: { kind: "portOf", name: "Singapore", countryCode: "SG", coordinates: [103.7566, 1.2788] },
+  kul: { kind: "airport", name: "KUL", countryCode: "MY", coordinates: [101.7063995, 2.7431274] },
+  bkk: { kind: "airport", name: "BKK", countryCode: "TH", coordinates: [100.7485803, 13.6818767] },
+  bandung: { kind: "city", name: "Bandung", countryCode: "ID", coordinates: [107.6070833, -6.9218457] },
+  yogyakarta: { kind: "city", name: "Yogyakarta", countryCode: "ID", coordinates: [110.3672845, -7.7953473] },
+  portKlang: { kind: "city", name: "Port Klang", countryCode: "MY", coordinates: [101.3913589, 2.9996963] },
+  laemChabang: { kind: "port", name: "Laem Chabang", countryCode: "TH", coordinates: [100.8994177, 13.0734119] },
+  hkg: { kind: "airport", name: "HKG", countryCode: "HK", coordinates: [113.9172999, 22.3125986] },
+  mnl: { kind: "airport", name: "MNL", countryCode: "PH", coordinates: [121.0219223, 14.5122467] },
+  jakarta: { kind: "city", name: "Jakarta", countryCode: "ID", coordinates: [106.827168, -6.1754049] },
+  shanghai: { kind: "port", name: "Shanghai", countryCode: "CN", coordinates: [121.4872194, 31.2219444] },
+  busan: { kind: "port", name: "Busan", countryCode: "KR", coordinates: [129.0492086, 35.1177052] },
+  nrt: { kind: "airport", name: "NRT", countryCode: "JP", coordinates: [140.3933101, 35.7758714] },
+  icn: { kind: "airport", name: "ICN", countryCode: "KR", coordinates: [126.4417093, 37.4634593] },
+  kualaLumpur: { kind: "city", name: "Kuala Lumpur", countryCode: "MY", coordinates: [101.6942371, 3.1516964] },
+  penang: { kind: "city", name: "Penang", countryCode: "MY", coordinates: [100.3287352, 5.4141619] },
+  cebu: { kind: "port", name: "Cebu", countryCode: "PH", coordinates: [123.9174564, 10.3054355] },
+  davao: { kind: "port", name: "Davao", countryCode: "PH", coordinates: [125.6627111, 7.1265272] },
+  dps: { kind: "airport", name: "DPS", countryCode: "ID", coordinates: [115.1673704, -8.746515] },
+  manilaPort: { kind: "portOf", name: "Manila", countryCode: "PH", coordinates: [120.9522815, 14.6038906] },
+  medan: { kind: "city", name: "Medan", countryCode: "ID", coordinates: [98.6741623, 3.5894617] },
+  pekanbaru: { kind: "city", name: "Pekanbaru", countryCode: "ID", coordinates: [101.4515727, 0.5262455] },
+  bom: { kind: "airport", name: "BOM", countryCode: "IN", coordinates: [72.8638223, 19.0901376] },
+  del: { kind: "airport", name: "DEL", countryCode: "IN", coordinates: [77.0847985, 28.5553942] },
+  rotterdam: { kind: "port", name: "Rotterdam", countryCode: "NL", coordinates: [4.4298268, 51.904333] },
+  hamburg: { kind: "port", name: "Hamburg", countryCode: "DE", coordinates: [9.9118353, 53.5279971] },
+  hoChiMinhCity: { kind: "city", name: "Ho Chi Minh City", countryCode: "VN", coordinates: [106.7166008, 10.7737261] },
+  daNang: { kind: "city", name: "Da Nang", countryCode: "VN", coordinates: [108.212, 16.068] },
+  dxb: { kind: "airport", name: "DXB", countryCode: "AE", coordinates: [55.3666519, 25.2515424] },
+  jed: { kind: "airport", name: "JED", countryCode: "SA", coordinates: [39.1634852, 21.6839754] },
+  nhavaSheva: { kind: "port", name: "Nhava Sheva", countryCode: "IN", coordinates: [72.952661, 18.9470339] },
+  colombo: { kind: "port", name: "Colombo", countryCode: "LK", coordinates: [79.8564409, 6.9646289] },
+  chiangMai: { kind: "city", name: "Chiang Mai", countryCode: "TH", coordinates: [98.9858802, 18.7882778] },
+  bangkok: { kind: "city", name: "Bangkok", countryCode: "TH", coordinates: [100.4935089, 13.7524938] },
+  kix: { kind: "airport", name: "KIX", countryCode: "JP", coordinates: [135.222523, 34.4342045] },
+  tpe: { kind: "airport", name: "TPE", countryCode: "TW", coordinates: [121.2345977, 25.0793174] },
+  bandarLampung: { kind: "city", name: "Bandar Lampung", countryCode: "ID", coordinates: [105.2643742, -5.4460713] },
+} as const satisfies Record<string, PlaceSource>;
+
+const note = (value: EtaNote): EtaPart => ({ kind: "note", note: value });
+const time = (value: string): EtaPart => ({ kind: "time", time: value });
+const weekday = (value: number): EtaPart => ({ kind: "weekday", weekday: value });
+
+export const shipmentSources = [
   {
     id: "SDA-01-2401",
     customer: customerAccounts.techCorp,
-    origin: {
-      display: "CGK Airport",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [106.6429036, -6.1238696],
-    },
-    destination: {
-      display: "SIN Airport",
-      country: "Singapore",
-      countryCode: "SG",
-      coordinates: [103.9949824, 1.3510921],
-    },
-    cargo: "Consumer Electronics",
-    handling: {
-      label: "Fragile electronics",
-      note: "Keep package sealed until handoff.",
-      tags: [
-        { label: "Do not stack", icon: Ban },
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Signature required", icon: PenLine },
-      ],
-    },
-    weight: "2,450 kg",
-    eta: "08:45 AM",
-    etaMeta: "Today",
-    status: "In Transit",
+    origin: places.cgk,
+    destination: places.sin,
+    handling: { label: "fragileElectronics", tags: ["doNotStack", "keepUpright", "signatureRequired"] },
+    weightKg: 2450,
+    eta: time("08:45"),
+    etaMeta: note("today"),
+    status: "inTransit",
     progress: 65,
     mode: "air",
     routeType: "flight",
@@ -199,32 +245,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-02-2402",
     customer: customerAccounts.regionalRoadExpress,
-    origin: {
-      display: "Surabaya",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [112.7377674, -7.2462836],
-    },
-    destination: {
-      display: "Semarang",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [110.4229104, -6.9903988],
-    },
-    cargo: "Industrial Machinery",
-    handling: {
-      label: "Heavy machinery",
-      note: "Secure machinery to pallet base before road dispatch.",
-      tags: [
-        { label: "Forklift only", icon: Forklift },
-        { label: "Secure load", icon: ShieldCheck },
-        { label: "Do not tip", icon: Ban },
-      ],
-    },
-    weight: "8,120 kg",
-    eta: "11:20 AM",
-    etaMeta: "Tomorrow",
-    status: "Delayed",
+    origin: places.surabaya,
+    destination: places.semarang,
+    handling: { label: "heavyMachinery", tags: ["forkliftOnly", "secureLoad", "doNotTip"] },
+    weightKg: 8120,
+    eta: time("11:20"),
+    etaMeta: note("tomorrow"),
+    status: "delayed",
     progress: 42,
     mode: "land",
     routeType: "road",
@@ -233,32 +260,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-03-2403",
     customer: customerAccounts.sendWell,
-    origin: {
-      display: "Tanjung Priok Port",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [106.8805674, -6.1045642],
-    },
-    destination: {
-      display: "Port of Singapore",
-      country: "Singapore",
-      countryCode: "SG",
-      coordinates: [103.7566, 1.2788],
-    },
-    cargo: "Frozen Seafood",
-    handling: {
-      label: "Temperature controlled",
-      note: "Maintain frozen chain at or below -18°C until port handoff.",
-      tags: [
-        { label: "Temperature log", icon: Thermometer },
-        { label: "Keep frozen", icon: Snowflake },
-        { label: "Seal intact", icon: ShieldCheck },
-      ],
-    },
-    weight: "19,800 kg",
-    eta: "09:15 PM",
-    etaMeta: "Delivered Yesterday",
-    status: "Delivered",
+    origin: places.tanjungPriok,
+    destination: places.singaporePort,
+    handling: { label: "temperatureControlled", tags: ["temperatureLog", "keepFrozen", "sealIntact"] },
+    weightKg: 19800,
+    eta: time("21:15"),
+    etaMeta: note("deliveredYesterday"),
+    status: "delivered",
     progress: 100,
     mode: "sea",
     routeType: "ship",
@@ -267,32 +275,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-04-2404",
     customer: customerAccounts.maersk,
-    origin: {
-      display: "KUL Airport",
-      country: "Malaysia",
-      countryCode: "MY",
-      coordinates: [101.7063995, 2.7431274],
-    },
-    destination: {
-      display: "BKK Airport",
-      country: "Thailand",
-      countryCode: "TH",
-      coordinates: [100.7485803, 13.6818767],
-    },
-    cargo: "Pharmaceutical Kits",
-    handling: {
-      label: "Temperature controlled",
-      note: "Maintain controlled temperature and verify hold clearance before release.",
-      tags: [
-        { label: "Temperature log", icon: Thermometer },
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Signature required", icon: PenLine },
-      ],
-    },
-    weight: "540 kg",
-    eta: "06:10 PM",
-    etaMeta: "Today",
-    status: "On Hold",
+    origin: places.kul,
+    destination: places.bkk,
+    handling: { label: "temperatureControlled", tags: ["temperatureLog", "keepUpright", "signatureRequired"] },
+    weightKg: 540,
+    eta: time("18:10"),
+    etaMeta: note("today"),
+    status: "onHold",
     progress: 28,
     mode: "air",
     routeType: "flight",
@@ -301,32 +290,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-05-2405",
     customer: customerAccounts.sourceDay,
-    origin: {
-      display: "Bandung",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [107.6070833, -6.9218457],
-    },
-    destination: {
-      display: "Yogyakarta",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [110.3672845, -7.7953473],
-    },
-    cargo: "Textiles",
-    handling: {
-      label: "Standard freight",
-      note: "Keep cartons dry and away from direct sunlight.",
-      tags: [
-        { label: "Keep dry", icon: Droplets },
-        { label: "Do not crush", icon: Ban },
-        { label: "Standard handoff", icon: PackageCheck },
-      ],
-    },
-    weight: "1,380 kg",
-    eta: "09:30 AM",
-    etaMeta: "Friday",
-    status: "Scheduled",
+    origin: places.bandung,
+    destination: places.yogyakarta,
+    handling: { label: "standardFreight", tags: ["keepDry", "doNotCrush", "standardHandoff"] },
+    weightKg: 1380,
+    eta: time("09:30"),
+    etaMeta: weekday(5),
+    status: "scheduled",
     progress: 12,
     mode: "land",
     routeType: "road",
@@ -335,32 +305,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-06-2406",
     customer: customerAccounts.logisticsPlus,
-    origin: {
-      display: "Port Klang",
-      country: "Malaysia",
-      countryCode: "MY",
-      coordinates: [101.3913589, 2.9996963],
-    },
-    destination: {
-      display: "Laem Chabang Port",
-      country: "Thailand",
-      countryCode: "TH",
-      coordinates: [100.8994177, 13.0734119],
-    },
-    cargo: "Construction Materials",
-    handling: {
-      label: "Heavy bulk cargo",
-      note: "Load with heavy-lift equipment and secure against shifting.",
-      tags: [
-        { label: "Heavy lift", icon: Forklift },
-        { label: "Secure load", icon: ShieldCheck },
-        { label: "Do not stack", icon: Ban },
-      ],
-    },
-    weight: "27,400 kg",
-    eta: "03:40 PM",
-    etaMeta: "Departing Today",
-    status: "Scheduled",
+    origin: places.portKlang,
+    destination: places.laemChabang,
+    handling: { label: "heavyBulk", tags: ["heavyLift", "secureLoad", "doNotStack"] },
+    weightKg: 27400,
+    eta: time("15:40"),
+    etaMeta: note("departingToday"),
+    status: "scheduled",
     progress: 18,
     mode: "sea",
     routeType: "ship",
@@ -369,32 +320,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-07-2407",
     customer: customerAccounts.flexport,
-    origin: {
-      display: "HKG Airport",
-      country: "Hong Kong",
-      countryCode: "HK",
-      coordinates: [113.9172999, 22.3125986],
-    },
-    destination: {
-      display: "MNL Airport",
-      country: "Philippines",
-      countryCode: "PH",
-      coordinates: [121.0219223, 14.5122467],
-    },
-    cargo: "Medical Devices",
-    handling: {
-      label: "Sensitive medical equipment",
-      note: "Keep medical devices sealed until customs inspection is complete.",
-      tags: [
-        { label: "Seal intact", icon: ShieldCheck },
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Signature required", icon: PenLine },
-      ],
-    },
-    weight: "860 kg",
-    eta: "Pending",
-    etaMeta: "Customs",
-    status: "Customs Hold",
+    origin: places.hkg,
+    destination: places.mnl,
+    handling: { label: "sensitiveMedical", tags: ["sealIntact", "keepUpright", "signatureRequired"] },
+    weightKg: 860,
+    eta: note("pending"),
+    etaMeta: note("customs"),
+    status: "customsHold",
     progress: 33,
     mode: "air",
     routeType: "flight",
@@ -403,32 +335,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-08-2408",
     customer: customerAccounts.shippingEasy,
-    origin: {
-      display: "Jakarta",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [106.827168, -6.1754049],
-    },
-    destination: {
-      display: "Bandung",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [107.6070833, -6.9218457],
-    },
-    cargo: "Retail Apparel",
-    handling: {
-      label: "Standard freight",
-      note: "Keep cartons dry and call receiver before final delivery.",
-      tags: [
-        { label: "Keep dry", icon: Droplets },
-        { label: "Call before delivery", icon: Truck },
-        { label: "Standard handoff", icon: PackageCheck },
-      ],
-    },
-    weight: "620 kg",
-    eta: "02:15 PM",
-    etaMeta: "Today",
-    status: "Out for Delivery",
+    origin: places.jakarta,
+    destination: places.bandung,
+    handling: { label: "standardFreight", tags: ["keepDry", "callBeforeDelivery", "standardHandoff"] },
+    weightKg: 620,
+    eta: time("14:15"),
+    etaMeta: note("today"),
+    status: "outForDelivery",
     progress: 88,
     mode: "land",
     routeType: "road",
@@ -437,32 +350,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-09-2409",
     customer: customerAccounts.freightView,
-    origin: {
-      display: "Shanghai Port",
-      country: "China",
-      countryCode: "CN",
-      coordinates: [121.4872194, 31.2219444],
-    },
-    destination: {
-      display: "Busan Port",
-      country: "South Korea",
-      countryCode: "KR",
-      coordinates: [129.0492086, 35.1177052],
-    },
-    cargo: "Auto Parts",
-    handling: {
-      label: "Industrial parts",
-      note: "Secure pallets and protect machined surfaces from moisture.",
-      tags: [
-        { label: "Secure load", icon: ShieldCheck },
-        { label: "Keep dry", icon: Droplets },
-        { label: "Forklift only", icon: Forklift },
-      ],
-    },
-    weight: "12,200 kg",
-    eta: "05:50 PM",
-    etaMeta: "Wednesday",
-    status: "In Transit",
+    origin: places.shanghai,
+    destination: places.busan,
+    handling: { label: "industrialParts", tags: ["secureLoad", "keepDry", "forkliftOnly"] },
+    weightKg: 12200,
+    eta: time("17:50"),
+    etaMeta: weekday(3),
+    status: "inTransit",
     progress: 54,
     mode: "sea",
     routeType: "ship",
@@ -471,32 +365,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-10-2410",
     customer: customerAccounts.techCorp,
-    origin: {
-      display: "NRT Airport",
-      country: "Japan",
-      countryCode: "JP",
-      coordinates: [140.3933101, 35.7758714],
-    },
-    destination: {
-      display: "ICN Airport",
-      country: "South Korea",
-      countryCode: "KR",
-      coordinates: [126.4417093, 37.4634593],
-    },
-    cargo: "Semiconductor Wafers",
-    handling: {
-      label: "High-value fragile cargo",
-      note: "Keep wafers sealed in shock-protected packaging until signed handoff.",
-      tags: [
-        { label: "Do not stack", icon: Ban },
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Signature required", icon: PenLine },
-      ],
-    },
-    weight: "320 kg",
-    eta: "08:30 PM",
-    etaMeta: "Delivered Yesterday",
-    status: "Delivered",
+    origin: places.nrt,
+    destination: places.icn,
+    handling: { label: "highValueFragile", tags: ["doNotStack", "keepUpright", "signatureRequired"] },
+    weightKg: 320,
+    eta: time("20:30"),
+    etaMeta: note("deliveredYesterday"),
+    status: "delivered",
     progress: 100,
     mode: "air",
     routeType: "flight",
@@ -505,32 +380,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-11-2411",
     customer: customerAccounts.sourceDay,
-    origin: {
-      display: "Kuala Lumpur",
-      country: "Malaysia",
-      countryCode: "MY",
-      coordinates: [101.6942371, 3.1516964],
-    },
-    destination: {
-      display: "Penang",
-      country: "Malaysia",
-      countryCode: "MY",
-      coordinates: [100.3287352, 5.4141619],
-    },
-    cargo: "Food Ingredients",
-    handling: {
-      label: "Food-grade handling",
-      note: "Keep food-grade seals intact and avoid cross-contamination.",
-      tags: [
-        { label: "Food grade", icon: PackageCheck },
-        { label: "Seal intact", icon: ShieldCheck },
-        { label: "Keep dry", icon: Droplets },
-      ],
-    },
-    weight: "3,950 kg",
-    eta: "01:05 PM",
-    etaMeta: "Today",
-    status: "In Transit",
+    origin: places.kualaLumpur,
+    destination: places.penang,
+    handling: { label: "foodGrade", tags: ["foodGrade", "sealIntact", "keepDry"] },
+    weightKg: 3950,
+    eta: time("13:05"),
+    etaMeta: note("today"),
+    status: "inTransit",
     progress: 71,
     mode: "land",
     routeType: "road",
@@ -539,32 +395,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-12-2412",
     customer: customerAccounts.transvirtual,
-    origin: {
-      display: "Cebu Port",
-      country: "Philippines",
-      countryCode: "PH",
-      coordinates: [123.9174564, 10.3054355],
-    },
-    destination: {
-      display: "Davao Port",
-      country: "Philippines",
-      countryCode: "PH",
-      coordinates: [125.6627111, 7.1265272],
-    },
-    cargo: "Agricultural Produce",
-    handling: {
-      label: "Perishable goods",
-      note: "Prioritize ventilation and inspect produce condition at port handoff.",
-      tags: [
-        { label: "Perishable", icon: Thermometer },
-        { label: "Ventilated hold", icon: PackageCheck },
-        { label: "Inspect on arrival", icon: CheckCircle2 },
-      ],
-    },
-    weight: "6,700 kg",
-    eta: "09:40 AM",
-    etaMeta: "Friday",
-    status: "Delayed",
+    origin: places.cebu,
+    destination: places.davao,
+    handling: { label: "perishable", tags: ["perishable", "ventilatedHold", "inspectOnArrival"] },
+    weightKg: 6700,
+    eta: time("09:40"),
+    etaMeta: weekday(5),
+    status: "delayed",
     progress: 39,
     mode: "sea",
     routeType: "ship",
@@ -573,32 +410,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-13-2413",
     customer: customerAccounts.flexport,
-    origin: {
-      display: "SIN Airport",
-      country: "Singapore",
-      countryCode: "SG",
-      coordinates: [103.9949824, 1.3510921],
-    },
-    destination: {
-      display: "DPS Airport",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [115.1673704, -8.746515],
-    },
-    cargo: "Luxury Retail Goods",
-    handling: {
-      label: "High-value cargo",
-      note: "Keep cartons sealed; release only to authorized receiving contact.",
-      tags: [
-        { label: "High value", icon: Star },
-        { label: "Do not stack", icon: Ban },
-        { label: "Signature required", icon: PenLine },
-      ],
-    },
-    weight: "210 kg",
-    eta: "07:15 AM",
-    etaMeta: "Monday",
-    status: "Scheduled",
+    origin: places.sin,
+    destination: places.dps,
+    handling: { label: "highValue", tags: ["highValue", "doNotStack", "signatureRequired"] },
+    weightKg: 210,
+    eta: time("07:15"),
+    etaMeta: weekday(1),
+    status: "scheduled",
     progress: 9,
     mode: "air",
     routeType: "flight",
@@ -607,32 +425,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-14-2414",
     customer: customerAccounts.sendWell,
-    origin: {
-      display: "Port of Manila",
-      country: "Philippines",
-      countryCode: "PH",
-      coordinates: [120.9522815, 14.6038906],
-    },
-    destination: {
-      display: "Tanjung Priok Port",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [106.8805674, -6.1045642],
-    },
-    cargo: "Paper Rolls",
-    handling: {
-      label: "Moisture-sensitive cargo",
-      note: "Keep rolls dry and avoid edge impact during unloading.",
-      tags: [
-        { label: "Keep dry", icon: Droplets },
-        { label: "Do not tip", icon: Ban },
-        { label: "Forklift only", icon: Forklift },
-      ],
-    },
-    weight: "15,900 kg",
-    eta: "Awaiting Release",
-    etaMeta: "Warehouse",
-    status: "On Hold",
+    origin: places.manilaPort,
+    destination: places.tanjungPriok,
+    handling: { label: "moistureSensitive", tags: ["keepDry", "doNotTip", "forkliftOnly"] },
+    weightKg: 15900,
+    eta: note("awaitingRelease"),
+    etaMeta: note("warehouse"),
+    status: "onHold",
     progress: 25,
     mode: "sea",
     routeType: "ship",
@@ -641,32 +440,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-15-2415",
     customer: customerAccounts.skyTrack,
-    origin: {
-      display: "Medan",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [98.6741623, 3.5894617],
-    },
-    destination: {
-      display: "Pekanbaru",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [101.4515727, 0.5262455],
-    },
-    cargo: "Beverage Stock",
-    handling: {
-      label: "Standard palletized freight",
-      note: "Keep pallets upright and prevent carton crush during road transfer.",
-      tags: [
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Do not stack", icon: Ban },
-        { label: "Standard handoff", icon: PackageCheck },
-      ],
-    },
-    weight: "4,500 kg",
-    eta: "03:30 PM",
-    etaMeta: "Today",
-    status: "Scheduled",
+    origin: places.medan,
+    destination: places.pekanbaru,
+    handling: { label: "standardPalletized", tags: ["keepUpright", "doNotStack", "standardHandoff"] },
+    weightKg: 4500,
+    eta: time("15:30"),
+    etaMeta: note("today"),
+    status: "scheduled",
     progress: 16,
     mode: "land",
     routeType: "road",
@@ -675,32 +455,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-16-2416",
     customer: customerAccounts.regionalRoadExpress,
-    origin: {
-      display: "BOM Airport",
-      country: "India",
-      countryCode: "IN",
-      coordinates: [72.8638223, 19.0901376],
-    },
-    destination: {
-      display: "DEL Airport",
-      country: "India",
-      countryCode: "IN",
-      coordinates: [77.0847985, 28.5553942],
-    },
-    cargo: "Auto Components",
-    handling: {
-      label: "Industrial parts",
-      note: "Secure crates and inspect pallet straps before final handoff.",
-      tags: [
-        { label: "Secure load", icon: ShieldCheck },
-        { label: "Forklift only", icon: Forklift },
-        { label: "Inspect on arrival", icon: CheckCircle2 },
-      ],
-    },
-    weight: "780 kg",
-    eta: "04:10 PM",
-    etaMeta: "Today",
-    status: "Out for Delivery",
+    origin: places.bom,
+    destination: places.del,
+    handling: { label: "industrialParts", tags: ["secureLoad", "forkliftOnly", "inspectOnArrival"] },
+    weightKg: 780,
+    eta: time("16:10"),
+    etaMeta: note("today"),
+    status: "outForDelivery",
     progress: 84,
     mode: "air",
     routeType: "flight",
@@ -709,32 +470,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-17-2417",
     customer: customerAccounts.logisticsPlus,
-    origin: {
-      display: "Rotterdam Port",
-      country: "Netherlands",
-      countryCode: "NL",
-      coordinates: [4.4298268, 51.904333],
-    },
-    destination: {
-      display: "Hamburg Port",
-      country: "Germany",
-      countryCode: "DE",
-      coordinates: [9.9118353, 53.5279971],
-    },
-    cargo: "Packaging Materials",
-    handling: {
-      label: "Standard freight",
-      note: "Keep pallets dry and verify pallet count at discharge.",
-      tags: [
-        { label: "Keep dry", icon: Droplets },
-        { label: "Count on arrival", icon: CheckCircle2 },
-        { label: "Standard handoff", icon: PackageCheck },
-      ],
-    },
-    weight: "21,300 kg",
-    eta: "Next Week",
-    etaMeta: "Tuesday",
-    status: "In Transit",
+    origin: places.rotterdam,
+    destination: places.hamburg,
+    handling: { label: "standardFreight", tags: ["keepDry", "countOnArrival", "standardHandoff"] },
+    weightKg: 21300,
+    eta: note("nextWeek"),
+    etaMeta: weekday(2),
+    status: "inTransit",
     progress: 62,
     mode: "sea",
     routeType: "ship",
@@ -743,32 +485,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-18-2418",
     customer: customerAccounts.transvirtual,
-    origin: {
-      display: "Ho Chi Minh City",
-      country: "Vietnam",
-      countryCode: "VN",
-      coordinates: [106.7166008, 10.7737261],
-    },
-    destination: {
-      display: "Da Nang",
-      country: "Vietnam",
-      countryCode: "VN",
-      coordinates: [108.212, 16.068],
-    },
-    cargo: "Household Appliances",
-    handling: {
-      label: "Fragile bulky goods",
-      note: "Use two-person handling and keep appliances upright until delivery.",
-      tags: [
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Do not stack", icon: Ban },
-        { label: "Two-person lift", icon: Truck },
-      ],
-    },
-    weight: "2,060 kg",
-    eta: "11:40 AM",
-    etaMeta: "Delivered Today",
-    status: "Delivered",
+    origin: places.hoChiMinhCity,
+    destination: places.daNang,
+    handling: { label: "fragileBulky", tags: ["keepUpright", "doNotStack", "twoPersonLift"] },
+    weightKg: 2060,
+    eta: time("11:40"),
+    etaMeta: note("deliveredToday"),
+    status: "delivered",
     progress: 100,
     mode: "land",
     routeType: "road",
@@ -777,32 +500,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-19-2419",
     customer: customerAccounts.maersk,
-    origin: {
-      display: "DXB Airport",
-      country: "United Arab Emirates",
-      countryCode: "AE",
-      coordinates: [55.3666519, 25.2515424],
-    },
-    destination: {
-      display: "JED Airport",
-      country: "Saudi Arabia",
-      countryCode: "SA",
-      coordinates: [39.1634852, 21.6839754],
-    },
-    cargo: "Temperature Controlled Goods",
-    handling: {
-      label: "Temperature controlled",
-      note: "Maintain temperature range and escalate delay exceptions immediately.",
-      tags: [
-        { label: "Temperature log", icon: Thermometer },
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Escalate delay", icon: AlertTriangleIcon },
-      ],
-    },
-    weight: "1,120 kg",
-    eta: "10:50 PM",
-    etaMeta: "Tonight",
-    status: "Delayed",
+    origin: places.dxb,
+    destination: places.jed,
+    handling: { label: "temperatureControlled", tags: ["temperatureLog", "keepUpright", "escalateDelay"] },
+    weightKg: 1120,
+    eta: time("22:50"),
+    etaMeta: note("tonight"),
+    status: "delayed",
     progress: 47,
     mode: "air",
     routeType: "flight",
@@ -811,32 +515,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-20-2420",
     customer: customerAccounts.freightView,
-    origin: {
-      display: "Nhava Sheva Port",
-      country: "India",
-      countryCode: "IN",
-      coordinates: [72.952661, 18.9470339],
-    },
-    destination: {
-      display: "Colombo Port",
-      country: "Sri Lanka",
-      countryCode: "LK",
-      coordinates: [79.8564409, 6.9646289],
-    },
-    cargo: "Steel Coils",
-    handling: {
-      label: "Heavy bulk cargo",
-      note: "Use coil cradles and confirm lashings before release.",
-      tags: [
-        { label: "Heavy lift", icon: Forklift },
-        { label: "Secure load", icon: ShieldCheck },
-        { label: "Do not tip", icon: Ban },
-      ],
-    },
-    weight: "31,800 kg",
-    eta: "06:00 AM",
-    etaMeta: "Thursday",
-    status: "Scheduled",
+    origin: places.nhavaSheva,
+    destination: places.colombo,
+    handling: { label: "heavyBulk", tags: ["heavyLift", "secureLoad", "doNotTip"] },
+    weightKg: 31800,
+    eta: time("06:00"),
+    etaMeta: weekday(4),
+    status: "scheduled",
     progress: 14,
     mode: "sea",
     routeType: "ship",
@@ -845,32 +530,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-21-2421",
     customer: customerAccounts.piedPiper,
-    origin: {
-      display: "Chiang Mai",
-      country: "Thailand",
-      countryCode: "TH",
-      coordinates: [98.9858802, 18.7882778],
-    },
-    destination: {
-      display: "Bangkok",
-      country: "Thailand",
-      countryCode: "TH",
-      coordinates: [100.4935089, 13.7524938],
-    },
-    cargo: "Furniture",
-    handling: {
-      label: "Fragile bulky goods",
-      note: "Use blanket wrap and avoid stacking on finished surfaces.",
-      tags: [
-        { label: "Do not stack", icon: Ban },
-        { label: "Keep dry", icon: Droplets },
-        { label: "Two-person lift", icon: Truck },
-      ],
-    },
-    weight: "5,240 kg",
-    eta: "08:20 AM",
-    etaMeta: "Tomorrow",
-    status: "In Transit",
+    origin: places.chiangMai,
+    destination: places.bangkok,
+    handling: { label: "fragileBulky", tags: ["doNotStack", "keepDry", "twoPersonLift"] },
+    weightKg: 5240,
+    eta: time("08:20"),
+    etaMeta: note("tomorrow"),
+    status: "inTransit",
     progress: 58,
     mode: "land",
     routeType: "road",
@@ -879,32 +545,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-22-2422",
     customer: customerAccounts.techCorp,
-    origin: {
-      display: "KIX Airport",
-      country: "Japan",
-      countryCode: "JP",
-      coordinates: [135.222523, 34.4342045],
-    },
-    destination: {
-      display: "TPE Airport",
-      country: "Taiwan",
-      countryCode: "TW",
-      coordinates: [121.2345977, 25.0793174],
-    },
-    cargo: "Precision Tools",
-    handling: {
-      label: "High-value precision cargo",
-      note: "Keep locked case sealed pending security clearance.",
-      tags: [
-        { label: "Security hold", icon: ShieldCheck },
-        { label: "Seal intact", icon: ShieldCheck },
-        { label: "Signature required", icon: PenLine },
-      ],
-    },
-    weight: "430 kg",
-    eta: "Pending",
-    etaMeta: "Security",
-    status: "On Hold",
+    origin: places.kix,
+    destination: places.tpe,
+    handling: { label: "highValuePrecision", tags: ["securityHold", "sealIntact", "signatureRequired"] },
+    weightKg: 430,
+    eta: note("pending"),
+    etaMeta: note("security"),
+    status: "onHold",
     progress: 29,
     mode: "air",
     routeType: "flight",
@@ -913,32 +560,13 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-23-2423",
     customer: customerAccounts.maersk,
-    origin: {
-      display: "Port of Singapore",
-      country: "Singapore",
-      countryCode: "SG",
-      coordinates: [103.7566, 1.2788],
-    },
-    destination: {
-      display: "Port Klang",
-      country: "Malaysia",
-      countryCode: "MY",
-      coordinates: [101.3913589, 2.9996963],
-    },
-    cargo: "Chemicals",
-    handling: {
-      label: "Hazardous materials review",
-      note: "Hold pending hazardous materials review and port clearance.",
-      tags: [
-        { label: "Hazmat review", icon: Flame },
-        { label: "Keep upright", icon: ArrowUp },
-        { label: "Restricted handling", icon: ShieldCheck },
-      ],
-    },
-    weight: "18,600 kg",
-    eta: "Departing",
-    etaMeta: "02:50 PM",
-    status: "Scheduled",
+    origin: places.singaporePort,
+    destination: places.portKlang,
+    handling: { label: "hazmatReview", tags: ["hazmatReview", "keepUpright", "restrictedHandling"] },
+    weightKg: 18600,
+    eta: note("departing"),
+    etaMeta: time("14:50"),
+    status: "scheduled",
     progress: 19,
     mode: "sea",
     routeType: "ship",
@@ -947,35 +575,18 @@ export const shipments: Shipment[] = [
   {
     id: "SDA-24-2424",
     customer: customerAccounts.shippingEasy,
-    origin: {
-      display: "Bandar Lampung",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [105.2643742, -5.4460713],
-    },
-    destination: {
-      display: "Jakarta",
-      country: "Indonesia",
-      countryCode: "ID",
-      coordinates: [106.827168, -6.1754049],
-    },
-    cargo: "Fresh Produce",
-    handling: {
-      label: "Perishable goods",
-      note: "Prioritize same-day handoff and keep produce ventilated.",
-      tags: [
-        { label: "Perishable", icon: Thermometer },
-        { label: "Ventilated hold", icon: PackageCheck },
-        { label: "Inspect on arrival", icon: CheckCircle2 },
-      ],
-    },
-    weight: "970 kg",
-    eta: "06:20 PM",
-    etaMeta: "Delivered Today",
-    status: "Delivered",
+    origin: places.bandarLampung,
+    destination: places.jakarta,
+    handling: { label: "perishable", tags: ["perishable", "ventilatedHold", "inspectOnArrival"] },
+    weightKg: 970,
+    eta: time("18:20"),
+    etaMeta: note("deliveredToday"),
+    status: "delivered",
     progress: 100,
     mode: "land",
     routeType: "road",
     transportNumber: "BE 1745 YU",
   },
-];
+] as const satisfies readonly ShipmentSource[];
+
+export type ShipmentId = (typeof shipmentSources)[number]["id"];

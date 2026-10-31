@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
+import { LocaleBundles } from "@/app/_components/locale-root";
+import { pageMetadata } from "@/config/metadata.server";
 
 import { GrowthReports } from "./_components/growth-reports";
+import { growthBundle, growthMessages } from "./_components/messages.server";
 
-export const metadata: Metadata = {
-  title: "Growth Reports",
-  description: "Won revenue by segment, lead sources, new customers and win rate over the last 3, 6 or 12 months.",
-  alternates: {
-    canonical: "/dashboard/analytics",
-  },
-};
+export const generateMetadata = () => pageMetadata("/dashboard/analytics", growthMessages);
 
 export default function Page() {
-  return <GrowthReports />;
+  return (
+    <LocaleBundles bundles={[growthBundle]}>
+      <GrowthReports />
+    </LocaleBundles>
+  );
 }
