@@ -1,0 +1,23 @@
+// Cloudflare Workers deployment through the OpenNext adapter (`npm run deploy`). Rename the worker, and its
+// self-reference below, for your own deployment.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "admin-os",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-23",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // OpenNext calls the worker itself for caching and revalidation; the service name must match the worker name.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "admin-os"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
