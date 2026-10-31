@@ -171,7 +171,8 @@
         "src/app/(main)/dashboard/(examples)/logistics/**",
         "src/app/(main)/dashboard/(examples)/patient-monitoring/**",
         "src/app/(main)/dashboard/(examples)/(legacy)/analytics-v1/**",
-        "src/app/(main)/dashboard/(examples)/(legacy)/crm-v1/**"
+        "src/app/(main)/dashboard/(examples)/(legacy)/crm-v1/**",
+        "src/app/(external)/**"
       ],
       "plugins": ["./lint/no-visible-string-props.grit", "./lint/no-visible-string-children.grit"],
       "linter": {

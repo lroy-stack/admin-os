@@ -141,6 +141,7 @@ German statuses are participles without gender in these positions and need no ru
 | Party size, covers | Covers | Comensales | Gedecke | Couverts | Restaurant preset vocabulary |
 | Walk-in | Walk-in | Walk-in | Walk-in | Walk-in | Never translated (owner): the term staff use; the button, the booking channel and a walk-in guest all say "Walk-in" |
 | Floor plan | Floor plan | Plano de sala | Raumplan | Plan de salle | |
+| Arrivals (the rail) | Arrivals | Llegadas | Ankünfte | Arrivées | The rail of upcoming bookings by time slot |
 | Guest | Guest | Cliente | Gast | Client | es uses "cliente" for a person at the table |
 | Appointment | Appointment | Cita | Termin | Rendez-vous | Salon and workshop presets |
 | Event | Event | Evento | Termin | Événement | de: "Termin" covers event and appointment; use "Veranstaltung" only for a public event |
@@ -234,6 +235,24 @@ German statuses are participles without gender in these positions and need no ru
 | Not found | Page not found | Página no encontrada | Seite nicht gefunden | Page introuvable | |
 | No permission | You do not have permission | No tienes permiso | Du hast keine Berechtigung | Vous n’avez pas l’autorisation | |
 | Required field | Enter a value. | Introduce un valor. | Gib einen Wert ein. | Saisissez une valeur. | |
+
+### Product and platform
+
+| Concept | en | es | de | fr | Note |
+| --- | --- | --- | --- | --- | --- |
+| Light (theme mode) | Light | Claro | Hell | Clair | |
+| Dark (theme mode) | Dark | Oscuro | Dunkel | Sombre | |
+| System (theme mode) | System | Sistema | System | Système | |
+| Owner (role) | Owner | Propietario | Inhaber | Propriétaire | `src/core/access`; a preset vocabulary may rename it. Not the owner of a deal |
+| Manager (role) | Manager | Encargado | Leitung | Responsable | |
+| Staff (role) | Staff | Personal | Mitarbeitende | Personnel | |
+| Permission | Permission | Permiso | Berechtigung | Autorisation | |
+| Vertical preset | Vertical preset | Preset por sector | Branchen-Preset | Préréglage métier | Hospitality, salon, workshop |
+| Liquid glass | Liquid glass | liquid glass | Liquid Glass | liquid glass | The design's name, not translated; de capitalises it as a noun |
+| Capability | Capability | Capacidad | Fähigkeit | Capacité | What a screen or an MCP tool may call |
+| Mock adapter | Mock adapter | Adaptador simulado | Mock-Adapter | Adaptateur fictif | |
+| AI assistant | AI assistant | Asistente de IA | KI-Assistent | Assistant IA | |
+| Seed data | Seed data | Datos de ejemplo | Beispieldaten | Données d’exemple | |
 
 ## What is never translated
 

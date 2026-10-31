@@ -18,7 +18,7 @@ const en: AppMessages = {
   meta: {
     title: "admin-OS: open-source management dashboard for small businesses",
     description:
-      "MIT-licensed management dashboard for restaurants, salons and workshops: bookings with a live floor plan, customers, team, catalog and messaging. Built with Next.js, shadcn/ui and liquid glass.",
+      "MIT-licensed management dashboard for restaurants, salons and workshops: bookings with a live floor plan, liquid-glass themes, four languages and an MCP server for AI assistants. Built with Next.js and shadcn/ui.",
   },
   copyright: "© {year} admin-OS. Open source under the MIT license.",
 };
@@ -27,7 +27,7 @@ const es: AppMessages = {
   meta: {
     title: "admin-OS: panel de gestión de código abierto para pequeños negocios",
     description:
-      "Panel de gestión con licencia MIT para restaurantes, salones y talleres: reservas con plano de sala en vivo, clientes, equipo, catálogo y mensajería. Creado con Next.js, shadcn/ui y liquid glass.",
+      "Panel de gestión con licencia MIT para restaurantes, salones y talleres: reservas con plano de sala en vivo, temas liquid glass, cuatro idiomas y un servidor MCP para asistentes de IA. Creado con Next.js y shadcn/ui.",
   },
   copyright: "© {year} admin-OS. Código abierto bajo licencia MIT.",
 };
@@ -36,7 +36,7 @@ const de: AppMessages = {
   meta: {
     title: "admin-OS: Open-Source-Verwaltungsdashboard für kleine Unternehmen",
     description:
-      "Verwaltungsdashboard unter MIT-Lizenz für Restaurants, Salons und Werkstätten: Reservierungen mit Live-Raumplan, Kunden, Team, Katalog und Nachrichten. Entwickelt mit Next.js, shadcn/ui und Liquid Glass.",
+      "Verwaltungsdashboard unter MIT-Lizenz für Restaurants, Salons und Werkstätten: Reservierungen mit Live-Raumplan, Liquid-Glass-Designs, vier Sprachen und ein MCP-Server für KI-Assistenten. Entwickelt mit Next.js und shadcn/ui.",
   },
   copyright: "© {year} admin-OS. Open Source unter der MIT-Lizenz.",
 };
@@ -45,7 +45,7 @@ const fr: AppMessages = {
   meta: {
     title: "admin-OS : tableau de bord de gestion open source pour petites entreprises",
     description:
-      "Tableau de bord de gestion sous licence MIT pour restaurants, salons et ateliers : réservations avec plan de salle en direct, clients, équipe, catalogue et messagerie. Conçu avec Next.js, shadcn/ui et liquid glass.",
+      "Tableau de bord de gestion sous licence MIT pour restaurants, salons et ateliers : réservations avec plan de salle en direct, thèmes liquid glass, quatre langues et un serveur MCP pour les assistants IA. Conçu avec Next.js et shadcn/ui.",
   },
   copyright: "© {year} admin-OS. Logiciel libre sous licence MIT.",
 };

@@ -7,7 +7,12 @@ value: lime
 Reference theme and the default: the lime and red palette of the first glass skin on a warm olive neutral.
 Light mode deepens the trio to ink strength; dark mode keeps the original pastels and backdrop hues, with the
 brightest blooms dimmed so text on the glass stays AA.
+
+The landing page (/) always wears Lime, whatever preset the visitor saved: the `:has([data-landing-page])` selector
+of each block outranks every `:root[data-theme-preset="…"]` rule while the landing is mounted. The Lime selector stays
+last in each list, where generate-theme-presets looks for it.
 */
+:root[data-theme-preset]:has([data-landing-page]),
 :root[data-theme-preset="lime"] {
   --tint-hue: 128.8;
   --brand: oklch(0.52 0.15 132);
@@ -30,6 +35,7 @@ brightest blooms dimmed so text on the glass stays AA.
   --app-backdrop-overlay: oklch(1 0 0 / 25%);
 }
 
+.dark:root[data-theme-preset]:has([data-landing-page]),
 .dark:root[data-theme-preset="lime"] {
   --brand: oklch(0.915 0.165 120.51);
   --brand-foreground: oklch(0.205 0.03 120);

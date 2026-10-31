@@ -1,61 +1,44 @@
-import Link from "next/link";
-
 import { ArrowUpRight } from "lucide-react";
+import { siGithub } from "simple-icons";
 
+import { SimpleIcon } from "@/components/simple-icon";
 import { Button } from "@/components/ui/button";
+import { APP_CONFIG } from "@/config/app-config";
+import { getMessages } from "@/config/locale.server";
 
-import { GitHubStarButton } from "./github-star-button";
-
-const repositoryUrl = "https://github.com/lroy-stack/admin-os";
-const repositoryStarsUrl = "https://api.github.com/repos/lroy-stack/admin-os/stargazers/count";
-
-type GitHubStarsResponse = {
-  count: number;
-};
-
-async function getGitHubStarCount() {
-  try {
-    const response = await fetch(repositoryStarsUrl, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "admin-os",
-        "X-GitHub-Api-Version": "2026-03-10",
-      },
-      next: { revalidate: 3600 },
-    });
-
-    if (!response.ok) return null;
-
-    const data = (await response.json()) as GitHubStarsResponse;
-    return Number.isFinite(data.count) ? data.count : null;
-  } catch {
-    return null;
-  }
-}
+import { landingMessages } from "./messages.server";
 
 export async function Intro() {
-  const starCount = await getGitHubStarCount();
+  const text = await getMessages(landingMessages);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
         <h1 className="text-2xl leading-snug font-medium tracking-tight text-balance sm:text-3xl" id="hero-title">
-          A polished admin dashboard built to fit your stack and the way you work.
+          {text.hero.title}
         </h1>
-        <p className="text-muted-foreground text-sm leading-6 sm:text-base">
-          Choose Radix UI, Base UI, React Aria, or TanStack Start, all with the same polished experience.
-        </p>
+        <p className="text-muted-foreground text-sm leading-6 text-pretty sm:text-base">{text.hero.lead}</p>
       </div>
 
       <div className="flex flex-wrap gap-2 sm:gap-3">
         <Button asChild>
-          <Link href="/dashboard/default" prefetch={false}>
-            Live demo
-            <ArrowUpRight aria-hidden="true" data-icon="inline-end" />
-          </Link>
+          <a href={APP_CONFIG.repository} target="_blank" rel="noreferrer">
+            <SimpleIcon icon={siGithub} aria-hidden data-icon="inline-start" className="fill-current" />
+            {text.hero.github}
+          </a>
         </Button>
-        <GitHubStarButton initialCount={starCount} repositoryUrl={repositoryUrl} />
+        <Button asChild variant="outline">
+          <a href={`${APP_CONFIG.repository}#getting-started`} target="_blank" rel="noreferrer">
+            {text.links.start}
+            <ArrowUpRight aria-hidden="true" data-icon="inline-end" />
+          </a>
+        </Button>
       </div>
+
+      <p className="text-muted-foreground flex items-center gap-2 text-xs">
+        <span aria-hidden="true" className="bg-brand size-1.5 shrink-0 rounded-full" />
+        {text.hero.status}
+      </p>
     </div>
   );
 }

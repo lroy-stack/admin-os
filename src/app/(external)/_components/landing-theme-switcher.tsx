@@ -4,11 +4,16 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import { Button } from "@/components/ui/button";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { usePreferencesStore } from "@/ds/preferences";
+
+import { landingMessageKey } from "./messages";
 
 const THEME_CYCLE = ["light", "dark", "system"] as const;
 
 export function LandingThemeSwitcher() {
+  const text = useMessages(landingMessageKey);
+  const locale = useLocale();
   const { themeMode, setPreference } = usePreferencesStore(
     useShallow((state) => ({
       themeMode: state.values.theme_mode,
@@ -34,7 +39,7 @@ export function LandingThemeSwitcher() {
       size="icon"
       variant="ghost"
       onClick={cycleTheme}
-      aria-label={`Current theme: ${themeMode}. Click to cycle themes`}
+      aria-label={format(text.theme.cycle, locale, { mode: text.theme.modes[themeMode] })}
     >
       <Monitor className="hidden [html[data-theme-mode=system]_&]:block" />
       <Sun className="hidden dark:block [html[data-theme-mode=system]_&]:hidden" />
