@@ -32,6 +32,12 @@ function DateCapsule({ top, bottom }: { top: string; bottom: string }) {
 
 const TIME: Intl.DateTimeFormatOptions = { timeStyle: "short" };
 
+/**
+ * Item titles default to `w-fit` and one line, so a long German or French title outgrows the row and runs under the
+ * amount. Here a title takes the row's width, wraps to two lines and hyphenates by the wrapper's `lang`.
+ */
+const LONG_TITLE = "line-clamp-2 block w-full font-normal break-words hyphens-auto";
+
 /** Next events after "now"; `events` is null until the client clock is known, to avoid hydration drift. */
 export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
   const text = useMessages(calendarMessageKey).sidebar;
@@ -71,7 +77,9 @@ export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
                 />
               </ItemMedia>
               <ItemContent className="min-w-0">
-                <ItemTitle className="truncate font-normal">{event.title}</ItemTitle>
+                <ItemTitle className={LONG_TITLE} title={event.title}>
+                  {event.title}
+                </ItemTitle>
                 <ItemDescription className="text-[11px]">{timeLabel(event)}</ItemDescription>
               </ItemContent>
             </Item>
@@ -107,10 +115,12 @@ export function ClosingSoon({ deals }: { deals: ClosingDeal[] }) {
                 />
               </ItemMedia>
               <ItemContent className="min-w-0">
-                <ItemTitle className="truncate font-normal">{deal.title}</ItemTitle>
+                <ItemTitle className={LONG_TITLE} title={deal.title}>
+                  {deal.title}
+                </ItemTitle>
                 <ItemDescription className="truncate text-[11px]">{deal.company}</ItemDescription>
               </ItemContent>
-              <ItemActions className="text-xs tabular-nums">
+              <ItemActions className="shrink-0 self-start pt-0.5 text-xs tabular-nums">
                 {formatAmount(deal.value, currency, locale, { compact: true })}
               </ItemActions>
             </Item>
