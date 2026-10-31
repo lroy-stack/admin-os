@@ -2,23 +2,30 @@ import { BellOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getMessages } from "@/config/locale.server";
 
-export function FocusCard() {
+import { productivityMessages } from "./messages.server";
+
+const FOCUS_MINUTES = 90;
+
+export async function FocusCard() {
+  const text = (await getMessages(productivityMessages)).focus;
+
   return (
     <Card className="shadow-xs">
       <CardHeader>
-        <CardTitle>Focus</CardTitle>
+        <CardTitle>{text.title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-4">
-            <div className="text-3xl tracking-tight">90:00</div>
-            <Button className="min-w-24">Start</Button>
+            <div className="shrink-0 text-3xl tracking-tight tabular-nums">{`${FOCUS_MINUTES}:00`}</div>
+            <Button className="min-w-24">{text.start}</Button>
           </div>
 
-          <div className="text-muted-foreground flex items-center gap-2 text-xs">
-            <BellOff className="size-3" />
-            <span>No notifications · Full focus</span>
+          <div className="text-muted-foreground flex items-start gap-2 text-xs">
+            <BellOff className="mt-0.5 size-3 shrink-0" />
+            <span className="min-w-0 break-words">{text.noNotifications}</span>
           </div>
         </div>
       </CardContent>

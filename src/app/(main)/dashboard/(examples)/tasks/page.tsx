@@ -1,25 +1,26 @@
-import type { Metadata } from "next";
+import { LocaleBundles } from "@/app/_components/locale-root";
+import { getLocale } from "@/config/locale.server";
+import { pageMetadata } from "@/config/metadata.server";
 
-import { tasks } from "./_components/data";
+import { tasksBundle, tasksMessages } from "./_components/messages.server";
+import { localizeTasks } from "./_components/task-titles.server";
 import { Tasks } from "./_components/tasks";
 
-export const metadata: Metadata = {
-  title: "Open Source Task Manager with shadcn/ui",
-  description:
-    "Explore an open source task manager for searching, filtering, organizing, and tracking work in one place.",
-  alternates: {
-    canonical: "/dashboard/tasks",
-  },
-};
+export const generateMetadata = () => pageMetadata("/dashboard/tasks", tasksMessages);
 
-export default function Page() {
+export default async function Page() {
+  const locale = await getLocale();
+  const text = tasksMessages[locale];
+
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-3xl tracking-tight">Welcome back!</h2>
-        <p className="text-muted-foreground">Here's a list of your tasks for this month!</p>
+    <LocaleBundles bundles={[tasksBundle]}>
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-3xl tracking-tight">{text.welcome.title}</h2>
+          <p className="text-muted-foreground">{text.welcome.subtitle}</p>
+        </div>
+        <Tasks data={localizeTasks(locale)} />
       </div>
-      <Tasks data={tasks} />
-    </div>
+    </LocaleBundles>
   );
 }

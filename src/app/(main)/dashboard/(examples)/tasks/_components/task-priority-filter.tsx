@@ -13,15 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import { priorities } from "./data";
+import { tasksMessageKey } from "./messages";
 
 interface TaskPriorityFilterProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;
 }
 
 export function TaskPriorityFilter<TData extends RowData>({ table }: TaskPriorityFilterProps<TData>) {
+  const text = useMessages(tasksMessageKey);
   const column = table.getColumn("priority");
 
   if (!column) {
@@ -56,7 +59,7 @@ export function TaskPriorityFilter<TData extends RowData>({ table }: TaskPriorit
           className={cn("border-dashed", selectedValues.size > 0 && "bg-muted text-foreground border-solid")}
         >
           <ListFilter data-icon="inline-start" />
-          Priority
+          {text.toolbar.priority}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-50">
@@ -72,7 +75,7 @@ export function TaskPriorityFilter<TData extends RowData>({ table }: TaskPriorit
                 onSelect={(event) => event.preventDefault()}
               >
                 <priority.icon className="text-muted-foreground" />
-                {priority.label}
+                {text.priorities[priority.value]}
               </DropdownMenuCheckboxItem>
             );
           })}
@@ -83,7 +86,7 @@ export function TaskPriorityFilter<TData extends RowData>({ table }: TaskPriorit
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={clearFilter} className="justify-center text-center">
                 <X />
-                Clear filters
+                {text.toolbar.clearFilters}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>

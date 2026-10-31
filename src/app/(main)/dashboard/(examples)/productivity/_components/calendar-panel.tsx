@@ -3,12 +3,14 @@
 import * as React from "react";
 
 import { startOfMonth, startOfToday } from "date-fns";
-import { enGB } from "date-fns/locale";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLocale } from "@/core/i18n/client";
+import { dateFnsLocale } from "@/core/i18n/ui";
 
 export function CalendarPanel() {
+  const locale = useLocale();
   const today = startOfToday();
   const [date, setDate] = React.useState<Date | undefined>(today);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(() => startOfMonth(today));
@@ -23,7 +25,7 @@ export function CalendarPanel() {
           month={currentMonth}
           onMonthChange={setCurrentMonth}
           fixedWeeks
-          locale={enGB}
+          locale={dateFnsLocale(locale)}
           className="w-full p-0"
         />
       </CardContent>

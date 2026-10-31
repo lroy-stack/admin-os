@@ -1,41 +1,60 @@
-import { format, isToday, isYesterday, subDays } from "date-fns";
 import { BookOpen, FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLocale } from "@/config/locale.server";
+import { format, formatCalendarDate } from "@/core/i18n/client";
 
-const today = new Date();
+import { addCalendarDays, todayIso } from "./calendar-days";
+import { productivityMessages } from "./messages.server";
 
-function formatNoteDate(date: Date) {
-  if (isToday(date)) return "Today";
-  if (isYesterday(date)) return "Yesterday";
-  return format(date, "MMM d");
-}
+export async function RecentNotesCard() {
+  const locale = await getLocale();
+  const text = productivityMessages[locale];
+  const today = todayIso();
 
-const recentNotes = [
-  { title: "Design principles that scale", date: formatNoteDate(today), icon: FileText },
-  { title: `Content ideas – ${format(today, "MMMM")}`, date: formatNoteDate(subDays(today, 1)), icon: FileText },
-  { title: "Lessons from the week", date: formatNoteDate(subDays(today, 4)), icon: FileText },
-  { title: "Books I’m Reading", date: formatNoteDate(subDays(today, 5)), icon: BookOpen },
-] as const;
+  // "Today" and "Yesterday" by name, anything older as a short date in the locale.
+  function noteDate(daysAgo: number) {
+    if (daysAgo === 0) return text.notes.today;
+    if (daysAgo === 1) return text.notes.yesterday;
+    return formatCalendarDate(addCalendarDays(today, -daysAgo), locale, { month: "short", day: "numeric" });
+  }
 
-export function RecentNotesCard() {
+  const recentNotes = [
+    { key: "principles", title: text.notes.items.designPrinciples, date: noteDate(0), icon: FileText },
+    {
+      key: "ideas",
+      title: format(text.notes.items.contentIdeas, locale, {
+        month: formatCalendarDate(today, locale, { month: "long" }),
+      }),
+      date: noteDate(1),
+      icon: FileText,
+    },
+    { key: "lessons", title: text.notes.items.weeklyLessons, date: noteDate(4), icon: FileText },
+    { key: "books", title: text.notes.items.books, date: noteDate(5), icon: BookOpen },
+  ];
+
   return (
     <Card className="shadow-xs">
       <CardHeader>
-        <CardTitle>Recent Notes</CardTitle>
+        <CardTitle>{text.notes.title}</CardTitle>
         <CardAction>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
-            View all
+            {text.viewAll}
           </Button>
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {recentNotes.map((note) => (
-          <div key={note.title} className="flex items-start gap-4">
-            <note.icon className="text-muted-foreground size-5" />
+          <div key={note.key} className="flex items-start gap-4">
+            <note.icon className="text-muted-foreground size-5 shrink-0" />
             <div className="min-w-0">
-              <div className="truncate text-sm leading-none font-medium">{note.title}</div>
+              <div
+                className="line-clamp-2 text-sm leading-snug font-medium break-words hyphens-auto"
+                title={note.title}
+              >
+                {note.title}
+              </div>
               <div className="text-muted-foreground text-xs">{note.date}</div>
             </div>
           </div>

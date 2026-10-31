@@ -13,15 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import { statuses } from "./data";
+import { tasksMessageKey } from "./messages";
 
 interface TaskStatusFilterProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;
 }
 
 export function TaskStatusFilter<TData extends RowData>({ table }: TaskStatusFilterProps<TData>) {
+  const text = useMessages(tasksMessageKey);
   const column = table.getColumn("status");
 
   if (!column) {
@@ -56,7 +59,7 @@ export function TaskStatusFilter<TData extends RowData>({ table }: TaskStatusFil
           className={cn("border-dashed", selectedValues.size > 0 && "bg-muted text-foreground border-solid")}
         >
           <ListFilter data-icon="inline-start" />
-          Status
+          {text.toolbar.status}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-50">
@@ -72,7 +75,7 @@ export function TaskStatusFilter<TData extends RowData>({ table }: TaskStatusFil
                 onSelect={(event) => event.preventDefault()}
               >
                 <status.icon className="text-muted-foreground" />
-                {status.label}
+                {text.statuses[status.value]}
               </DropdownMenuCheckboxItem>
             );
           })}
@@ -83,7 +86,7 @@ export function TaskStatusFilter<TData extends RowData>({ table }: TaskStatusFil
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={clearFilter} className="justify-center text-center">
                 <X />
-                Clear filters
+                {text.toolbar.clearFilters}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>

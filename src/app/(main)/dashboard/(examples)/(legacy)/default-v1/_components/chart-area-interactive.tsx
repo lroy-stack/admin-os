@@ -5,10 +5,14 @@ import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { format, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+import { defaultV1MessageKey } from "./messages";
+import { VisitorsTooltip } from "./visitors-tooltip";
 
 const chartData = [
   { date: "2024-04-01", desktop: 222, mobile: 150 },
@@ -104,21 +108,20 @@ const chartData = [
   { date: "2024-06-30", desktop: 446, mobile: 400 },
 ];
 
-const chartConfig = {
-  visitors: {
-    label: "Visitors",
-  },
-  desktop: {
-    label: "Desktop",
-    color: "var(--chart-1)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig;
-
 export function ChartAreaInteractive() {
+  const text = useMessages(defaultV1MessageKey).chart;
+  const locale = useLocale();
+  const fmt = useChartFormatters();
+  const chartConfig = {
+    visitors: { label: text.series.visitors },
+    desktop: { label: text.series.desktop, color: "var(--chart-1)" },
+    mobile: { label: text.series.mobile, color: "var(--chart-2)" },
+  } satisfies ChartConfig;
+  const ranges = {
+    "90d": format(text.lastMonths, locale, { count: 3 }),
+    "30d": format(text.lastDays, locale, { count: 30 }),
+    "7d": format(text.lastDays, locale, { count: 7 }),
+  };
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("90d");
 
@@ -145,10 +148,10 @@ export function ChartAreaInteractive() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Total Visitors</CardTitle>
+        <CardTitle>{text.title}</CardTitle>
         <CardDescription>
-          <span className="hidden @[540px]/card:block">Total for the last 3 months</span>
-          <span className="@[540px]/card:hidden">Last 3 months</span>
+          <span className="hidden @[540px]/card:block">{format(text.totalForMonths, locale, { count: 3 })}</span>
+          <span className="@[540px]/card:hidden">{ranges["90d"]}</span>
         </CardDescription>
         <CardAction>
           <ToggleGroup
@@ -158,28 +161,28 @@ export function ChartAreaInteractive() {
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
           >
-            <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
+            <ToggleGroupItem value="90d">{ranges["90d"]}</ToggleGroupItem>
+            <ToggleGroupItem value="30d">{ranges["30d"]}</ToggleGroupItem>
+            <ToggleGroupItem value="7d">{ranges["7d"]}</ToggleGroupItem>
           </ToggleGroup>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+              className="flex w-44 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
               size="sm"
-              aria-label="Select a value"
+              aria-label={text.rangeLabel}
             >
-              <SelectValue placeholder="Last 3 months" />
+              <SelectValue placeholder={ranges["90d"]} />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectGroup>
                 <SelectItem value="90d" className="rounded-lg">
-                  Last 3 months
+                  {ranges["90d"]}
                 </SelectItem>
                 <SelectItem value="30d" className="rounded-lg">
-                  Last 30 days
+                  {ranges["30d"]}
                 </SelectItem>
                 <SelectItem value="7d" className="rounded-lg">
-                  Last 7 days
+                  {ranges["7d"]}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
@@ -206,25 +209,15 @@ export function ChartAreaInteractive() {
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
-              tickFormatter={(value) => {
-                const date = new Date(value);
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                });
-              }}
+              tickFormatter={(value) => fmt.day(String(value))}
             />
             <ChartTooltip
               cursor={false}
               defaultIndex={isMobile ? -1 : 10}
               content={
-                <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    });
-                  }}
+                <VisitorsTooltip
+                  seriesLabels={{ desktop: text.series.desktop, mobile: text.series.mobile }}
+                  labelFormatter={(value) => fmt.day(String(value))}
                   indicator="dot"
                 />
               }

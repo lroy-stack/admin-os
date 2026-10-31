@@ -35,20 +35,38 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, formatNumber, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
 
-import { DraggableProposalSectionsRow, proposalSectionsColumns } from "./columns";
+import { defaultV1MessageKey } from "../messages";
+import { createProposalSectionsColumns, DraggableProposalSectionsRow } from "./columns";
 import type { ProposalSectionsRow } from "./schema";
 
-const VIEW_OPTIONS = [
-  { value: "outline", label: "Outline" },
-  { value: "past-performance", label: "Past Performance" },
-  { value: "key-personnel", label: "Key Personnel" },
-  { value: "focus-documents", label: "Focus Documents" },
-] as const;
+const VIEW_VALUES = ["outline", "past-performance", "key-personnel", "focus-documents"] as const;
 
-type ViewOption = (typeof VIEW_OPTIONS)[number]["value"];
+type ViewOption = (typeof VIEW_VALUES)[number];
+
+// Demo counts shown on two of the tabs.
+const PAST_PERFORMANCE_COUNT = 3;
+const KEY_PERSONNEL_COUNT = 2;
+
+/** The toggle-columns menu lists these columns, named in the dictionary. */
+type ToggleableColumn = "type" | "status" | "target" | "limit" | "reviewer";
+
+function isToggleableColumn(id: string): id is ToggleableColumn {
+  return id === "type" || id === "status" || id === "target" || id === "limit" || id === "reviewer";
+}
+
 export function ProposalSectionsTable({ data: initialData }: { data: ProposalSectionsRow[] }) {
+  const text = useMessages(defaultV1MessageKey).table;
+  const locale = useLocale();
+  const columns = React.useMemo(() => createProposalSectionsColumns(text, locale), [text, locale]);
+  const viewLabels: Readonly<Record<ViewOption, string>> = {
+    outline: text.views.outline,
+    "past-performance": text.views.pastPerformance,
+    "key-personnel": text.views.keyPersonnel,
+    "focus-documents": text.views.focusDocuments,
+  };
   const [data, setData] = React.useState(() => initialData);
   const [activeView, setActiveView] = React.useState<ViewOption>("outline");
   const [rowSelection, setRowSelection] = React.useState({});
@@ -62,7 +80,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
   const table = useTable({
     features: dataTableFeatures,
     data,
-    columns: proposalSectionsColumns,
+    columns,
     state: {
       sorting,
       columnVisibility,
@@ -113,62 +131,63 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
     >
       <div className="flex items-center justify-between">
         <Label htmlFor="view-selector" className="sr-only">
-          View
+          {text.viewLabel}
         </Label>
         <Select value={activeView} onValueChange={(value) => setActiveView(value as ViewOption)}>
           <SelectTrigger className="flex w-fit @4xl/main:hidden" size="sm" id="view-selector">
-            <SelectValue placeholder="Select a view" />
+            <SelectValue placeholder={text.selectView} />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {VIEW_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+              {VIEW_VALUES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {viewLabels[value]}
                 </SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="outline">Outline</TabsTrigger>
+          <TabsTrigger value="outline">{viewLabels.outline}</TabsTrigger>
           <TabsTrigger value="past-performance">
-            Past Performance <Badge variant="secondary">3</Badge>
+            {viewLabels["past-performance"]}{" "}
+            <Badge variant="secondary">{formatNumber(PAST_PERFORMANCE_COUNT, locale)}</Badge>
           </TabsTrigger>
           <TabsTrigger value="key-personnel">
-            Key Personnel <Badge variant="secondary">2</Badge>
+            {viewLabels["key-personnel"]} <Badge variant="secondary">{formatNumber(KEY_PERSONNEL_COUNT, locale)}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
+          <TabsTrigger value="focus-documents">{viewLabels["focus-documents"]}</TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Settings2 data-icon="inline-start" />
-                View
+                {text.view}
                 <ChevronDownIcon data-icon="inline-end" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-35">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="min-w-35">
+              <DropdownMenuLabel>{text.toggleColumns}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {table
                 .getAllColumns()
                 .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide())
-                .map((column) => (
+                .flatMap((column) => (isToggleableColumn(column.id) ? [{ column, id: column.id }] : []))
+                .map(({ column, id }) => (
                   <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
+                    key={id}
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) => column.toggleVisibility(!!value)}
                   >
-                    {column.id}
+                    {text.columns[id]}
                   </DropdownMenuCheckboxItem>
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" aria-label={text.addSection}>
             <PlusIcon data-icon="inline-start" />
-            <span className="hidden lg:inline">Add Section</span>
+            <span className="hidden lg:inline">{text.addSection}</span>
           </Button>
         </div>
       </div>
@@ -202,7 +221,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
                 ) : (
                   <TableRow>
                     <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
-                      No results.
+                      {text.empty}
                     </TableCell>
                   </TableRow>
                 )}
@@ -212,13 +231,15 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-            selected.
+            {format(text.selected, locale, {
+              count: table.getFilteredSelectedRowModel().rows.length,
+              total: table.getFilteredRowModel().rows.length,
+            })}
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
+                {text.rowsPerPage}
               </Label>
               <Select
                 value={`${table.state.pagination.pageSize}`}
@@ -241,7 +262,10 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
+              {format(text.pageOf, locale, {
+                page: table.state.pagination.pageIndex + 1,
+                pages: table.getPageCount(),
+              })}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
@@ -250,7 +274,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">{text.firstPage}</span>
                 <ChevronsLeftIcon />
               </Button>
               <Button
@@ -260,7 +284,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">{text.previousPage}</span>
                 <ChevronLeftIcon />
               </Button>
               <Button
@@ -270,7 +294,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">{text.nextPage}</span>
                 <ChevronRightIcon />
               </Button>
               <Button
@@ -280,7 +304,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">{text.lastPage}</span>
                 <ChevronsRightIcon />
               </Button>
             </div>

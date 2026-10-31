@@ -24,6 +24,7 @@ import {
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import { labels, priorities, statuses, type Task } from "./data";
+import type { TasksMessages } from "./messages";
 
 const statusStyles: Record<string, string> = {
   backlog: "border-muted-foreground/20 bg-muted text-muted-foreground",
@@ -45,177 +46,190 @@ function SortIcon({ sortDirection }: { sortDirection: false | "asc" | "desc" }) 
   return <ArrowUpDown data-icon="inline-end" />;
 }
 
-function TitleColumnHeader({ column }: { column: Column<DataTableFeatures, Task, unknown> }) {
+function TitleColumnHeader({
+  column,
+  text,
+}: {
+  column: Column<DataTableFeatures, Task, unknown>;
+  text: TasksMessages;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="text-muted-foreground data-[state=open]:bg-accent -ml-3">
-          Title
+          {text.columns.title}
           <SortIcon sortDirection={column.getIsSorted()} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <DropdownMenuItem onSelect={() => column.toggleSorting(false)}>
           <ArrowUp />
-          Asc
+          {text.sort.ascending}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => column.toggleSorting(true)}>
           <ArrowDown />
-          Desc
+          {text.sort.descending}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => column.clearSorting()}>
           <RotateCcw />
-          Reset
+          {text.sort.reset}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-export const columns: ColumnDef<DataTableFeatures, Task>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Subscribe
-        source={table.atoms.rowSelection}
-        selector={() =>
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected() && "indeterminate")
-        }
-      >
-        {(checked) => (
-          <Checkbox
-            checked={checked}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-            className="translate-y-0.5"
-          />
-        )}
-      </Subscribe>
-    ),
-    cell: ({ row }) => (
-      <Subscribe source={row.table.atoms.rowSelection} selector={(selection) => Boolean(selection?.[row.id])}>
-        {(checked) => (
-          <Checkbox
-            checked={checked}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="translate-y-0.5"
-          />
-        )}
-      </Subscribe>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "id",
-    header: "Task",
-    cell: ({ row }) => <div className="text-muted-foreground w-20 font-mono text-sm">{row.getValue("id")}</div>,
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "title",
-    header: ({ column }) => <TitleColumnHeader column={column} />,
-    cell: ({ row }) => {
-      const label = labels.find((label) => label.value === row.original.label);
-
-      return (
-        <div className="flex min-w-0 items-center gap-2">
-          {label && (
-            <Badge className="rounded-sm bg-transparent" variant="outline">
-              {label.label}
-            </Badge>
+export function createColumns(text: TasksMessages): ColumnDef<DataTableFeatures, Task>[] {
+  return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Subscribe
+          source={table.atoms.rowSelection}
+          selector={() =>
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected() && "indeterminate")
+          }
+        >
+          {(checked) => (
+            <Checkbox
+              checked={checked}
+              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+              aria-label={text.row.selectAll}
+              className="translate-y-0.5"
+            />
           )}
-          <span className="max-w-lg truncate text-sm font-medium">{row.getValue("title")}</span>
-        </div>
-      );
+        </Subscribe>
+      ),
+      cell: ({ row }) => (
+        <Subscribe source={row.table.atoms.rowSelection} selector={(selection) => Boolean(selection?.[row.id])}>
+          {(checked) => (
+            <Checkbox
+              checked={checked}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label={text.row.selectRow}
+              className="translate-y-0.5"
+            />
+          )}
+        </Subscribe>
+      ),
+      enableSorting: false,
+      enableHiding: false,
     },
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = statuses.find((status) => status.value === row.getValue("status"));
+    {
+      accessorKey: "id",
+      header: text.columns.task,
+      cell: ({ row }) => <div className="text-muted-foreground w-20 font-mono text-sm">{row.getValue("id")}</div>,
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "title",
+      header: ({ column }) => <TitleColumnHeader column={column} text={text} />,
+      cell: ({ row }) => {
+        const label = labels.find((label) => label.value === row.original.label);
 
-      if (!status) {
-        return null;
-      }
+        return (
+          <div className="flex min-w-0 items-center gap-2">
+            {label && (
+              <Badge className="shrink-0 rounded-sm bg-transparent" variant="outline">
+                {text.labels[label.value]}
+              </Badge>
+            )}
+            <span
+              className="line-clamp-2 max-w-lg min-w-0 text-sm font-medium break-words hyphens-auto"
+              title={row.original.title}
+            >
+              {row.original.title}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: text.columns.status,
+      cell: ({ row }) => {
+        const status = statuses.find((status) => status.value === row.getValue("status"));
 
-      return (
-        <Badge className={cn("gap-1.5 rounded-sm border font-medium", statusStyles[status.value])} variant="outline">
-          {status.icon && <status.icon className="size-4" />}
-          {status.label}
-        </Badge>
-      );
-    },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id));
-    },
-  },
-  {
-    accessorKey: "priority",
-    header: "Priority",
-    cell: ({ row }) => {
-      const priority = priorities.find((priority) => priority.value === row.getValue("priority"));
+        if (!status) {
+          return null;
+        }
 
-      if (!priority) {
-        return null;
-      }
+        return (
+          <Badge className={cn("gap-1.5 rounded-sm border font-medium", statusStyles[status.value])} variant="outline">
+            {status.icon && <status.icon className="size-4" />}
+            {text.statuses[status.value]}
+          </Badge>
+        );
+      },
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
+      },
+    },
+    {
+      accessorKey: "priority",
+      header: text.columns.priority,
+      cell: ({ row }) => {
+        const priority = priorities.find((priority) => priority.value === row.getValue("priority"));
 
-      return (
-        <div className="flex items-center gap-2 text-sm">
-          {priority.icon && <priority.icon className="text-muted-foreground size-4" />}
-          {priority.label}
-        </div>
-      );
-    },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id));
-    },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const task = row.original as Task;
+        if (!priority) {
+          return null;
+        }
 
-      return (
-        <div className="text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="text-muted-foreground data-[state=open]:bg-muted">
-                <MoreHorizontal />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem>Make a copy</DropdownMenuItem>
-              <DropdownMenuItem>Favorite</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup value={task.label}>
-                    {labels.map((label) => (
-                      <DropdownMenuRadioItem key={label.value} value={label.value}>
-                        {label.label}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                Delete
-                <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
+        return (
+          <div className="flex items-center gap-2 text-sm">
+            {priority.icon && <priority.icon className="text-muted-foreground size-4" />}
+            {text.priorities[priority.value]}
+          </div>
+        );
+      },
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
+      },
     },
-  },
-];
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const task = row.original as Task;
+
+        return (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" className="text-muted-foreground data-[state=open]:bg-muted">
+                  <MoreHorizontal />
+                  <span className="sr-only">{text.row.openMenu}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-40">
+                <DropdownMenuItem>{text.row.edit}</DropdownMenuItem>
+                <DropdownMenuItem>{text.row.copy}</DropdownMenuItem>
+                <DropdownMenuItem>{text.row.favorite}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>{text.row.labels}</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup value={task.label}>
+                      {labels.map((label) => (
+                        <DropdownMenuRadioItem key={label.value} value={label.value}>
+                          {text.labels[label.value]}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  {text.row.delete}
+                  <DropdownMenuShortcut>{text.row.deleteShortcut}</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
+  ];
+}

@@ -9,12 +9,11 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { cn } from "cn";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, MoreHorizontal } from "lucide-react";
 
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -22,10 +21,12 @@ import {
 } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
 
-import { columns } from "./columns";
+import { createColumns } from "./columns";
 import type { Task } from "./data";
+import { tasksMessageKey } from "./messages";
 import { TasksToolbar } from "./tasks-toolbar";
 
 interface TasksProps {
@@ -34,6 +35,15 @@ interface TasksProps {
 
 function preventPaginationNavigation(event: React.MouseEvent<HTMLAnchorElement>) {
   event.preventDefault();
+}
+
+/** The gap in the page list; decorative, so it carries no text (the ui ellipsis has an English one). */
+function PageGap() {
+  return (
+    <span aria-hidden className="flex size-8 items-center justify-center">
+      <MoreHorizontal className="size-4" />
+    </span>
+  );
 }
 
 function getPageNumbers(currentPage: number, pageCount: number) {
@@ -48,6 +58,9 @@ function getPageNumbers(currentPage: number, pageCount: number) {
 }
 
 export function Tasks({ data }: TasksProps) {
+  const text = useMessages(tasksMessageKey);
+  const locale = useLocale();
+  const columns = React.useMemo(() => createColumns(text), [text]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -118,7 +131,7 @@ export function Tasks({ data }: TasksProps) {
           ) : (
             <TableRow>
               <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
-                No results.
+                {text.table.empty}
               </TableCell>
             </TableRow>
           )}
@@ -126,12 +139,14 @@ export function Tasks({ data }: TasksProps) {
       </Table>
       <div className="flex flex-col gap-3 border-t px-4 py-4 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-sm">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
+          {format(text.table.selected, locale, {
+            count: table.getFilteredSelectedRowModel().rows.length,
+            total: table.getFilteredRowModel().rows.length,
+          })}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-6 lg:gap-8">
           <div className="flex items-center gap-2">
-            <p className="text-muted-foreground text-sm font-medium">Rows per page</p>
+            <p className="text-muted-foreground text-sm font-medium">{text.table.rowsPerPage}</p>
             <Select
               value={`${table.state.pagination.pageSize}`}
               onValueChange={(value) => {
@@ -152,15 +167,15 @@ export function Tasks({ data }: TasksProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex w-24 items-center justify-start text-sm font-medium sm:justify-center">
-            Page {currentPage} of {pageCount}
+          <div className="flex min-w-24 items-center justify-start text-sm font-medium whitespace-nowrap sm:justify-center">
+            {format(text.table.pageOf, locale, { page: currentPage, pages: pageCount })}
           </div>
-          <Pagination className="mx-0 w-auto justify-start sm:justify-end">
+          <Pagination aria-label={text.table.pagination} className="mx-0 w-auto justify-start sm:justify-end">
             <PaginationContent className="gap-1">
               <PaginationItem className="hidden lg:block">
                 <PaginationLink
                   href="#"
-                  aria-label="Go to first page"
+                  aria-label={text.table.firstPage}
                   aria-disabled={!canPreviousPage}
                   className={cn(!canPreviousPage && "pointer-events-none opacity-50")}
                   onClick={(event) => {
@@ -174,7 +189,8 @@ export function Tasks({ data }: TasksProps) {
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
-                  text="Prev"
+                  text={text.table.previous}
+                  aria-label={text.table.previousPage}
                   aria-disabled={!canPreviousPage}
                   className={cn(!canPreviousPage && "pointer-events-none opacity-50")}
                   onClick={(event) => {
@@ -185,7 +201,7 @@ export function Tasks({ data }: TasksProps) {
               </PaginationItem>
               {pageNumbers[0] > 1 ? (
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <PageGap />
                 </PaginationItem>
               ) : null}
               {pageNumbers.map((pageNumber) => (
@@ -204,12 +220,14 @@ export function Tasks({ data }: TasksProps) {
               ))}
               {pageNumbers[pageNumbers.length - 1] < pageCount ? (
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <PageGap />
                 </PaginationItem>
               ) : null}
               <PaginationItem>
                 <PaginationNext
                   href="#"
+                  text={text.table.next}
+                  aria-label={text.table.nextPage}
                   aria-disabled={!canNextPage}
                   className={cn(!canNextPage && "pointer-events-none opacity-50")}
                   onClick={(event) => {
@@ -221,7 +239,7 @@ export function Tasks({ data }: TasksProps) {
               <PaginationItem className="hidden lg:block">
                 <PaginationLink
                   href="#"
-                  aria-label="Go to last page"
+                  aria-label={text.table.lastPage}
                   aria-disabled={!canNextPage}
                   className={cn(!canNextPage && "pointer-events-none opacity-50")}
                   onClick={(event) => {

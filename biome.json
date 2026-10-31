@@ -142,7 +142,10 @@
         "src/components/date-range-picker.tsx",
         "src/app/(main)/dashboard/default/**",
         "src/app/(main)/dashboard/invoice/**",
-        "src/app/(main)/dashboard/calendar/**"
+        "src/app/(main)/dashboard/calendar/**",
+        "src/app/(main)/dashboard/(examples)/tasks/**",
+        "src/app/(main)/dashboard/(examples)/productivity/**",
+        "src/app/(main)/dashboard/(examples)/(legacy)/default-v1/**"
       ],
       "plugins": ["./lint/no-visible-string-props.grit"],
       "linter": {

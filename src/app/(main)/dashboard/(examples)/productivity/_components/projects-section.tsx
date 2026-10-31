@@ -1,4 +1,3 @@
-import { addDays, format } from "date-fns";
 import { ClipboardCheck, Globe, Orbit, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -6,81 +5,96 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getLocale } from "@/config/locale.server";
+import { format, formatCalendarDate, formatPercent } from "@/core/i18n/client";
 
-const today = new Date();
+import { addCalendarDays, todayIso } from "./calendar-days";
+import { productivityMessages } from "./messages.server";
 
-const projects = [
-  {
-    title: "Q2 Roadmap",
-    status: "In Progress",
-    description: "Ship better, ship smarter.",
-    progress: 68,
-    due: `Due ${format(addDays(today, 9), "MMM d")}`,
-    icon: Orbit,
-  },
-  {
-    title: "Website Redesign",
-    status: "Planning",
-    description: "Clean, modern, and fast.",
-    progress: 42,
-    due: `Due ${format(addDays(today, 21), "MMM d")}`,
-    icon: Globe,
-  },
-  {
-    title: "Onboarding",
-    status: "Planning",
-    description: "Trim first-run steps.",
-    progress: 31,
-    due: `Due ${format(addDays(today, 18), "MMM d")}`,
-    icon: ClipboardCheck,
-  },
-] as const;
+export async function ProjectsSection() {
+  const locale = await getLocale();
+  const text = productivityMessages[locale].projects;
+  const today = todayIso();
+  const due = (days: number) =>
+    format(text.due, locale, {
+      date: formatCalendarDate(addCalendarDays(today, days), locale, { month: "short", day: "numeric" }),
+    });
 
-export function ProjectsSection() {
+  const projects = [
+    {
+      key: "roadmap",
+      ...text.items.roadmap,
+      status: text.statuses.inProgress,
+      progress: 0.68,
+      due: due(9),
+      icon: Orbit,
+    },
+    {
+      key: "website",
+      ...text.items.website,
+      status: text.statuses.planning,
+      progress: 0.42,
+      due: due(21),
+      icon: Globe,
+    },
+    {
+      key: "onboarding",
+      ...text.items.onboarding,
+      status: text.statuses.planning,
+      progress: 0.31,
+      due: due(18),
+      icon: ClipboardCheck,
+    },
+  ];
+
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl tracking-tight">Projects</h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 className="text-xl tracking-tight">{text.title}</h2>
         <div className="flex items-center gap-2">
           <Select defaultValue="active">
-            <SelectTrigger className="w-28">
-              <SelectValue placeholder="Active" />
+            <SelectTrigger className="min-w-28" aria-label={text.filterLabel}>
+              <SelectValue placeholder={text.filters.active} />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="planning">Planning</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="active">{text.filters.active}</SelectItem>
+                <SelectItem value="planning">{text.filters.planning}</SelectItem>
+                <SelectItem value="completed">{text.filters.completed}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
           <Button variant="outline">
             <Plus data-icon="inline-start" />
-            New
+            {text.new}
           </Button>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         {projects.map((project) => (
-          <Card key={project.title} className="shadow-xs">
+          <Card key={project.key} className="min-w-0 shadow-xs">
             <CardHeader>
               <CardTitle>
-                <div className="flex items-center gap-2">
-                  <project.icon className="text-muted-foreground size-4" />
-                  <span>{project.title}</span>
+                <div className="flex items-start gap-2">
+                  <project.icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                  <span className="min-w-0 break-words hyphens-auto">{project.title}</span>
                 </div>
               </CardTitle>
               <CardAction>
-                <Badge variant="outline">{project.status}</Badge>
+                <Badge variant="outline" className="max-w-32">
+                  <span className="truncate" title={project.status}>
+                    {project.status}
+                  </span>
+                </Badge>
               </CardAction>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-1">
-                <div className="text-sm leading-none">{project.description}</div>
+                <div className="text-sm leading-snug break-words hyphens-auto">{project.description}</div>
                 <div className="flex items-center gap-3">
-                  <Progress value={project.progress} className="h-2" />
-                  <span className="shrink-0 text-sm">{project.progress}%</span>
+                  <Progress value={project.progress * 100} className="h-2" />
+                  <span className="shrink-0 text-sm tabular-nums">{formatPercent(project.progress, locale)}</span>
                 </div>
               </div>
             </CardContent>

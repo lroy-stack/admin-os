@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Drawer,
@@ -36,36 +36,43 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  format,
+  formatCalendarDate,
+  type Locale,
+  useChartFormatters,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import type { ProposalSectionsRow } from "./schema";
+import { type DefaultV1Messages, defaultV1MessageKey } from "../messages";
+import { formatOneDecimalPercent } from "../percent";
+import { VisitorsTooltip } from "../visitors-tooltip";
+import { type ProposalSectionsRow, sectionStatuses, sectionTypes } from "./schema";
 
+// Calendar months of the drawer's demo chart; the names come from `Intl` in the active locale.
 const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
+  { month: "2024-01", desktop: 186, mobile: 80 },
+  { month: "2024-02", desktop: 305, mobile: 200 },
+  { month: "2024-03", desktop: 237, mobile: 120 },
+  { month: "2024-04", desktop: 73, mobile: 190 },
+  { month: "2024-05", desktop: 209, mobile: 130 },
+  { month: "2024-06", desktop: 214, mobile: 140 },
 ];
 
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--primary)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig;
+const CHART_MONTHS = chartData.length;
+
+// Proper nouns: the people who can review a section.
+const reviewers = ["Eddie Lake", "Jamik Tashpulatov", "Emily Whalen"] as const;
 
 type SortableRowContextValue = Pick<ReturnType<typeof useSortable>, "handleRef">;
 
 const SortableRowContext = createContext<SortableRowContextValue | null>(null);
 
 function DragHandle() {
+  const text = useMessages(defaultV1MessageKey).table;
   const sortableRow = useContext(SortableRowContext);
 
   if (!sortableRow) {
@@ -77,25 +84,36 @@ function DragHandle() {
   return (
     <Button ref={handleRef} variant="ghost" size="icon" className="text-muted-foreground size-7 hover:bg-transparent">
       <GripVerticalIcon />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">{text.dragToReorder}</span>
     </Button>
   );
 }
 
 function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
+  const messages = useMessages(defaultV1MessageKey);
+  const text = messages.table;
+  const locale = useLocale();
+  const fmt = useChartFormatters();
   const isMobile = useIsMobile();
+  const chartConfig = {
+    desktop: { label: messages.chart.series.desktop, color: "var(--primary)" },
+    mobile: { label: messages.chart.series.mobile, color: "var(--primary)" },
+  } satisfies ChartConfig;
 
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">
+        <Button
+          variant="link"
+          className="text-foreground h-auto w-fit max-w-64 px-0 py-0 text-left break-words hyphens-auto whitespace-normal"
+        >
           {item.header}
         </Button>
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle>{item.header}</DrawerTitle>
-          <DrawerDescription>Showing total visitors for the last 6 months</DrawerDescription>
+          <DrawerDescription>{format(text.drawer.description, locale, { count: CHART_MONTHS })}</DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           {!isMobile && (
@@ -115,10 +133,19 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 3)}
+                    tickFormatter={(value) => fmt.month(String(value))}
                     hide
                   />
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <VisitorsTooltip
+                        seriesLabels={{ desktop: chartConfig.desktop.label, mobile: chartConfig.mobile.label }}
+                        labelFormatter={(value) => formatCalendarDate(`${value}-01`, locale, { month: "long" })}
+                        indicator="dot"
+                      />
+                    }
+                  />
                   <Area
                     dataKey="mobile"
                     type="natural"
@@ -140,11 +167,11 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
               <Separator />
               <div className="grid gap-2">
                 <div className="flex gap-2 leading-none font-medium">
-                  Trending up by 5.2% this month <TrendingUpIcon />
+                  {format(text.drawer.trend, locale, { change: formatOneDecimalPercent(0.052, locale) })}{" "}
+                  <TrendingUpIcon />
                 </div>
                 <div className="text-muted-foreground">
-                  Showing total visitors for the last 6 months. This is just some random text to test the layout. It
-                  spans multiple lines and should wrap around.
+                  {format(text.drawer.summary, locale, { count: CHART_MONTHS })}
                 </div>
               </div>
               <Separator />
@@ -152,41 +179,40 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
           )}
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="header">Header</Label>
+              <Label htmlFor="header">{text.drawer.fields.header}</Label>
               <Input id="header" defaultValue={item.header} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">{text.drawer.fields.type}</Label>
                 <Select defaultValue={item.type}>
                   <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Select a type" />
+                    <SelectValue placeholder={text.drawer.selectType} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="Table of Contents">Table of Contents</SelectItem>
-                      <SelectItem value="Executive Summary">Executive Summary</SelectItem>
-                      <SelectItem value="Technical Approach">Technical Approach</SelectItem>
-                      <SelectItem value="Design">Design</SelectItem>
-                      <SelectItem value="Capabilities">Capabilities</SelectItem>
-                      <SelectItem value="Focus Documents">Focus Documents</SelectItem>
-                      <SelectItem value="Narrative">Narrative</SelectItem>
-                      <SelectItem value="Cover Page">Cover Page</SelectItem>
+                      {sectionTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {text.types[type]}
+                        </SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">{text.drawer.fields.status}</Label>
                 <Select defaultValue={item.status}>
                   <SelectTrigger id="status" className="w-full">
-                    <SelectValue placeholder="Select a status" />
+                    <SelectValue placeholder={text.drawer.selectStatus} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="Done">Done</SelectItem>
-                      <SelectItem value="In Progress">In Progress</SelectItem>
-                      <SelectItem value="Not Started">Not Started</SelectItem>
+                      {sectionStatuses.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {text.statuses[status]}
+                        </SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -194,25 +220,27 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="target">Target</Label>
+                <Label htmlFor="target">{text.drawer.fields.target}</Label>
                 <Input id="target" defaultValue={item.target} />
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="limit">Limit</Label>
+                <Label htmlFor="limit">{text.drawer.fields.limit}</Label>
                 <Input id="limit" defaultValue={item.limit} />
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="reviewer">Reviewer</Label>
-              <Select defaultValue={item.reviewer}>
+              <Label htmlFor="reviewer">{text.drawer.fields.reviewer}</Label>
+              <Select defaultValue={item.reviewer ?? undefined}>
                 <SelectTrigger id="reviewer" className="w-full">
-                  <SelectValue placeholder="Select a reviewer" />
+                  <SelectValue placeholder={text.drawer.selectReviewer} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-                    <SelectItem value="Jamik Tashpulatov">Jamik Tashpulatov</SelectItem>
-                    <SelectItem value="Emily Whalen">Emily Whalen</SelectItem>
+                    {reviewers.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -220,9 +248,9 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
           </form>
         </div>
         <DrawerFooter>
-          <Button>Submit</Button>
+          <Button>{text.drawer.save}</Button>
           <DrawerClose asChild>
-            <Button variant="outline">Done</Button>
+            <Button variant="outline">{text.drawer.close}</Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
@@ -230,181 +258,191 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
   );
 }
 
-function createInlineSaveHandler(header: string) {
+function createInlineSaveHandler(header: string, text: DefaultV1Messages["table"], locale: Locale) {
   return (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Saving ${header}`,
-      success: "Done",
-      error: "Error",
+      loading: format(text.toast.saving, locale, { header }),
+      success: text.toast.saved,
+      error: text.toast.error,
     });
   };
 }
 
-export const proposalSectionsColumns: ColumnDef<DataTableFeatures, ProposalSectionsRow>[] = [
-  {
-    id: "drag",
-    header: () => null,
-    cell: () => <DragHandle />,
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Subscribe
-          source={table.atoms.rowSelection}
-          selector={() =>
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected() && "indeterminate")
-          }
-        >
-          {(checked) => (
-            <Checkbox
-              checked={checked}
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="Select all"
-            />
-          )}
-        </Subscribe>
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Subscribe source={row.table.atoms.rowSelection} selector={(rowSelection) => Boolean(rowSelection?.[row.id])}>
-          {(checked) => (
-            <Checkbox
-              checked={checked}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          )}
-        </Subscribe>
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "header",
-    header: "Header",
-    cell: ({ row }) => <ProposalSectionDetailViewer item={row.original} />,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "type",
-    header: "Section Type",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge variant="outline" className="text-muted-foreground px-1.5">
-          {row.original.type}
-        </Badge>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge variant="outline" className="text-muted-foreground px-1.5">
-        {row.original.status === "Done" ? (
-          <CircleCheckIcon className="stroke-primary-foreground fill-green-500 dark:fill-green-600" />
-        ) : (
-          <LoaderIcon />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "target",
-    header: () => <div className="w-full text-right">Target</div>,
-    cell: ({ row }) => (
-      <form onSubmit={createInlineSaveHandler(row.original.header)}>
-        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-          Target
-        </Label>
-        <Input
-          id={`${row.original.id}-target`}
-          defaultValue={row.original.target}
-          className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-        />
-      </form>
-    ),
-  },
-  {
-    accessorKey: "limit",
-    header: () => <div className="w-full text-right">Limit</div>,
-    cell: ({ row }) => (
-      <form onSubmit={createInlineSaveHandler(row.original.header)}>
-        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-          Limit
-        </Label>
-        <Input
-          id={`${row.original.id}-limit`}
-          defaultValue={row.original.limit}
-          className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-        />
-      </form>
-    ),
-  },
-  {
-    accessorKey: "reviewer",
-    header: "Reviewer",
-    cell: ({ row }) => {
-      const isAssigned = row.original.reviewer !== "Assign reviewer";
-
-      if (isAssigned) {
-        return row.original.reviewer;
-      }
-
-      return (
-        <>
-          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-            Reviewer
-          </Label>
-          <Select>
-            <SelectTrigger
-              id={`${row.original.id}-reviewer`}
-              className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-              size="sm"
-            >
-              <SelectValue placeholder="Assign reviewer" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectGroup>
-                <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-                <SelectItem value="Jamik Tashpulatov">Jamik Tashpulatov</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </>
-      );
+export function createProposalSectionsColumns(
+  text: DefaultV1Messages["table"],
+  locale: Locale,
+): ColumnDef<DataTableFeatures, ProposalSectionsRow>[] {
+  return [
+    {
+      id: "drag",
+      header: () => null,
+      cell: () => <DragHandle />,
+      enableSorting: false,
+      enableHiding: false,
     },
-  },
-  {
-    id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="text-muted-foreground data-[state=open]:bg-muted flex size-8" size="icon">
-            <EllipsisVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-    enableSorting: false,
-  },
-];
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Subscribe
+            source={table.atoms.rowSelection}
+            selector={() =>
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected() && "indeterminate")
+            }
+          >
+            {(checked) => (
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label={text.selectAll}
+              />
+            )}
+          </Subscribe>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Subscribe source={row.table.atoms.rowSelection} selector={(rowSelection) => Boolean(rowSelection?.[row.id])}>
+            {(checked) => (
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label={text.selectRow}
+              />
+            )}
+          </Subscribe>
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "header",
+      header: text.columns.header,
+      cell: ({ row }) => <ProposalSectionDetailViewer item={row.original} />,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "type",
+      header: text.columns.type,
+      cell: ({ row }) => (
+        <div className="min-w-32">
+          <Badge variant="outline" className="text-muted-foreground px-1.5">
+            {text.types[row.original.type]}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: text.columns.status,
+      cell: ({ row }) => (
+        <Badge variant="outline" className="text-muted-foreground px-1.5">
+          {row.original.status === "done" ? (
+            <CircleCheckIcon className="stroke-primary-foreground fill-green-500 dark:fill-green-600" />
+          ) : (
+            <LoaderIcon />
+          )}
+          {text.statuses[row.original.status]}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "target",
+      header: () => <div className="w-full text-right">{text.columns.target}</div>,
+      cell: ({ row }) => (
+        <form onSubmit={createInlineSaveHandler(row.original.header, text, locale)}>
+          <Label htmlFor={`${row.original.id}-target`} className="sr-only">
+            {text.columns.target}
+          </Label>
+          <Input
+            id={`${row.original.id}-target`}
+            defaultValue={row.original.target}
+            className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
+          />
+        </form>
+      ),
+    },
+    {
+      accessorKey: "limit",
+      header: () => <div className="w-full text-right">{text.columns.limit}</div>,
+      cell: ({ row }) => (
+        <form onSubmit={createInlineSaveHandler(row.original.header, text, locale)}>
+          <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
+            {text.columns.limit}
+          </Label>
+          <Input
+            id={`${row.original.id}-limit`}
+            defaultValue={row.original.limit}
+            className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
+          />
+        </form>
+      ),
+    },
+    {
+      accessorKey: "reviewer",
+      header: text.columns.reviewer,
+      cell: ({ row }) => {
+        if (row.original.reviewer !== null) {
+          return row.original.reviewer;
+        }
+
+        return (
+          <>
+            <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
+              {text.columns.reviewer}
+            </Label>
+            <Select>
+              <SelectTrigger
+                id={`${row.original.id}-reviewer`}
+                className="w-44 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+                size="sm"
+              >
+                <SelectValue placeholder={text.assignReviewer} />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectGroup>
+                  {reviewers.slice(0, 2).map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </>
+        );
+      },
+    },
+    {
+      id: "actions",
+      cell: () => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="text-muted-foreground data-[state=open]:bg-muted flex size-8"
+              size="icon"
+            >
+              <EllipsisVerticalIcon />
+              <span className="sr-only">{text.openMenu}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-32">
+            <DropdownMenuItem>{text.actions.edit}</DropdownMenuItem>
+            <DropdownMenuItem>{text.actions.copy}</DropdownMenuItem>
+            <DropdownMenuItem>{text.actions.favorite}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">{text.actions.delete}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      enableSorting: false,
+    },
+  ];
+}
 
 export function DraggableProposalSectionsRow({
   row,
