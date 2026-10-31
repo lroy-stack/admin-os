@@ -127,5 +127,1909 @@
       "indentScriptAndStyle": false,
       "selfCloseVoidElements": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/lib/**", "src/hooks/**", "src/components/ui/**", "src/components/calendar/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/core", "@/core/**", "**/core/**"],
+                    "message": "core is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/config/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/ds", "@/ds/**", "**/ds/**"],
+                    "message": "ds is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ds/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/data", "@/data/**", "@/navigation", "@/navigation/**"],
+                    "message": "ds is domain-free: it never imports demo data or static navigation"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ds/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/data", "@/data/**", "@/navigation", "@/navigation/**"],
+                    "message": "ds is domain-free: it never imports demo data or static navigation"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ds/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/data", "@/data/**", "@/navigation", "@/navigation/**"],
+                    "message": "ds is domain-free: it never imports demo data or static navigation"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ds/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/data", "@/data/**", "@/navigation", "@/navigation/**"],
+                    "message": "ds is domain-free: it never imports demo data or static navigation"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ds/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/data", "@/data/**", "@/navigation", "@/navigation/**"],
+                    "message": "ds is domain-free: it never imports demo data or static navigation"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ds/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/engines", "@/engines/**", "**/engines/**"],
+                    "message": "engines is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/data", "@/data/**", "@/navigation", "@/navigation/**"],
+                    "message": "ds is domain-free: it never imports demo data or static navigation"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../../**"],
+                    "message": "a relative import may not leave its package; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines/*", "@/engines/*/**"],
+                    "message": "one engine may not import another engine (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines/*", "@/engines/*/**"],
+                    "message": "one engine may not import another engine (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../**"],
+                    "message": "a relative import may not leave its engine; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines/*", "@/engines/*/**"],
+                    "message": "one engine may not import another engine (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "a relative import may not leave its engine; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines/*", "@/engines/*/**"],
+                    "message": "one engine may not import another engine (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../**"],
+                    "message": "a relative import may not leave its engine; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines/*", "@/engines/*/**"],
+                    "message": "one engine may not import another engine (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../**"],
+                    "message": "a relative import may not leave its engine; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/*/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/modules", "@/modules/**", "**/modules/**"],
+                    "message": "modules is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/engines/*", "@/engines/*/**"],
+                    "message": "one engine may not import another engine (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../../**"],
+                    "message": "a relative import may not leave its engine; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../**"],
+                    "message": "a relative import may not leave its module; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "a relative import may not leave its module; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../**"],
+                    "message": "a relative import may not leave its module; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../**"],
+                    "message": "a relative import may not leave its module; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/*/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/verticals", "@/verticals/**", "**/verticals/**"],
+                    "message": "verticals is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../../**"],
+                    "message": "a relative import may not leave its module; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals/*", "@/verticals/*/**"],
+                    "message": "one preset may not import another preset (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals/*", "@/verticals/*/**"],
+                    "message": "one preset may not import another preset (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../**"],
+                    "message": "a relative import may not leave its preset; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals/*", "@/verticals/*/**"],
+                    "message": "one preset may not import another preset (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "a relative import may not leave its preset; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals/*", "@/verticals/*/**"],
+                    "message": "one preset may not import another preset (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../**"],
+                    "message": "a relative import may not leave its preset; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals/*", "@/verticals/*/**"],
+                    "message": "one preset may not import another preset (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../**"],
+                    "message": "a relative import may not leave its preset; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/*/*/*/*/*/*.ts*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/config", "@/config/**", "**/config/**"],
+                    "message": "config is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/app", "@/app/**", "**/app/**"],
+                    "message": "app is a higher layer (ADR 0003): a lower layer never imports a higher one"
+                  },
+                  {
+                    "group": ["@/verticals/*", "@/verticals/*/**"],
+                    "message": "one preset may not import another preset (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"],
+                    "message": "import modules only through @/modules/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/engines/*/**", "!@/engines/*/server", "!@/engines/*/ui"],
+                    "message": "import engines only through @/engines/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/verticals/*/**", "!@/verticals/*/server", "!@/verticals/*/ui"],
+                    "message": "import verticals only through @/verticals/<name>, /server or /ui (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/ds/*/**", "!@/ds/preferences/actions"],
+                    "message": "import ds only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["@/core/*/**"],
+                    "message": "import core only through its first-level subpaths (ADR 0003)"
+                  },
+                  {
+                    "group": ["../../../../../**"],
+                    "message": "a relative import may not leave its preset; use the @/ alias"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engines/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noJsxLiterals": "error"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/modules/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noJsxLiterals": "error"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/verticals/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noJsxLiterals": "error"
+          }
+        }
+      }
+    }
+  ]
 }
