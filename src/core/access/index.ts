@@ -1,4 +1,6 @@
-import type { AnyCapability, Catalog, Permission } from "@/core/capability";
+import { z } from "zod";
+
+import { type AnyCapability, type Catalog, defineCapability, type Permission } from "@/core/capability";
 import type { ModuleId } from "@/core/nav";
 
 export const ROLE_IDS = ["owner", "manager", "staff"] as const;
@@ -29,9 +31,18 @@ export function moduleOf(capabilityId: string): ModuleId {
   return capabilityId.split(".")[0] as ModuleId;
 }
 
-/** The distinct permissions of the catalogue, sorted, restricted to the enabled modules. A disabled module grants none. */
+/**
+ * Modules every preset has, whatever it enables: the actor reads itself (`access.me.get`) and the business clock
+ * (`clock.get`). They grant no business data.
+ */
+export const KERNEL_MODULES = ["access", "clock"] as const satisfies readonly ModuleId[];
+
+const inScopeModules = (enabledModules: readonly ModuleId[]) =>
+  new Set<ModuleId>([...KERNEL_MODULES, ...enabledModules]);
+
+/** The distinct permissions of the catalogue, sorted, restricted to the enabled and kernel modules. */
 export function catalogPermissions(catalog: Catalog, enabledModules: readonly ModuleId[]): Permission[] {
-  const enabled = new Set(enabledModules);
+  const enabled = inScopeModules(enabledModules);
   const permissions = Object.entries(catalog)
     .filter(([id]) => enabled.has(moduleOf(id)))
     .map(([, capability]) => capability.permission);
@@ -51,7 +62,7 @@ function allows(rule: RoleRule, capability: AnyCapability): boolean {
 
 /** The permissions a role holds over the catalogue, restricted to the enabled modules. */
 export function permissionsOf(role: RolePreset, catalog: Catalog, enabledModules: readonly ModuleId[]): Permission[] {
-  const enabled = new Set(enabledModules);
+  const enabled = inScopeModules(enabledModules);
   const inScope = Object.entries(catalog)
     .filter(([id]) => enabled.has(moduleOf(id)))
     .map(([, capability]) => capability);
@@ -66,3 +77,22 @@ export const DEFAULT_ROLES = [
   { id: "manager", labelKey: "access.roles.manager", rule: "all-but-elevated" },
   { id: "staff", labelKey: "access.roles.staff", rule: "reads-and-writes" },
 ] as const satisfies readonly RolePreset[];
+
+/** The calling actor as the adapter sees it (ADR 0006); the UI and the MCP server both start from it. */
+export const actorSchema = z.object({
+  actorId: z.string().min(1),
+  displayName: z.string().min(1),
+  roleId: z.string().min(1),
+  permissions: z.array(z.string()),
+});
+
+export const accessMeGet = defineCapability({
+  id: "access.me.get",
+  summary: "Who is calling: actor id, display name, role and permissions.",
+  input: z.strictObject({}),
+  output: actorSchema,
+  permission: "read:access",
+  effect: "read",
+});
+
+export const accessCapabilities = { "access.me.get": accessMeGet } as const;

@@ -1,8 +1,19 @@
 import "server-only";
 
+import type { ClockSeed } from "@/core/clock";
 import type { Vocabulary } from "@/core/i18n";
 
+import { BUSINESS_DAY } from "./seed";
+
 export { workshopSeed } from "./seed";
+
+/** Mid-morning, while drop-offs are being checked in. Seeded so server and client render the same moment (ADR 0005). */
+export const workshopClock: ClockSeed = {
+  businessDay: BUSINESS_DAY,
+  nowMin: 9 * 60 + 30,
+  cutoffMin: 0,
+  timeZone: "Europe/Madrid",
+};
 
 export const workshopVocabulary = {
   "bookings.title": {

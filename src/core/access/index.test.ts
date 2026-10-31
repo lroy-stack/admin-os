@@ -80,3 +80,22 @@ describe("catalogPermissions", () => {
     ]);
   });
 });
+
+describe("kernel modules", () => {
+  const withKernel: Catalog = {
+    ...catalog,
+    "access.me.get": capability("access.me.get", "read:access", "read"),
+    "clock.get": capability("clock.get", "read:clock", "read"),
+  };
+
+  it.each(DEFAULT_ROLES.map((role) => [role.id, role] as const))(
+    "%s reads the actor and the clock even when no business module is enabled",
+    (_id, role) => {
+      expect(permissionsOf(role, withKernel, [])).toEqual(["read:access", "read:clock"]);
+    },
+  );
+
+  it("lists the kernel permissions in the catalogue's permissions", () => {
+    expect(catalogPermissions(withKernel, [])).toEqual(["read:access", "read:clock"]);
+  });
+});

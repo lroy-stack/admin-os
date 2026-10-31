@@ -1,8 +1,19 @@
 import "server-only";
 
+import type { ClockSeed } from "@/core/clock";
 import type { Vocabulary } from "@/core/i18n";
 
+import { BUSINESS_DAY } from "./seed";
+
 export { hospitalitySeed } from "./seed";
+
+/** Dinner service at 20:40; the business day turns over at 05:00 after late service. Seeded so server and client render the same moment (ADR 0005). */
+export const hospitalityClock: ClockSeed = {
+  businessDay: BUSINESS_DAY,
+  nowMin: 20 * 60 + 40,
+  cutoffMin: 5 * 60,
+  timeZone: "Europe/Madrid",
+};
 
 export const hospitalityVocabulary = {
   "bookings.title": { en: "Reservations", es: "Reservas", de: "Reservierungen", fr: "Réservations" },

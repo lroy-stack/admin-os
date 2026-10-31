@@ -1,8 +1,19 @@
 import "server-only";
 
+import type { ClockSeed } from "@/core/clock";
 import type { Vocabulary } from "@/core/i18n";
 
+import { BUSINESS_DAY } from "./seed";
+
 export { salonSeed } from "./seed";
+
+/** A late-morning moment in a salon day. Seeded so server and client render the same moment (ADR 0005). */
+export const salonClock: ClockSeed = {
+  businessDay: BUSINESS_DAY,
+  nowMin: 11 * 60,
+  cutoffMin: 0,
+  timeZone: "Europe/Madrid",
+};
 
 export const salonVocabulary = {
   "bookings.title": { en: "Appointments", es: "Citas", de: "Termine", fr: "Rendez-vous" },

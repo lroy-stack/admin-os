@@ -238,3 +238,26 @@ Every list capability paginates.
   - **sessions are lost often:** more than about 1 navigation in 20 in a 5-minute demo. Then back the mock store
     with a Durable Object or KV binding;
   - **reference's console moves reads to the client.**
+
+## Update 2026-10-31: the mock adapter as built (T5)
+
+- **Kernel capabilities.** `clock.get` lives in `src/core/clock` and `access.me.get` in `src/core/access`. Their
+  modules (`access`, `clock`) are kernel modules: every role holds `read:clock` and `read:access` whatever the preset
+  enables, and they grant no business data.
+- **Clock seed.** Each preset's `server.ts` exports a `ClockSeed` (`businessDay`, `nowMin`, `cutoffMin`,
+  `timeZone`) next to its seed collections. `fixedClock` freezes it; `MOCK_CLOCK=live` uses `liveClock` in the same
+  time zone and cut-off.
+- **Handlers.** Each module exports `<module>MockHandlers` from `mock.ts` through its server entry, registered with
+  `mockHandler(capability, run)` so the handler's input is the capability's parsed input. `src/config/data.server.ts`
+  merges them with `kernelMockHandlers`, and a contract test fails when a catalogue capability has no handler or its
+  output breaks the schema for any preset.
+- **Cookies** (no `studio_` prefix): `demo_session` (httpOnly; started by `ensureDemoSession()` in a Server
+  Action before the first write), `demo_role` (role switch; an unknown value falls back to `owner`) and
+  `mock_faults` (a visitor's faults in the `MOCK_FAULTS` grammar; a malformed cookie is ignored, while a malformed
+  environment value fails loudly).
+- **Writes without a session** return `transport.unavailable` with an actionable message instead of touching the
+  shared seed. Keyed writes replay their first result per session, and approval-gated writes are stored as pending
+  approvals on the session.
+- **Lists** page with `paginate(items, page)` from `src/core/pagination` (the base64url `{o}` cursor). A cursor that
+  does not decode is `schema.invalid_input`.
+

@@ -7,6 +7,8 @@ import { type CallResult, err, isAwaitingApproval, type Result } from "@/core/re
 /** Opaque here: ADR 0006 owns how an actor is resolved. The client only forwards it and logs the role. */
 export interface Actor {
   readonly actorId: string;
+  /** Shown in the shell; `access.me.get` returns it. */
+  readonly displayName?: string;
   readonly roleId: string;
   readonly permissions: readonly string[];
 }
