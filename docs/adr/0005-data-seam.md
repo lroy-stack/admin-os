@@ -1,10 +1,10 @@
 # ADR 0005 — Data seam: capability descriptors, a typed server client, and a swappable mock adapter
 
-Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/002-reference-console/spec.md` (D2) · Related: ADR 0003, 0004, 0006
+Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Related: ADR 0003, 0004, 0006
 
 ## Context
 
-**What reference does** (`a local checkout`):
+**What the reference console does:**
 
 - Every operation is a capability `{id, input zod, output zod, permission, effect, hitl?}`. Screens are Server
   Components that read with `sdk.call(id, input)`; writes go through `'use server'` actions
@@ -45,13 +45,13 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 1. **Client seam.** Client components call a browser data client; the mock store lives in zustand and localStorage.
    - *Pros:* closest to today's code; pages stay static; demo state is per visitor for free.
    - *Cons:*
-     - reads happen in the client, so porting to reference (RSC reads, Server Action writes) rewrites every screen;
+     - reads happen in the client, so porting to the reference console (RSC reads, Server Action writes) rewrites every screen;
      - permission filtering lands after hydration, so hidden entries flash, which breaks "hide, don't disable";
      - a real adapter cannot hold credentials in the browser.
    - *Effort / reversal:* S / L.
 2. **Server seam (chosen).** RSC reads go through a server-only client, writes go through route Server Actions, and
    a mock adapter runs on the server with a per-session in-memory store.
-   - *Pros:* the same shape as reference, so the port swaps one adapter.
+   - *Pros:* the same shape as the reference console, so the port swaps one adapter.
    - *Cons:* the dashboard renders dynamically; mock state lives per server process or isolate.
    - *Effort / reversal:* M / M.
 3. **Isomorphic seam.** One client on both sides; mock writes run in the browser and overlay server reads.
@@ -64,14 +64,14 @@ Option 2.
 
 ### Contract (`src/core`)
 
-The shape is copied from `a shared package`, so the port can re-export it:
+The shape is copied from `a shared contracts package`, so the port can re-export it:
 
 ```ts
-// src/core/result — identical to a shared package
+// src/core/result — identical to a shared result contract
 export interface DomainError { readonly code: string; readonly message: string; readonly details?: Readonly<Record<string, unknown>> }
 export type Result<T, E = DomainError> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 export interface AwaitingApproval { readonly status: "awaiting_approval"; readonly approvalId: string }
-export type CallResult<T> = Result<T> | AwaitingApproval; // = reference's SdkCallResult
+export type CallResult<T> = Result<T> | AwaitingApproval; // = the reference console's SdkCallResult
 
 // src/core/capability
 export interface Capability<Id extends string, I extends z.ZodType, O extends z.ZodType> {
@@ -110,7 +110,7 @@ export interface Adapter { dispatch(capability: AnyCapability, input: unknown, c
 4. **Retry policy.**
    - A read is retried once, with jittered backoff of about 300 ms, on `transport.*`.
    - A write is never retried unless it carries an `idempotencyKey`: one key per form attempt, renewed only after a
-     response (reference's `nuevaClaveIdempotencia`). The mock adapter de-duplicates by key.
+     response (the reference console's `nuevaClaveIdempotencia`). The mock adapter de-duplicates by key.
 
 ### Error codes (`src/core/errors`)
 
@@ -131,11 +131,11 @@ export interface Adapter { dispatch(capability: AnyCapability, input: unknown, c
 - **Approval is not an error.** `AwaitingApproval` renders the `AwaitingApproval` banner, and the pending item
   appears in the notification feed (ADR 0006).
 - **Rule violations travel as data.** They come in `details.violations[{ruleId, severity, params}]`, and the module
-  composes the sentence (reference's legal-violation pattern).
+  composes the sentence (the reference console's legal-violation pattern).
 
 ### Pagination
 
-`src/core/pagination` is a port of reference's `pagination.ts`:
+`src/core/pagination` is a port of the reference console's `pagination.ts`:
 
 - input `pageInput({defaultLimit, maxLimit})`, output `pageOutput(item)`;
 - a ceiling of 200 items per page and an opaque cursor of at most 512 characters;
@@ -146,7 +146,7 @@ Every list capability paginates.
 
 ### Mock adapter
 
-**The dispatcher.** `src/core/mock` exposes it on its server entry. It mirrors reference's kernel:
+**The dispatcher.** `src/core/mock` exposes it on its server entry. It mirrors the reference console's kernel:
 
 1. resolve the handler;
 2. check the permission against the actor (`access.forbidden`);
@@ -192,7 +192,7 @@ Every list capability paginates.
 ### Writes go through Server Actions
 
 - **Route `actions.ts`.** It carries `'use server'` at the top, every export is `async`, and it imports no other
-  `'use server'` file (reference's gotcha). Each action is thin: `call(...)`, then `refresh()` on `ok`.
+  `'use server'` file (the reference console's gotcha). Each action is thin: `call(...)`, then `refresh()` on `ok`.
 - **The client handles the result.** It calls the action inside `useTransition` and handles `CallResult`:
   - `ok`: update local state and show `toastWithUndo`;
   - `awaiting_approval`: show the banner;
@@ -207,8 +207,8 @@ Every list capability paginates.
 
 - **The switch.** `DATA_ADAPTER=mock` (the default) is chosen in `src/config/data.server.ts`. Another value selects
   another `Adapter`; screens, routes and modules do not change.
-- **The reference adapter is never part of this repo,** which keeps it generic. It lives in reference's console and maps
-  each kit capability to an reference capability id with a pure output mapper (an identity mapper where shapes match).
+- **The the reference console adapter is never part of this repo,** which keeps it generic. It lives in the reference console's console and maps
+  each kit capability to an the reference console capability id with a pure output mapper (an identity mapper where shapes match).
   The kit's output schemas then validate the mapped result.
 - **The spike of ADR 0004 measures that mapping** on two capabilities.
 
@@ -231,13 +231,13 @@ Every list capability paginates.
 - **The current mock files migrate when their slice touches them:** `_components/*-data.ts`, `src/data/crm.ts`.
   Untouched template-demo pages keep their files.
 - **Reversal costs medium.** Screens are shaped as RSC reads plus actions; this is deliberate, because it matches
-  reference.
+  the reference console.
 - **First spike:** deploy one write → read → navigate cycle to the Cloudflare preview and count session losses
   over 50 navigations.
 - **Revisit when:**
   - **sessions are lost often:** more than about 1 navigation in 20 in a 5-minute demo. Then back the mock store
     with a Durable Object or KV binding;
-  - **reference's console moves reads to the client.**
+  - **the reference console's console moves reads to the client.**
 
 ## Update 2026-10-31: the mock adapter as built (T5)
 

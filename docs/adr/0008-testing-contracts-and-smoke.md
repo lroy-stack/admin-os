@@ -20,8 +20,8 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 - 375 / 834 / 1440 px with no console errors;
 - seams and dictionaries are respected.
 
-**reference's practice.** A smoke e2e at 375 and 1280 px pins what the user does *before* migrating a screen, and the
-tests of deleted pieces go with them (reference `CLAUDE.md`, Working style 3).
+**the reference console's practice.** A smoke e2e at 375 and 1280 px pins what the user does *before* migrating a screen, and the
+tests of deleted pieces go with them (the reference console `CLAUDE.md`, Working style 3).
 
 **The salon preset (ADR 0004)** needs an automated check that nothing generic is restaurant-coupled.
 
@@ -111,7 +111,7 @@ The lists live in each preset. `table` is deliberately absent because it collide
 - under 3 minutes in CI;
 - part of the Stop-hook gates once F5 lands: Biome, tsc, vitest and build stay as they are, and e2e is added.
 
-**Timing.** A slice adds its smoke spec **before** redesigning its page (reference's rule). The spec first pins the
+**Timing.** A slice adds its smoke spec **before** redesigning its page (the reference console's rule). The spec first pins the
 current behaviour; the slice then updates it in the same change that changes the requirement.
 
 ## Consequences

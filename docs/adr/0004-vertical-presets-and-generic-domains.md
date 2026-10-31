@@ -4,14 +4,14 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 
 ## Context
 
-**Who the kit is for.** It is for any small business. Hospitality (reference) is the reference vertical and is built
+**Who the kit is for.** It is for any small business. Hospitality (the reference console) is the reference vertical and is built
 fully. A salon (appointments by stylist and chair, a services catalog, commissions) and a workshop (work orders,
 vehicles as customer assets, bays, parts, quotes and invoices) stress-test the names and contracts.
 
-**reference's rules.**
+**the reference console's rules.**
 
 - No hard-coded business data: name, city, currency.
-- Every business rule is a setting, with a default chosen by industry practice (reference `CLAUDE.md`).
+- Every business rule is a setting, with a default chosen by industry practice (the reference console `CLAUDE.md`).
 
 **Restaurant vocabulary already sits in generic places:**
 
@@ -23,14 +23,14 @@ vehicles as customer assets, bays, parts, quotes and invoices) stress-test the n
   - business rules: `LATE_AFTER_MIN = 10` and a fixed `SERVICE_NOW_MIN`.
 - `floor/floor-model.ts` names the item `DiningTable`, with landmark kinds bar / kitchen / restrooms.
   `floor/table-geometry.ts` places chairs around tables, and `floor/venue.ts` holds the mock room.
-- reference's booking statuses include `seated` and `pending_payment`, and its booking carries `blockedSeats`
+- the reference console's booking statuses include `seated` and `pending_payment`, and its booking carries `blockedSeats`
   (`packages/contracts/src/operations/booking-summary-view.ts`).
 - `src/lib/utils.ts:27-28` defaults `formatCurrency` to USD / `en-US`.
 
 ## Options considered
 
 1. **Restaurant-first naming; other verticals fork the repo.**
-   - *Pros:* fastest for reference.
+   - *Pros:* fastest for the reference console.
    - *Cons:* the template is not generic, and the forks diverge.
    - *Effort / reversal:* S / L (renames spread everywhere later).
 2. **A runtime metamodel** (entities and fields defined as data, low-code style).
@@ -102,8 +102,8 @@ Option 3.
 - **When:** each slug is renamed in the slice that redesigns its page, with a redirect from the old slug in
   `next.config.mjs` `redirects()`.
 - **First (done 2026-10-31):** `reservas` → `bookings`, because it is the only Spanish and vertical slug in a generic layer.
-- **Approval:** this amends spec D1 ("paths kept") for the template and needs the owner's acceptance. reference's port
-  keeps reference's own slugs.
+- **Approval:** this amends spec D1 ("paths kept") for the template and needs the owner's acceptance. the reference console's port
+  keeps the reference console's own slugs.
 
 ### Contracts: what is generic and what is a vertical extension
 
@@ -119,7 +119,7 @@ preset-registered record sections. Generic screens never read `ext`.
 | **customers** | `Customer {id, name, contacts[], consent, tags, vip, blocked, notes, figures {visits, spend, lastVisit, noShows}}`, `Asset {id, customerId, kind, label}` with attributes in `ext` | Allergy and diet strip, seating preferences | Colour formulas (in `ext`) | Vehicles as assets (plate, VIN, make, model, mileage) |
 | **staff** | `StaffMember {id, name, roleIds, status, locationIds, contract, skills[]}`, `Shift`, `Attendance`, `Leave` | Crew and XP, academy credentials, tips | Skills; commission in `ext` | Certifications; hours per job in `ext` |
 | **tasks** (board engine) | `Task {id, title, status (columns from the preset), assignee: staff \| role \| shift, dueAt?, checklist, links: EntityRef[]}` | Opening and closing checklists, mise en place | — | Work order = task + lines + asset + quote → invoice (a workshop extension module) |
-| **vouchers** | `Pass {id, programId, holderId, balance \| stamps, status, expiresAt}`, `Program`, `Movement` | reference Pass, wallet card | Gift card, prepaid pack | — |
+| **vouchers** | `Pass {id, programId, holderId, balance \| stamps, status, expiresAt}`, `Program`, `Movement` | the reference console Pass, wallet card | Gift card, prepaid pack | — |
 | **conversations** (inbox engine) | `Conversation {id, channel, participants, assigneeId, links}`, `Message` | WhatsApp booking intake | Reminders | Quote approval by SMS |
 | **agenda** engine | `AgendaLayer` and `AgendaItem` (ADR 0006), resources as rows | Reservations, shifts, closures | Appointments by stylist | Bays by day |
 
@@ -182,13 +182,13 @@ spike below and is not shipped.
 ### First spike, before S1: the riskiest assumption
 
 **The assumption:** one set of generic contracts serves hospitality, salon and workshop while staying a
-near-identity mapping of reference's capability outputs.
+near-identity mapping of the reference console's capability outputs.
 
 **The spike** (size S–M, vitest only, no UI):
 
 1. Draft zod schemas for `Booking`, `Customer` + `Asset`, `CatalogItem` and `StaffMember`.
 2. Write the hospitality seed from `reservations-data.ts`, the salon seed, and the workshop seed sketch.
-3. Write the reference → generic mappers for `BookingSummaryView` and the customer profile.
+3. Write the the reference console → generic mappers for `BookingSummaryView` and the customer profile.
 
 **Pass when:**
 
@@ -205,9 +205,9 @@ near-identity mapping of reference's capability outputs.
 - The hospitality, salon and workshop seeds parse with the generic `bookings`, `customers`, `catalog`, `staff` and
   `resources` schemas and with their preset `ext` schemas.
 - No generic schema reads `ext` (`src/modules/ext-guard.test.ts`).
-- reference's `BookingSummaryView` and customer profile map by renames and enum maps (`seated` → `in_progress`,
+- the reference console's `BookingSummaryView` and customer profile map by renames and enum maps (`seated` → `in_progress`,
   `pending_payment` → `awaiting_payment`, `source` → `origin`). On top of that, the mappers:
-  - take **request context**: `currency`, plus `businessDay` until reference exposes `serviceDate`;
+  - take **request context**: `currency`, plus `businessDay` until the reference console exposes `serviceDate`;
   - make structural wraps: menu → one line, deposit fields → `deposit`;
   - convert the wire form of the bigint deposit amount.
 
@@ -236,7 +236,7 @@ near-identity mapping of reference's capability outputs.
 
 - **Indirection.** Labels come from dictionaries and vertical data sits behind `ext`. Generic screens become a
   little more abstract, but they never branch on the vertical.
-- **The reference adapter maps names** (`in_progress` ↔ `seated`, `location` ↔ `venue`, permission slugs). The
+- **The the reference console adapter maps names** (`in_progress` ↔ `seated`, `location` ↔ `venue`, permission slugs). The
   spike measures that cost.
 - **Reversal costs medium.** Names spread across schemas, dictionaries and routes, so they are fixed here and
   checked by the spike before S1.

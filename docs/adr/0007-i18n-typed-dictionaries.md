@@ -172,7 +172,7 @@ every string translated: no partial dictionaries.
   - user-visible dates are formatted with `date-fns` `format()` (`finance/page.tsx`, `calendar/_components/*`,
     `mail/_components/*`).
 
-**What reference does:**
+**What the reference console does:**
 
 - Staff locales are es / en / de. Texts live in `src/i18n/*.ts` as `Record<StaffLocale, Textos…>`, read through an
   accessor (`apps/console/src/i18n/navegacion.ts`).
@@ -208,12 +208,12 @@ A hand-made `n === 1` is therefore wrong in French.
      - a new dependency with its own plugin and request config;
      - JSON messages need declaration merging to be typed;
      - preset vocabulary overrides still need custom merging;
-     - reference's dictionaries do not use it, so the port is not mechanical.
+     - the reference console's dictionaries do not use it, so the port is not mechanical.
    - *Effort / reversal:* M / M.
 2. **JSON dictionaries per locale, as in the Next guide.**
    - *Cons:* no compile-time completeness without codegen, and placeholders are untyped.
    - *Effort / reversal:* S / S.
-3. **Typed TypeScript dictionaries, data-only, with `Intl` for formatting (chosen).** This is reference's
+3. **Typed TypeScript dictionaries, data-only, with `Intl` for formatting (chosen).** This is the reference console's
    `Record<Locale, T>` pattern.
    - *Effort / reversal:* S–M / S.
 
@@ -248,20 +248,20 @@ Options 3 and 2.
 - the template's audience and its existing screens are English, so untranslated screens stay coherent with the
   chrome during the migration.
 
-**Approval and the reference port:**
+**Approval and the the reference console port:**
 
 - This amends spec D3 and needs the owner's acceptance.
-- reference's console sets `es` in its own config when ported.
+- the reference console's console sets `es` in its own config when ported.
 
 ### Resolution
 
 Order: the `locale` cookie (when supported), then `Accept-Language` (q-ordered, matched on the base
 language), then `defaultLocale`.
 
-- **The resolver** is a pure `resolveLocale({cookie, acceptLanguage, defaultLocale})`, ported from reference's
+- **The resolver** is a pure `resolveLocale({cookie, acceptLanguage, defaultLocale})`, ported from the reference console's
   `idiomaDelPersonalDe`. `getLocale()` (server, `React.cache`) feeds it with `cookies()` and `headers()`.
 - **The switch** is a Server Action that writes the cookie (Next then re-renders the page). With a real backend, the adapter
-  also stores the preference (reference's `core.identity.locale.set_self`).
+  also stores the preference (the reference console's `core.identity.locale.set_self`).
 - **No `[lang]` segment and no `proxy.ts`.**
   - `cookies()` also works in Server Actions, unlike root params.
   - A public, SEO-relevant surface such as the `(external)` landing may adopt `[lang]` later, on its own.
@@ -373,10 +373,10 @@ The server's `message` is never rendered. Rule violations compose their sentence
   goes in the slice's acceptance list.
 - **The dashboard layout reads the locale cookie,** which it already does for the session.
 - **Business data in seeds is not translated:** guest notes, dish names in the seed. It is content, like real data.
-  Catalogue names use i18n fields (`{source, translations}`, reference `packages/contracts/src/i18n.ts`) when the
+  Catalogue names use i18n fields (`{source, translations}`, the reference console `packages/contracts/src/i18n.ts`) when the
   catalog module lands.
-- **The port is close to mechanical.** It means renaming the cookie (`reference_staff_lang`) and adding `fr` on
-  reference's side, which its types will then demand.
+- **The port is close to mechanical.** It means renaming the cookie (its existing cookie) and adding `fr` on
+  the reference console's side, which its types will then demand.
 - **Revisit when:**
   - translators need external tooling (TMS, ICU files), or a locale needs ICU features beyond plural selection.
     Then generate these typed dictionaries from ICU JSON, or adopt next-intl;

@@ -41,7 +41,7 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 **A typed static registry already exists here.** `PREFERENCE_REGISTRY` (`src/lib/preferences/preferences-config.ts`)
 is one, serialised into the boot script (`src/scripts/theme-boot.tsx`).
 
-**What reference does:**
+**What the reference console does:**
 
 - **The nav manifest** is `NAVIGATION_MANIFEST`, whose entries carry `requiredPermission` or `requiredModule`
   (`apps/console/src/lib/navigation.ts`).
@@ -130,7 +130,7 @@ export interface NavEntry {
 ```
 
 - **Fail-closed.** An entry with neither gate is hidden. A gate on a disabled module is hidden.
-- **The `wide` breakpoint** is a ds token at 1180 px, which matches reference.
+- **The `wide` breakpoint** is a ds token at 1180 px, which matches the reference console.
 - **Visibility is decided on the server; rendering happens in the client.**
   - The dashboard layout computes `visibleNavIds(manifest, access)` with a pure function and passes only the ids.
   - A small client wrapper in `src/app/(main)/dashboard/_components/` takes the active preset's manifest from
@@ -149,15 +149,15 @@ export interface NavEntry {
 
 **Permission slugs.**
 
-- They use reference's grammar `"<action>:<resource>"` (`read:customers`, `set:customers.vip`,
+- They use the reference console's grammar `"<action>:<resource>"` (`read:customers`, `set:customers.vip`,
   `manage:settings`, `export:customers.gdpr`).
 - Every slug comes from a capability descriptor (ADR 0005), so the catalogue is derived and cannot drift.
-- The reference adapter maps slugs onto reference's own.
+- The the reference console adapter maps slugs onto the reference console's own.
 
 **The actor.**
 
 - It comes from the capability `access.me.get`, which returns `{actorId, displayName, roleId, permissions}`. The
-  mock answers from the preset's role preset; reference answers from `/v1/me/capabilities`.
+  mock answers from the preset's role preset; the reference console answers from `/v1/me/capabilities`.
 - `getRuntime()` (`src/config`, wrapped in `React.cache`) reads it once per request.
 
 **`can()`.**
@@ -170,10 +170,10 @@ export interface NavEntry {
 **In screens:**
 
 - **Hide, never disable:** `{can("set:customers.vip") && <VipToggle />}`.
-- **Elevated pages** (GDPR, audit) call `notFound()` without permission, as reference's GDPR screen does.
+- **Elevated pages** (GDPR, audit) call `notFound()` without permission, as the reference console's GDPR screen does.
 - **Other pages** render a "no access" state from the `forbidden` code.
 
-**Security.** UI hiding is UX only. The adapter checks every call: the mock in its dispatcher, reference in its API.
+**Security.** UI hiding is UX only. The adapter checks every call: the mock in its dispatcher, the reference console in its API.
 
 **Role presets.**
 
@@ -186,7 +186,7 @@ export interface NavEntry {
   - `staff`: reads plus operational writes.
 - **A contract test checks** that owner ⊇ manager ⊇ staff, and that every role is a subset of the catalogue.
 
-**Location scope** (reference's venue) is deferred until the first screen with a location selector. `can()` then
+**Location scope** (the reference console's venue) is deferred until the first screen with a location selector. `can()` then
 gains an optional `scope`.
 
 ### Dev-only switches (account menu)
@@ -207,4 +207,4 @@ gains an optional `scope`.
   that declares it and the preset that lists it. Nothing registers itself.
 - **Reversal is cheap.** Arrays and context sit behind small types.
 - **Revisit when:** third parties need to add modules without editing a preset (a plugin market). Then add a
-  build-time registry generator. reference's `pnpm gen:registry` is the reference.
+  build-time registry generator. the reference console's `pnpm gen:registry` is the reference.

@@ -5,8 +5,8 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 ## Context
 
 This repo is a fork of Studio Admin that becomes a **reusable, publishable kit** for building the management
-dashboard of any small business (restaurant, hair salon, car repair workshop). reference's restaurant console is the
-reference consumer. Later, a clean monorepo and reference's new console app will be built by **porting folders out of
+dashboard of any small business (restaurant, hair salon, car repair workshop). the reference console's restaurant console is the
+reference consumer. Later, a clean monorepo and the reference console's new console app will be built by **porting folders out of
 this repo**. The owner's constraint is that the repo stays a generic template.
 
 What the code shows today:
@@ -33,8 +33,8 @@ What the code shows today:
 - **AGENTS.md rules:**
   - keep code in its route until another feature reuses it;
   - never modify `src/components/ui/` or `src/components/calendar/`.
-- **reference enforces its layers.** Core → Engines → Domains → Interfaces is enforced by `depcruise`, and
-  `a shared package` may not import business logic (reference `CLAUDE.md`).
+- **the reference console enforces its layers.** Core → Engines → Domains → Interfaces is enforced by `depcruise`, and
+  `a shared package` may not import business logic (the reference console `CLAUDE.md`).
 - **Tooling.** Biome 2.6.4 is the only linter (`biome.json`). It already enables `noImportCycles` and
   `noUndeclaredDependencies`. Boundaries moved to `dependency-cruiser` (see Enforcement).
 
@@ -212,18 +212,18 @@ New packages are covered without editing the config.
 
 ### Porting map
 
-| This repo | Published kit (future monorepo) | reference's new console |
+| This repo | Published kit (future monorepo) | the reference console's new console |
 | --- | --- | --- |
 | `src/components/ui`, `src/components/calendar`, `src/lib`, `src/hooks` | `packages/ui` (primitives) | consumed |
 | `src/ds` | `packages/ui` (`/shell`, `/glass`, `/preferences`, tokens CSS) | consumed |
-| `src/core` | `packages/core` | consumed; `Result` is shape-identical to `a shared package` |
+| `src/core` | `packages/core` | consumed; `Result` is shape-identical to `a shared contracts package` |
 | `src/engines/*` | `packages/engines` (one subpath per engine) | consumed |
 | `src/modules/*` (`index`, `ui`) | `packages/modules` (`/customers`, `/customers/ui`, …) | consumed |
 | `src/core` mock dispatcher + `src/modules/*/server` mock handlers | `packages/adapter-mock` | dev and demo only |
 | — (never in this repo) | — | `apps/console/src/lib/adapter-reference.ts`: maps ids and outputs onto `a shared package` (ADR 0005) |
 | `src/verticals/hospitality` | `presets/hospitality` | vocabulary, registrations, floor extension (not the seed) |
 | `src/verticals/salon` | `presets/salon` | — |
-| `src/config` and the redesigned routes in `src/app/(main)/dashboard/*`, `mail`, `chat` | `apps/template` (what a scaffold copies) | routes copied into `apps/console/src/app/(app)/` under reference's slugs |
+| `src/config` and the redesigned routes in `src/app/(main)/dashboard/*`, `mail`, `chat` | `apps/template` (what a scaffold copies) | routes copied into `apps/console/src/app/(app)/` under the reference console's slugs |
 | `(examples)`, `(legacy)`, `src/data`, `src/lib/crm.ts`, `(external)` landing, `auth/v1`, `auth/v2` | stays here as the template demo (`apps/showcase`) | not ported |
 
 **Distribution (sketch, not a commitment):**
