@@ -12,6 +12,7 @@ vi.mock("react", async (importOriginal) => ({
 }));
 
 const { pageMetadata } = await import("./metadata.server");
+const { APP_CONFIG } = await import("./app-config");
 
 const dictionary = {
   en: { meta: { title: "Title", description: "Description" } },
@@ -34,6 +35,13 @@ describe("pageMetadata", () => {
       ogLocale,
       "/dashboard/x",
     ]);
+  });
+
+  // A page's openGraph replaces the root layout's, so the social card has to be part of every page's defaults.
+  it("shares the social card as og:image", async () => {
+    cookieValue.locale = "en";
+    const metadata = await pageMetadata("/x", dictionary);
+    expect(metadata.openGraph?.images).toEqual([APP_CONFIG.socialImage]);
   });
 
   it("lets a page add fields such as robots", async () => {

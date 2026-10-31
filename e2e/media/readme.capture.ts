@@ -137,14 +137,13 @@ test.describe("desktop screens", () => {
   });
 
   test("social preview card", async ({ browser, baseURL }) => {
-    // 1200 x 630 is the card size Open Graph and X recommend; Next serves both files from the app root.
+    // 1200 x 630 is the card size Open Graph and X recommend; the metadata points both at it (APP_CONFIG.socialImage).
     const page = await openPage(browser, baseURL ?? "", "desktop", "dark");
     await ready(page, "/dashboard/bookings");
     await roomReady(page);
     await page.mouse.move(0, 0);
     const png = await page.screenshot({ animations: "disabled", caret: "hide" });
-    await writeCard("src/app/opengraph-image.png", png, 1200, 630);
-    await writeCard("src/app/twitter-image.png", png, 1200, 630);
+    await writeCard("public/social-card.png", png, 1200, 630);
     await page.context().close();
   });
 

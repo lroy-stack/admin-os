@@ -15,7 +15,8 @@ type MetaDictionary = Readonly<Record<Locale, { readonly meta: PageMeta }>>;
  *
  *   export const generateMetadata = () => pageMetadata("/dashboard/default", overviewMessages);
  *
- * It sets title, description, canonical URL and the Open Graph pair (`og:locale` per language). The root layout stays
+ * It sets title, description, canonical URL, the Open Graph pair (`og:locale` per language) and the social card as
+ * `og:image`, since a page's `openGraph` replaces the root layout's. The root layout stays
  * static (ADR 0007), so pages cannot inherit these from it. `extra` is merged last, for example `robots`; its
  * `openGraph` and `alternates` are merged field by field into the defaults, so adding an `og:image` or a language
  * alternate does not drop `og:locale`, the title, the URL or the canonical.
@@ -36,6 +37,7 @@ export async function pageMetadata(path: string, dictionary: MetaDictionary, ext
       url: path,
       title,
       description,
+      images: [APP_CONFIG.socialImage],
       ...openGraph,
     } as Metadata["openGraph"],
   };
