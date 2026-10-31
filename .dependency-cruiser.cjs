@@ -15,8 +15,8 @@ const PACKAGED = "core|ds|engines|modules|verticals";
 const UNIT = "(?:engines|modules|verticals)/[^/]+|core|ds";
 /** Platform code below the layers (shadcn primitives, generic utilities). */
 const PLATFORM = "^src/(lib|hooks|components/(ui|calendar))/";
-/** Public entries of a package: `index`, `server` or `ui`, as a file or a folder index. */
-const ENTRY = "(index|server|ui)(/index)?\\.tsx?$";
+/** Public entries of a package: `index`, `server`, `ui` or `client`, as a file or a folder index. */
+const ENTRY = "(index|server|ui|client)(/index)?\\.tsx?$";
 
 const SEE = "docs/adr/0003-package-shaped-layers.md";
 
@@ -54,6 +54,14 @@ module.exports = {
         path: `^src/(${PACKAGED})/[^/]+/`,
         pathNot: [`^src/(${PACKAGED})/[^/]+/${ENTRY}`, "^src/ds/preferences/actions\\.tsx?$"],
       },
+    },
+    {
+      name: "i18n-client-entry-for-tsx",
+      severity: "error",
+      comment:
+        "components import i18n through @/core/i18n/client; the full barrel carries every locale's error messages and the zod schemas, which must not reach the browser (docs/adr/0007-i18n-typed-dictionaries.md)",
+      from: { path: "^src/.*\\.tsx$", pathNot: "\\.test\\.tsx$" },
+      to: { path: "^src/core/i18n/index\\.ts$" },
     },
     {
       name: "no-relative-escape",

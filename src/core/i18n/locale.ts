@@ -1,17 +1,18 @@
-import { z } from "zod";
-
 export const LOCALES = ["en", "es", "de", "fr"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
+/** Cookie holding the owner's language. Named like the other preference cookies (`theme_mode`, `font`, ...). */
+export const LOCALE_COOKIE = "locale";
+
+/** Each language in its own tongue, so the picker never depends on the active locale. Not a translation. */
+export const LOCALE_NAMES: Readonly<Record<Locale, string>> = {
+  en: "English",
+  es: "Español",
+  de: "Deutsch",
+  fr: "Français",
+};
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }
-
-/** The original text plus the translations that exist so far (ADR 0007); a missing locale falls back to `source`. */
-export const localizedTextSchema = z.object({
-  source: z.string(),
-  translations: z.partialRecord(z.enum(LOCALES), z.string()),
-});
-
-export type LocalizedText = z.infer<typeof localizedTextSchema>;

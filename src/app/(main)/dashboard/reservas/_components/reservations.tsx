@@ -468,7 +468,9 @@ export function Reservations() {
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <PeriodStepper
+              label="Change period"
               previousLabel="Previous day"
+              todayLabel="Today"
               nextLabel="Next day"
               onPrevious={() => setDayOffset((offset) => offset - 1)}
               onToday={() => setDayOffset(0)}

@@ -14,11 +14,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
+import { shellMessageKey } from "./messages";
 import type { ShellAccount } from "./types";
 
 export function AccountMenu({ accounts }: { accounts: readonly ShellAccount[] }) {
+  const { account: text } = useMessages(shellMessageKey);
+  const locale = useLocale();
   const [activeUser, setActiveUser] = useState(accounts[0]);
 
   if (!activeUser) {
@@ -33,7 +37,7 @@ export function AccountMenu({ accounts }: { accounts: readonly ShellAccount[] })
             {getInitials(activeUser.name)}
           </AvatarFallback>
         </Avatar>
-        <span className="sr-only">Account: {activeUser.name}</span>
+        <span className="sr-only">{format(text.label, locale, { name: activeUser.name })}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56 space-y-1 rounded-lg" side="bottom" align="end" sideOffset={4}>
         {accounts.map((user) => (
@@ -67,21 +71,21 @@ export function AccountMenu({ accounts }: { accounts: readonly ShellAccount[] })
         <DropdownMenuGroup>
           <DropdownMenuItem>
             <BadgeCheck />
-            Account
+            {text.account}
           </DropdownMenuItem>
           <DropdownMenuItem>
             <CreditCard />
-            Billing
+            {text.billing}
           </DropdownMenuItem>
           <DropdownMenuItem>
             <Bell />
-            Notifications
+            {text.notifications}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <LogOut />
-          Log out
+          {text.logOut}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

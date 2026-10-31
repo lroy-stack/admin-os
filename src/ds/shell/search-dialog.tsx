@@ -18,25 +18,28 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMessages } from "@/core/i18n/client";
 
+import { shellMessageKey } from "./messages";
 import { railButtonClassName } from "./rail-button";
 import type { ShellSearchGroup, ShellSearchItem } from "./types";
 
-type SearchItem = ShellSearchItem & { group: string };
+type SearchItem = ShellSearchItem & { groupId: string; group: string };
 
 function flatten(groups: readonly ShellSearchGroup[]): SearchItem[] {
-  return groups.flatMap((group) => group.items.map((item) => ({ ...item, group: group.label })));
+  return groups.flatMap((group) => group.items.map((item) => ({ ...item, groupId: group.id, group: group.label })));
 }
 
 function groupBy(items: SearchItem[]) {
-  const groups = [...new Set(items.map((item) => item.group))];
-  return groups.map((group) => ({
-    group,
-    items: items.filter((item) => item.group === group),
-  }));
+  const ids = [...new Set(items.map((item) => item.groupId))];
+  return ids.map((groupId) => {
+    const members = items.filter((item) => item.groupId === groupId);
+    return { groupId, group: members[0]?.group, items: members };
+  });
 }
 
 export function SearchDialog({ groups }: { groups: readonly ShellSearchGroup[] }) {
+  const { search: text } = useMessages(shellMessageKey);
   const searchItems = flatten(groups);
   const recommendations = searchItems.filter((item) => item.suggested);
   const [open, setOpen] = React.useState(false);
@@ -70,14 +73,14 @@ export function SearchDialog({ groups }: { groups: readonly ShellSearchGroup[] }
   };
 
   const renderGroups = (items: SearchItem[]) =>
-    groupBy(items).map(({ group, items: groupItems }, index) => (
-      <React.Fragment key={group}>
+    groupBy(items).map(({ groupId, group, items: groupItems }, index) => (
+      <React.Fragment key={groupId}>
         {index > 0 && <CommandSeparator />}
         <CommandGroup heading={group}>
           {groupItems.map((item) => (
             <CommandItem
               disabled={item.disabled}
-              key={`${group}-${item.id}`}
+              key={`${groupId}-${item.id}`}
               value={`${item.group} ${item.label}`}
               onSelect={() => handleSelect(item)}
             >
@@ -97,16 +100,16 @@ export function SearchDialog({ groups }: { groups: readonly ShellSearchGroup[] }
         <TooltipTrigger asChild>
           <Button onClick={() => handleOpenChange(true)} variant="ghost" size="icon" className={railButtonClassName}>
             <Search />
-            <span className="sr-only">Search</span>
+            <span className="sr-only">{text.open}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">Search ⌘J</TooltipContent>
+        <TooltipContent side="right">{text.tooltip}</TooltipContent>
       </Tooltip>
       <CommandDialog open={open} onOpenChange={handleOpenChange}>
         <Command>
-          <CommandInput placeholder="Search dashboards, users, and more…" value={query} onValueChange={setQuery} />
+          <CommandInput placeholder={text.placeholder} value={query} onValueChange={setQuery} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{text.empty}</CommandEmpty>
             {query ? renderGroups(searchItems) : renderGroups(recommendations)}
           </CommandList>
         </Command>

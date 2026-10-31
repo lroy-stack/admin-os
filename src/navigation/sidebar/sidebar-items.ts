@@ -58,15 +58,18 @@ export interface NavMainParentItem extends NavItemBase {
 
 export type NavMainItem = NavMainLinkItem | NavMainParentItem;
 
+export type NavGroupId = "dashboards" | "pages" | "legacy" | "misc";
+
 export interface NavGroup {
-  id: number;
+  /** Stable key the shell translates the group label with; never an index. */
+  id: NavGroupId;
   label?: string;
   items: NavMainItem[];
 }
 
 export const sidebarItems: NavGroup[] = [
   {
-    id: 1,
+    id: "dashboards",
     label: "Dashboards",
     items: [
       {
@@ -138,7 +141,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 2,
+    id: "pages",
     label: "Pages",
     items: [
       {
@@ -224,7 +227,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 3,
+    id: "legacy",
     label: "Legacy",
     items: [
       {
@@ -240,7 +243,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 4,
+    id: "misc",
     label: "Misc",
     items: [
       {

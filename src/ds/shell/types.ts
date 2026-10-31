@@ -35,6 +35,8 @@ export type ShellSearchItem = {
 };
 
 export type ShellSearchGroup = {
+  /** Stable key the app translates the label with. */
+  readonly id: string;
   readonly label: string;
   readonly items: readonly ShellSearchItem[];
 };

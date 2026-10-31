@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMessages } from "@/core/i18n/client";
 
 import { isActiveLink } from "./active-link";
 import { LayoutControls } from "./layout-controls";
+import { shellMessageKey } from "./messages";
 import { railButtonClassName } from "./rail-button";
 import { SearchDialog } from "./search-dialog";
 import { ThemeSwitcher } from "./theme-switcher";
@@ -23,10 +25,11 @@ export function AppRail({
   searchGroups: readonly ShellSearchGroup[];
 }) {
   const pathname = usePathname();
+  const { landmarks } = useMessages(shellMessageKey);
 
   return (
     <aside
-      aria-label="Quick access"
+      aria-label={landmarks.quickAccess}
       className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center md:pointer-events-auto md:sticky md:top-24 md:bottom-auto md:block md:self-start"
     >
       <div className="liquid-glass liquid-glass-solid pointer-events-auto flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto rounded-full p-1 md:flex-col md:gap-1 md:overflow-visible md:p-1.5">

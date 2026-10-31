@@ -5,6 +5,8 @@
  * Runs early in <head> to apply the correct data attributes before hydration,
  * preventing layout or theme flicker and keeping RootLayout fully static.
  */
+import { LOCALE_COOKIE, LOCALES } from "@/core/i18n/client";
+
 import { PREFERENCE_REGISTRY } from "./preferences-config";
 
 export function ThemeBootScript() {
@@ -63,6 +65,11 @@ export function ThemeBootScript() {
             : mode === "dark"
               ? "dark"
               : "light";
+
+        var locale = readCookie(${JSON.stringify(LOCALE_COOKIE)});
+        if (${JSON.stringify(LOCALES)}.indexOf(locale) >= 0) {
+          root.lang = locale;
+        }
 
         root.classList.toggle("dark", resolvedMode === "dark");
         root.style.colorScheme = resolvedMode;

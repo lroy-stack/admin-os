@@ -115,7 +115,9 @@ export function Calendar() {
 
       <div className="flex flex-wrap items-center gap-2">
         <PeriodStepper
+          label="Change period"
           previousLabel="Previous period"
+          todayLabel="Today"
           nextLabel="Next period"
           onPrevious={() => controller.prev()}
           onToday={() => controller.today()}

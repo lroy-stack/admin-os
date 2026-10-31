@@ -10,11 +10,16 @@ import { Bell, Inbox } from "lucide-react";
 
 import { AppLogo } from "@/components/app-logo";
 import { Button } from "@/components/ui/button";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { LiquidThumb, useLiquidThumb } from "@/ds/components";
 
 import { AccountMenu } from "./account-menu";
 import { isActiveLink } from "./active-link";
+import { shellMessageKey } from "./messages";
 import type { ShellAccount, ShellBrand, ShellNavItem } from "./types";
+
+// Demo count until the feed engine supplies the real one.
+const UNREAD_NOTIFICATIONS = 1;
 
 const headerButtonClassName = "liquid-glass liquid-glass-solid size-9 rounded-full hover:bg-foreground/10";
 
@@ -111,6 +116,8 @@ export function TopNav({
   inboxHref: string;
 }) {
   const pathname = usePathname();
+  const { landmarks, header } = useMessages(shellMessageKey);
+  const locale = useLocale();
   const scrolled = useScrolledPast(8);
 
   return (
@@ -130,26 +137,29 @@ export function TopNav({
           <span className="text-lg font-medium tracking-tight">{brand.name}</span>
         </Link>
 
-        <nav aria-label="Sections" className="hidden xl:block">
+        <nav aria-label={landmarks.sections} className="hidden xl:block">
           <NavPills items={items} pathname={pathname} />
         </nav>
 
         <div className="flex items-center justify-end gap-2">
           <Button asChild variant="ghost" size="icon" className={headerButtonClassName}>
-            <Link prefetch={false} href={inboxHref} aria-label="Inbox">
+            <Link prefetch={false} href={inboxHref} aria-label={header.inbox}>
               <Inbox />
             </Link>
           </Button>
           <Button variant="ghost" size="icon" className={headerButtonClassName}>
             <Bell />
             <span className="bg-destructive absolute top-2 right-2.5 size-1.5 rounded-full" />
-            <span className="sr-only">Notifications, 1 unread</span>
+            <span className="sr-only">{format(header.unread, locale, { count: UNREAD_NOTIFICATIONS })}</span>
           </Button>
           <AccountMenu accounts={accounts} />
         </div>
       </div>
 
-      <nav aria-label="Sections" className="-mx-4 mt-3 [scrollbar-width:none] overflow-x-auto px-4 py-1 xl:hidden">
+      <nav
+        aria-label={landmarks.sections}
+        className="-mx-4 mt-3 [scrollbar-width:none] overflow-x-auto px-4 py-1 xl:hidden"
+      >
         <NavPills items={items} pathname={pathname} className="w-max" />
       </nav>
     </header>

@@ -125,6 +125,7 @@ Every folder in L1–L5 is reached only through:
 | --- | --- | --- |
 | `index.ts` | Isomorphic contract: types, zod schemas, capability descriptors, pure functions | Safe to import from client and server |
 | `server.ts` | Mock handlers, messages (all four locales), preset seeds | Starts with `import "server-only"`, so Next fails the build if a client file reaches it |
+| `client.ts` | Client-safe subset of a package whose `index` also carries server-only weight (`core/i18n`) | Components import it instead of the barrel; a dependency-cruiser rule enforces it |
 | `ui.ts` | Client components (`"use client"` at the leaf files) | Exists only once a UI piece has a second consumer |
 
 `src/ds` and `src/core` expose first-level subpaths (`@/ds/shell`, `@/ds/components`, `@/core/result`,
@@ -199,7 +200,7 @@ The rules:
 - **Layer direction.** A layer never imports a higher one, and `src/lib`, `src/hooks`, `src/components/ui` and
   `src/components/calendar` import no layer. One rule per layer, generated from the layer list.
 - **Public entries only.** Outside a package, `src/{core,ds,engines,modules,verticals}/<package>/` is reached only
-  through `index`, `server` or `ui`, whether the import is written with `@/` or relatively. The one exception is
+  through `index`, `server`, `ui` or `client`, whether the import is written with `@/` or relatively. The one exception is
   `@/ds/preferences/actions`.
 - **No relative escape.** A relative import cannot leave its engine, module or preset, nor the `core` or `ds` layer;
   crossing a package needs the alias.

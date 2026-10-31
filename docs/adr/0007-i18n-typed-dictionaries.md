@@ -2,6 +2,23 @@
 
 Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/002-reference-console/spec.md` (D3) · Related: ADR 0003–0006
 
+> **Amended 2026-10-31 (T6a):**
+>
+> - The language switch lives in Preferences, directly under Theme and Font, not in the account menu. The cookie is
+>   named `locale`, like the other preference cookies (`theme_mode`, `font`), instead of `studio_locale`.
+> - `getLocale()` lives in `src/config/locale.server.ts` because the default comes from config. The Server Action
+>   `setLocale` sits with the other preference actions and takes `unknown`, since it is a public endpoint.
+> - The Server Action does not call `refresh()`: the Next 16 docs say that setting a cookie in a Server Action
+>   already re-renders the current page and its layouts, so client state survives without it.
+> - Client components read messages through `useMessages(key)`, where the key is a typed handle
+>   (`messageKey<T>(namespace)`) so the dictionary itself stays in a server entry.
+> - Client components import `@/core/i18n/client`, never the barrel: the barrel carries every locale's
+>   `defaultErrorMessages` and the zod schemas. A dependency-cruiser rule enforces it for every `.tsx` file.
+> - Shell chrome strings are `ShellMessages` in `src/ds/shell`. Route titles belong to the app: `NavMessages` in
+>   `src/navigation/shell`, keyed by the stable ids of the nav registry (never by index), so the T6b manifest keeps them.
+> - The dashboard layout renders `lang={locale}` on its wrapper, so the language is right from the first byte even when
+>   `Accept-Language` decided it; `<html lang>` is set by the boot script and restored when the provider unmounts.
+
 ## Context
 
 **The owner's requirement.** The kit ships in **English, Spanish, German and French** (`en`, `es`, `de`, `fr`), with
@@ -101,12 +118,12 @@ Options 3 and 2.
 
 ### Resolution
 
-Order: the `studio_locale` cookie (when supported), then `Accept-Language` (q-ordered, matched on the base
+Order: the `locale` cookie (when supported), then `Accept-Language` (q-ordered, matched on the base
 language), then `defaultLocale`.
 
 - **The resolver** is a pure `resolveLocale({cookie, acceptLanguage, defaultLocale})`, ported from reference's
   `idiomaDelPersonalDe`. `getLocale()` (server, `React.cache`) feeds it with `cookies()` and `headers()`.
-- **The switch** is a Server Action that writes the cookie and calls `refresh()`. With a real backend, the adapter
+- **The switch** is a Server Action that writes the cookie (Next then re-renders the page). With a real backend, the adapter
   also stores the preference (reference's `core.identity.locale.set_self`).
 - **No `[lang]` segment and no `proxy.ts`.**
   - `cookies()` also works in Server Actions, unlike root params.
