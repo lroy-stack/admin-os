@@ -18,6 +18,8 @@ export interface LandingMessages {
     readonly title: string;
     readonly lead: string;
     readonly status: string;
+    /** Opens the app's own demo, served on the mock adapter. */
+    readonly demo: string;
     readonly github: string;
   };
   readonly showcase: { readonly label: string; readonly alt: string };

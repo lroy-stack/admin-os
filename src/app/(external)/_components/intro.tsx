@@ -1,4 +1,6 @@
-import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+
+import { ArrowRight } from "lucide-react";
 import { siGithub } from "simple-icons";
 
 import { SimpleIcon } from "@/components/simple-icon";
@@ -22,15 +24,15 @@ export async function Intro() {
 
       <div className="flex flex-wrap gap-2 sm:gap-3">
         <Button asChild>
+          <Link href="/dashboard/default" prefetch={false}>
+            {text.hero.demo}
+            <ArrowRight aria-hidden="true" data-icon="inline-end" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
           <a href={APP_CONFIG.repository} target="_blank" rel="noreferrer">
             <SimpleIcon icon={siGithub} aria-hidden data-icon="inline-start" className="fill-current" />
             {text.hero.github}
-          </a>
-        </Button>
-        <Button asChild variant="outline">
-          <a href={`${APP_CONFIG.repository}#getting-started`} target="_blank" rel="noreferrer">
-            {text.links.start}
-            <ArrowUpRight aria-hidden="true" data-icon="inline-end" />
           </a>
         </Button>
       </div>

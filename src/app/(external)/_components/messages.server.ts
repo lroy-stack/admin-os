@@ -14,6 +14,7 @@ const en: LandingMessages = {
     title: "The open-source management dashboard for small businesses.",
     lead: "Built for restaurants first, and designed so that a hair salon or a car repair workshop can run on the same modules.",
     status: "In active development towards its first release.",
+    demo: "Open the demo",
     github: "View on GitHub",
   },
   showcase: {
@@ -90,6 +91,7 @@ const es: LandingMessages = {
     title: "El panel de gestión de código abierto para pequeños negocios.",
     lead: "Pensado primero para restaurantes y diseñado para que una peluquería o un taller mecánico funcionen con los mismos módulos.",
     status: "En desarrollo activo hacia su primera versión.",
+    demo: "Abrir la demo",
     github: "Ver en GitHub",
   },
   showcase: {
@@ -166,6 +168,7 @@ const de: LandingMessages = {
     title: "Das Open-Source-Verwaltungsdashboard für kleine Unternehmen.",
     lead: "Zuerst für Restaurants gebaut und so entworfen, dass ein Friseursalon oder eine Kfz-Werkstatt mit denselben Modulen läuft.",
     status: "In aktiver Entwicklung auf dem Weg zur ersten Version.",
+    demo: "Demo öffnen",
     github: "Auf GitHub ansehen",
   },
   showcase: {
@@ -243,6 +246,7 @@ const fr: LandingMessages = {
     title: "Le tableau de bord de gestion open source pour les petites entreprises.",
     lead: "Conçu d’abord pour les restaurants, et pensé pour qu’un salon de coiffure ou un garage automobile fonctionne avec les mêmes modules.",
     status: "En développement actif vers sa première version.",
+    demo: "Ouvrir la démo",
     github: "Voir sur GitHub",
   },
   showcase: {
