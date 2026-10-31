@@ -36,7 +36,7 @@ What the code shows today:
 - **reference enforces its layers.** Core → Engines → Domains → Interfaces is enforced by `depcruise`, and
   `a shared package` may not import business logic (reference `CLAUDE.md`).
 - **Tooling.** Biome 2.6.4 is the only linter (`biome.json`). It already enables `noImportCycles` and
-  `noUndeclaredDependencies`.
+  `noUndeclaredDependencies`. Boundaries moved to `dependency-cruiser` (see Enforcement).
 
 ## Options considered
 
@@ -53,8 +53,8 @@ What the code shows today:
    - *Effort / reversal:* L / M.
 3. **Package-shaped folders in one app (chosen).**
    - *How:* top-level layers under `src/`. Each folder is shaped like a future package: public entries, no upward
-     imports, enforced by Biome. Extraction later means moving the folder, adding a `package.json` and changing an
-     alias.
+     imports, enforced by `dependency-cruiser`. Extraction later means moving the folder, adding a `package.json` and
+     changing an alias.
    - *Effort / reversal:* M / S.
 
 ## Decision
@@ -184,28 +184,30 @@ until `default` and `crm` are redesigned.
 
 ### Enforcement
 
-All of this goes in `biome.json` `overrides` with `style/noRestrictedImports` `patterns`. A spike on Biome 2.6.4 in
-the scratchpad confirmed every case below.
+Boundaries are enforced by `dependency-cruiser` (`.dependency-cruiser.cjs`, `npm run depcruise`, part of
+`npm run check` and of the pre-commit hook). Biome keeps the rest: `noImportCycles`, `noUndeclaredDependencies`
+and `noJsxLiterals`.
 
-- **Layer direction.**
-  - Each layer forbids higher layers in alias form and in relative form (`@/modules/**` and `**/modules/**`).
-  - The spike: `../../modules/customers/ui/record` and `../../app/x/page` from `src/engines/agenda/a.ts` were both
-    reported.
-- **Public entries only.**
-  - Outside a module, the rule is `["@/modules/*/**", "!@/modules/*/server", "!@/modules/*/ui"]`; the same goes
-    for engines and verticals.
-  - The spike: negation works. `@/modules/customers/server` and `/ui` passed; `/mock/store` and `/ui/record` were
-    reported.
-- **No relative escape.**
-  - Depth-scoped overrides: `src/modules/*/*.ts*` forbids `../**`, and `src/modules/*/*/*.ts*` forbids
-    `../../**`. A relative import cannot leave its package; crossing a package needs the alias.
-  - The spike: `../bookings/schema` and `../../bookings/schema` were reported; `../index` inside the module passed.
-- **Already on:**
-  - `noImportCycles` keeps the graph acyclic;
-  - `noUndeclaredDependencies` becomes the native boundary once the folders are packages.
-- **New:**
-  - `style/noJsxLiterals` on `src/ds`, `src/engines`, `src/modules` and `src/verticals` (ADR 0007);
-  - `import "server-only"` in every `server.ts`.
+> **Update 2026-10-31.** The first version of this ADR enforced boundaries with Biome `noRestrictedImports`
+> overrides. Biome has no way to say "relative path that leaves this package", so each folder depth needed its own
+> block and the config grew to 36 override blocks, past the trigger below. The boundary rules moved to
+> `dependency-cruiser`: one generic rule set over layer and package paths, which also resolves the `@/` alias and
+> checks type-only imports.
+
+The rules:
+
+- **Layer direction.** A layer never imports a higher one, and `src/lib`, `src/hooks`, `src/components/ui` and
+  `src/components/calendar` import no layer. One rule per layer, generated from the layer list.
+- **Public entries only.** Outside a package, `src/{core,ds,engines,modules,verticals}/<package>/` is reached only
+  through `index`, `server` or `ui`, whether the import is written with `@/` or relatively. The one exception is
+  `@/ds/preferences/actions`.
+- **No relative escape.** A relative import cannot leave its engine, module or preset, nor the `core` or `ds` layer;
+  crossing a package needs the alias.
+- **Same-layer isolation.** One engine does not import another engine, and one preset does not import another preset.
+- **`ds` is domain-free.** It never imports `src/data` or `src/navigation`.
+- **Also on:** `import "server-only"` in every `server.ts`.
+
+New packages are covered without editing the config.
 
 ### Porting map
 
@@ -236,7 +238,7 @@ Decide between them when there are two external users.
 
 ## Consequences
 
-- **F0 is a pure move.** ds leaves `src/app`, the shell becomes props-driven, the Biome overrides land and the
+- **F0 is a pure move.** ds leaves `src/app`, the shell becomes props-driven, the boundary rules land and the
   `(examples)` group is created. Behaviour does not change. Verify with `npm run build`, `npm test`, `npm run check`,
   and screenshots of Overview, Reservas and Calendar.
 - **AGENTS.md** (§ Co-location-based structure) needs the new top-level folders and the extraction table on
@@ -244,6 +246,4 @@ Decide between them when there are two external users.
 - **The import rule:** imports that cross a layer use `@/`; relative imports stay inside one package.
 - **Reversal is cheap.** The rules are configuration and the folders can be collapsed.
 - **Revisit when:**
-  - **the boundary config gets too heavy:** more than about 15 override blocks, or a relative escape found in
-    review. Then adopt `dependency-cruiser` as the single boundary gate; it is reference's tool (`pnpm depcruise`).
   - **two external consumers exist.** Then start the monorepo (option 2).
