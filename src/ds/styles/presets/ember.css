@@ -1,0 +1,48 @@
+/*
+label: Ember
+value: ember
+*/
+
+/* Restaurants and bars: tangerine on a warm clay neutral, berry for alerts and teal as the cool counterweight. */
+:root[data-theme-preset="ember"] {
+  --tint-hue: 55;
+  --brand: oklch(0.55 0.16 45);
+  --brand-foreground: oklch(0.99 0.015 60);
+  --salmon: oklch(0.53 0.17 360);
+  --azure: oklch(0.53 0.09 200);
+
+  /* Room states: the floor plan is a white room in both modes, so they stay at light-mode strength. */
+  --table-arriving: oklch(0.55 0.16 45);
+  --table-seated: oklch(0.35 0.06 30);
+  --table-leaving: oklch(0.53 0.09 200);
+  --table-late: oklch(0.53 0.17 360);
+
+  /* Candlelit linen: peach, apricot and rose blooms. */
+  --app-backdrop:
+    radial-gradient(50% 45% at 8% 0%, oklch(0.92 0.05 75 / 85%), transparent 72%),
+    radial-gradient(45% 40% at 55% -5%, oklch(0.95 0.03 90 / 60%), transparent 70%),
+    radial-gradient(45% 55% at 100% 22%, oklch(0.88 0.07 45 / 75%), transparent 72%),
+    radial-gradient(38% 50% at 0% 62%, oklch(0.9 0.05 10 / 60%), transparent 70%),
+    radial-gradient(60% 45% at 62% 58%, oklch(0.92 0.03 195 / 45%), transparent 75%),
+    radial-gradient(70% 45% at 45% 105%, oklch(0.88 0.06 55 / 75%), transparent 75%),
+    linear-gradient(oklch(0.97 0.014 70), oklch(0.93 0.02 55));
+  --app-backdrop-overlay: oklch(1 0 0 / 25%);
+}
+
+.dark:root[data-theme-preset="ember"] {
+  --brand: oklch(0.79 0.15 55);
+  --brand-foreground: oklch(0.2 0.04 50);
+  --salmon: oklch(0.79 0.11 355);
+  --azure: oklch(0.79 0.09 195);
+
+  /* Embers in a dark room: amber and terracotta glow, a little berry and a cool teal edge. */
+  --app-backdrop:
+    radial-gradient(50% 45% at 8% 0%, oklch(0.52 0.09 70 / 70%), transparent 72%),
+    radial-gradient(45% 40% at 55% -5%, oklch(0.56 0.04 80 / 45%), transparent 70%),
+    radial-gradient(45% 55% at 100% 22%, oklch(0.47 0.11 40 / 75%), transparent 72%),
+    radial-gradient(38% 50% at 0% 62%, oklch(0.42 0.1 0 / 55%), transparent 70%),
+    radial-gradient(60% 45% at 62% 58%, oklch(0.42 0.05 200 / 40%), transparent 75%),
+    radial-gradient(70% 45% at 45% 105%, oklch(0.36 0.06 35 / 75%), transparent 75%),
+    linear-gradient(oklch(0.28 0.025 50), oklch(0.18 0.015 40));
+  --app-backdrop-overlay: oklch(0.08 0.01 40 / 30%);
+}

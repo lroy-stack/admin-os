@@ -1,0 +1,48 @@
+/*
+label: Cobalt
+value: cobalt
+*/
+
+/* Workshops and trades: cobalt on a graphite neutral, signal red for alerts and amber as the second series. */
+:root[data-theme-preset="cobalt"] {
+  --tint-hue: 255;
+  --brand: oklch(0.52 0.17 260);
+  --brand-foreground: oklch(0.99 0.01 260);
+  --salmon: oklch(0.55 0.19 30);
+  --azure: oklch(0.54 0.11 75);
+
+  /* Room states: the floor plan is a white room in both modes, so they stay at light-mode strength. */
+  --table-arriving: oklch(0.52 0.17 260);
+  --table-seated: oklch(0.33 0.05 275);
+  --table-leaving: oklch(0.54 0.11 75);
+  --table-late: oklch(0.55 0.19 30);
+
+  /* Brushed steel with a cobalt and amber glint. */
+  --app-backdrop:
+    radial-gradient(50% 45% at 8% 0%, oklch(0.9 0.04 255 / 85%), transparent 72%),
+    radial-gradient(45% 40% at 55% -5%, oklch(0.95 0.01 250 / 60%), transparent 70%),
+    radial-gradient(45% 55% at 100% 22%, oklch(0.92 0.05 80 / 65%), transparent 72%),
+    radial-gradient(38% 50% at 0% 62%, oklch(0.9 0.03 230 / 55%), transparent 70%),
+    radial-gradient(60% 45% at 62% 58%, oklch(0.92 0.015 260 / 55%), transparent 75%),
+    radial-gradient(70% 45% at 45% 105%, oklch(0.89 0.02 255 / 70%), transparent 75%),
+    linear-gradient(oklch(0.965 0.005 250), oklch(0.93 0.008 255));
+  --app-backdrop-overlay: oklch(1 0 0 / 25%);
+}
+
+.dark:root[data-theme-preset="cobalt"] {
+  --brand: oklch(0.75 0.14 258);
+  --brand-foreground: oklch(0.18 0.04 260);
+  --salmon: oklch(0.78 0.13 32);
+  --azure: oklch(0.85 0.13 82);
+
+  /* Graphite workshop: cool steel, a cobalt lamp and a warm amber spark. */
+  --app-backdrop:
+    radial-gradient(50% 45% at 8% 0%, oklch(0.52 0.1 258 / 65%), transparent 72%),
+    radial-gradient(45% 40% at 55% -5%, oklch(0.54 0.01 250 / 45%), transparent 70%),
+    radial-gradient(45% 55% at 100% 22%, oklch(0.55 0.09 75 / 50%), transparent 72%),
+    radial-gradient(38% 50% at 0% 62%, oklch(0.4 0.03 240 / 55%), transparent 70%),
+    radial-gradient(60% 45% at 62% 58%, oklch(0.36 0.02 260 / 55%), transparent 75%),
+    radial-gradient(70% 45% at 45% 105%, oklch(0.28 0.02 255 / 75%), transparent 75%),
+    linear-gradient(oklch(0.26 0.008 255), oklch(0.17 0.006 260));
+  --app-backdrop-overlay: oklch(0.08 0.004 260 / 30%);
+}

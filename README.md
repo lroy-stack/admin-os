@@ -15,8 +15,8 @@ designed, reusable at every level, and ready to be managed by an AI assistant th
   - An arrivals rail is planned by time slot.
   - A room editor handles several levels.
   - A full-screen service view gives the floor and the rail the whole screen.
-- **Liquid-glass interface.** A dark glass shell with theme presets, layout controls and a responsive layout that
-  works on phones.
+- **Liquid-glass interface.** A glass shell with five themes (Lime, Ember, Rose, Tide, Cobalt), each in light and
+  dark, layout controls and a responsive layout that works on phones.
 - **Vertical presets.** One codebase serves different businesses: hospitality (tables and covers), salons (chairs and
   services) and workshops (bays and vehicles). Generic domain modules sit underneath and only the vocabulary and seed
   data change.

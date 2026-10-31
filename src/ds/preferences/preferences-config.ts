@@ -62,7 +62,7 @@ export const PREFERENCE_REGISTRY = {
 
   theme_preset: definePreference({
     values: THEME_PRESET_VALUES,
-    defaultValue: "glass",
+    defaultValue: "lime",
     persistence: "client-cookie",
     attribute: "data-theme-preset",
   }),

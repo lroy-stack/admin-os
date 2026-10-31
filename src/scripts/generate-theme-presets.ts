@@ -2,9 +2,8 @@
  * Script: generate-theme-presets.ts
  *
  * This script scans the /ds/styles/presets directory for CSS files containing theme definitions.
- * It extracts `label:`, `value:`, and primary color definitions (`--primary`) for both light and dark modes.
- * These primary colors are used to visually represent each theme in the UI (e.g., colored dots or theme previews).
- * Default theme colors are fetched from /ds/styles/tokens.css.
+ * It extracts `label:`, `value:`, and the brand colour (`--brand`) of the light and dark blocks.
+ * The brand colours are the swatches that represent each theme in the theme picker.
  * All extracted metadata is injected into a marked section of the /ds/preferences/theme.ts file.
  *
  * Usage:
@@ -31,7 +30,8 @@ const outputPath = path.resolve(__dirname, "../ds/preferences/theme.ts");
 const files = fs.readdirSync(presetDir).filter((file) => file.endsWith(".css"));
 
 if (files.length === 0) {
-  console.warn("⚠️ No preset CSS files found. Only default preset will be included.");
+  console.error(`❌ No preset CSS files found in ${presetDir}; the theme picker needs at least one.`);
+  process.exit(1);
 }
 
 const presets = files.map((file) => {
@@ -51,44 +51,20 @@ const presets = files.map((file) => {
   const label = labelMatch?.[1]?.trim() ?? file.replace(".css", "");
   const value = valueMatch?.[1]?.trim() ?? file.replace(".css", "");
 
-  const lightPrimaryMatch = content.match(/:root\[data-theme-preset="[^"]*"\][\s\S]*?--primary:\s*([^;]+);/);
-  const darkPrimaryMatch = content.match(/\.dark:root\[data-theme-preset="[^"]*"\][\s\S]*?--primary:\s*([^;]+);/);
+  const lightBrandMatch = content.match(/^:root\[data-theme-preset="[^"]*"\]\s*\{[^}]*?--brand:\s*([^;]+);/m);
+  const darkBrandMatch = content.match(/^\.dark:root\[data-theme-preset="[^"]*"\]\s*\{[^}]*?--brand:\s*([^;]+);/m);
 
-  const primary = {
-    light: lightPrimaryMatch?.[1]?.trim() ?? "",
-    dark: darkPrimaryMatch?.[1]?.trim() ?? "",
+  const brand = {
+    light: lightBrandMatch?.[1]?.trim() ?? "",
+    dark: darkBrandMatch?.[1]?.trim() ?? "",
   };
 
-  if (!lightPrimaryMatch || !darkPrimaryMatch) {
-    console.warn(`⚠️ Missing --primary for ${file} (light or dark). Check CSS syntax.`);
+  if (!lightBrandMatch || !darkBrandMatch) {
+    console.warn(`⚠️ Missing --brand for ${file} (light or dark). Check CSS syntax.`);
   }
 
-  return { label, value, primary };
+  return { label, value, brand };
 });
-
-const tokensPath = path.resolve(__dirname, "../ds/styles/tokens.css");
-
-let globalContent = "";
-try {
-  globalContent = fs.readFileSync(tokensPath, "utf8");
-} catch (err) {
-  console.error(`❌ Could not read tokens.css at ${tokensPath}`);
-  console.error(err);
-  process.exit(1);
-}
-
-const defaultLightPrimaryRegex = /:root\s*{[^}]*--primary:\s*([^;]+);/;
-const defaultDarkPrimaryRegex = /\.dark\s*{[^}]*--primary:\s*([^;]+);/;
-
-const defaultLightPrimaryMatch = globalContent.match(defaultLightPrimaryRegex);
-const defaultDarkPrimaryMatch = globalContent.match(defaultDarkPrimaryRegex);
-
-const defaultPrimary = {
-  light: defaultLightPrimaryMatch?.[1].trim() ?? "",
-  dark: defaultDarkPrimaryMatch?.[1].trim() ?? "",
-};
-
-presets.unshift({ label: "Default", value: "default", primary: defaultPrimary });
 
 const generatedBlock = `// --- generated:themePresets:start ---
 

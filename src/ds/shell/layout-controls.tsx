@@ -89,7 +89,7 @@ export function LayoutControls() {
                         <span
                           className="size-2.5 rounded-full"
                           style={{
-                            backgroundColor: resolvedThemeMode === "dark" ? preset.primary.dark : preset.primary.light,
+                            backgroundColor: resolvedThemeMode === "dark" ? preset.brand.dark : preset.brand.light,
                           }}
                         />
                         {preset.label}

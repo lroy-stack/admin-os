@@ -2,11 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Theme preset styles: these override CSS variables based on the selected data-theme-preset */
-@import "../ds/styles/presets/brutalist.css";
-@import "../ds/styles/presets/glass.css";
-@import "../ds/styles/presets/soft-pop.css";
-@import "../ds/styles/presets/tangerine.css";
+/* Liquid-glass theme presets: each supplies its primitives for light and dark; tokens.css derives the rest. */
+@import "../ds/styles/presets/cobalt.css";
+@import "../ds/styles/presets/ember.css";
+@import "../ds/styles/presets/lime.css";
+@import "../ds/styles/presets/rose.css";
+@import "../ds/styles/presets/tide.css";
 
 @import "../ds/styles/tokens.css";
 @import "../ds/styles/glass.css";

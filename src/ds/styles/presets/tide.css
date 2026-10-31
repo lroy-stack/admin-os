@@ -1,0 +1,48 @@
+/*
+label: Tide
+value: tide
+*/
+
+/* Clinics, spas and calm services: sea teal on a cool slate neutral, coral for alerts and iris as the second series. */
+:root[data-theme-preset="tide"] {
+  --tint-hue: 215;
+  --brand: oklch(0.52 0.1 195);
+  --brand-foreground: oklch(0.99 0.01 195);
+  --salmon: oklch(0.55 0.16 28);
+  --azure: oklch(0.52 0.15 290);
+
+  /* Room states: the floor plan is a white room in both modes, so they stay at light-mode strength. */
+  --table-arriving: oklch(0.52 0.1 195);
+  --table-seated: oklch(0.35 0.06 235);
+  --table-leaving: oklch(0.52 0.15 290);
+  --table-late: oklch(0.55 0.16 28);
+
+  /* Seafoam and wet sand. */
+  --app-backdrop:
+    radial-gradient(50% 45% at 8% 0%, oklch(0.91 0.05 195 / 85%), transparent 72%),
+    radial-gradient(45% 40% at 55% -5%, oklch(0.95 0.025 85 / 60%), transparent 70%),
+    radial-gradient(45% 55% at 100% 22%, oklch(0.9 0.04 230 / 75%), transparent 72%),
+    radial-gradient(38% 50% at 0% 62%, oklch(0.92 0.05 165 / 55%), transparent 70%),
+    radial-gradient(60% 45% at 62% 58%, oklch(0.92 0.03 290 / 45%), transparent 75%),
+    radial-gradient(70% 45% at 45% 105%, oklch(0.9 0.04 205 / 70%), transparent 75%),
+    linear-gradient(oklch(0.97 0.01 200), oklch(0.935 0.016 210));
+  --app-backdrop-overlay: oklch(1 0 0 / 25%);
+}
+
+.dark:root[data-theme-preset="tide"] {
+  --brand: oklch(0.83 0.11 190);
+  --brand-foreground: oklch(0.2 0.04 200);
+  --salmon: oklch(0.77 0.12 28);
+  --azure: oklch(0.77 0.1 290);
+
+  /* Deep water: teal and green-blue light with a pale sand glint. */
+  --app-backdrop:
+    radial-gradient(50% 45% at 8% 0%, oklch(0.48 0.07 195 / 70%), transparent 72%),
+    radial-gradient(45% 40% at 55% -5%, oklch(0.56 0.03 85 / 40%), transparent 70%),
+    radial-gradient(45% 55% at 100% 22%, oklch(0.42 0.06 225 / 70%), transparent 72%),
+    radial-gradient(38% 50% at 0% 62%, oklch(0.45 0.07 170 / 50%), transparent 70%),
+    radial-gradient(60% 45% at 62% 58%, oklch(0.38 0.05 290 / 40%), transparent 75%),
+    radial-gradient(70% 45% at 45% 105%, oklch(0.3 0.04 210 / 75%), transparent 75%),
+    linear-gradient(oklch(0.27 0.02 205), oklch(0.17 0.015 215));
+  --app-backdrop-overlay: oklch(0.08 0.01 215 / 30%);
+}

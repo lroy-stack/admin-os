@@ -229,7 +229,7 @@ export function FloorView({
                 else plateRefs.current.delete(`landmark:${landmark.id}`);
               }}
               className={cn(
-                "absolute top-0 left-0 text-[10px] font-medium tracking-wide whitespace-nowrap text-(--room-ink)/55 uppercase",
+                "absolute top-0 left-0 text-[10px] font-medium tracking-wide whitespace-nowrap text-(--room-ink)/70 uppercase",
                 (landmark.toLevelId || editing) && "pointer-events-auto",
               )}
             >
