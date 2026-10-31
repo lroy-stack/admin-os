@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ErrorCodes } from "@/core/errors";
 import { err, ok, type Result } from "@/core/result";
 
-/** Ceiling for any list, whatever a capability asks for (ported from reference). */
+/** Ceiling for any list, whatever a capability asks for. */
 export const MAX_PAGE_LIMIT = 200;
 export const MAX_CURSOR_LENGTH = 512;
 

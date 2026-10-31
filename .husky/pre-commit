@@ -1,3 +1,4 @@
+node scripts/check-staged.mts
 npm run generate:presets
 git add src/ds/preferences/theme.ts
 npm exec -- lint-staged

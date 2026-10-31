@@ -1,4 +1,4 @@
-/** Mirrors `a shared package` so the reference port can re-export it (ADR 0005). */
+/** The result contract every capability returns (ADR 0005): a value, a domain error, or awaiting approval. */
 export interface DomainError {
   readonly code: string;
   readonly message: string;

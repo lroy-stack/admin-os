@@ -21,8 +21,9 @@
 
 # misc
 .DS_Store
-# agent worktrees (each is a full checkout with its own config)
-/.claude/worktrees/
+# local only: agent files and planning specs (scripts/staged-guard.mts blocks them on commit too)
+/.claude/
+/docs/specs/
 *.pem
 *.sh
 
