@@ -23,12 +23,12 @@ const PUBLIC_ROUTES = [
   "/dashboard/profile",
   "/dashboard/users",
   "/dashboard/roles",
-  "/dashboard/mail",
-  "/dashboard/chat",
   "/auth/v1/login",
   "/auth/v2/login",
   "/auth/v1/register",
   "/auth/v2/register",
+  "/chat",
+  "/mail",
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

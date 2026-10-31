@@ -12,43 +12,43 @@ export type ResolvedThemeMode = "light" | "dark";
 
 export const THEME_PRESET_OPTIONS = [
   {
-    label: "Default",
-    value: "default",
-    primary: {
-      light: "oklch(0.205 0 0)",
-      dark: "oklch(0.922 0 0)",
+    label: "Cobalt",
+    value: "cobalt",
+    brand: {
+      light: "oklch(0.52 0.17 260)",
+      dark: "oklch(0.75 0.14 258)",
     },
   },
   {
-    label: "Brutalist",
-    value: "brutalist",
-    primary: {
-      light: "oklch(0.6489 0.237 26.9728)",
-      dark: "oklch(0.7044 0.1872 23.1858)",
+    label: "Ember",
+    value: "ember",
+    brand: {
+      light: "oklch(0.55 0.16 45)",
+      dark: "oklch(0.79 0.15 55)",
     },
   },
   {
-    label: "Glass",
-    value: "glass",
-    primary: {
-      light: "var(--brand)",
-      dark: "var(--brand)",
+    label: "Lime",
+    value: "lime",
+    brand: {
+      light: "oklch(0.52 0.15 132)",
+      dark: "oklch(0.915 0.165 120.51)",
     },
   },
   {
-    label: "Soft Pop",
-    value: "soft-pop",
-    primary: {
-      light: "oklch(0.5106 0.2301 276.9656)",
-      dark: "oklch(0.6801 0.1583 276.9349)",
+    label: "Rose",
+    value: "rose",
+    brand: {
+      light: "oklch(0.54 0.17 355)",
+      dark: "oklch(0.81 0.12 355)",
     },
   },
   {
-    label: "Tangerine",
-    value: "tangerine",
-    primary: {
-      light: "oklch(0.64 0.17 36.44)",
-      dark: "oklch(0.64 0.17 36.44)",
+    label: "Tide",
+    value: "tide",
+    brand: {
+      light: "oklch(0.52 0.1 195)",
+      dark: "oklch(0.83 0.11 190)",
     },
   },
 ] as const;

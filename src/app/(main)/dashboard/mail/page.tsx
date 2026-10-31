@@ -1,26 +1,28 @@
 import type { Metadata } from "next";
 
-import { getValueFromCookie } from "@/ds/preferences/actions";
-
-import { mails } from "./_components/data";
-import { MailComponent } from "./_components/mail";
-import { DEFAULT_MAIL_LAYOUT, MAIL_LAYOUT_COOKIE } from "./_components/mail-layout-config";
+import { MailApp } from "./_components/mail-app";
 
 export const metadata: Metadata = {
   title: "Open Source Email Client with shadcn/ui",
   description:
     "Explore an open source email client with inbox navigation, message search, reading, replying, and archiving.",
+  robots: {
+    index: false,
+    follow: true,
+  },
   alternates: {
-    canonical: "/dashboard/mail",
+    canonical: "/mail",
   },
 };
 
-export default async function Page() {
-  const layoutCookie = await getValueFromCookie(MAIL_LAYOUT_COOKIE);
-
+export default function Page() {
   return (
-    <div className="h-full min-h-0 overflow-hidden">
-      <MailComponent mails={mails} defaultLayout={layoutCookie ? JSON.parse(layoutCookie) : [...DEFAULT_MAIL_LAYOUT]} />
+    // Full-height app page: the dashboard drops its content padding and the mail panes fill the rest of the screen.
+    <div
+      data-content-padding="false"
+      className="bg-background relative h-[calc(100dvh-var(--dashboard-header-height))] min-h-0 overflow-hidden rounded-lg border"
+    >
+      <MailApp standaloneHref="/mail" />
     </div>
   );
 }

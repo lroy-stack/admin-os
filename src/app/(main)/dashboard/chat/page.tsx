@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
 
-import { Chat } from "./_components/chat";
-import { conversations } from "./_components/data";
+import { ChatApp } from "./_components/chat-app";
 
 export const metadata: Metadata = {
   title: "Open Source Chat Interface with shadcn/ui",
   description:
     "Explore an open source chat interface with conversation search, message threads, internal notes, and contact details.",
+  robots: {
+    index: false,
+    follow: true,
+  },
   alternates: {
-    canonical: "/dashboard/chat",
+    canonical: "/chat",
   },
 };
 
 export default function Page() {
-  return <Chat conversations={conversations} />;
+  return (
+    // Full-height app page: the dashboard drops its content padding and the chat panes fill the rest of the screen.
+    <div
+      data-content-padding="false"
+      className="bg-background relative h-[calc(100dvh-var(--dashboard-header-height))] min-h-0 overflow-hidden rounded-lg border"
+    >
+      <ChatApp standaloneHref="/chat" />
+    </div>
+  );
 }

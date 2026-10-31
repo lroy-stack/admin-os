@@ -7,15 +7,17 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
+import { OpenStandaloneButton } from "../../_components/open-standalone-button";
 import type { Mail } from "./data";
 import { MailList } from "./mail-list";
 
 interface MailInboxProps {
   mails: Mail[];
   onSelectMail?: (mail: Mail) => void;
+  standaloneHref?: string;
 }
 
-export function MailInbox({ mails, onSelectMail }: MailInboxProps) {
+export function MailInbox({ mails, onSelectMail, standaloneHref }: MailInboxProps) {
   const pinnedMails = mails.filter((mail) => mail.isPinned);
   const unpinnedMails = mails.filter((mail) => !mail.isPinned);
 
@@ -37,6 +39,7 @@ export function MailInbox({ mails, onSelectMail }: MailInboxProps) {
           <Button variant="ghost" size="icon-sm">
             <Ellipsis />
           </Button>
+          {standaloneHref && <OpenStandaloneButton href={standaloneHref} />}
         </div>
       </div>
 

@@ -21,9 +21,11 @@ import { useMail } from "./use-mail";
 interface MailProps {
   mails: Mail[];
   defaultLayout: number[] | undefined;
+  /** Shows the button that opens the standalone mail page; set when the dashboard embeds the app. */
+  standaloneHref?: string;
 }
 
-export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT] }: MailProps) {
+export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
   const { isMobile } = useSidebar();
   const [isMounted, setIsMounted] = React.useState(false);
 
@@ -38,20 +40,20 @@ export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT] 
   }
 
   return isMobile ? (
-    <MailMobileLayout mails={mails} />
+    <MailMobileLayout mails={mails} standaloneHref={standaloneHref} />
   ) : (
-    <MailDesktopLayout mails={mails} defaultLayout={defaultLayout} />
+    <MailDesktopLayout mails={mails} defaultLayout={defaultLayout} standaloneHref={standaloneHref} />
   );
 }
 
-function MailMobileLayout({ mails }: Pick<MailProps, "mails">) {
+function MailMobileLayout({ mails, standaloneHref }: Pick<MailProps, "mails" | "standaloneHref">) {
   const [mail] = useMail();
   const [isMailOpen, setIsMailOpen] = React.useState(false);
   const selectedMail = mails.find((item) => item.id === mail.selected) || null;
 
   return (
     <>
-      <MailInbox mails={mails} onSelectMail={() => setIsMailOpen(true)} />
+      <MailInbox mails={mails} onSelectMail={() => setIsMailOpen(true)} standaloneHref={standaloneHref} />
 
       <Drawer open={isMailOpen} onOpenChange={setIsMailOpen}>
         <DrawerContent>
@@ -64,7 +66,7 @@ function MailMobileLayout({ mails }: Pick<MailProps, "mails">) {
   );
 }
 
-function MailDesktopLayout({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT] }: MailProps) {
+function MailDesktopLayout({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
   const [mail] = useMail();
 
   return (
@@ -77,7 +79,7 @@ function MailDesktopLayout({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT] }: 
       className="h-full"
     >
       <ResizablePanel id={MAIL_LIST_PANEL_ID} defaultSize={`${defaultLayout[0]}%`} minSize="30%" className="min-h-0">
-        <MailInbox mails={mails} />
+        <MailInbox mails={mails} standaloneHref={standaloneHref} />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel id={MAIL_DETAIL_PANEL_ID} defaultSize={`${defaultLayout[1]}%`} minSize="30%" className="min-h-0">

@@ -3,7 +3,9 @@ import { Bell, MessageSquarePlus, Search, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
-export function ChatHeader() {
+import { OpenStandaloneButton } from "../../_components/open-standalone-button";
+
+export function ChatHeader({ standaloneHref }: { standaloneHref?: string }) {
   return (
     <header className="bg-background sticky top-0 z-50 flex h-(--header-height) w-full items-center border-b">
       <div className="flex h-full w-full items-center justify-between gap-3 px-4">
@@ -26,6 +28,7 @@ export function ChatHeader() {
           <Button variant="ghost" size="icon-sm" aria-label="Settings">
             <Settings />
           </Button>
+          {standaloneHref && <OpenStandaloneButton href={standaloneHref} />}
         </div>
       </div>
     </header>
