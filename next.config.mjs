@@ -11,6 +11,16 @@ const nextConfig = {
         destination: "/dashboard/default",
         permanent: false,
       },
+      {
+        source: "/mail",
+        destination: "/dashboard/mail",
+        permanent: false,
+      },
+      {
+        source: "/chat",
+        destination: "/dashboard/chat",
+        permanent: false,
+      },
     ];
   },
 };

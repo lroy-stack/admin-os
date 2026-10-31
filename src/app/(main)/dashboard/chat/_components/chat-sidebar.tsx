@@ -42,10 +42,7 @@ export function ChatSidebar() {
   const _isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar
-      collapsible="offcanvas"
-      className="**:data-[sidebar=sidebar]:bg-background top-(--header-height) h-[calc(100svh-var(--header-height))]!"
-    >
+    <Sidebar collapsible="offcanvas" className="**:data-[sidebar=sidebar]:bg-background absolute inset-y-0 h-full">
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu className="gap-1">
