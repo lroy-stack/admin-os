@@ -1,6 +1,6 @@
 # ADR 0009 — The MCP server is a projection of the catalogue through the UI's client
 
-Status: proposed · Date: 2026-10-31 · Spec: `docs/specs/001-v0-1/spec.md` (D4, AC5) · Plan: T8a, T8b · Related: ADR 0003, 0005, 0006
+Status: proposed · Date: 2026-10-31 · Amended: 2026-10-31 (transports, T8b) · Spec: `docs/specs/001-v0-1/spec.md` (D4, AC5) · Plan: T8a, T8b · Related: ADR 0003, 0005, 0006
 
 ## Context
 
@@ -105,8 +105,8 @@ approval-gated write would otherwise fail validation in the client.
 
 The projection takes an `Actor`; the transports decide how it is resolved (T8b):
 
-- **Streamable HTTP:** a bearer demo token mapped to a role through `MCP_TOKENS` (for example
-  `owner:<token>,staff:<token>`), verified before the factory runs and passed as `authInfo`.
+- **Streamable HTTP:** a bearer demo token mapped to a role through `MCP_TOKENS` (`<token>:<role>` pairs, see
+  the amendment), verified before the factory runs and passed as `authInfo`.
 - **stdio:** the role from an environment variable (`MCP_ROLE`, default `staff`, the least privilege).
 - Both build the actor with `demoActor(roleId, vertical)` (`src/config/actor.ts`), the same function the UI's
   `getRuntime()` uses, so a role has the same permissions through both doors.
@@ -117,8 +117,8 @@ The projection takes an `Actor`; the transports decide how it is resolved (T8b):
   the SDK and is never imported by the browser. It depends only on `core` contracts and the SDK.
 - **`src/config/mcp.server.ts`** wires it: `createMcpServer({actor, vertical, sessionId?})` passes `CATALOG` and
   a client over `getAdapter(...)` with the `MOCK_FAULTS` of the environment.
-- **T8b** adds `src/app/api/mcp/route.ts` and `src/mcp/stdio.ts`, which only resolve the actor and call
-  `createMcpServer`. No new entry type, so ADR 0003's tables do not change.
+- **T8b** adds `src/app/api/mcp/route.ts` and `scripts/mcp-stdio.ts`, which only resolve the actor and call
+  `createMcpServer` (see the amendment). No new entry type, so ADR 0003's tables do not change.
 
 ### Security
 
@@ -147,3 +147,72 @@ The projection takes an `Actor`; the transports decide how it is resolved (T8b):
   - the SDK's `McpServer` lets an unregistered tool name answer a tool error and lets the handler own input
     validation; option 1 would then cost nothing;
   - a capability needs a non-object output, which MCP requires to be wrapped.
+
+## Amendment 2026-10-31: the transports (T8b)
+
+Verified against the installed `@modelcontextprotocol/server` 2.4.0 typings and built code, and exercised with MCP
+Inspector 2.13.0 (`--cli`) on `next start` and on stdio.
+
+### Streamable HTTP (`/api/mcp`)
+
+- **Handler.** `createMcpHandler(factory)` from the SDK, created once per module; it builds one low-level `Server`
+  per request. GET, POST and DELETE go to it. It serves both eras: the modern 2026-07-28 per-request envelope and
+  the 2025 era through its stateless legacy fallback (the default; 2025 GET and DELETE answer `405`). A route test
+  pins both eras with the real SDK client (`getProtocolEra()` is `modern` and `legacy`).
+- **Auth before the handler.** `src/config/mcp-http.server.ts` runs the SDK's `verifyBearerToken` with an
+  `OAuthTokenVerifier` over `MCP_TOKENS`, then passes the `AuthInfo` to `handler.fetch`; the factory reads the role
+  and session from `authInfo.extra` (parsed with zod). A missing header, a non-bearer scheme or an unknown token
+  answers `bearerAuthChallengeResponse`: `401`, `WWW-Authenticate: Bearer error="invalid_token", ...,
+  resource_metadata="<origin>/.well-known/oauth-protected-resource/api/mcp"`. **No token never means a role.**
+- **`expiresAt`.** The SDK refuses an `AuthInfo` without it. Demo tokens do not expire, so the verifier stamps one
+  hour from the verification, which only bounds this request.
+- **`MCP_TOKENS`** is `"<token>:<role>,..."` (this replaces the `owner:<token>` order sketched above), parsed with
+  zod in `src/config/mcp-env.ts`: tokens are RFC 6750 `b64token`, 8 to 256 characters; roles are `owner`, `manager`,
+  `staff`; a repeated token or a bad entry fails loudly, and the error never echoes a token. Unset or empty, the
+  public demo tokens (`demo-owner-token`, `demo-manager-token`, `demo-staff-token`) apply **only on the mock
+  adapter**; with any other adapter no token is accepted until `MCP_TOKENS` is set.
+- **Demo session per token.** The session id is `mcp-` + the first 16 bytes of SHA-256(token): stable, so a client
+  sees its own writes across requests; different per token; and the token itself never becomes an id or a log
+  field. Everyone holding the same public demo token shares that token's copy, which is acceptable for demo data.
+- **Preset and faults.** `getVertical()` per request; `createMcpServer` applies `MOCK_FAULTS` from the environment.
+  The UI's per-visitor `mock_faults` cookie does not apply: an MCP client has no demo cookies.
+- **RFC 9728 metadata** at the path-aware location `src/app/.well-known/oauth-protected-resource/api/mcp/route.ts`:
+  `resource`, `bearer_methods_supported: ["header"]`, `resource_name`, `resource_documentation`, with permissive
+  CORS (a public document, as the SDK's own `oauthMetadataResponse` serves it). **No `authorization_servers`**: the
+  demo tokens are static, not OAuth-issued, and the SDK's `buildOAuthProtectedResourceMetadata` requires an
+  authorization server's metadata, so the document is built directly with the SDK's
+  `OAuthProtectedResourceMetadata` type. A real deployment adds its authorization server there and swaps the
+  verifier. Inspector reads the challenge and offers OAuth discovery, as expected.
+- **Runtime: Node.** The SDK's HTTP entry is web-standard, so either runtime would run it. Node is chosen because
+  the demo sessions live in this process's memory (the same store the UI's Server Actions use) and OpenNext on
+  Cloudflare, our deploy target, serves Node routes, not the edge runtime. `dynamic = "force-dynamic"`.
+- **Not added:** host or origin allowlists. They defend local servers against DNS rebinding; this route is a remote
+  endpoint behind bearer auth with no cookies. Revisit if the route ever trusts a cookie.
+
+### stdio (`npm run --silent mcp:stdio`)
+
+- **Entry.** `scripts/mcp-stdio.ts` calls the SDK's `serveStdio(factory)`, which pins one instance per connection
+  and serves both eras (a smoke test pins each). The actor comes from `MCP_ROLE` (default `staff`, the least
+  privilege; an unknown role fails loudly at start), the preset from `VERTICAL`, and the session id is
+  `stdio-<uuid>`, one per process.
+- **Runner: `tsx` 4.23.15, pinned as a devDependency.** The entry imports the app's modules through the `@/` alias,
+  which plain Node's type stripping does not resolve; `tsx` does, with no build step to keep in sync.
+- **`server-only` outside Next: a resolve hook, not `--conditions=react-server`.** The global condition was tried
+  first and fails: it also resolves `react` to its server build, where `createContext` does not exist, and a module
+  on the import path (`src/core/i18n/provider.tsx`) calls it at load. `scripts/server-only-hook.mjs` uses Node's
+  `module.registerHooks` (Node 22.15 or later) to add `react-server` for the `server-only` specifier alone, so the
+  marker resolves to the package's own empty module and nothing else changes.
+- **`next/headers`.** `data.server.ts` no longer imports it: `ensureDemoSession`, `resetDemoSession` and
+  `DEMO_SESSION_COOKIE` moved to `src/config/demo-session.server.ts`, with `resetDemoData(vertical, sessionId)` left
+  in the adapter module. The stdio path therefore loads no Next module.
+- **stdout carries the protocol only.** `createMcpServer` takes a `logger`; stdio passes one that writes JSON lines
+  to stderr, and the entry redirects `console.log`, `info` and `debug` to stderr so no dependency can corrupt the
+  stream. npm prints its script banner on stdout, so the documented commands use `npm run --silent`. A smoke test
+  spawns the real command and checks that every stdout line is JSON-RPC.
+
+### What AC5 still waits for
+
+The catalogue has no write capability yet, and every hospitality role gets the same seven reads. So creating a
+booking, `awaiting_approval`, and a forbidden call on a *known* tool that one role is offered and another is not
+wait for T13 (the first write, `bookings.create`). The transports need no change for them: writes reach the token's
+or process's demo session, and the projection's generic tests already cover approval and idempotent replay.

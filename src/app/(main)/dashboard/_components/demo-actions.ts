@@ -2,7 +2,8 @@
 
 import { refresh } from "next/cache";
 
-import { isDemoAdapter, resetDemoSession } from "@/config/data.server";
+import { isDemoAdapter } from "@/config/data.server";
+import { resetDemoSession } from "@/config/demo-session.server";
 import { DEMO_ROLE_COOKIE } from "@/config/runtime";
 import { verticalIdSchema } from "@/config/vertical";
 import { DEMO_PRESET_COOKIE, getVertical } from "@/config/vertical.server";

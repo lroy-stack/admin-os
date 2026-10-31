@@ -252,7 +252,8 @@ Every list capability paginates.
   merges them with `kernelMockHandlers`, and a contract test fails when a catalogue capability has no handler or its
   output breaks the schema for any preset.
 - **Cookies** (no `studio_` prefix): `demo_session` (httpOnly; started by `ensureDemoSession()` in a Server
-  Action before the first write), `demo_role` (role switch; an unknown value falls back to `owner`) and
+  Action before the first write; the cookie functions live in `src/config/demo-session.server.ts` so the adapter
+  wiring has no `next/headers` import, ADR 0009), `demo_role` (role switch; an unknown value falls back to `owner`) and
   `mock_faults` (a visitor's faults in the `MOCK_FAULTS` grammar; a malformed cookie is ignored, while a malformed
   environment value fails loudly).
 - **Writes without a session** return `transport.unavailable` with an actionable message instead of touching the

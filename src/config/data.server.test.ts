@@ -4,7 +4,8 @@ import { DEFAULT_ROLES, permissionsOf } from "@/core/access";
 import { type Actor, createClient } from "@/core/client";
 
 import { CATALOG } from "./catalog";
-import { DEMO_SESSION_COOKIE, ensureDemoSession, getAdapter, MOCK_HANDLERS } from "./data.server";
+import { getAdapter, MOCK_HANDLERS } from "./data.server";
+import { DEMO_SESSION_COOKIE, ensureDemoSession } from "./demo-session.server";
 import { DEMO_ROLE_COOKIE, getRuntime, MOCK_FAULTS_COOKIE } from "./runtime";
 import { VERTICALS, type VerticalId } from "./vertical";
 

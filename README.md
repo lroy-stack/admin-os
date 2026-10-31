@@ -81,6 +81,42 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build |
 | `npm test` | Unit and contract tests (Vitest) |
 | `npm run check` | Lint and format check (Biome) |
+| `npm run mcp:stdio` | MCP server over stdio |
+
+## MCP
+
+The same capabilities the screens use are MCP tools, filtered by the caller's role
+([ADR 0009](docs/adr/0009-mcp-server.md)). Two transports serve them:
+
+- **Streamable HTTP** at `/api/mcp`, with a bearer token. `MCP_TOKENS` maps tokens to roles (see
+  [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`,
+  `demo-manager-token` and `demo-staff-token` work. Each token has its own demo data.
+- **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
+
+Claude Code, from the repository root:
+
+```bash
+claude mcp add --scope project --transport http admin-os http://localhost:3000/api/mcp \
+  --header "Authorization: Bearer demo-staff-token"
+# or over stdio
+claude mcp add --scope project admin-os -e MCP_ROLE=owner -- npm run --silent mcp:stdio
+```
+
+Claude Desktop (`claude_desktop_config.json`), with the absolute path of your clone:
+
+```json
+{
+  "mcpServers": {
+    "admin-os": {
+      "command": "npm",
+      "args": ["--prefix", "/absolute/path/to/admin-os", "run", "--silent", "mcp:stdio"],
+      "env": { "MCP_ROLE": "owner" }
+    }
+  }
+}
+```
+
+Keep `--silent`: without it npm prints its banner on stdout, which carries the protocol.
 
 ## Credits
 

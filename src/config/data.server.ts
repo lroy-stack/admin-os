@@ -1,7 +1,5 @@
 import "server-only";
 
-import { cookies } from "next/headers";
-
 import { z } from "zod";
 
 import type { Adapter } from "@/core/client";
@@ -44,10 +42,6 @@ export const MOCK_HANDLERS: Readonly<Record<string, MockHandler<DemoSeed>>> = {
   ...staffMockHandlers,
 };
 
-/** httpOnly: only Server Actions and the server read it. */
-export const DEMO_SESSION_COOKIE = "demo_session";
-const DEMO_SESSION_MAX_AGE_S = 2 * 60 * 60;
-
 /** One store per preset and process: visitors' copies live here until their TTL or a reset (ADR 0005). */
 const stores = new Map<VerticalId, SessionStore<DemoSeed>>();
 
@@ -89,23 +83,7 @@ export function getAdapter(options: {
   });
 }
 
-/** For Server Actions before a write: the visitor's demo session, started on the first write. */
-export async function ensureDemoSession(): Promise<string> {
-  const jar = await cookies();
-  const existing = jar.get(DEMO_SESSION_COOKIE)?.value;
-  if (existing) return existing;
-  const sessionId = crypto.randomUUID();
-  jar.set(DEMO_SESSION_COOKIE, sessionId, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: DEMO_SESSION_MAX_AGE_S,
-  });
-  return sessionId;
-}
-
-/** "Reset demo data": the visitor's copy is dropped, so the next read sees the seed again. */
-export async function resetDemoSession(vertical: VerticalId): Promise<void> {
-  const sessionId = (await cookies()).get(DEMO_SESSION_COOKIE)?.value;
-  if (sessionId) storeFor(vertical).reset(sessionId);
+/** Drops one demo session's copy, so its next read sees the seed again (ADR 0005). */
+export function resetDemoData(vertical: VerticalId, sessionId: string): void {
+  storeFor(vertical).reset(sessionId);
 }
