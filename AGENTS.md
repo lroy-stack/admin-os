@@ -45,12 +45,16 @@ Available commands:
 npm run build
 npm run lint
 npm run format
-npm run check
+npm run check        # Biome and layer boundaries (dependency-cruiser)
 npm run check:fix
+npm test             # unit and contract tests (Vitest)
+npm run test:e2e     # shell smoke on a production build (Playwright)
+npm run media        # rebuilds the README and landing images in media/ (Playwright)
+npm run mcp:stdio    # MCP server over stdio
 npm run generate:presets
 ```
 
-There is currently no automated test command. Run build, lint, check, or other validation commands only when the user explicitly requests that validation.
+Run `npm run check`, `npx tsc --noEmit` and `npm test` before you commit; run `npm run test:e2e` when you change the shell, routing or a screen's loading path. When a change alters what a screen looks like, run `npm run media` and commit the updated images with it.
 
 ## Co-location-based structure
 

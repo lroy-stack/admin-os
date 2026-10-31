@@ -6,7 +6,68 @@ designed, reusable at every level, and ready to be managed by an AI assistant th
 
 > [!NOTE]
 > admin-OS is in active development towards its first release (`v0.1`). Some modules below are built, others are
-> in progress. See [Status](#status).
+> in progress. See [Status](#status). The screenshots show the demo data that ships with the mock adapter.
+
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset="media/desktop/bookings-dark.webp"><img alt="Reservations screen: the live floor plan in 2.5D beside the arrivals rail" src="media/desktop/bookings-light.webp" width="100%"></picture>
+</p>
+
+## See it in use
+
+**Moving around.** The top bar holds the business areas, the rail on the left the tools.
+
+<img alt="Moving through Home, Reservations, Pipeline, Schedule, Email and Chat" src="media/flows/tour.webp" width="100%">
+
+**The bookings room.** The floor plan switches between 2D, 2.5D and 3D; a table opens its booking, and the same
+service reads as an agenda or a list.
+
+<img alt="Floor plan switching camera angles, a table opening its booking, then the agenda and list views" src="media/flows/room.webp" width="100%">
+
+**Themes, modes and languages.** Five liquid-glass themes in light and dark, and the interface in English, Spanish,
+German and French.
+
+<img alt="Preferences panel cycling the Ember, Rose, Tide, Cobalt and Lime themes, light and dark mode, then Spanish, German, French and English" src="media/flows/preferences.webp" width="100%">
+
+**On a phone.** The same screens, with a bottom dock and bottom sheets.
+
+<table>
+  <tr>
+    <td width="33%"><img alt="Phone: scrolling Home, opening Reservations, tapping a table and switching to the agenda" src="media/flows/phone.webp" width="100%"></td>
+    <td width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="media/devices/phone-bookings-dark.webp"><img alt="Phone: today's reservations" src="media/devices/phone-bookings-light.webp" width="100%"></picture></td>
+    <td width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="media/devices/phone-calendar-dark.webp"><img alt="Phone: team schedule" src="media/devices/phone-calendar-light.webp" width="100%"></picture></td>
+  </tr>
+</table>
+
+## Screens
+
+Desktop, 1440 × 900. The images follow your GitHub theme (light or dark).
+
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="media/desktop/home-dark.webp"><img alt="Home: sales overview with revenue, quota, stage mix and hot deals" src="media/desktop/home-light.webp" width="100%"></picture></td>
+    <td width="50%"><img alt="Reservations: the floor plan in 3D" src="media/desktop/bookings-3d-dark.webp" width="100%"></td>
+  </tr>
+  <tr>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="media/desktop/pipeline-dark.webp"><img alt="Pipeline: deals on a board by stage" src="media/desktop/pipeline-light.webp" width="100%"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="media/desktop/calendar-dark.webp"><img alt="Schedule: the team calendar with what closes soon" src="media/desktop/calendar-light.webp" width="100%"></picture></td>
+  </tr>
+  <tr>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="media/desktop/mail-dark.webp"><img alt="Email: folders, inbox and an open message" src="media/desktop/mail-light.webp" width="100%"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="media/desktop/chat-dark.webp"><img alt="Chat: channels, conversations and a thread with a reply box" src="media/desktop/chat-light.webp" width="100%"></picture></td>
+  </tr>
+</table>
+
+Tablet, 834 × 1194.
+
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="media/devices/tablet-bookings-dark.webp"><img alt="Tablet: reservations with the arrivals rail and the floor plan" src="media/devices/tablet-bookings-light.webp" width="100%"></picture></td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="media/devices/tablet-home-dark.webp"><img alt="Tablet: home overview" src="media/devices/tablet-home-light.webp" width="100%"></picture></td>
+  </tr>
+</table>
+
+Every image is generated from the running app by `npm run media`
+([`e2e/media/readme.capture.ts`](e2e/media/readme.capture.ts)), so it stays in step with the code.
 
 ## What it does
 
@@ -16,25 +77,32 @@ designed, reusable at every level, and ready to be managed by an AI assistant th
   - A room editor handles several levels.
   - A full-screen service view gives the floor and the rail the whole screen.
 - **Liquid-glass interface.** A glass shell with five themes (Lime, Ember, Rose, Tide, Cobalt), each in light and
-  dark, layout controls and a responsive layout that works on phones.
+  dark and checked against WCAG contrast, with layout controls and a responsive layout that works on phones and
+  touch screens.
 - **Vertical presets.** One codebase serves different businesses: hospitality (tables and covers), salons (chairs and
   services) and workshops (bays and vehicles). Generic domain modules sit underneath and only the vocabulary and seed
   data change.
-- **Four languages.** English, Spanish, German and French, with complete dictionaries (in progress).
+- **Four languages, three currencies.** English, Spanish, German and French, with complete dictionaries that lint
+  enforces, and USD, EUR or GBP as the business currency.
+- **Roles and permissions.** Owner, manager and staff roles with typed permissions that gate every capability, the
+  MCP tools and the navigation.
 - **Pluggable data layer.** Every screen reads and writes through typed capabilities. A mock adapter ships for
-  demos; a real backend replaces one adapter.
-- **MCP server** (planned for `v0.1`), so any MCP-capable AI assistant can operate the dashboard.
+  demos, with its own data per visitor; a real backend replaces one adapter.
+- **MCP server**, so any MCP-capable AI assistant can operate the dashboard with the same capabilities and
+  permissions as the screens.
 
 ## Status
 
 | Area | State |
 | --- | --- |
-| Shell, glass design system, theme presets | Done |
+| Shell, glass design system, five themes in light and dark | Done |
 | Bookings: floor plan, rail, editor, full view | Done (mock data) |
 | Generic domain contracts (bookings, customers, catalog, staff, resources) | Done, proven on three vertical seeds |
-| Data seam, permissions, i18n (en / es / de / fr) | In progress |
+| Data seam, permissions and roles | Done (mock adapter) |
+| Languages (en / es / de / fr) and currencies (USD / EUR / GBP) | Done |
+| MCP server (Streamable HTTP and stdio) | Done |
 | Customers CRM, agenda, team, catalog, messaging, tasks | Planned for `v0.1` |
-| MCP server, landing page | Planned for `v0.1` |
+| Landing page | In progress |
 
 ## Tech stack
 
@@ -43,7 +111,8 @@ designed, reusable at every level, and ready to be managed by an AI assistant th
 - **Data and forms:** TanStack Table, Zod, React Hook Form, Zustand.
 - **Calendar and boards:** FullCalendar 7, dnd-kit.
 - **3D floor plan:** three.js.
-- **Tooling:** Biome, Vitest, Husky.
+- **AI:** Model Context Protocol server (official TypeScript SDK).
+- **Tooling:** Biome, dependency-cruiser, Vitest, Playwright, Husky.
 
 ## Architecture
 
@@ -80,7 +149,9 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run dev` | Development server |
 | `npm run build` | Production build |
 | `npm test` | Unit and contract tests (Vitest) |
-| `npm run check` | Lint and format check (Biome) |
+| `npm run test:e2e` | Shell smoke on a production build (Playwright) |
+| `npm run check` | Lint, format and layer boundaries (Biome, dependency-cruiser) |
+| `npm run media` | Rebuilds the screenshots and recordings in `media/` |
 | `npm run mcp:stdio` | MCP server over stdio |
 
 ## MCP

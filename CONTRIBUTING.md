@@ -73,8 +73,14 @@ Code starts in its route and moves into a layer when a second consumer needs it.
   git commit -m "feat: add finance dashboard screen"
   ```
 
+- Before you push, run the checks:
+  ```bash
+  npm run check && npx tsc --noEmit && npm test
+  ```
+  Run `npm run test:e2e` as well when you change the shell, routing or how a screen loads.
 - Open a Pull Request once ready.
-- If your change adds a new UI screen or component, include a screenshot in your PR description.
+- If your change adds a new UI screen or component, include a screenshot in your PR description. If it changes a
+  screen shown in the README, run `npm run media` and commit the regenerated images in `media/`.
 
 ---
 
