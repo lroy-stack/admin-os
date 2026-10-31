@@ -135,7 +135,7 @@ export function TopNav({
       <div className="grid grid-cols-[1fr_auto] items-center gap-3 xl:grid-cols-[1fr_auto_1fr]">
         <Link prefetch={false} href={brand.href} className="flex w-fit items-center gap-2.5 rounded-xl">
           <span className="liquid-glass-brand bg-brand text-brand-foreground grid size-9 place-items-center rounded-xl">
-            <AppLogo viewBox="72 96 356 308" className="size-5" />
+            <AppLogo className="size-5" />
           </span>
           <span className="text-lg font-medium tracking-tight">{brand.name}</span>
         </Link>

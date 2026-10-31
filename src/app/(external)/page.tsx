@@ -47,7 +47,7 @@ export default async function Home() {
             aria-label={text.home}
             prefetch={false}
           >
-            <AppLogo className="size-4 shrink-0" viewBox="72 96 356 308" />
+            <AppLogo className="size-4 shrink-0" />
             <span>{APP_CONFIG.name}</span>
           </Link>
           <div className="flex items-center gap-1">

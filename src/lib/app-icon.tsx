@@ -2,9 +2,17 @@ import { ImageResponse } from "next/og";
 
 import { AppLogo } from "@/components/app-logo";
 
-export function createAppIcon(size: number) {
-  const logoWidth = size * 0.72;
-  const logoHeight = logoWidth * (308 / 356);
+// The Lime brand pair of the shell's logo badge (dark mode `--brand` and `--brand-foreground`) in sRGB, since the
+// icon renderer does not read CSS variables or oklch.
+const BRAND = "#d4f36b";
+const BRAND_FOREGROUND = "#151909";
+
+/**
+ * The app icon: the logo on the lime badge. Browser icons get the badge's rounded corners; the Apple touch icon stays
+ * square because iOS applies its own mask.
+ */
+export function createAppIcon(size: number, { rounded = true }: { rounded?: boolean } = {}) {
+  const logoSize = size * 0.62;
 
   return new ImageResponse(
     <div
@@ -14,11 +22,12 @@ export function createAppIcon(size: number) {
         justifyContent: "center",
         width: "100%",
         height: "100%",
-        background: "black",
-        color: "white",
+        background: BRAND,
+        color: BRAND_FOREGROUND,
+        borderRadius: rounded ? size * 0.22 : 0,
       }}
     >
-      <AppLogo viewBox="72 96 356 308" width={logoWidth} height={logoHeight} />
+      <AppLogo width={logoSize} height={logoSize} />
     </div>,
     { width: size, height: size },
   );
