@@ -1,6 +1,6 @@
 import { type Browser, expect, type Page, test } from "@playwright/test";
 
-import { type Frame, writeAnimation, writeStill } from "./encode";
+import { type Frame, writeAnimation, writeCard, writeStill } from "./encode";
 
 /**
  * The README and landing media, rebuilt from the running app by `npm run media`. Everything is shown in English,
@@ -133,6 +133,18 @@ test.describe("desktop screens", () => {
     await page.getByRole("radio", { name: "3D" }).click();
     await beat(1500);
     await still(page, "desktop/bookings-3d-dark", 2880);
+    await page.context().close();
+  });
+
+  test("social preview card", async ({ browser, baseURL }) => {
+    // 1200 x 630 is the card size Open Graph and X recommend; Next serves both files from the app root.
+    const page = await openPage(browser, baseURL ?? "", "desktop", "dark");
+    await ready(page, "/dashboard/bookings");
+    await roomReady(page);
+    await page.mouse.move(0, 0);
+    const png = await page.screenshot({ animations: "disabled", caret: "hide" });
+    await writeCard("src/app/opengraph-image.png", png, 1200, 630);
+    await writeCard("src/app/twitter-image.png", png, 1200, 630);
     await page.context().close();
   });
 

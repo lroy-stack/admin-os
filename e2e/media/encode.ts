@@ -18,6 +18,11 @@ export async function writeStill(path: string, png: Buffer, width: number): Prom
   await sharp(png).resize({ width }).webp({ quality: 90, effort: 6, smartSubsample: true }).toFile(path);
 }
 
+/** A social preview card (Open Graph, X): the top of a screen, cropped to the card's aspect ratio. */
+export async function writeCard(path: string, png: Buffer, width: number, height: number): Promise<void> {
+  await sharp(png).resize({ width, height, fit: "cover", position: "top" }).png({ compressionLevel: 9 }).toFile(path);
+}
+
 /**
  * Animated WebP from screencast frames. Each frame lasts until the next repaint, so a still stretch stays one frame;
  * the last one lasts `holdMs` before the loop restarts. WebP keeps the glass gradients that a 256-colour GIF bands.
