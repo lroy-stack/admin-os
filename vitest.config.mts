@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   test: {
-    // Agent worktrees under .claude/worktrees are full checkouts; their copies of the suite are not this checkout's.
-    exclude: [...configDefaults.exclude, ".claude/worktrees/**"],
+    // Agent worktrees are full checkouts with their own suite; e2e/ holds Playwright specs, run by `npm run test:e2e`.
+    exclude: [...configDefaults.exclude, ".claude/worktrees/**", "e2e/**"],
   },
 });
