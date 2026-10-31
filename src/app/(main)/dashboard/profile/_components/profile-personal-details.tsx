@@ -2,51 +2,55 @@ import { LockKeyhole } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getMessages } from "@/config/locale.server";
 
+import { profileMessages } from "./messages.server";
 import type { ProfileRecord } from "./profile-data";
 
-export function PersonalDetails({ profile }: { profile: ProfileRecord }) {
+export async function PersonalDetails({ profile }: { profile: ProfileRecord }) {
+  const text = (await getMessages(profileMessages)).personal;
+
   return (
     <>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="font-heading text-base font-medium">Personal information</h2>
+          <h2 className="font-heading text-base font-medium">{text.information}</h2>
           <Badge className="rounded-sm" variant="outline">
             <LockKeyhole data-icon="inline-start" />
-            Private
+            {text.private}
           </Badge>
         </div>
         <dl className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3 xl:gap-12">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Preferred name</dt>
-              <dd className="text-sm">{profile.preferredName}</dd>
+              <dt className="text-muted-foreground text-xs">{text.preferredName}</dt>
+              <dd className="text-sm break-words">{profile.preferredName}</dd>
             </div>
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Date of birth</dt>
-              <dd className="text-sm">{profile.dateOfBirth}</dd>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Legal name</dt>
-              <dd className="text-sm">{profile.legalName}</dd>
-            </div>
-            <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Personal email</dt>
-              <dd className="text-sm">{profile.personalEmail}</dd>
+              <dt className="text-muted-foreground text-xs">{text.dateOfBirth}</dt>
+              <dd className="text-sm break-words">{profile.dateOfBirth}</dd>
             </div>
           </div>
 
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Pronouns</dt>
-              <dd className="text-sm">{profile.pronouns}</dd>
+              <dt className="text-muted-foreground text-xs">{text.legalName}</dt>
+              <dd className="text-sm break-words">{profile.legalName}</dd>
             </div>
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Work phone</dt>
-              <dd className="text-sm">{profile.workPhone}</dd>
+              <dt className="text-muted-foreground text-xs">{text.personalEmail}</dt>
+              <dd className="text-sm break-words">{profile.personalEmail}</dd>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1">
+              <dt className="text-muted-foreground text-xs">{text.pronouns}</dt>
+              <dd className="text-sm break-words">{profile.pronouns}</dd>
+            </div>
+            <div className="flex flex-col gap-1">
+              <dt className="text-muted-foreground text-xs">{text.workPhone}</dt>
+              <dd className="text-sm break-words">{profile.workPhone}</dd>
             </div>
           </div>
         </dl>
@@ -56,31 +60,31 @@ export function PersonalDetails({ profile }: { profile: ProfileRecord }) {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="font-heading text-base font-medium">Address and emergency contact</h2>
+          <h2 className="font-heading text-base font-medium">{text.addressAndEmergency}</h2>
           <Badge className="rounded-sm" variant="outline">
             <LockKeyhole data-icon="inline-start" />
-            Private
+            {text.private}
           </Badge>
         </div>
         <dl className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3 xl:gap-12">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Home address</dt>
-              <dd className="text-sm">{profile.address}</dd>
+              <dt className="text-muted-foreground text-xs">{text.homeAddress}</dt>
+              <dd className="text-sm break-words">{profile.address}</dd>
             </div>
           </div>
 
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Emergency contact</dt>
-              <dd className="text-sm">{profile.emergencyContact}</dd>
+              <dt className="text-muted-foreground text-xs">{text.emergencyContact}</dt>
+              <dd className="text-sm break-words">{profile.emergencyContact}</dd>
             </div>
           </div>
 
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground text-xs">Emergency phone</dt>
-              <dd className="text-sm">{profile.emergencyPhone}</dd>
+              <dt className="text-muted-foreground text-xs">{text.emergencyPhone}</dt>
+              <dd className="text-sm break-words">{profile.emergencyPhone}</dd>
             </div>
           </div>
         </dl>

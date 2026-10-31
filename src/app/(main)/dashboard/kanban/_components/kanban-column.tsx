@@ -7,7 +7,9 @@ import { cn } from "cn";
 import { GripVertical, MoreVertical, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
+import { kanbanMessageKey } from "./messages";
 import { SortableTaskCard } from "./sortable-task-card";
 import type { Column, Task } from "./types";
 
@@ -18,6 +20,9 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ column, index, tasks }: KanbanColumnProps) {
+  const text = useMessages(kanbanMessageKey);
+  const locale = useLocale();
+  const title = text.columns[column.id];
   const columnSortable = useSortable({
     id: `column:${column.id}`,
     index,
@@ -51,21 +56,23 @@ export function KanbanColumn({ column, index, tasks }: KanbanColumnProps) {
               variant="ghost"
               size="icon-xs"
               className="text-foreground/70 -ml-2 cursor-grab active:cursor-grabbing"
-              aria-label={`Drag ${column.title} column`}
+              aria-label={format(text.column.drag, locale, { column: title })}
             >
               <GripVertical />
             </Button>
-            <h2 className="truncate text-base leading-none font-medium">{column.title}</h2>
+            <h2 className="truncate text-base leading-none font-medium" title={title}>
+              {title}
+            </h2>
           </div>
           <p className="text-muted-foreground text-sm leading-none tabular-nums">
-            {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+            {format(text.column.taskCount, locale, { count: tasks.length })}
           </p>
         </div>
         <div className="text-muted-foreground -mr-2 flex items-center gap-0.5">
-          <Button variant="ghost" size="icon-sm" aria-label={`Add task to ${column.title}`}>
+          <Button variant="ghost" size="icon-sm" aria-label={format(text.column.addTask, locale, { column: title })}>
             <Plus />
           </Button>
-          <Button variant="ghost" size="icon-sm" aria-label={`${column.title} column actions`}>
+          <Button variant="ghost" size="icon-sm" aria-label={format(text.column.actions, locale, { column: title })}>
             <MoreVertical />
           </Button>
         </div>

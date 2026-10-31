@@ -11,9 +11,11 @@ import { GripVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import type { TaskTableRow } from "./kanban-table-columns";
+import { kanbanMessageKey } from "./messages";
 
 export function KanbanTableDnd({
   order,
@@ -54,6 +56,8 @@ export function SortableTaskTableRow({
   table: ReactTable<DataTableFeatures, TaskTableRow>;
   index: number;
 }) {
+  const text = useMessages(kanbanMessageKey);
+  const locale = useLocale();
   const { ref, handleRef, isDragging } = useSortable({
     id: row.id,
     index,
@@ -78,7 +82,7 @@ export function SortableTaskTableRow({
               variant="ghost"
               size="icon-sm"
               className="text-muted-foreground cursor-grab touch-none active:cursor-grabbing"
-              aria-label={`Drag ${row.original.title}`}
+              aria-label={format(text.table.dragTask, locale, { title: row.original.title })}
             >
               <GripVertical />
             </Button>

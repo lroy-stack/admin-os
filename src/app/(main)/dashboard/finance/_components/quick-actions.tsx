@@ -15,6 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
+import { currencySymbol, formatNumber } from "@/core/i18n/client";
+
+import { financeMessages } from "./messages.server";
 
 const contacts = [
   { id: 1, initials: "AR" },
@@ -24,22 +28,25 @@ const contacts = [
 ];
 
 const shortcuts = [
-  { id: 1, label: "Scan QR", icon: QrCode },
-  { id: 2, label: "Transfer", icon: SendHorizontal },
-  { id: 3, label: "Pay Bills", icon: Banknote },
-  { id: 4, label: "History", icon: History },
-  { id: 5, label: "Mobile", icon: Smartphone },
-  { id: 6, label: "Electricity", icon: Lightbulb },
-  { id: 7, label: "Water", icon: Droplet },
-  { id: 8, label: "More", icon: MoreHorizontal },
-];
+  { id: "scanQr", icon: QrCode },
+  { id: "transfer", icon: SendHorizontal },
+  { id: "payBills", icon: Banknote },
+  { id: "history", icon: History },
+  { id: "mobile", icon: Smartphone },
+  { id: "electricity", icon: Lightbulb },
+  { id: "water", icon: Droplet },
+  { id: "more", icon: MoreHorizontal },
+] as const;
 
-export function QuickActions() {
+export async function QuickActions() {
+  const [text, locale, currency] = await Promise.all([getMessages(financeMessages), getLocale(), getCurrency()]);
+  const labels = text.quick;
+
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="font-normal">Quick Transfer</CardTitle>
+          <CardTitle className="font-normal">{labels.transferTitle}</CardTitle>
           <CardAction>
             <div className="flex items-center gap-1">
               <div className="flex -space-x-2">
@@ -57,32 +64,38 @@ export function QuickActions() {
           <Field orientation="horizontal">
             <InputGroup>
               <InputGroupAddon>
-                <InputGroupText>$</InputGroupText>
+                <InputGroupText>{currencySymbol(currency, locale)}</InputGroupText>
               </InputGroupAddon>
-              <InputGroupInput placeholder="0.00" />
+              <InputGroupInput
+                aria-label={labels.amountLabel}
+                inputMode="decimal"
+                placeholder={formatNumber(0, locale, { minimumFractionDigits: 2 })}
+              />
               <InputGroupAddon align="inline-end">
-                <InputGroupText>USD</InputGroupText>
+                <InputGroupText>{currency}</InputGroupText>
               </InputGroupAddon>
             </InputGroup>
-            <Button>Send</Button>
+            <Button className="shrink-0">{labels.send}</Button>
           </Field>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-normal">Shortcuts</CardTitle>
+          <CardTitle className="font-normal">{labels.shortcutsTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-4 gap-4">
             {shortcuts.map((shortcut) => {
               const Icon = shortcut.icon;
               return (
-                <div key={shortcut.id} className="flex flex-col items-center gap-2.5">
-                  <Button variant="outline" className="size-12 rounded-full">
+                <div key={shortcut.id} className="flex min-w-0 flex-col items-center gap-2.5">
+                  <Button variant="outline" className="size-12 rounded-full" aria-label={labels.shortcuts[shortcut.id]}>
                     <Icon className="size-5" />
                   </Button>
-                  <span className="text-muted-foreground text-center text-xs">{shortcut.label}</span>
+                  <span className="text-muted-foreground min-w-0 text-center text-xs break-words hyphens-auto">
+                    {labels.shortcuts[shortcut.id]}
+                  </span>
                 </div>
               );
             })}

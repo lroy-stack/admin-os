@@ -4,56 +4,57 @@ import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@/lib/utils";
+import { useChartFormatters, useMessages } from "@/core/i18n/client";
+import { CurrencyTooltipContent } from "@/ds/components";
 
+import { financeV1MessageKey } from "./messages";
+
+// Months are calendar months of one year, so the chart formats them with the active locale.
 const chartData = [
-  { month: "Jan", income: 5900, expenses: -4200 },
-  { month: "Feb", income: 3800, expenses: -6100 },
-  { month: "Mar", income: 5200, expenses: -5600 },
-  { month: "Apr", income: 7100, expenses: -3200 },
-  { month: "May", income: 4500, expenses: -4400 },
-  { month: "Jun", income: 6100, expenses: -3600 },
-  { month: "Jul", income: 3300, expenses: -5200 },
-  { month: "Aug", income: 4300, expenses: -4000 },
-  { month: "Sep", income: 7200, expenses: -5800 },
-  { month: "Oct", income: 5600, expenses: -4600 },
-  { month: "Nov", income: 3600, expenses: -6400 },
-  { month: "Dec", income: 4700, expenses: -3400 },
+  { month: "2026-01", income: 5900, expenses: -4200 },
+  { month: "2026-02", income: 3800, expenses: -6100 },
+  { month: "2026-03", income: 5200, expenses: -5600 },
+  { month: "2026-04", income: 7100, expenses: -3200 },
+  { month: "2026-05", income: 4500, expenses: -4400 },
+  { month: "2026-06", income: 6100, expenses: -3600 },
+  { month: "2026-07", income: 3300, expenses: -5200 },
+  { month: "2026-08", income: 4300, expenses: -4000 },
+  { month: "2026-09", income: 7200, expenses: -5800 },
+  { month: "2026-10", income: 5600, expenses: -4600 },
+  { month: "2026-11", income: 3600, expenses: -6400 },
+  { month: "2026-12", income: 4700, expenses: -3400 },
 ];
 
-const chartConfig = {
-  income: {
-    label: "Income",
-    color: "var(--chart-1)",
-  },
-  expenses: {
-    label: "Expenses",
-    color: "var(--chart-2)",
-  },
-} as ChartConfig;
+const totalIncome = chartData.reduce((acc, item) => acc + item.income, 0);
+const totalExpenses = chartData.reduce((acc, item) => acc + Math.abs(item.expenses), 0);
 
 export function CashFlowOverview() {
-  const totalIncome = chartData.reduce((acc, item) => acc + item.income, 0);
-  const totalExpenses = chartData.reduce((acc, item) => acc + Math.abs(item.expenses), 0);
+  const text = useMessages(financeV1MessageKey).cashFlow;
+  const fmt = useChartFormatters();
+  const chartConfig = {
+    income: { label: text.income, color: "var(--chart-1)" },
+    expenses: { label: text.expenses, color: "var(--chart-2)" },
+  } satisfies ChartConfig;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Cash Flow Overview</CardTitle>
-        <CardDescription>Monthly income and expenses with net cash impact.</CardDescription>
+        <CardTitle>{text.title}</CardTitle>
+        <CardDescription>{text.description}</CardDescription>
         <CardAction>
           <Select defaultValue="this-year">
-            <SelectTrigger size="sm" className="w-37">
-              <SelectValue placeholder="Select period" />
+            <SelectTrigger size="sm" className="w-40" aria-label={text.periodPlaceholder}>
+              <SelectValue placeholder={text.periodPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="this-month">This Month</SelectItem>
-                <SelectItem value="last-6-months">Last 6 Months</SelectItem>
-                <SelectItem value="ytd">Year to Date</SelectItem>
-                <SelectItem value="this-year">This Year</SelectItem>
+                <SelectItem value="this-month">{text.periods.thisMonth}</SelectItem>
+                <SelectItem value="last-6-months">{text.periods.lastSixMonths}</SelectItem>
+                <SelectItem value="ytd">{text.periods.yearToDate}</SelectItem>
+                <SelectItem value="this-year">{text.periods.thisYear}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -62,23 +63,23 @@ export function CashFlowOverview() {
       <CardContent>
         <Separator />
         <div className="flex items-start justify-between gap-2 py-5 md:items-stretch md:gap-0">
-          <div className="flex flex-1 items-center justify-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
             <div className="bg-chart-1 flex size-10 shrink-0 items-center justify-center rounded-full">
               <ArrowDownLeft className="stroke-background size-6" />
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs uppercase">Income</p>
-              <p className="font-medium tabular-nums">{formatCurrency(totalIncome, { noDecimals: true })}</p>
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs uppercase">{text.income}</p>
+              <p className="font-medium tabular-nums">{fmt.currency(totalIncome)}</p>
             </div>
           </div>
           <Separator orientation="vertical" className="h-auto! self-stretch" />
-          <div className="flex flex-1 items-center justify-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
             <div className="bg-chart-2 flex size-10 shrink-0 items-center justify-center rounded-full">
               <ArrowUpRight className="stroke-background size-6" />
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs uppercase">Expenses</p>
-              <p className="font-medium tabular-nums">{formatCurrency(totalExpenses, { noDecimals: true })}</p>
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs uppercase">{text.expenses}</p>
+              <p className="font-medium tabular-nums">{fmt.currency(totalExpenses)}</p>
             </div>
           </div>
         </div>
@@ -86,27 +87,43 @@ export function CashFlowOverview() {
         <ChartContainer className="max-h-72 w-full" config={chartConfig}>
           <BarChart
             stackOffset="sign"
-            margin={{ left: -25, right: 0, top: 25, bottom: 0 }}
+            margin={{ left: 0, right: 0, top: 25, bottom: 0 }}
             accessibilityLayer
             data={chartData}
           >
             <CartesianGrid vertical={false} />
-            <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              minTickGap={4}
+              tickFormatter={(month: string) => fmt.month(month)}
+            />
             <YAxis
               axisLine={false}
               tickLine={false}
               tickMargin={8}
-              tickFormatter={(value) => {
-                const abs = Math.abs(value);
-                const formatted = abs >= 1000 ? `${abs / 1000}k` : `${abs}`;
-                return value < 0 ? `-${formatted}` : formatted;
-              }}
+              width={48}
+              tickFormatter={(value: number) => fmt.compact(value)}
               ticks={[-8000, -4000, 0, 4000, 8000]}
             />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <ChartTooltip content={<CurrencyTooltipContent hideLabel />} />
             <ReferenceLine y={0} stroke="var(--border)" />
-            <Bar dataKey="income" stackId="a" fill={chartConfig.income.color} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expenses" stackId="a" fill={chartConfig.expenses.color} radius={[4, 4, 0, 0]} />
+            <Bar
+              dataKey="income"
+              name={text.income}
+              stackId="a"
+              fill={chartConfig.income.color}
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              dataKey="expenses"
+              name={text.expenses}
+              stackId="a"
+              fill={chartConfig.expenses.color}
+              radius={[4, 4, 0, 0]}
+            />
           </BarChart>
         </ChartContainer>
       </CardContent>

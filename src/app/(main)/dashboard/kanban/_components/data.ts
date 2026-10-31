@@ -1,11 +1,21 @@
-import type { BoardState, Column, TaskOwnerProfile, TaskTeam } from "./types";
+import type {
+  BoardLayout,
+  BoardState,
+  Column,
+  Task,
+  TaskFacts,
+  TaskId,
+  TaskOwnerProfile,
+  TaskTeam,
+  TaskText,
+} from "./types";
 
 export const columns = [
-  { id: "ideas", title: "Ideas" },
-  { id: "planned", title: "Planned" },
-  { id: "building", title: "Building" },
-  { id: "qa", title: "QA" },
-  { id: "shipped", title: "Shipped" },
+  { id: "ideas" },
+  { id: "planned" },
+  { id: "building" },
+  { id: "qa" },
+  { id: "shipped" },
 ] as const satisfies readonly Column[];
 
 export const columnIds = columns.map((column) => column.id);
@@ -53,14 +63,13 @@ const taskOwners = {
   },
 } satisfies Record<string, TaskOwnerProfile>;
 
-export const initialBoard: BoardState = {
+/** The tasks and where they sit. Titles and descriptions live in the dictionary, keyed by task id. */
+export const initialBoard: BoardLayout = {
   ideas: [
     {
       id: "tender-workflow-map",
-      title: "Tender workflow map",
-      description: "Model Tender, Award/L1, Work Order, allocation, salary, and documents.",
       priority: "High",
-      dueDate: "Jun 14",
+      dueDate: "2026-06-14",
       progress: 10,
       owner: taskOwners.alex,
       team: "Product",
@@ -71,10 +80,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "license-strategy-research",
-      title: "License strategy research",
-      description: "Compare private MVP, open core, GPL, AGPL, and commercial modules.",
       priority: "Medium",
-      dueDate: "Jun 16",
+      dueDate: "2026-06-16",
       progress: 20,
       owner: taskOwners.rahul,
       team: "Finance Ops",
@@ -85,10 +92,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "backup-restore-plan",
-      title: "Backup and restore plan",
-      description: "Define local database backup, restore, and exported document recovery.",
       priority: "Medium",
-      dueDate: "Jun 18",
+      dueDate: "2026-06-18",
       progress: 15,
       owner: taskOwners.maya,
       team: "Platform",
@@ -99,10 +104,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "work-order-allocation-model",
-      title: "Work order allocation model",
-      description: "Sketch how awarded work orders connect to employee allocations and salary months.",
       priority: "Medium",
-      dueDate: "Jun 19",
+      dueDate: "2026-06-19",
       progress: 5,
       owner: taskOwners.meera,
       team: "Product",
@@ -113,10 +116,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "future-sync-notes",
-      title: "Future sync notes",
-      description: "Capture local-first sync assumptions before deciding on cloud PostgreSQL and file storage.",
       priority: "Low",
-      dueDate: "Jun 21",
+      dueDate: "2026-06-21",
       progress: 0,
       owner: taskOwners.alex,
       team: "Platform",
@@ -126,10 +127,8 @@ export const initialBoard: BoardState = {
   planned: [
     {
       id: "electron-app-shell",
-      title: "Electron app shell",
-      description: "Create local-first desktop shell with React, Tailwind, and shadcn/ui.",
       priority: "High",
-      dueDate: "Jun 20",
+      dueDate: "2026-06-20",
       progress: 25,
       owner: taskOwners.alex,
       team: "Platform",
@@ -141,10 +140,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "secure-preload-api",
-      title: "Secure preload API",
-      description: "Expose renderer-safe methods for imports, records, PDFs, and backups.",
       priority: "High",
-      dueDate: "Jun 22",
+      dueDate: "2026-06-22",
       progress: 20,
       owner: taskOwners.nisha,
       team: "Backend",
@@ -156,10 +153,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "party-employee-records",
-      title: "Party and employee records",
-      description: "Create local records for clients, contractors, employees, and identifiers.",
       priority: "Medium",
-      dueDate: "Jun 24",
+      dueDate: "2026-06-24",
       progress: 15,
       owner: taskOwners.meera,
       team: "Product",
@@ -170,10 +165,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "generated-documents-index",
-      title: "Generated documents index",
-      description: "Plan filters for generated PDFs by party, salary month, employee, and import batch.",
       priority: "Medium",
-      dueDate: "Jun 25",
+      dueDate: "2026-06-25",
       progress: 10,
       owner: taskOwners.maya,
       team: "Docs",
@@ -186,10 +179,8 @@ export const initialBoard: BoardState = {
   building: [
     {
       id: "sqlite-drizzle-schema",
-      title: "SQLite and Drizzle schema",
-      description: "Model parties, employees, tenders, work orders, salary imports, and documents.",
       priority: "High",
-      dueDate: "Jun 26",
+      dueDate: "2026-06-26",
       progress: 65,
       owner: taskOwners.alex,
       team: "Data",
@@ -201,10 +192,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "salary-excel-import",
-      title: "Salary Excel import",
-      description: "Read salary sheets with SheetJS and persist import batches locally.",
       priority: "High",
-      dueDate: "Jun 28",
+      dueDate: "2026-06-28",
       progress: 45,
       owner: taskOwners.junaid,
       team: "Data",
@@ -216,10 +205,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "column-mapping-builder",
-      title: "Column mapping builder",
-      description: "Map Excel columns to salary fields with reusable templates per party.",
       priority: "Medium",
-      dueDate: "Jul 1",
+      dueDate: "2026-07-01",
       progress: 30,
       owner: taskOwners.sara,
       team: "Design",
@@ -232,10 +219,8 @@ export const initialBoard: BoardState = {
   qa: [
     {
       id: "salary-row-validation",
-      title: "Salary row validation",
-      description: "Flag missing employee IDs, invalid amounts, duplicate rows, and unmapped fields.",
       priority: "High",
-      dueDate: "Jul 4",
+      dueDate: "2026-07-04",
       progress: 75,
       owner: taskOwners.nisha,
       team: "QA",
@@ -246,10 +231,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "payslip-preview",
-      title: "Payslip preview",
-      description: "Preview generated payslips before bulk PDF export and document history.",
       priority: "Medium",
-      dueDate: "Jul 6",
+      dueDate: "2026-07-06",
       progress: 60,
       owner: taskOwners.junaid,
       team: "Finance Ops",
@@ -263,10 +246,8 @@ export const initialBoard: BoardState = {
   shipped: [
     {
       id: "architecture-rule",
-      title: "Architecture rule locked",
-      description: "Renderer stays UI-only; preload, IPC, services, and database stay separated.",
       priority: "High",
-      dueDate: "Jun 8",
+      dueDate: "2026-06-08",
       progress: 100,
       owner: taskOwners.alex,
       team: "Backend",
@@ -277,10 +258,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "private-mvp-scope",
-      title: "Private MVP scope",
-      description: "Start private source first, then revisit open-core after workflow validation.",
       priority: "Medium",
-      dueDate: "Jun 10",
+      dueDate: "2026-06-10",
       progress: 100,
       owner: taskOwners.rahul,
       team: "Finance Ops",
@@ -291,10 +270,8 @@ export const initialBoard: BoardState = {
     },
     {
       id: "mvp-module-priorities",
-      title: "MVP module priorities",
-      description: "Payslip generation is first, but data model supports wider tender operations.",
       priority: "Medium",
-      dueDate: "Jun 12",
+      dueDate: "2026-06-12",
       progress: 100,
       owner: taskOwners.meera,
       team: "Finance Ops",
@@ -305,3 +282,15 @@ export const initialBoard: BoardState = {
     },
   ],
 };
+
+/** Gives every task of the layout its title and description in one language (the dictionary's `tasks`). */
+export function localizeBoard(layout: BoardLayout, tasks: Readonly<Record<TaskId, TaskText>>): BoardState {
+  const localize = (facts: TaskFacts[]): Task[] => facts.map((item) => ({ ...item, ...tasks[item.id] }));
+  return {
+    ideas: localize(layout.ideas),
+    planned: localize(layout.planned),
+    building: localize(layout.building),
+    qa: localize(layout.qa),
+    shipped: localize(layout.shipped),
+  };
+}

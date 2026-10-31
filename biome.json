@@ -149,7 +149,11 @@
         "src/app/(main)/dashboard/ecommerce/**",
         "src/app/(main)/dashboard/crm/**",
         "src/app/(main)/dashboard/products/**",
-        "src/app/(main)/dashboard/file-manager/**"
+        "src/app/(main)/dashboard/file-manager/**",
+        "src/app/(main)/dashboard/kanban/**",
+        "src/app/(main)/dashboard/profile/**",
+        "src/app/(main)/dashboard/finance/**",
+        "src/app/(main)/dashboard/(examples)/(legacy)/finance-v1/**"
       ],
       "plugins": ["./lint/no-visible-string-props.grit"],
       "linter": {

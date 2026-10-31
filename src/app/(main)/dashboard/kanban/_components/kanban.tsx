@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMessages } from "@/core/i18n/client";
 
 import { columnIds, columns } from "./data";
 import { KanbanColumn } from "./kanban-column";
@@ -44,6 +45,7 @@ import { KanbanList } from "./kanban-list";
 import { KanbanListDnd } from "./kanban-list-dnd";
 import { KanbanTable } from "./kanban-table";
 import { KanbanTableDnd } from "./kanban-table-dnd";
+import { kanbanMessageKey } from "./messages";
 import { TaskCard } from "./task-card";
 import type { BoardState, ColumnId, Task } from "./types";
 
@@ -76,11 +78,12 @@ function isTaskDragData(value: unknown): value is TaskDragData {
 }
 
 export function Kanban({ initialBoard }: KanbanProps) {
+  const text = useMessages(kanbanMessageKey);
   const searchParams = useSearchParams();
   const requestedView = searchParams.get("view");
   const view = requestedView === "list" || requestedView === "table" ? requestedView : "board";
   const [board, setBoard] = React.useState<BoardState>(initialBoard);
-  const [tableOrder, setTableOrder] = React.useState(() =>
+  const [tableOrder, setTableOrder] = React.useState<string[]>(() =>
     columnIds.flatMap((id) => initialBoard[id].map((task) => task.id)),
   );
   const [columnOrder, setColumnOrder] = React.useState<ColumnId[]>(columnIds);
@@ -136,57 +139,61 @@ export function Kanban({ initialBoard }: KanbanProps) {
         <TabsList className="w-full *:data-[slot=tabs-trigger]:flex-1 sm:w-fit sm:*:data-[slot=tabs-trigger]:flex-none">
           <TabsTrigger value="board" className="gap-2">
             <KanbanIcon />
-            Board
+            {text.views.board}
           </TabsTrigger>
           <TabsTrigger value="list" className="gap-2">
             <List />
-            List
+            {text.views.list}
           </TabsTrigger>
           <TabsTrigger value="table" className="gap-2">
             <Table2 />
-            Table
+            {text.views.table}
           </TabsTrigger>
         </TabsList>
 
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center 2xl:justify-end">
           <InputGroup className="min-w-0 sm:w-64 2xl:w-48">
-            <InputGroupInput type="text" aria-label="Search tasks" placeholder="Search tasks" />
+            <InputGroupInput
+              type="text"
+              aria-label={text.toolbar.searchLabel}
+              placeholder={text.toolbar.searchPlaceholder}
+            />
             <InputGroupAddon>
               <Search />
             </InputGroupAddon>
           </InputGroup>
           <Button variant="outline" className="w-full sm:w-auto">
             <SlidersHorizontal data-icon="inline-start" />
-            Filter
+            {text.toolbar.filter}
           </Button>
           <Button variant="outline" className="w-full sm:w-auto">
             <ArrowUpDown data-icon="inline-start" />
-            Sort
+            {text.toolbar.sort}
           </Button>
           <ButtonGroup className="w-full sm:w-fit">
             <Button className="flex-1 sm:flex-none">
               <Plus data-icon="inline-start" />
-              Add task
+              {text.toolbar.addTask}
             </Button>
             <ButtonGroupSeparator />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button aria-label="Open add task menu">
+                <Button aria-label={text.toolbar.addMenu}>
                   <ChevronDown />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem>
                   <Upload />
-                  Import CSV
+                  {text.toolbar.importCsv}
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <LayoutTemplate />
-                  Add from template
+                  {text.toolbar.addFromTemplate}
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Bot />
-                  Create automation
+                  {text.toolbar.createAutomation}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

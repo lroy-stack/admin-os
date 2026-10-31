@@ -7,13 +7,16 @@ import { FileText, type LucideIcon, MessageSquare, Paperclip } from "lucide-reac
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, type Locale } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 import { getInitials } from "@/lib/utils";
 
 import { tagTones } from "./data";
+import type { KanbanMessages } from "./messages";
 import { priorityBadgeConfig } from "./task-priority";
 import { statusIcons } from "./task-status";
 import type { Column, ColumnId, Task, TaskInsightLabel } from "./types";
+import { formatDueDate } from "./utils";
 
 export type TaskTableRow = Task & { status: Column };
 
@@ -26,6 +29,8 @@ const insightIcons: Record<TaskInsightLabel, LucideIcon> = {
 export function createTaskTableColumns(
   columns: readonly Column[],
   onStatusChange: (taskId: string, status: ColumnId) => void,
+  text: KanbanMessages,
+  locale: Locale,
 ): ColumnDef<DataTableFeatures, TaskTableRow>[] {
   return [
     {
@@ -38,7 +43,7 @@ export function createTaskTableColumns(
     },
     {
       accessorKey: "title",
-      header: "Task",
+      header: text.table.headers.task,
       size: 360,
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-4">
@@ -52,10 +57,16 @@ export function createTaskTableColumns(
                 const Icon = insightIcons[insight.label];
 
                 return (
-                  <span key={insight.label} className="flex items-center gap-1" title={insight.label}>
+                  <span
+                    key={insight.label}
+                    className="flex items-center gap-1"
+                    title={format(text.insights[insight.label], locale, { count: insight.count })}
+                  >
                     <Icon className="size-3.5" aria-hidden="true" />
-                    {insight.count}
-                    <span className="sr-only">{insight.label.toLowerCase()}</span>
+                    <span aria-hidden="true">{insight.count}</span>
+                    <span className="sr-only">
+                      {format(text.insights[insight.label], locale, { count: insight.count })}
+                    </span>
                   </span>
                 );
               })}
@@ -65,8 +76,8 @@ export function createTaskTableColumns(
     },
     {
       id: "status",
-      accessorFn: (task) => task.status.title,
-      header: "Status",
+      accessorFn: (task) => text.columns[task.status.id],
+      header: text.table.headers.status,
       size: 140,
       cell: ({ row }) => {
         const Icon = statusIcons[row.original.status.id];
@@ -84,7 +95,7 @@ export function createTaskTableColumns(
             <SelectTrigger
               size="sm"
               className="w-fit gap-1.5 border-transparent bg-transparent px-0 shadow-none"
-              aria-label={`Change status for ${row.original.title}`}
+              aria-label={format(text.table.changeStatus, locale, { title: row.original.title })}
             >
               <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
               <SelectValue />
@@ -93,7 +104,7 @@ export function createTaskTableColumns(
               <SelectGroup>
                 {columns.map((column) => (
                   <SelectItem key={column.id} value={column.id}>
-                    {column.title}
+                    {text.columns[column.id]}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -104,7 +115,7 @@ export function createTaskTableColumns(
     },
     {
       accessorKey: "priority",
-      header: "Priority",
+      header: text.table.headers.priority,
       size: 120,
       cell: ({ row }) => {
         const priority = priorityBadgeConfig[row.original.priority];
@@ -113,25 +124,25 @@ export function createTaskTableColumns(
         return (
           <Badge variant={priority.variant} className={cn("rounded-md px-2", priority.className)}>
             <Icon data-icon="inline-start" aria-hidden="true" />
-            {row.original.priority}
+            {text.priorities[row.original.priority]}
           </Badge>
         );
       },
     },
     {
       accessorKey: "team",
-      header: "Team",
+      header: text.table.headers.team,
       size: 140,
       cell: ({ row }) => (
         <Badge variant="secondary" className={tagTones[row.original.team]}>
-          {row.original.team}
+          {text.teams[row.original.team]}
         </Badge>
       ),
     },
     {
       id: "owner",
       accessorFn: (task) => task.owner.name,
-      header: "Owner",
+      header: text.table.headers.owner,
       size: 190,
       cell: ({ row }) => (
         <span className="flex items-center gap-1.5">
@@ -146,9 +157,11 @@ export function createTaskTableColumns(
     },
     {
       accessorKey: "dueDate",
-      header: "Due date",
+      header: text.table.headers.dueDate,
       size: 160,
-      cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.dueDate}</span>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground tabular-nums">{formatDueDate(row.original.dueDate, locale)}</span>
+      ),
     },
   ];
 }

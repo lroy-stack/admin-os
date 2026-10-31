@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
 
 import { columnIds } from "./data";
 import { createTaskTableColumns } from "./kanban-table-columns";
 import { SortableTaskTableRow } from "./kanban-table-dnd";
+import { kanbanMessageKey } from "./messages";
 import type { BoardState, Column, ColumnId } from "./types";
 
 const headerIcons: Record<string, typeof ListTodo> = {
@@ -37,6 +39,8 @@ export function KanbanTable({
   setBoard: Dispatch<SetStateAction<BoardState>>;
   order: string[];
 }) {
+  const text = useMessages(kanbanMessageKey);
+  const locale = useLocale();
   const changeStatus = useCallback(
     (taskId: string, status: ColumnId) => {
       setBoard((current) => {
@@ -59,7 +63,10 @@ export function KanbanTable({
     },
     [setBoard],
   );
-  const tableColumns = useMemo(() => createTaskTableColumns(columns, changeStatus), [columns, changeStatus]);
+  const tableColumns = useMemo(
+    () => createTaskTableColumns(columns, changeStatus, text, locale),
+    [columns, changeStatus, text, locale],
+  );
   const data = useMemo(() => {
     const positions = new Map(order.map((id, index) => [id, index]));
     return columns
@@ -80,7 +87,7 @@ export function KanbanTable({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col *:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:flex-1 *:data-[slot=table-container]:overflow-auto">
-      <Table aria-label="Kanban tasks" className="min-w-280 table-fixed border-separate border-spacing-0">
+      <Table aria-label={text.table.label} className="min-w-280 table-fixed border-separate border-spacing-0">
         <TableHeader className="bg-background sticky top-0 z-10">
           {table.getHeaderGroups().map((group) => (
             <TableRow key={group.id} className="hover:bg-transparent">
@@ -118,8 +125,8 @@ export function KanbanTable({
               <TableCell colSpan={tableColumns.length}>
                 <Empty>
                   <EmptyHeader>
-                    <EmptyTitle>No tasks yet</EmptyTitle>
-                    <EmptyDescription>Tasks from your board appear here.</EmptyDescription>
+                    <EmptyTitle>{text.table.emptyTitle}</EmptyTitle>
+                    <EmptyDescription>{text.table.emptyDescription}</EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               </TableCell>
@@ -130,11 +137,14 @@ export function KanbanTable({
       <footer className="text-muted-foreground flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-t px-6 py-2 text-sm">
         <div className="flex flex-wrap items-center gap-4">
           <span className="tabular-nums" aria-live="polite">
-            {data.length ? pageIndex * pageSize + 1 : 0}–{Math.min((pageIndex + 1) * pageSize, data.length)} of{" "}
-            {data.length} tasks
+            {format(text.table.range, locale, {
+              from: data.length ? pageIndex * pageSize + 1 : 0,
+              to: Math.min((pageIndex + 1) * pageSize, data.length),
+              count: data.length,
+            })}
           </span>
           <div className="flex items-center gap-2">
-            <label htmlFor="kanban-page-size">Rows per page</label>
+            <label htmlFor="kanban-page-size">{text.table.rowsPerPage}</label>
             <Select
               value={String(pageSize)}
               onValueChange={(value) => {
@@ -159,12 +169,12 @@ export function KanbanTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="mr-2 text-xs tabular-nums">
-            Page {pageIndex + 1} of {pageCount}
+            {format(text.table.page, locale, { page: pageIndex + 1, pages: pageCount })}
           </span>
           <Button
             variant="outline"
             size="icon-sm"
-            aria-label="Previous page"
+            aria-label={text.table.previousPage}
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.previousPage()}
           >
@@ -173,7 +183,7 @@ export function KanbanTable({
           <Button
             variant="outline"
             size="icon-sm"
-            aria-label="Next page"
+            aria-label={text.table.nextPage}
             disabled={!table.getCanNextPage()}
             onClick={() => table.nextPage()}
           >

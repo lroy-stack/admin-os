@@ -1,6 +1,3 @@
-"use client";
-
-import { addDays, format } from "date-fns";
 import { Home, Receipt, Sparkles, Zap } from "lucide-react";
 import { siApple, siMastercard } from "simple-icons";
 
@@ -8,47 +5,37 @@ import { SimpleIcon } from "@/components/simple-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@/lib/utils";
+import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
+import { format, formatAmount, formatCalendarDate } from "@/core/i18n/client";
 
-const now = new Date();
+import { financeV1Messages } from "./messages.server";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const upcomingPayments = [
-  {
-    id: 1,
-    icon: Home,
-    title: "Apartment Rent",
-    amount: 1200,
-    date: `Due on ${format(addDays(now, 2), "do MMMM yyyy")}`,
-  },
-  {
-    id: 2,
-    icon: Zap,
-    title: "Electricity Bill",
-    amount: 75,
-    date: `Due on ${format(addDays(now, 2), "do MMMM yyyy")}`,
-  },
-  {
-    id: 3,
-    icon: Sparkles,
-    title: "ChatGPT Plus",
-    amount: 20,
-    date: `Due on ${format(addDays(now, 7), "do MMMM yyyy")}`,
-  },
-  {
-    id: 4,
-    icon: Receipt,
-    title: "Credit Card Payment",
-    amount: 420,
-    date: `Due on ${format(addDays(now, 9), "do MMMM yyyy")}`,
-  },
-];
+  { id: 1, key: "rent", icon: Home, amount: 1200, inDays: 2 },
+  { id: 2, key: "electricity", icon: Zap, amount: 75, inDays: 2 },
+  { id: 3, key: "chatgpt", icon: Sparkles, amount: 20, inDays: 7 },
+  { id: 4, key: "creditCard", icon: Receipt, amount: 420, inDays: 9 },
+] as const;
 
-export function CardOverview() {
+// The cardholder is a person and the number and expiry are data, so none of them is translated.
+const CARDHOLDER = "Alex Morgan";
+const EXPIRY = "06/30";
+const MASKED_NUMBER = "•••• •••• •••• 2301";
+const MASKED_CVV = "•••";
+
+export async function CardOverview() {
+  const [text, locale, currency] = await Promise.all([getMessages(financeV1Messages), getLocale(), getCurrency()]);
+  const labels = text.card;
+  const now = Date.now();
+  const amount = (value: number, fractionDigits = 0) => formatAmount(value, currency, locale, { fractionDigits });
+
   return (
     <Card className="shadow-xs">
       <CardHeader className="items-center">
-        <CardTitle>My Card</CardTitle>
-        <CardDescription>1 of 4 cards added · Overview of your primary card and upcoming payments</CardDescription>
+        <CardTitle>{labels.title}</CardTitle>
+        <CardDescription>{format(labels.description, locale, { added: 1, total: 4 })}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -60,23 +47,25 @@ export function CardOverview() {
 
               <div className="space-y-1">
                 <p className="text-primary-foreground/90 font-mono text-sm tracking-[0.15em] sm:text-lg">
-                  •••• •••• •••• 2301
+                  {MASKED_NUMBER}
                 </p>
               </div>
 
               <div className="flex items-end justify-between">
                 <div className="space-y-2">
                   <p className="text-primary-foreground font-mono text-sm font-medium tracking-wide uppercase">
-                    Alex Morgan
+                    {CARDHOLDER}
                   </p>
                   <div className="flex gap-6">
                     <div>
-                      <p className="text-primary-foreground/80 text-[10px] tracking-wider uppercase">Valid Thru</p>
-                      <p className="text-primary-foreground/80 font-mono text-xs">06/30</p>
+                      <p className="text-primary-foreground/80 text-[10px] tracking-wider uppercase">
+                        {labels.validThru}
+                      </p>
+                      <p className="text-primary-foreground/80 font-mono text-xs">{EXPIRY}</p>
                     </div>
                     <div>
-                      <p className="text-primary-foreground/80 text-[10px] tracking-wider uppercase">CVV</p>
-                      <p className="text-primary-foreground/80 font-mono text-xs">•••</p>
+                      <p className="text-primary-foreground/80 text-[10px] tracking-wider uppercase">{labels.cvv}</p>
+                      <p className="text-primary-foreground/80 font-mono text-xs">{MASKED_CVV}</p>
                     </div>
                   </div>
                 </div>
@@ -86,37 +75,37 @@ export function CardOverview() {
           </div>
 
           <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Card type</span>
-              <span className="font-medium tabular-nums">Virtual</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{labels.type}</span>
+              <span className="text-right font-medium">{labels.virtual}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Billing cycle</span>
-              <span className="font-medium tabular-nums">21st monthly</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{labels.billingCycle}</span>
+              <span className="text-right font-medium">{format(labels.billingDay, locale, { day: 21 })}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Card Limit</span>
-              <span className="font-medium tabular-nums">$62,000.00</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{labels.limit}</span>
+              <span className="font-medium tabular-nums">{amount(62000, 2)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Available Balance</span>
-              <span className="font-medium tabular-nums">$13,100.06</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{labels.availableBalance}</span>
+              <span className="font-medium tabular-nums">{amount(13100.06, 2)}</span>
             </div>
           </div>
 
           <div className="space-y-1">
             <Button className="w-full" size="sm">
-              Manage Card
+              {labels.manage}
             </Button>
 
             <Button className="w-full" variant="outline" size="sm">
-              Add Card
+              {labels.add}
             </Button>
           </div>
           <Separator />
 
           <div className="space-y-4">
-            <h6 className="text-muted-foreground text-sm uppercase">Upcoming Payments</h6>
+            <h6 className="text-muted-foreground text-sm uppercase">{labels.upcomingPayments}</h6>
 
             <div className="space-y-4">
               {upcomingPayments.map((transaction) => (
@@ -124,16 +113,24 @@ export function CardOverview() {
                   <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full">
                     <transaction.icon className="text-muted-foreground size-5" />
                   </div>
-                  <div className="flex w-full items-end justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{transaction.title}</p>
-                      <p className="text-muted-foreground text-xs">{transaction.date}</p>
-                    </div>
-                    <div>
-                      <span className="text-destructive text-sm leading-none font-medium tabular-nums">
-                        {formatCurrency(transaction.amount, {
-                          noDecimals: true,
+                  <div className="flex w-full items-end justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium break-words">{labels.payments[transaction.key]}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {format(labels.dueOn, locale, {
+                          date: formatCalendarDate(
+                            new Date(now + transaction.inDays * DAY_MS).toISOString().slice(0, 10),
+                            locale,
+                            {
+                              dateStyle: "long",
+                            },
+                          ),
                         })}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <span className="text-destructive text-sm leading-none font-medium tabular-nums">
+                        {amount(transaction.amount)}
                       </span>
                     </div>
                   </div>
@@ -142,7 +139,7 @@ export function CardOverview() {
             </div>
 
             <Button className="w-full" size="sm" variant="outline">
-              View All Payments
+              {labels.viewAll}
             </Button>
           </div>
         </div>

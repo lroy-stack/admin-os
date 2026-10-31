@@ -5,7 +5,9 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils";
+import { formatDate, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
+
+import { financeMessageKey } from "./messages";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const weekStart = Date.UTC(2026, 0, 5);
@@ -50,42 +52,31 @@ const chartData = [
 
 const weekdayTicks = Array.from({ length: 7 }, (_, index) => weekStart + (index + 0.5) * DAY_MS);
 
-const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  weekday: "long",
-});
-
-const formatWeekday = (value: number) => weekdayFormatter.format(new Date(value));
-
 const chartDomain = [weekStart, weekStart + 7 * DAY_MS];
-const formatTooltipCurrency = (value: number | string) => formatCurrency(Number(value), { noDecimals: true });
-
-const chartConfig = {
-  expense: {
-    color: "var(--chart-4)",
-    label: "Expense",
-  },
-  income: {
-    color: "var(--chart-2)",
-    label: "Income",
-  },
-} satisfies ChartConfig;
 
 export function TransactionsOverviewCard() {
+  const text = useMessages(financeMessageKey).spending;
+  const locale = useLocale();
+  const fmt = useChartFormatters();
+  const chartConfig = {
+    expense: { color: "var(--chart-4)", label: text.expense },
+    income: { color: "var(--chart-2)", label: text.income },
+  } satisfies ChartConfig;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-normal">Spending Overview</CardTitle>
+        <CardTitle className="font-normal">{text.title}</CardTitle>
         <CardAction>
           <Select defaultValue="weekly">
-            <SelectTrigger className="w-28" size="sm">
+            <SelectTrigger className="w-40" size="sm" aria-label={text.periodLabel}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="yearly">Yearly</SelectItem>
+                <SelectItem value="weekly">{text.periods.weekly}</SelectItem>
+                <SelectItem value="monthly">{text.periods.monthly}</SelectItem>
+                <SelectItem value="yearly">{text.periods.yearly}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -101,7 +92,7 @@ export function TransactionsOverviewCard() {
               dataKey="timestamp"
               domain={chartDomain}
               scale="time"
-              tickFormatter={formatWeekday}
+              tickFormatter={(value: number) => formatDate(value, locale, "UTC", { weekday: "short" })}
               tickLine={false}
               tickMargin={10}
               ticks={weekdayTicks}
@@ -118,7 +109,7 @@ export function TransactionsOverviewCard() {
                   label={label}
                   payload={payload?.map((item) => ({
                     ...item,
-                    value: typeof item.value === "number" ? formatTooltipCurrency(item.value) : item.value,
+                    value: typeof item.value === "number" ? fmt.currency(item.value) : item.value,
                   }))}
                 />
               )}

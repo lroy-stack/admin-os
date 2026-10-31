@@ -7,11 +7,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { format, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
 import { tagTones } from "./data";
+import { kanbanMessageKey } from "./messages";
 import { priorityBadgeConfig } from "./task-priority";
 import type { ColumnId, Task, TaskInsightLabel } from "./types";
+import { formatDueDate } from "./utils";
 
 const taskInsightIcons: Record<TaskInsightLabel, LucideIcon> = {
   Attachments: Paperclip,
@@ -28,6 +31,9 @@ export function TaskCard({
   columnId?: ColumnId;
   isOverlay?: boolean;
 }) {
+  const text = useMessages(kanbanMessageKey);
+  const locale = useLocale();
+  const dueDate = formatDueDate(task.dueDate, locale);
   const isDone = columnId === "shipped";
   const showBuildingDetails = columnId === "building" && typeof task.progress === "number";
   const owner = task.owner;
@@ -41,8 +47,13 @@ export function TaskCard({
       )}
     >
       <div className="min-w-0 space-y-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="min-w-0 truncate text-sm leading-none font-medium">{task.title}</h3>
+        <div className="flex items-start justify-between gap-3">
+          <h3
+            className="line-clamp-2 min-w-0 text-sm leading-snug font-medium break-words hyphens-auto"
+            title={task.title}
+          >
+            {task.title}
+          </h3>
           <Badge
             variant={priorityBadgeConfig[task.priority].variant}
             className={cn(
@@ -51,7 +62,7 @@ export function TaskCard({
             )}
           >
             <PriorityIcon data-icon="inline-start" />
-            {task.priority}
+            {text.priorities[task.priority]}
           </Badge>
         </div>
         <p className="text-muted-foreground line-clamp-2 text-sm leading-5">{task.description}</p>
@@ -64,12 +75,12 @@ export function TaskCard({
               <AvatarFallback className="rounded-sm text-[10px]">{getInitials(owner.name)}</AvatarFallback>
             </Avatar>
 
-            <span className="text-muted-foreground text-sm">{owner.name}</span>
+            <span className="text-muted-foreground min-w-0 truncate text-sm">{owner.name}</span>
           </div>
 
           <div className="text-muted-foreground flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-sm">{task.dueDate}</span>
-            <CalendarDays className="size-3" />
+            <span className="truncate text-sm">{dueDate}</span>
+            <CalendarDays className="size-3 shrink-0" />
           </div>
         </div>
       ) : null}
@@ -78,14 +89,14 @@ export function TaskCard({
         <div className="flex flex-col gap-3">
           <div className="space-y-1.5">
             <div className="text-muted-foreground flex items-center justify-between text-xs">
-              <span className="leading-none">Progress</span>
-              <span className="leading-none tabular-nums">{task.progress}%</span>
+              <span className="leading-none">{text.card.progress}</span>
+              <span className="leading-none tabular-nums">{formatPercent(task.progress / 100, locale)}</span>
             </div>
             <Progress value={task.progress} />
           </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground text-sm">Owner</span>
+              <span className="text-muted-foreground shrink-0 text-sm">{text.card.owner}</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground truncate text-sm">{owner.name}</span>
                 <Avatar className={cn("size-5 after:rounded-sm", owner.tone)}>
@@ -95,20 +106,20 @@ export function TaskCard({
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground text-sm">Due date</span>
+              <span className="text-muted-foreground shrink-0 text-sm">{text.card.dueDate}</span>
               <span className="text-muted-foreground flex items-center gap-1.5">
-                <span className="truncate text-sm">{task.dueDate}</span>
-                <CalendarDays className="size-3" />
+                <span className="truncate text-sm">{dueDate}</span>
+                <CalendarDays className="size-3 shrink-0" />
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground text-sm">Team</span>
+              <span className="text-muted-foreground shrink-0 text-sm">{text.card.team}</span>
               <Badge
                 variant="secondary"
                 className={cn("rounded-md border-transparent px-2 font-medium", tagTones[task.team])}
               >
-                {task.team}
+                {text.teams[task.team]}
               </Badge>
             </div>
           </div>
@@ -121,7 +132,7 @@ export function TaskCard({
         {isDone ? (
           <div className="flex items-center gap-1 text-sm font-medium text-green-700 dark:text-green-600">
             <BadgeCheck className="size-4" />
-            Done
+            {text.card.done}
           </div>
         ) : null}
 
@@ -131,9 +142,16 @@ export function TaskCard({
               const Icon = taskInsightIcons[insight.label];
 
               return (
-                <span key={insight.label} className="flex items-center gap-1.5 text-sm">
-                  <Icon className="size-3.5" />
-                  {insight.count}
+                <span
+                  key={insight.label}
+                  className="flex items-center gap-1.5 text-sm"
+                  title={format(text.insights[insight.label], locale, { count: insight.count })}
+                >
+                  <Icon className="size-3.5" aria-hidden="true" />
+                  <span aria-hidden="true">{insight.count}</span>
+                  <span className="sr-only">
+                    {format(text.insights[insight.label], locale, { count: insight.count })}
+                  </span>
                 </span>
               );
             })}

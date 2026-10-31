@@ -1,119 +1,59 @@
 "use client";
 
-import * as React from "react";
-
 import { Label, Pie, PieChart } from "recharts";
 
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils";
+import { formatPercent, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
+
+import { financeMessageKey } from "./messages";
 
 type BalanceKey = "investment" | "main" | "reserve" | "savings";
 
+// Plain numbers are the business's books in the selected currency; nothing is converted.
 const balanceData: {
-  account: string;
   amount: number;
   key: BalanceKey;
-  percentage: number;
+  share: number;
 }[] = [
-  {
-    account: "Main Wallet",
-    amount: 122_540,
-    key: "main",
-    percentage: 52.2,
-  },
-  {
-    account: "Savings Account",
-    amount: 48_320,
-    key: "savings",
-    percentage: 20.6,
-  },
-  {
-    account: "Investment Account",
-    amount: 36_780,
-    key: "investment",
-    percentage: 15.7,
-  },
-  {
-    account: "Reserve Account",
-    amount: 27_256,
-    key: "reserve",
-    percentage: 11.5,
-  },
+  { amount: 122_540, key: "main", share: 0.522 },
+  { amount: 48_320, key: "savings", share: 0.206 },
+  { amount: 36_780, key: "investment", share: 0.157 },
+  { amount: 27_256, key: "reserve", share: 0.115 },
 ];
 
-const chartConfig = {
-  amount: {
-    label: "Balance",
-  },
-  investment: {
-    color: "var(--chart-1)",
-    label: "Investment Account",
-  },
-  main: {
-    color: "var(--chart-2)",
-    label: "Main Wallet",
-  },
-  reserve: {
-    color: "var(--chart-3)",
-    label: "Reserve Account",
-  },
-  savings: {
-    color: "var(--chart-4)",
-    label: "Savings Account",
-  },
-} satisfies ChartConfig;
-
-const currencies = {
-  EUR: {
-    label: "Euro Balance",
-  },
-  GBP: {
-    label: "GBP Balance",
-  },
-  USD: {
-    label: "USD Balance",
-  },
-} as const;
-
-type Currency = keyof typeof currencies;
-
-const getAccountColor = (key: BalanceKey) => {
-  const config = chartConfig[key];
-
-  return "color" in config ? config.color : undefined;
+const accountColors: Record<BalanceKey, string> = {
+  investment: "var(--chart-1)",
+  main: "var(--chart-2)",
+  reserve: "var(--chart-3)",
+  savings: "var(--chart-4)",
 };
 
-const chartData = balanceData.map((item) => ({
-  ...item,
-  fill: getAccountColor(item.key),
-}));
 const totalBalance = balanceData.reduce((total, item) => total + item.amount, 0);
 
 export function BalanceDistributionCard() {
-  const [currency, setCurrency] = React.useState<Currency>("USD");
+  const text = useMessages(financeMessageKey).allocation;
+  const locale = useLocale();
+  const fmt = useChartFormatters();
+
+  const chartConfig = {
+    amount: { label: text.balance },
+    investment: { color: accountColors.investment, label: text.accounts.investment },
+    main: { color: accountColors.main, label: text.accounts.main },
+    reserve: { color: accountColors.reserve, label: text.accounts.reserve },
+    savings: { color: accountColors.savings, label: text.accounts.savings },
+  } satisfies ChartConfig;
+
+  const chartData = balanceData.map((item) => ({
+    ...item,
+    account: text.accounts[item.key],
+    fill: accountColors[item.key],
+  }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-normal">Account Allocation</CardTitle>
-        <CardAction>
-          <Select onValueChange={(value) => setCurrency(value as Currency)} value={currency}>
-            <SelectTrigger className="w-36" size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {Object.entries(currencies).map(([value, item]) => (
-                  <SelectItem key={value} value={value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </CardAction>
+        <CardTitle className="font-normal">{text.title}</CardTitle>
       </CardHeader>
 
       <CardContent className="grid items-center gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)]">
@@ -142,14 +82,14 @@ export function BalanceDistributionCard() {
                   return (
                     <text dominantBaseline="middle" textAnchor="middle" x={viewBox.cx} y={viewBox.cy}>
                       <tspan className="fill-muted-foreground text-xs" x={viewBox.cx} y={(viewBox.cy ?? 0) - 8}>
-                        Total
+                        {text.total}
                       </tspan>
                       <tspan
                         className="fill-foreground text-lg font-medium tabular-nums"
                         x={viewBox.cx}
                         y={(viewBox.cy ?? 0) + 14}
                       >
-                        {formatCurrency(totalBalance, { currency, noDecimals: true })}
+                        {fmt.currency(totalBalance)}
                       </tspan>
                     </text>
                   );
@@ -161,17 +101,23 @@ export function BalanceDistributionCard() {
 
         <div className="flex min-w-0 flex-col gap-3">
           {chartData.map((item) => (
-            <div className="grid grid-cols-[1fr_auto] items-end gap-3" key={item.key}>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3" key={item.key}>
               <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-1">
-                  <span aria-hidden="true" className="h-2 w-1 rounded-full" style={{ backgroundColor: item.fill }} />
-                  <p className="text-muted-foreground truncate text-xs">{item.account}</p>
+                <div className="flex min-w-0 items-start gap-1">
+                  <span
+                    aria-hidden="true"
+                    className="mt-1 h-2 w-1 shrink-0 rounded-full"
+                    style={{ backgroundColor: item.fill }}
+                  />
+                  <p className="text-muted-foreground min-w-0 text-xs break-words hyphens-auto" title={item.account}>
+                    {item.account}
+                  </p>
                 </div>
-                <p className="font-medium tabular-nums">
-                  {formatCurrency(item.amount, { currency, noDecimals: true })}
-                </p>
+                <p className="font-medium tabular-nums">{fmt.currency(item.amount)}</p>
               </div>
-              <div className="font-medium tabular-nums">{item.percentage}%</div>
+              <div className="shrink-0 font-medium tabular-nums">
+                {formatPercent(item.share, locale, { fractionDigits: 1 })}
+              </div>
             </div>
           ))}
         </div>

@@ -1,55 +1,58 @@
-"use client";
-
-import { addDays, format, set } from "date-fns";
 import { ChevronRight, Zap } from "lucide-react";
 import { siClaude, siLinear, siResend } from "simple-icons";
 
 import { SimpleIcon } from "@/components/simple-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
+import { format, formatAmount, formatCalendarDate, formatTime } from "@/core/i18n/client";
 
-const transactions = [
-  {
-    id: 1,
-    title: "Claude Pro Subscription",
-    date: format(set(addDays(new Date(), 2), { hours: 14, minutes: 45 }), "hh.mm a '•' MMMM dd, yyyy"),
-    icon: siClaude,
-  },
-  {
-    id: 2,
-    title: "Resend Pro Team",
-    date: format(set(addDays(new Date(), 4), { hours: 7, minutes: 0 }), "hh.mm a '•' MMMM dd, yyyy"),
-    icon: siResend,
-  },
-  {
-    id: 3,
-    title: "Linear Plus Plan",
-    date: format(set(addDays(new Date(), 10), { hours: 7, minutes: 0 }), "hh.mm a '•' MMMM dd, yyyy"),
-    icon: siLinear,
-  },
-];
+import { financeMessages } from "./messages.server";
 
-export function UpcomingTransactions() {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const upcoming = [
+  { id: "claude", inDays: 2, hour: 14, minute: 45, icon: siClaude },
+  { id: "resend", inDays: 4, hour: 7, minute: 0, icon: siResend },
+  { id: "linear", inDays: 10, hour: 7, minute: 0, icon: siLinear },
+] as const;
+
+export async function UpcomingTransactions() {
+  const [text, locale, currency] = await Promise.all([getMessages(financeMessages), getLocale(), getCurrency()]);
+  const labels = text.upcoming;
+  const today = Date.now();
+  const transactions = upcoming.map((entry) => {
+    const day = new Date(today + entry.inDays * DAY_MS);
+    return {
+      id: entry.id,
+      icon: entry.icon,
+      title: labels.items[entry.id],
+      when: format(labels.when, locale, {
+        time: formatTime(Date.UTC(2026, 0, 5, entry.hour, entry.minute), locale, "UTC"),
+        date: formatCalendarDate(day.toISOString().slice(0, 10), locale, { dateStyle: "long" }),
+      }),
+    };
+  });
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-normal">Upcoming Bills & Payments</CardTitle>
+        <CardTitle className="font-normal">{labels.title}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 className="flex items-baseline text-3xl leading-none tracking-tight">
-              <span className="font-normal">$1,245</span>
-              <span className="text-muted-foreground text-xl">.00</span>
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-3xl leading-none font-normal tracking-tight tabular-nums">
+              {formatAmount(1245, currency, locale, { fractionDigits: 0 })}
             </h2>
-            <p className="text-muted-foreground text-sm leading-none">
-              You have <span className="text-foreground font-medium">3</span> bills due this month
+            <p className="text-muted-foreground text-sm leading-snug">
+              {format(labels.billsDue, locale, { count: transactions.length })}
             </p>
           </div>
-          <div className="border-border bg-muted/70 flex w-max items-center gap-2 rounded-md border px-2 py-1.5 text-sm">
-            <Zap className="fill-primary text-primary size-4" />
-            <span className="text-muted-foreground">
-              Autopay will process <span className="text-foreground font-medium">$145.00</span> today
+          <div className="border-border bg-muted/70 flex max-w-full items-center gap-2 rounded-md border px-2 py-1.5 text-sm">
+            <Zap className="fill-primary text-primary size-4 shrink-0" />
+            <span className="text-muted-foreground min-w-0 break-words">
+              {format(labels.autopay, locale, { amount: formatAmount(145, currency, locale) })}
             </span>
           </div>
         </div>
@@ -62,11 +65,13 @@ export function UpcomingTransactions() {
                   <SimpleIcon icon={transaction.icon} />
                 </div>
               </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{transaction.title}</ItemTitle>
-                <ItemDescription>{transaction.date}</ItemDescription>
+              <ItemContent className="min-w-0">
+                <ItemTitle className="line-clamp-2 block w-full break-words hyphens-auto" title={transaction.title}>
+                  {transaction.title}
+                </ItemTitle>
+                <ItemDescription>{transaction.when}</ItemDescription>
               </ItemContent>
-              <ItemActions>
+              <ItemActions className="shrink-0">
                 <ChevronRight className="text-muted-foreground size-5" />
               </ItemActions>
             </Item>

@@ -1,8 +1,8 @@
 export type ColumnId = "ideas" | "planned" | "building" | "qa" | "shipped";
 
+/** A column is its id; the name shown for it comes from the dictionary. */
 export type Column = {
   id: ColumnId;
-  title: string;
 };
 
 export type TaskTeam =
@@ -30,10 +30,34 @@ export type TaskOwnerProfile = {
   tone: string;
 };
 
-export type Task = {
-  id: string;
+export type TaskId =
+  | "tender-workflow-map"
+  | "license-strategy-research"
+  | "backup-restore-plan"
+  | "work-order-allocation-model"
+  | "future-sync-notes"
+  | "electron-app-shell"
+  | "secure-preload-api"
+  | "party-employee-records"
+  | "generated-documents-index"
+  | "sqlite-drizzle-schema"
+  | "salary-excel-import"
+  | "column-mapping-builder"
+  | "salary-row-validation"
+  | "payslip-preview"
+  | "architecture-rule"
+  | "private-mvp-scope"
+  | "mvp-module-priorities";
+
+/** The business text of a task: the only part that is written in a language. */
+export type TaskText = {
   title: string;
   description: string;
+};
+
+/** What does not depend on the language. `dueDate` is a calendar day (YYYY-MM-DD). */
+export type TaskFacts = {
+  id: TaskId;
   priority: TaskPriority;
   dueDate: string;
   progress: number;
@@ -41,5 +65,9 @@ export type Task = {
   team: TaskTeam;
   insights: TaskInsight[];
 };
+
+export type Task = TaskFacts & TaskText;
+
+export type BoardLayout = Record<ColumnId, TaskFacts[]>;
 
 export type BoardState = Record<ColumnId, Task[]>;
