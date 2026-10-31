@@ -196,3 +196,70 @@ html:has([data-landing-page]) {
     -webkit-print-color-adjust: exact;
   }
 }
+
+/*
+ * Touch targets: on any coarse pointer, every interactive primitive offers at least 44 × 44 px (WCAG 2.5.5, Apple
+ * HIG). Rows, pills and fields grow to 44 px. Glyph controls (checkbox, radio, switch, slider thumb) keep their drawn
+ * size and extend an invisible hit area instead, so dense forms keep their layout. Selected by `data-slot`, so the
+ * shadcn primitives stay untouched.
+ */
+@layer base {
+  @media (any-pointer: coarse) {
+    :where(
+        [data-slot="button"],
+        [data-slot="toggle"],
+        [data-slot="toggle-group-item"],
+        [data-slot="tabs-trigger"],
+        [data-slot="select-trigger"],
+        [data-slot="input"],
+        [data-slot="textarea"],
+        [data-slot="input-group-button"],
+        [data-slot="pagination-link"],
+        [data-slot="menubar-trigger"],
+        [data-slot="navigation-menu-trigger"],
+        [data-slot="navigation-menu-link"],
+        [data-slot="accordion-trigger"],
+        [data-slot="sidebar-menu-button"],
+        [data-slot="dropdown-menu-item"],
+        [data-slot="dropdown-menu-checkbox-item"],
+        [data-slot="dropdown-menu-radio-item"],
+        [data-slot="dropdown-menu-sub-trigger"],
+        [data-slot="context-menu-item"],
+        [data-slot="menubar-item"],
+        [data-slot="command-item"],
+        [data-slot="select-item"]
+      ) {
+      min-height: 44px;
+    }
+
+    :where([data-slot="button"], [data-slot="input-group-button"])[data-size^="icon"] {
+      min-width: 44px;
+    }
+
+    :where(
+        [data-slot="checkbox"],
+        [data-slot="radio-group-item"],
+        [data-slot="switch"],
+        [data-slot="slider-thumb"],
+        [data-slot="breadcrumb-link"]
+      ) {
+      position: relative;
+    }
+
+    :where(
+        [data-slot="checkbox"],
+        [data-slot="radio-group-item"],
+        [data-slot="switch"],
+        [data-slot="slider-thumb"],
+        [data-slot="breadcrumb-link"]
+      )::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
