@@ -1,0 +1,149 @@
+# ADR 0009 — The MCP server is a projection of the catalogue through the UI's client
+
+Status: proposed · Date: 2026-10-31 · Spec: `docs/specs/001-v0-1/spec.md` (D4, AC5) · Plan: T8a, T8b · Related: ADR 0003, 0005, 0006
+
+## Context
+
+- **Spec D4, one catalogue, two doors.** The UI and the MCP server call the same capabilities through the same
+  client. The MCP server adds a transport, not a second API.
+- **AC5.** An MCP client lists the tools for the actor's permissions, reads bookings and customers, creates a
+  booking, gets the same `access.forbidden` as the UI on a forbidden call, and gets `awaiting_approval` on an
+  approval-gated write.
+- **What already exists.**
+  - Every capability carries `id`, `summary`, zod `input` and `output`, `permission`, `effect` (`read`, `write`,
+    `destructive`), `elevated` and an optional `approval` rule (`src/core/capability`).
+  - `createClient(catalog, adapter, {actor, correlationId})` validates the input (`schema.invalid_input`), enforces
+    timeouts, retries reads, retries writes only with an idempotency key, and validates the output
+    (`src/core/client`, ADR 0005).
+  - The mock adapter checks the permission (`access.forbidden`) and applies the approval rule (ADR 0005).
+  - Roles become permissions with `permissionsOf` over the merged catalogue and the preset's modules (ADR 0006).
+- **The SDK as installed** (verified in the typings and the built code of the packages, not from memory):
+  - `@modelcontextprotocol/server` 2.4.0 (protocol revision 2026-07-28, zod 4 through Standard Schema) and
+    `@modelcontextprotocol/client` 2.4.0, used by the tests.
+  - `McpServer.registerTool(name, {title, description, inputSchema, outputSchema, annotations}, handler)` exists.
+    But its `tools/call` handler (`dist/mcp-*.mjs`, `setToolRequestHandlers`):
+    - throws a JSON-RPC `-32602` protocol error, `Tool <name> not found`, for an unregistered or disabled name;
+    - validates the arguments itself, before the handler, and answers a text-only tool error
+      (`Input validation error: ...`) with no code.
+  - The low-level `Server` takes `setRequestHandler("tools/list" | "tools/call", ...)`. Its
+    `projectCallToolResult(result, outputSchema)` is the documented hook for low-level `tools/call` authors.
+  - `ToolAnnotations` has `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`.
+  - The handler context exposes `ctx.mcpReq.id` (the JSON-RPC id), `ctx.mcpReq._meta`, `ctx.mcpReq.signal` and,
+    over HTTP, `ctx.http.authInfo`.
+  - The package itself ships `createMcpHandler(factory, options)` (a fetch-shaped Streamable HTTP handler, one
+    server per request) and `serveStdio` from `@modelcontextprotocol/server/stdio`. The factory receives
+    `{era, authInfo, requestInfo}` and may return an `McpServer` or a low-level `Server`.
+  - The client validates `structuredContent` against the advertised `outputSchema` (ajv) once it has listed the
+    tools.
+
+## Options considered
+
+1. **`McpServer.registerTool` per capability** (the research digest's proposal).
+   - *Pros:* the SDK converts the zod schemas and validates input and output.
+   - *Cons:* a call to an unlisted tool is a protocol error, not a tool error carrying `access.forbidden`. Invalid
+     input is the SDK's own text error, not `schema.invalid_input` with paths. Both break AC5's parity with the UI,
+     and input is validated twice by two different rules.
+   - *Effort / reversal:* S / S.
+2. **A second, MCP-specific API** (hand-written tools).
+   - *Cons:* it drifts from the UI's rules; D4 rejects it.
+3. **Low-level `Server` with our own `tools/list` and `tools/call` (chosen).** The projection lists the actor's
+   tools and dispatches every call through `createClient`, so validation, permission, approval and error codes are
+   the client's by construction.
+   - *Cons:* we convert the schemas ourselves, with zod 4's `z.toJSONSchema`, the same converter the SDK falls back
+     to, at the SDK's target (`draft-2020-12`). That is about ten lines.
+   - *Effort / reversal:* S / S. Moving to option 1 later only touches `src/core/mcp`.
+
+## Decision
+
+Option 3. **This amends the digest's `McpServer.registerTool` proposal**, for the two reasons in option 1.
+
+### Projection (`src/core/mcp/project-catalog.ts`)
+
+`projectCatalog({catalog, actor, createClient, serverInfo?})` returns a low-level `Server` for one actor. It is
+generic: it takes the catalogue and a client factory, so it imports no module, preset or config.
+
+| Capability | MCP tool |
+| --- | --- |
+| `id` | `name`: dots → underscores (`bookings.list` → `bookings_list`); two ids that project to one name throw at construction |
+| `summary` | `description` |
+| `input` | `inputSchema`: `z.toJSONSchema(input, {io: "input"})`, object root |
+| `output` | `outputSchema`: `z.toJSONSchema(output, {io: "output"})`; for `write` and `destructive`, the union of `output` and `{status: "awaiting_approval", approvalId}` |
+| `effect` | `annotations`: `readOnlyHint` = `read`, `destructiveHint` = `destructive`, `idempotentHint` = `read`, `openWorldHint` = `false` (the tools act on this business's own data) |
+
+**The write output is a union** because the client checks every non-error result against the advertised schema: an
+approval-gated write would otherwise fail validation in the client.
+
+### Visibility
+
+- `tools/list` returns only the capabilities whose permission the actor holds, the rule ADR 0006 calls "hide,
+  never disabled". The modules a preset does not enable are already outside the actor's permissions
+  (`permissionsOf`).
+- **An actor without permissions lists nothing**, an empty list rather than an error.
+- **A call to an unlisted name, known or not, is a tool error** with `access.forbidden`, the UI's code. Unknown and
+  forbidden names answer the same, so a client cannot probe which tools exist. The message says to call
+  `tools/list`.
+- The list is fixed for the life of one server instance (one actor), so `tools.listChanged` is `false`.
+
+### Dispatch
+
+- Every call goes through the factory's client, `createClient(CATALOG, adapter, {actor, correlationId})`, with a
+  fresh correlation id per call and the request's abort signal.
+- **The client validates the arguments**, so invalid input answers `schema.invalid_input` with `details.paths`,
+  exactly as in the UI. The SDK's input validation is not used.
+- **Mapping of `CallResult`:**
+  - `ok` → `structuredContent` = the value, plus one text block with its JSON for clients that read only `content`;
+  - error → `isError: true`, `structuredContent` = `{code, message, details?}`, text `"<code>: <message>"`;
+  - `awaiting_approval` → a non-error result, `structuredContent` = `{status: "awaiting_approval", approvalId}`, and
+    a text that says a person must approve it and not to retry.
+- **Idempotency.** MCP has no idempotency field. The JSON-RPC id (`ctx.mcpReq.id`) is not one: a retry is a new
+  request with a new id, and ids repeat across connections. So a write takes its key from
+  `_meta["admin-os/idempotencyKey"]` (a string of 1 to 128 characters) when the client sends one; a malformed key
+  is `schema.invalid_input`. Without it nothing is derived, and the client's rule applies: a write without a key is
+  never retried (ADR 0005). Reads ignore the key.
+
+### Actor
+
+The projection takes an `Actor`; the transports decide how it is resolved (T8b):
+
+- **Streamable HTTP:** a bearer demo token mapped to a role through `MCP_TOKENS` (for example
+  `owner:<token>,staff:<token>`), verified before the factory runs and passed as `authInfo`.
+- **stdio:** the role from an environment variable (`MCP_ROLE`, default `staff`, the least privilege).
+- Both build the actor with `demoActor(roleId, vertical)` (`src/config/actor.ts`), the same function the UI's
+  `getRuntime()` uses, so a role has the same permissions through both doors.
+
+### Layer
+
+- **`src/core/mcp`** holds the generic projection, behind a `server.ts` entry (`import "server-only"`): it carries
+  the SDK and is never imported by the browser. It depends only on `core` contracts and the SDK.
+- **`src/config/mcp.server.ts`** wires it: `createMcpServer({actor, vertical, sessionId?})` passes `CATALOG` and
+  a client over `getAdapter(...)` with the `MOCK_FAULTS` of the environment.
+- **T8b** adds `src/app/api/mcp/route.ts` and `src/mcp/stdio.ts`, which only resolve the actor and call
+  `createMcpServer`. No new entry type, so ADR 0003's tables do not change.
+
+### Security
+
+- **HTTP auth.** A missing or unknown token is a `401` with `WWW-Authenticate: Bearer resource_metadata="<url>"`,
+  and the route serves the RFC 9728 protected-resource metadata. The tokens are demo tokens for the public demo
+  only; a real deployment replaces the token verifier with its own auth (an OAuth authorization server) and maps
+  the verified subject to an actor. The SDK's `OAuthTokenVerifier` and bearer helpers are the seam.
+- **No personal data in logs.** The client logs `{capability, effect, status, code, durationMs, correlationId,
+  actorRole}` only (ADR 0005). The projection logs nothing itself; on stdio nothing may be written to stdout.
+- **Writes** keep the UI's rules: the same permission check, the approval rule, and `destructiveHint` on
+  destructive tools so clients ask before calling them.
+- **Demo sessions.** Without a session id, writes answer `transport.unavailable` as in the UI. T8b gives each token
+  (HTTP) or process (stdio) its own demo session, so one MCP client never edits another's copy.
+
+## Consequences
+
+- AC5's parity holds by construction: one client, one rule set, one error vocabulary.
+- **A contract test pins it** (`src/config/mcp.server.test.ts`): every catalogue capability projects to one tool
+  with object schemas; listing per role on the hospitality preset; annotations per effect; `bookings_list` and
+  `customers_list` output; `access.forbidden`. The generic behaviour, including writes, approval, invalid input and
+  idempotent replay, is tested on a test catalogue in `src/core/mcp/project-catalog.test.ts`. Both use a real SDK
+  client over `InMemoryTransport.createLinkedPair()`, which lists before calling so output validation is live.
+- **`mcp-handler` is not needed** for T8b: the SDK's own `createMcpHandler` serves Streamable HTTP from a fetch
+  handler with a per-request factory.
+- **Revisit when:**
+  - the SDK's `McpServer` lets an unregistered tool name answer a tool error and lets the handler own input
+    validation; option 1 would then cost nothing;
+  - a capability needs a non-object output, which MCP requires to be wrapped.

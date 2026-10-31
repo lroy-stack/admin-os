@@ -6,11 +6,11 @@ import { cookies } from "next/headers";
 
 import { z } from "zod";
 
-import { permissionsOf, ROLE_IDS } from "@/core/access";
-import { type Actor, createClient } from "@/core/client";
+import { ROLE_IDS } from "@/core/access";
+import { createClient } from "@/core/client";
 import { type FaultMap, parseFaults } from "@/core/mock";
-import { users } from "@/data/users";
 
+import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
 import { DEMO_SESSION_COOKIE, getAdapter } from "./data.server";
 import { getLocale } from "./locale.server";
@@ -44,13 +44,7 @@ export const getRuntime = cache(async () => {
   const [jar, locale] = await Promise.all([cookies(), getLocale()]);
   const vertical = getVertical();
   const roleId = roleSchema.parse(jar.get(DEMO_ROLE_COOKIE)?.value);
-  const role = vertical.roles.find((preset) => preset.id === roleId);
-  const actor: Actor = {
-    actorId: `demo-${roleId}`,
-    displayName: users[0]?.name ?? roleId,
-    roleId,
-    permissions: role ? permissionsOf(role, CATALOG, vertical.modules) : [],
-  };
+  const actor = demoActor(roleId, vertical);
   const correlationId = crypto.randomUUID();
   const adapter = getAdapter({
     vertical: vertical.id,
