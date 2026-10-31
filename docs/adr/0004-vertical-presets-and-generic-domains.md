@@ -64,6 +64,10 @@ Option 3.
 
 ### Rules for presets
 
+> **Amended 2026-10-31 (T4):** `vocabulary` values are `Message` (a string or a `Plural`) per locale, not only
+> `Record<Locale, string>`, so a preset can rename counts such as "{count} tables". The type is `Vocabulary` in
+> `src/core/i18n`.
+
 - **Business data lives only in `src/verticals/*/server.ts` seeds.** Generic layers contain none (see the leak
   check in ADR 0008).
 - **Modules never read the preset.** They receive registrations and settings through the composition root

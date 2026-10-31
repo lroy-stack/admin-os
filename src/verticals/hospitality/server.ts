@@ -1,0 +1,45 @@
+import "server-only";
+
+import type { Vocabulary } from "@/core/i18n";
+
+export { hospitalitySeed } from "./seed";
+
+export const hospitalityVocabulary = {
+  "bookings.title": { en: "Reservations", es: "Reservas", de: "Reservierungen", fr: "Réservations" },
+  "bookings.count": {
+    en: { one: "{count} reservation", other: "{count} reservations" },
+    es: { one: "{count} reserva", other: "{count} reservas" },
+    de: { one: "{count} Reservierung", other: "{count} Reservierungen" },
+    fr: { one: "{count} réservation", other: "{count} réservations" },
+  },
+  "bookings.partySize": { en: "Covers", es: "Comensales", de: "Gedecke", fr: "Couverts" },
+  "customers.title": { en: "Guests", es: "Clientes", de: "Gäste", fr: "Clients" },
+  "customers.count": {
+    en: { one: "{count} guest", other: "{count} guests" },
+    es: { one: "{count} cliente", other: "{count} clientes" },
+    de: { one: "{count} Gast", other: "{count} Gäste" },
+    fr: { one: "{count} client", other: "{count} clients" },
+  },
+  "resources.title": { en: "Tables", es: "Mesas", de: "Tische", fr: "Tables" },
+  "resources.count": {
+    en: { one: "{count} table", other: "{count} tables" },
+    es: { one: "{count} mesa", other: "{count} mesas" },
+    de: { one: "{count} Tisch", other: "{count} Tische" },
+    fr: { one: "{count} table", other: "{count} tables" },
+  },
+  "resources.kind": { en: "Table", es: "Mesa", de: "Tisch", fr: "Table" },
+  "staff.title": { en: "Team", es: "Equipo", de: "Team", fr: "Équipe" },
+  "staff.count": {
+    en: { one: "{count} team member", other: "{count} team members" },
+    es: { one: "{count} miembro del equipo", other: "{count} miembros del equipo" },
+    de: { one: "{count} Teammitglied", other: "{count} Teammitglieder" },
+    fr: { one: "{count} membre de l’équipe", other: "{count} membres de l’équipe" },
+  },
+  "catalog.title": { en: "Menu", es: "Carta", de: "Speisekarte", fr: "Carte" },
+  "catalog.count": {
+    en: { one: "{count} dish", other: "{count} dishes" },
+    es: { one: "{count} plato", other: "{count} platos" },
+    de: { one: "{count} Gericht", other: "{count} Gerichte" },
+    fr: { one: "{count} plat", other: "{count} plats" },
+  },
+} as const satisfies Vocabulary;

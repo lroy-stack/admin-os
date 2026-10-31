@@ -9,6 +9,14 @@ export {
   formatTime,
 } from "./format";
 export { isLocale, LOCALES, type Locale, type LocalizedText, localizedTextSchema } from "./locale";
-export { defineMessages, format, type Message, type MessageParams, type Plural, placeholdersOf } from "./messages";
-export { assertDictionaryParity } from "./parity";
+export {
+  defineMessages,
+  format,
+  type Message,
+  type MessageParams,
+  type Plural,
+  placeholdersOf,
+  type Vocabulary,
+} from "./messages";
+export { assertDictionaryParity, flattenMessages, placeholderSignature } from "./parity";
 export { resolveLocale } from "./resolve-locale";

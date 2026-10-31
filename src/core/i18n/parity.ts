@@ -27,8 +27,16 @@ function formsOf(message: Message): string[] {
   return typeof message === "string" ? [message] : Object.values(message).filter((v) => typeof v === "string");
 }
 
-function placeholderSignature(message: Message): string {
+/** The sorted, comma-joined set of `{placeholders}` across all forms of a message. */
+export function placeholderSignature(message: Message): string {
   return [...new Set(formsOf(message).flatMap(placeholdersOf))].sort().join(",");
+}
+
+/** Flattens a dictionary into `path -> Message`, so callers can compare keys and placeholders across dictionaries. */
+export function flattenMessages(dictionary: unknown): Map<string, Message> {
+  const out = new Map<string, Message>();
+  flatten(dictionary, "", out);
+  return out;
 }
 
 function problemsFor(locale: Locale, path: string, message: Message): string[] {
@@ -46,11 +54,21 @@ function problemsFor(locale: Locale, path: string, message: Message): string[] {
   return problems;
 }
 
+function sameInEveryLocale(messages: readonly Message[]): boolean {
+  const canonical = (message: Message) =>
+    typeof message === "string" ? message : JSON.stringify(Object.entries(message).sort());
+  return new Set(messages.map(canonical)).size === 1;
+}
+
 /**
  * Runtime half of ADR 0007's completeness (the compiler covers the other half). Throws one error listing every
- * problem: missing locale or key, empty string, differing `{placeholders}`, or a plural without `one`/`other`.
+ * problem: missing locale or key, empty string, differing `{placeholders}`, a plural without `one`/`other`, or a message identical in all four locales (an untranslated copy).
+ * `allowIdentical` lists the paths that may legitimately match everywhere, such as brand names.
  */
-export function assertDictionaryParity(dictionary: Readonly<Record<Locale, unknown>>): void {
+export function assertDictionaryParity(
+  dictionary: Readonly<Record<Locale, unknown>>,
+  allowIdentical: readonly string[] = [],
+): void {
   const problems: string[] = [];
   const flat = new Map<Locale, Map<string, Message>>();
   for (const locale of LOCALES) {
@@ -76,6 +94,10 @@ export function assertDictionaryParity(dictionary: Readonly<Record<Locale, unkno
     }
     if (signatures.size > 1) {
       problems.push(`${path} has different placeholders across locales`);
+    }
+    const everyLocale = [...flat.values()].flatMap((entries) => entries.get(path) ?? []);
+    if (everyLocale.length === LOCALES.length && sameInEveryLocale(everyLocale) && !allowIdentical.includes(path)) {
+      problems.push(`${path} is identical in all locales; translate it or add it to the allow-list`);
     }
   }
   if (problems.length > 0) {

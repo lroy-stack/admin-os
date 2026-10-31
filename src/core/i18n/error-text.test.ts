@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 import { assertDictionaryParity, defaultErrorMessages, defineMessages, errorText } from "@/core/i18n";
 
 const moduleErrors = defineMessages({
-  en: { "bookings.table_taken": "That table is taken." },
-  es: { "bookings.table_taken": "Esa mesa está ocupada." },
-  de: { "bookings.table_taken": "Dieser Tisch ist belegt." },
-  fr: { "bookings.table_taken": "Cette table est prise." },
+  en: { "bookings.slot_taken": "That slot is taken." },
+  es: { "bookings.slot_taken": "Ese horario está ocupado." },
+  de: { "bookings.slot_taken": "Dieser Termin ist belegt." },
+  fr: { "bookings.slot_taken": "Ce créneau est pris." },
 });
 
 describe("errorText", () => {
   it("prefers the exact code of the module dictionary", () => {
-    expect(errorText({ code: "bookings.table_taken" }, moduleErrors, "es")).toBe("Esa mesa está ocupada.");
+    expect(errorText({ code: "bookings.slot_taken" }, moduleErrors, "es")).toBe("Ese horario está ocupado.");
   });
 
   it.each([
@@ -22,8 +22,8 @@ describe("errorText", () => {
   });
 
   it("shows the code in the generic text when nothing matches", () => {
-    expect(errorText({ code: "bookings.table_taken_twice" }, moduleErrors, "de")).toBe(
-      "Etwas ist schiefgelaufen. Fehlercode: bookings.table_taken_twice.",
+    expect(errorText({ code: "bookings.slot_taken_twice" }, moduleErrors, "de")).toBe(
+      "Etwas ist schiefgelaufen. Fehlercode: bookings.slot_taken_twice.",
     );
   });
 

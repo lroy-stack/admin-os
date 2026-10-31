@@ -87,6 +87,9 @@ is one, serialised into the boot script (`src/scripts/theme-boot.tsx`).
 
 ### Nav manifest (`src/core/nav`)
 
+> **Amended 2026-10-31 (T4):** `labelKey` points at a text message of a module (`bookings.title`), not at a separate
+> `nav` dictionary. The contract test requires it to resolve to a string in all four locales.
+
 ```ts
 export interface NavEntry {
   readonly id: string;                        // stable: "bookings"
@@ -113,6 +116,11 @@ export interface NavEntry {
   static `examplesNav` in `(examples)`, shown only in the template demo.
 
 ### Permissions (`src/core/access`)
+
+> **Amended 2026-10-31 (T4):** "elevated" is a flag on the capability descriptor (`elevated: true`, ADR 0005), not a
+> hand-written list in core. A role rule grants a permission slug only if every capability carrying it passes the
+> rule, so a slug shared by a safe and a destructive or elevated capability is never granted by accident. A contract
+> test requires one effect and one elevated flag per slug.
 
 **Permission slugs.**
 

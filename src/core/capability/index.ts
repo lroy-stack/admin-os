@@ -14,6 +14,8 @@ export interface Capability<Id extends string, I extends z.ZodType, O extends z.
   readonly output: O;
   readonly permission: Permission;
   readonly effect: Effect;
+  /** Reserved for owners: roles other than `owner` never hold the permission (ADR 0006). Absent means not elevated. */
+  readonly elevated?: boolean;
   /** Mock HITL rule; absent means never. Method syntax keeps concrete capabilities assignable to `AnyCapability`. */
   approval?(input: z.output<I>): boolean;
 }

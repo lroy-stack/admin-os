@@ -16,6 +16,12 @@ export interface Plural {
 /** A message is plain data (a `{placeholder}` template or a `Plural`) so it can cross to client components. */
 export type Message = string | Plural;
 
+/**
+ * A preset's overrides of module messages, key-major so each key is complete for all four locales by construction.
+ * Keys are `<module>.<path>` into the module's messages, for example `"bookings.title"`.
+ */
+export type Vocabulary = Readonly<Record<string, Readonly<Record<Locale, Message>>>>;
+
 export type MessageParams = Readonly<Record<string, string | number>>;
 
 /** Fails to compile when a locale is missing; a missing key fails when each locale constant is typed `T`. */

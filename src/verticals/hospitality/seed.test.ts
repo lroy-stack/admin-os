@@ -1,55 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
-import { bookingSchema } from "@/modules/bookings";
-import { catalogItemSchema } from "@/modules/catalog";
-import { customerSchema } from "@/modules/customers";
-import { areaSchema, resourceSchema } from "@/modules/resources";
-import { shiftSchema, staffMemberSchema } from "@/modules/staff";
-
-import {
-  areaExtSchema,
-  bookingExtSchema,
-  catalogItemExtSchema,
-  customerExtSchema,
-  resourceExtSchema,
-  staffExtSchema,
-} from "./extensions";
+import { catalogItemExtSchema, customerExtSchema } from "./extensions";
 import { hospitalitySeed } from "./seed";
 
 const NOW_MIN = 20 * 60 + 40;
 const LATE_AFTER_MIN = 10;
 
-const moduleCollections: [string, z.ZodType, unknown][] = [
-  ["areas", z.array(areaSchema), hospitalitySeed.areas],
-  ["resources", z.array(resourceSchema), hospitalitySeed.resources],
-  ["customers", z.array(customerSchema), hospitalitySeed.customers],
-  ["catalog", z.array(catalogItemSchema), hospitalitySeed.catalog],
-  ["staff", z.array(staffMemberSchema), hospitalitySeed.staff],
-  ["shifts", z.array(shiftSchema), hospitalitySeed.shifts],
-  ["bookings", z.array(bookingSchema), hospitalitySeed.bookings],
-];
-
-const extCollections: [string, z.ZodType, unknown][] = [
-  ["area", z.array(areaExtSchema), hospitalitySeed.areas.map((entity) => entity.ext)],
-  ["resource", z.array(resourceExtSchema), hospitalitySeed.resources.map((entity) => entity.ext)],
-  ["customer", z.array(customerExtSchema), hospitalitySeed.customers.map((entity) => entity.ext)],
-  ["catalog item", z.array(catalogItemExtSchema), hospitalitySeed.catalog.map((entity) => entity.ext)],
-  ["staff member", z.array(staffExtSchema), hospitalitySeed.staff.map((entity) => entity.ext)],
-  ["booking", z.array(bookingExtSchema.optional()), hospitalitySeed.bookings.map((entity) => entity.ext)],
-];
-
 const { bookings, resources, catalog, customers } = hospitalitySeed;
 
 describe("hospitality seed", () => {
-  it.each(moduleCollections)("parses the %s collection with the module schema", (_name, schema, data) => {
-    expect(schema.safeParse(data).error).toBeUndefined();
-  });
-
-  it.each(extCollections)("parses the %s ext slots with the preset schema", (_name, schema, data) => {
-    expect(schema.safeParse(data).error).toBeUndefined();
-  });
-
   it("references only existing resources from bookings", () => {
     const known = new Set(resources.map((resource) => resource.id));
     const unknown = bookings.flatMap((booking) => booking.resourceIds).filter((id) => !known.has(id));

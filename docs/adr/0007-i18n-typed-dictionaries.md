@@ -138,7 +138,7 @@ export const bookingsMessages = defineMessages<BookingsMessages>({ en, es, de, f
   - no empty strings;
   - an identical set of `{placeholders}` across locales;
   - every `Plural` has `one` and `other`;
-  - no key equal across all four locales unless allow-listed (brand names).
+  - no key equal across all four locales unless allow-listed (brand names). `assertDictionaryParity` takes the allow-list as its second argument.
 
 **Only data, never functions.** Messages hold strings, `{placeholder}` templates and `Plural` objects. They are
 therefore serialisable: the server resolves them for **one** locale and passes them to the client, and the other
@@ -155,7 +155,9 @@ vocabulary: {
 }
 ```
 
-- **Keys are typed paths into module messages.**
+- **Keys are paths into module messages.**
+  > **Amended 2026-10-31 (T4):** the paths are checked by the contract test (`src/config/contracts.test.ts`: the key
+  > exists, and its shape and placeholders match the module message), not by the compiler.
 - **Presets override whole messages, never nouns inside a sentence.** Interpolating a noun breaks grammatical
   gender: "Nueva reserva", "Nueva cita", "Nuevo pedido".
 - **The server merges** module defaults with preset overrides once per locale and preset, cached.
