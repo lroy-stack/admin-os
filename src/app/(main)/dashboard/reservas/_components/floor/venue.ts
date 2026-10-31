@@ -1,0 +1,171 @@
+import type { DiningTable, FloorPlan, TableShape } from "./floor-model";
+import { defaultSize } from "./table-geometry";
+
+/** A table sized from its capacity with the shared seating rules. */
+function table(
+  id: string,
+  shape: TableShape,
+  capacity: number,
+  xCm: number,
+  yCm: number,
+  rotationDeg = 0,
+): DiningTable {
+  return { id, label: id, shape, capacity, xCm, yCm, rotationDeg, inService: true, ...defaultSize(capacity, shape) };
+}
+
+/** Mock venue: a street-level dining room and bar, and a rooftop terrace linked by stairs. */
+export const mockVenue: FloorPlan = {
+  id: "venue",
+  name: "Main venue",
+  levels: [
+    {
+      id: "street",
+      name: "Street level",
+      index: 0,
+      zones: [
+        {
+          id: "dining",
+          name: "Dining room",
+          outdoor: false,
+          outline: { xCm: 0, yCm: 0, widthCm: 1200, depthCm: 800 },
+          wallHeightCm: 120,
+          openings: [
+            { id: "dining-window-1", kind: "window", edge: "n", offsetCm: 120, widthCm: 240 },
+            { id: "dining-window-2", kind: "window", edge: "n", offsetCm: 520, widthCm: 240 },
+            { id: "dining-entrance", kind: "door", edge: "s", offsetCm: 460, widthCm: 140 },
+            { id: "dining-to-bar", kind: "door", edge: "e", offsetCm: 300, widthCm: 180 },
+          ],
+          tables: [
+            table("S1", "rect", 4, 200, 170),
+            table("S2", "square", 2, 420, 170),
+            table("S3", "rect", 4, 640, 170),
+            table("S4", "square", 2, 200, 430),
+            table("S5", "round", 4, 430, 430),
+            table("S6", "rect", 6, 680, 430),
+            table("S7", "rect", 4, 200, 660),
+            table("S8", "round", 2, 430, 660),
+          ],
+        },
+        {
+          id: "bar",
+          name: "Bar",
+          outdoor: false,
+          outline: { xCm: 1200, yCm: 0, widthCm: 600, depthCm: 800 },
+          wallHeightCm: 120,
+          openings: [{ id: "bar-window", kind: "window", edge: "e", offsetCm: 120, widthCm: 300 }],
+          tables: [
+            table("B1", "round", 2, 1300, 380),
+            table("B2", "round", 2, 1460, 380),
+            table("B3", "round", 2, 1620, 380),
+            table("B4", "round", 2, 1380, 600),
+          ],
+        },
+      ],
+      landmarks: [
+        {
+          id: "kitchen",
+          kind: "kitchen",
+          label: "Kitchen",
+          xCm: 1020,
+          yCm: 140,
+          widthCm: 260,
+          depthCm: 160,
+          rotationDeg: 0,
+        },
+        { id: "column", kind: "column", label: "", xCm: 880, yCm: 430, widthCm: 40, depthCm: 40, rotationDeg: 0 },
+        {
+          id: "restrooms",
+          kind: "restrooms",
+          label: "Restrooms",
+          xCm: 1020,
+          yCm: 680,
+          widthCm: 240,
+          depthCm: 160,
+          rotationDeg: 0,
+        },
+        {
+          id: "entrance",
+          kind: "entrance",
+          label: "Entrance",
+          xCm: 530,
+          yCm: 850,
+          widthCm: 180,
+          depthCm: 60,
+          rotationDeg: 0,
+        },
+        {
+          id: "bar-counter",
+          kind: "bar",
+          label: "Bar",
+          xCm: 1500,
+          yCm: 110,
+          widthCm: 420,
+          depthCm: 70,
+          rotationDeg: 0,
+        },
+        {
+          id: "stairs-up",
+          kind: "stairs",
+          label: "Stairs to terrace",
+          xCm: 1690,
+          yCm: 660,
+          widthCm: 160,
+          depthCm: 220,
+          rotationDeg: 0,
+          toLevelId: "rooftop",
+        },
+      ],
+    },
+    {
+      id: "rooftop",
+      name: "Rooftop",
+      index: 1,
+      zones: [
+        {
+          id: "terrace",
+          name: "Terrace",
+          outdoor: true,
+          outline: { xCm: 0, yCm: 0, widthCm: 1000, depthCm: 700 },
+          wallHeightCm: 100,
+          openings: [],
+          tables: [
+            table("T1", "square", 2, 150, 150),
+            table("T2", "square", 2, 330, 150),
+            table("T3", "rect", 4, 540, 150),
+            table("T4", "square", 2, 760, 150),
+            table("T5", "rect", 4, 170, 420),
+            table("T6", "rect", 4, 400, 420),
+            table("T7", "round", 3, 620, 420),
+            table("T8", "square", 2, 820, 420),
+          ],
+        },
+      ],
+      landmarks: [
+        {
+          id: "stairs-down",
+          kind: "stairs",
+          label: "Stairs to street level",
+          xCm: 900,
+          yCm: 600,
+          widthCm: 160,
+          depthCm: 200,
+          rotationDeg: 0,
+          toLevelId: "street",
+        },
+        {
+          id: "service-bar",
+          kind: "bar",
+          label: "Service bar",
+          xCm: 600,
+          yCm: 630,
+          widthCm: 240,
+          depthCm: 60,
+          rotationDeg: 0,
+        },
+        { id: "plant-1", kind: "plant", label: "", xCm: 80, yCm: 640, widthCm: 60, depthCm: 60, rotationDeg: 0 },
+        { id: "plant-2", kind: "plant", label: "", xCm: 260, yCm: 640, widthCm: 60, depthCm: 60, rotationDeg: 0 },
+        { id: "plant-3", kind: "plant", label: "", xCm: 960, yCm: 60, widthCm: 60, depthCm: 60, rotationDeg: 0 },
+      ],
+    },
+  ],
+};

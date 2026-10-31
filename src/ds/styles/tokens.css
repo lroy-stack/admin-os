@@ -1,0 +1,179 @@
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-salmon: var(--salmon);
+  --color-azure: var(--azure);
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+}
+
+/* Default theme styles (used when no data-theme-preset is set or when 'default' is selected).
+These serve as the fallback; there is no separate default.css file. */
+:root {
+  --radius: 0.625rem;
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* fonts */
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+
+  /* Brand palette: the single place to change the accent and the secondary series colors. */
+  --brand: oklch(0.88 0.16 135);
+  --brand-foreground: oklch(0.22 0.045 255);
+  --salmon: oklch(0.78 0.1 290);
+  --azure: oklch(0.8 0.09 238);
+
+  /* Surface tokens: presets override these to restyle every Card and the app backdrop. */
+  --glass-blur: 24px;
+  --card-radius: calc(var(--radius) + 4px);
+  --card-radius-sm: calc(var(--radius) + 4px);
+  --card-padding: calc(var(--spacing) * 4);
+  --card-backdrop: none;
+  --app-backdrop: none;
+  --app-backdrop-overlay: transparent;
+
+  /* Liquid glass capsules: fill, lit rim and depth. The thumb is the brighter lens that marks a selection. */
+  --glass-fill: oklch(1 0 0 / 6%);
+  /* Denser fill for persistent chrome such as the top navbar, so content scrolling underneath stays out of the way. */
+  --glass-fill-solid: color-mix(in oklab, var(--background) 72%, transparent);
+  --glass-blur-solid: 40px;
+  /* Below 1 so a bright backdrop (the white room, a photo) is pulled down instead of washing the capsule out,
+     as Liquid Glass's dark material does; above 1 it would whiten glass over white content. */
+  --glass-brightness: 0.96;
+  --glass-rim: linear-gradient(
+    160deg,
+    oklch(1 0 0 / 55%),
+    oklch(1 0 0 / 8%) 35%,
+    oklch(1 0 0 / 4%) 65%,
+    oklch(1 0 0 / 30%)
+  );
+  /* Lit inner edge, then an outer hairline and a contact shadow that keep the capsule's outline on pale content. */
+  --glass-shadow:
+    inset 0 1px 1px 0 oklch(1 0 0 / 18%), inset 0 -6px 12px -8px oklch(1 0 0 / 14%), 0 0 0 0.5px oklch(0 0 0 / 22%),
+    0 1px 3px oklch(0 0 0 / 30%), 0 12px 32px -14px oklch(0 0 0 / 60%);
+  --glass-thumb-fill: linear-gradient(180deg, oklch(1 0 0 / 24%), oklch(1 0 0 / 10%));
+  --glass-thumb-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 45%), inset 0 -2px 6px 0 oklch(1 0 0 / 10%), 0 4px 14px -6px oklch(0 0 0 / 55%);
+  --ease-liquid: cubic-bezier(0.34, 1.32, 0.64, 1);
+
+  /* Room plan: a white, flat room where only the table state carries colour (read by the 3D scene at runtime). */
+  --room-paper: oklch(0.955 0.006 255);
+  --room-floor: oklch(0.995 0 0);
+  --room-floor-outdoor: oklch(0.975 0.014 150);
+  --room-wall: oklch(0.9 0.008 255);
+  --room-landmark: oklch(0.93 0.006 255);
+  --room-chair: oklch(0.84 0.01 255);
+  --room-plant: oklch(0.86 0.06 150);
+  --room-ink: oklch(0.24 0.045 258);
+  --table-free: oklch(0.995 0 0);
+  --table-arriving: var(--brand);
+  --table-seated: oklch(0.36 0.09 260);
+  --table-leaving: var(--azure);
+  --table-late: var(--salmon);
+  --table-blocked: oklch(0.86 0.005 255);
+  --table-hatch: oklch(0.7 0.03 262);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}

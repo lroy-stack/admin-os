@@ -1,0 +1,78 @@
+/*
+Page transitions: content slides toward the section picked in the nav while the root stays static.
+Shell chrome is deliberately not named: a view-transition-name makes an element a backdrop root, which
+stops the frosted capsules inside it from blurring the page, and named elements ignore clicks mid-transition.
+*/
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(.nav-forward) {
+  --vt-offset: -48px;
+  animation:
+    140ms ease-in both vt-fade reverse,
+    380ms var(--ease-liquid) both vt-slide reverse;
+}
+
+::view-transition-new(.nav-forward) {
+  --vt-offset: 48px;
+  animation:
+    220ms ease-out 100ms both vt-fade,
+    420ms var(--ease-liquid) both vt-slide;
+}
+
+::view-transition-old(.nav-back) {
+  --vt-offset: 48px;
+  animation:
+    140ms ease-in both vt-fade reverse,
+    380ms var(--ease-liquid) both vt-slide reverse;
+}
+
+::view-transition-new(.nav-back) {
+  --vt-offset: -48px;
+  animation:
+    220ms ease-out 100ms both vt-fade,
+    420ms var(--ease-liquid) both vt-slide;
+}
+
+::view-transition-old(.page-fade) {
+  animation: 120ms ease-in both vt-fade reverse;
+}
+
+::view-transition-new(.page-fade) {
+  animation:
+    220ms ease-out 60ms both vt-fade,
+    360ms var(--ease-liquid) both vt-rise;
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-offset) 0;
+  }
+}
+
+@keyframes vt-rise {
+  from {
+    translate: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

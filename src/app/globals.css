@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Theme preset styles: these override CSS variables based on the selected data-theme-preset */
+@import "../ds/styles/presets/brutalist.css";
+@import "../ds/styles/presets/glass.css";
+@import "../ds/styles/presets/soft-pop.css";
+@import "../ds/styles/presets/tangerine.css";
+
+@import "../ds/styles/tokens.css";
+@import "../ds/styles/glass.css";
+@import "../ds/styles/motion.css";
+@import "../ds/styles/base.css";

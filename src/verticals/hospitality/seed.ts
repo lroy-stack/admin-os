@@ -1,0 +1,367 @@
+import type { BookingInput } from "@/modules/bookings";
+import type { CatalogItem } from "@/modules/catalog";
+import type { Customer } from "@/modules/customers";
+import type { Area, Resource } from "@/modules/resources";
+import type { Shift, StaffMember } from "@/modules/staff";
+
+/**
+ * Hospitality mock data in the generic contracts. Values are copied from the reservations mock and the mock venue
+ * (the app keeps reading its own files until they move here). Times are minutes from midnight; "now" is 20:40.
+ */
+
+export const BUSINESS_DAY = "2026-10-31";
+const EUR = "EUR";
+const at = (hours: number, minutes = 0) => hours * 60 + minutes;
+const eur = (amountMinor: number) => ({ amountMinor, currency: EUR });
+
+export const areas: Area[] = [
+  { id: "dining", label: "Dining room", levelId: "street", ext: { outdoor: false } },
+  { id: "bar", label: "Bar", levelId: "street", ext: { outdoor: false } },
+  { id: "terrace", label: "Terrace", levelId: "rooftop", ext: { outdoor: true } },
+];
+
+const table = (id: string, areaId: string, shape: "rect" | "square" | "round", capacity: number): Resource => ({
+  id,
+  kind: "table",
+  label: id,
+  areaId,
+  capacity,
+  active: true,
+  ext: { shape },
+});
+
+export const resources: Resource[] = [
+  table("S1", "dining", "rect", 4),
+  table("S2", "dining", "square", 2),
+  table("S3", "dining", "rect", 4),
+  table("S4", "dining", "square", 2),
+  table("S5", "dining", "round", 4),
+  table("S6", "dining", "rect", 6),
+  table("S7", "dining", "rect", 4),
+  table("S8", "dining", "round", 2),
+  table("B1", "bar", "round", 2),
+  table("B2", "bar", "round", 2),
+  table("B3", "bar", "round", 2),
+  table("B4", "bar", "round", 2),
+  table("T1", "terrace", "square", 2),
+  table("T2", "terrace", "square", 2),
+  table("T3", "terrace", "rect", 4),
+  table("T4", "terrace", "square", 2),
+  table("T5", "terrace", "rect", 4),
+  table("T6", "terrace", "rect", 4),
+  table("T7", "terrace", "round", 3),
+  table("T8", "terrace", "square", 2),
+];
+
+const customerFigures = (visits: number, averageSpend: number, lastVisit: string, noShows = 0) => ({
+  visits,
+  spend: eur(visits * averageSpend * 100),
+  lastVisit: `${lastVisit}T00:00:00Z`,
+  noShows,
+});
+
+export const customers: Customer[] = [
+  {
+    id: "C-iglesias",
+    name: "Iglesias",
+    phone: "+34600000101",
+    locale: "es",
+    consent: { marketing: true },
+    tags: ["Regular"],
+    vip: false,
+    blocked: false,
+    figures: customerFigures(14, 58, "2026-10-17"),
+    ext: { allergens: [], dietaryRestrictions: [] },
+  },
+  {
+    id: "C-ortega",
+    name: "Ortega",
+    phone: "+34600000102",
+    email: "ortega@example.com",
+    locale: "es",
+    consent: { marketing: false },
+    tags: [],
+    vip: false,
+    blocked: false,
+    notes: "One guest is coeliac",
+    figures: customerFigures(6, 52, "2026-09-30"),
+    ext: { allergens: ["gluten"], dietaryRestrictions: ["Gluten-free"] },
+  },
+  {
+    id: "C-bravo",
+    name: "Bravo",
+    phone: "+34600000103",
+    locale: "es",
+    consent: { marketing: true },
+    tags: ["Regular"],
+    vip: true,
+    blocked: false,
+    figures: customerFigures(8, 61, "2026-10-24"),
+    ext: { allergens: ["milk"], dietaryRestrictions: ["Lactose-free"] },
+  },
+  {
+    id: "C-calvo",
+    name: "Calvo",
+    email: "calvo@example.com",
+    locale: "es",
+    consent: { marketing: false },
+    tags: ["Company"],
+    vip: false,
+    blocked: false,
+    figures: { visits: 1, spend: null, lastVisit: null, noShows: 0 },
+    ext: { allergens: ["nuts"], dietaryRestrictions: [] },
+  },
+];
+
+const text = (en: string, es: string, de: string, fr: string) => ({ source: en, translations: { en, es, de, fr } });
+
+export const catalog: CatalogItem[] = [
+  {
+    id: "dish-croquetas",
+    kind: "product",
+    name: text("Ham croquettes", "Croquetas de jamón", "Schinkenkroketten", "Croquettes au jambon"),
+    categoryId: "starters",
+    price: eur(1100),
+    status: "active",
+    media: [],
+    tags: [],
+    ext: { allergens: ["gluten", "milk", "eggs"] },
+  },
+  {
+    id: "dish-arroz",
+    kind: "product",
+    name: text("Seafood rice", "Arroz del señorito", "Reis mit Meeresfrüchten", "Riz aux fruits de mer"),
+    categoryId: "mains",
+    price: eur(2400),
+    status: "active",
+    media: [],
+    tags: ["Signature"],
+    ext: { allergens: ["crustaceans", "molluscs", "fish"], pairing: "Albariño" },
+  },
+  {
+    id: "dish-flan",
+    kind: "product",
+    name: text("House flan", "Flan de la casa", "Flan des Hauses", "Flan maison"),
+    categoryId: "desserts",
+    price: eur(750),
+    status: "active",
+    media: [],
+    tags: [],
+    ext: { allergens: ["milk", "eggs"] },
+  },
+  {
+    id: "dish-of-the-day",
+    kind: "product",
+    name: text("Catch of the day", "Pescado del día", "Fisch des Tages", "Poisson du jour"),
+    categoryId: "mains",
+    price: eur(2600),
+    status: "active",
+    media: [],
+    tags: ["Daily"],
+    ext: { allergens: ["fish"], dishOfTheDay: true },
+  },
+  {
+    id: "menu-tasting",
+    kind: "bundle",
+    name: text("Tasting menu", "Menú degustación", "Degustationsmenü", "Menu dégustation"),
+    categoryId: "menus",
+    price: eur(5200),
+    durationMin: 120,
+    status: "active",
+    media: [],
+    tags: ["Whole table"],
+    sections: [
+      { id: "course-1", name: text("Starter", "Entrante", "Vorspeise", "Entrée"), itemIds: ["dish-croquetas"] },
+      {
+        id: "course-2",
+        name: text("Main", "Principal", "Hauptgang", "Plat"),
+        itemIds: ["dish-arroz", "dish-of-the-day"],
+      },
+      { id: "course-3", name: text("Dessert", "Postre", "Nachspeise", "Dessert"), itemIds: ["dish-flan"] },
+    ],
+    ext: { allergens: ["gluten", "milk", "eggs", "crustaceans", "molluscs", "fish"] },
+  },
+];
+
+export const staff: StaffMember[] = [
+  {
+    id: "staff-marta",
+    name: "Marta",
+    roleIds: ["manager"],
+    status: "active",
+    locationIds: ["venue"],
+    skills: ["host", "sommelier"],
+    contract: { type: "full_time", startDate: "2022-03-01", hoursPerWeek: 40 },
+    ext: { crew: "floor" },
+  },
+  {
+    id: "staff-iker",
+    name: "Iker",
+    roleIds: ["staff"],
+    status: "active",
+    locationIds: ["venue"],
+    skills: ["waiter"],
+    ext: { crew: "floor" },
+  },
+  {
+    id: "staff-lucia",
+    name: "Lucía",
+    roleIds: ["staff"],
+    status: "active",
+    locationIds: ["venue"],
+    skills: ["grill", "pastry"],
+    ext: { crew: "kitchen" },
+  },
+];
+
+export const shifts: Shift[] = [
+  { id: "shift-marta", staffId: "staff-marta", businessDay: BUSINESS_DAY, startMin: at(17), endMin: at(24) },
+  { id: "shift-iker", staffId: "staff-iker", businessDay: BUSINESS_DAY, startMin: at(18, 30), endMin: at(24) },
+  { id: "shift-lucia", staffId: "staff-lucia", businessDay: BUSINESS_DAY, startMin: at(17, 30), endMin: at(23, 30) },
+];
+
+const base = { businessDay: BUSINESS_DAY, staffIds: [], lines: [] };
+
+export const bookings: BookingInput[] = [
+  {
+    ...base,
+    id: "R-1041",
+    status: "in_progress",
+    startMin: at(19),
+    endMin: at(20, 30),
+    resourceIds: ["S2"],
+    staffIds: ["staff-iker"],
+    customerId: "C-iglesias",
+    partySize: 2,
+    origin: "online",
+    channel: "web",
+    staffNote: "Asked for the bill",
+    tags: ["Regular"],
+  },
+  {
+    ...base,
+    id: "R-1043",
+    status: "in_progress",
+    startMin: at(19, 15),
+    endMin: at(21),
+    resourceIds: ["S3"],
+    staffIds: ["staff-iker"],
+    customerId: "C-ortega",
+    partySize: 4,
+    origin: "staff",
+    channel: "phone",
+    guestNote: "One guest is coeliac",
+    tags: ["Gluten-free"],
+  },
+  {
+    ...base,
+    id: "R-1046",
+    status: "confirmed",
+    startMin: at(20, 15),
+    endMin: at(21, 45),
+    resourceIds: ["T8"],
+    partySize: 2,
+    origin: "online",
+    channel: "web",
+    tags: [],
+    contactName: "Castaño",
+  },
+  {
+    ...base,
+    id: "R-1047",
+    status: "in_progress",
+    startMin: at(20, 20),
+    endMin: at(21, 50),
+    resourceIds: ["T1"],
+    partySize: 2,
+    origin: "walk_in",
+    tags: [],
+  },
+  {
+    ...base,
+    id: "R-1048",
+    status: "confirmed",
+    deposit: { amount: eur(4000), status: "captured" },
+    startMin: at(20, 30),
+    endMin: at(22, 15),
+    resourceIds: ["S5"],
+    customerId: "C-bravo",
+    partySize: 4,
+    origin: "staff",
+    channel: "phone",
+    tags: ["Lactose-free"],
+  },
+  {
+    ...base,
+    id: "R-1055",
+    status: "confirmed",
+    startMin: at(21, 15),
+    endMin: at(22, 45),
+    resourceIds: [],
+    partySize: 4,
+    origin: "staff",
+    channel: "phone",
+    guestNote: "Prefers a quiet corner",
+    tags: ["Quiet table"],
+    contactName: "Rey",
+  },
+  {
+    ...base,
+    id: "R-1059",
+    status: "awaiting_payment",
+    deposit: { amount: eur(20_000), status: "due" },
+    startMin: at(22),
+    endMin: at(24),
+    resourceIds: [],
+    customerId: "C-calvo",
+    partySize: 8,
+    lines: [{ catalogItemId: "menu-tasting", qty: 8, durationMin: 120, unitPrice: eur(5200) }],
+    origin: "staff",
+    channel: "phone",
+    guestNote: "Asked for a set menu for the whole table",
+    tags: ["Company dinner"],
+    ext: { type: "event", occasion: "Company dinner" },
+  },
+  {
+    ...base,
+    id: "R-1061",
+    status: "completed",
+    startMin: at(19),
+    endMin: at(20, 15),
+    resourceIds: ["B2"],
+    partySize: 2,
+    origin: "online",
+    channel: "web",
+    tags: [],
+    contactName: "Navarro",
+  },
+  {
+    ...base,
+    id: "R-1062",
+    status: "cancelled",
+    startMin: at(20),
+    endMin: at(21, 30),
+    resourceIds: [],
+    partySize: 2,
+    origin: "online",
+    channel: "web",
+    staffNote: "Cancelled by the guest this afternoon",
+    tags: [],
+    contactName: "Vidal",
+  },
+  {
+    ...base,
+    id: "R-1063",
+    status: "no_show",
+    startMin: at(19, 45),
+    endMin: at(21, 15),
+    resourceIds: [],
+    partySize: 3,
+    origin: "staff",
+    channel: "phone",
+    tags: [],
+    contactName: "Herrera",
+  },
+];
+
+export const hospitalitySeed = { areas, resources, customers, catalog, staff, shifts, bookings } as const;
