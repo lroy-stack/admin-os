@@ -1,9 +1,9 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { getValueFromCookie } from "@/ds/preferences/actions";
+import { readCookie } from "@/ds/preferences/server";
 
 import { mails } from "./data";
 import { MailComponent } from "./mail";
-import { DEFAULT_MAIL_LAYOUT, MAIL_LAYOUT_COOKIE } from "./mail-layout-config";
+import { MAIL_LAYOUT_COOKIE, parseMailLayout } from "./mail-layout-config";
 import { MailSidebar } from "./mail-sidebar";
 
 /**
@@ -11,17 +11,13 @@ import { MailSidebar } from "./mail-sidebar";
  * the standalone page; `/mail` renders it on its own.
  */
 export async function MailApp({ standaloneHref }: { standaloneHref?: string }) {
-  const layoutCookie = await getValueFromCookie(MAIL_LAYOUT_COOKIE);
+  const layout = parseMailLayout(await readCookie(MAIL_LAYOUT_COOKIE));
 
   return (
     <SidebarProvider className="h-full min-h-0">
       <MailSidebar />
       <div className="size-full min-h-0 overflow-hidden">
-        <MailComponent
-          mails={mails}
-          defaultLayout={layoutCookie ? JSON.parse(layoutCookie) : [...DEFAULT_MAIL_LAYOUT]}
-          standaloneHref={standaloneHref}
-        />
+        <MailComponent mails={mails} defaultLayout={layout} standaloneHref={standaloneHref} />
       </div>
     </SidebarProvider>
   );

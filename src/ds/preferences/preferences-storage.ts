@@ -3,7 +3,7 @@
 import { setClientCookie } from "@/lib/cookie.client";
 import { setLocalStorageValue } from "@/lib/local-storage.client";
 
-import { setValueToCookie } from "./actions";
+import { setPreference } from "./actions";
 import {
   getPreferencePersistence,
   type PreferenceKey,
@@ -21,7 +21,7 @@ async function persistByMode(mode: PreferencePersistence, key: string, value: st
       return;
 
     case "server-cookie":
-      await setValueToCookie(key, value);
+      await setPreference(key, value);
       return;
 
     case "localStorage":

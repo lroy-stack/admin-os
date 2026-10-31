@@ -1,34 +1,28 @@
 "use server";
 
-import { cookies } from "next/headers";
-
 import { isLocale, LOCALE_COOKIE } from "@/core/i18n";
 import { CURRENCY_COOKIE, isCurrency } from "@/core/money";
 
-import {
-  getPreferencePersistence,
-  PREFERENCE_REGISTRY,
-  type PreferenceKey,
-  type PreferenceValueMap,
-  parsePreference,
-} from "./preferences-config";
+import { PREFERENCE_REGISTRY, type PreferenceKey } from "./preferences-config";
+import { writeCookie } from "./server";
 
-export async function getValueFromCookie(key: string): Promise<string | undefined> {
-  const cookieStore = await cookies();
-  return cookieStore.get(key)?.value;
-}
+const YEAR_S = 60 * 60 * 24 * 365;
 
-export async function setValueToCookie(
-  key: string,
-  value: string,
-  options: { path?: string; maxAge?: number; sameSite?: "lax" | "strict" | "none" } = {},
-): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(key, value, {
-    path: options.path ?? "/",
-    maxAge: options.maxAge ?? 60 * 60 * 24 * 7, // default: 7 days
-    ...(options.sameSite ? { sameSite: options.sameSite } : {}),
-  });
+/**
+ * Stores one preference from the registry. Public endpoint: the key must be a registry key and the value one of that
+ * preference's allowed values, so no caller can use it to set, overwrite or probe any other cookie (sessions, demo
+ * switches, locale, currency).
+ */
+export async function setPreference(key: unknown, value: unknown): Promise<void> {
+  if (typeof key !== "string" || !Object.hasOwn(PREFERENCE_REGISTRY, key)) {
+    throw new Error("Unknown preference");
+  }
+  const preference = key as PreferenceKey;
+  const allowed = PREFERENCE_REGISTRY[preference].values as readonly string[];
+  if (typeof value !== "string" || !allowed.includes(value)) {
+    throw new Error(`Unsupported value for ${preference}`);
+  }
+  await writeCookie(preference, value, { maxAge: YEAR_S, sameSite: "lax" });
 }
 
 /**
@@ -40,7 +34,7 @@ export async function setLocale(locale: unknown): Promise<void> {
   if (!isLocale(locale)) {
     throw new Error("Unsupported locale");
   }
-  await setValueToCookie(LOCALE_COOKIE, locale, { maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  await writeCookie(LOCALE_COOKIE, locale, { maxAge: YEAR_S, sameSite: "lax" });
 }
 
 /**
@@ -51,17 +45,5 @@ export async function setCurrency(currency: unknown): Promise<void> {
   if (!isCurrency(currency)) {
     throw new Error("Unsupported currency");
   }
-  await setValueToCookie(CURRENCY_COOKIE, currency, { maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
-}
-
-export async function getPreference<K extends PreferenceKey>(key: K): Promise<PreferenceValueMap[K]> {
-  const definition = PREFERENCE_REGISTRY[key];
-  const persistence = getPreferencePersistence(key);
-
-  if (persistence !== "client-cookie" && persistence !== "server-cookie") {
-    return definition.defaultValue as PreferenceValueMap[K];
-  }
-
-  const cookieStore = await cookies();
-  return parsePreference(key, cookieStore.get(key)?.value.trim());
+  await writeCookie(CURRENCY_COOKIE, currency, { maxAge: YEAR_S, sameSite: "lax" });
 }

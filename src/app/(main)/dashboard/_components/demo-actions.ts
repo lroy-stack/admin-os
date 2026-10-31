@@ -7,7 +7,7 @@ import { DEMO_ROLE_COOKIE } from "@/config/runtime";
 import { verticalIdSchema } from "@/config/vertical";
 import { DEMO_PRESET_COOKIE, getVertical } from "@/config/vertical.server";
 import { roleIdSchema } from "@/core/access";
-import { setValueToCookie } from "@/ds/preferences/actions";
+import { writeCookie } from "@/ds/preferences/server";
 
 // The demo switches (ADR 0006). Every action is a public endpoint: the input is untrusted and the switches work
 // only on the demo build. Setting a cookie in a Server Action re-renders the page and its layouts on its own.
@@ -22,12 +22,12 @@ function assertDemo(): void {
 
 export async function setDemoRole(role: unknown): Promise<void> {
   assertDemo();
-  await setValueToCookie(DEMO_ROLE_COOKIE, roleIdSchema.parse(role), COOKIE_OPTIONS);
+  await writeCookie(DEMO_ROLE_COOKIE, roleIdSchema.parse(role), COOKIE_OPTIONS);
 }
 
 export async function setDemoPreset(preset: unknown): Promise<void> {
   assertDemo();
-  await setValueToCookie(DEMO_PRESET_COOKIE, verticalIdSchema.parse(preset), COOKIE_OPTIONS);
+  await writeCookie(DEMO_PRESET_COOKIE, verticalIdSchema.parse(preset), COOKIE_OPTIONS);
 }
 
 export async function resetDemoData(): Promise<void> {
