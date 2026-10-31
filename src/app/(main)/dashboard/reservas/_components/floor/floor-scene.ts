@@ -44,9 +44,15 @@ import {
   TABLE_HEIGHT_M,
   type TableParts,
 } from "./room-meshes";
+import { tableStateCues } from "./state-cues";
 import type { VisibleTableState } from "./table-state";
 
 export type ScenePick = PickTag | { kind: "empty" };
+
+function hatchTextures(palette: RoomPalette): Record<"stripes" | "dots", Texture> {
+  const ink = palette["table-hatch"];
+  return { stripes: patternTexture("stripes", ink), dots: patternTexture("dots", ink) };
+}
 
 export type SceneMode = "service" | "edit";
 
@@ -85,8 +91,9 @@ export class FloorScene {
   private readonly tables = new Map<string, TableParts>();
   private readonly landmarks = new Map<string, Group>();
   private readonly tableBoxes = new Map<string, Box>();
-  private readonly palette: RoomPalette;
-  private readonly hatch: Record<"stripes" | "dots", Texture>;
+  private palette: RoomPalette;
+  private hatch: Record<"stripes" | "dots", Texture>;
+  private readonly sky: HemisphereLight;
   private readonly sun: DirectionalLight;
   private readonly resizeObserver: ResizeObserver;
   private readonly visibilityObserver: IntersectionObserver;
@@ -96,6 +103,8 @@ export class FloorScene {
   private fittedScale = 40;
   private levelBox: Box = { minX: 0, maxX: 1, minZ: 0, maxZ: 1, height: LEVEL_HEIGHT_M };
   private levelId: string | null = null;
+  private level: Level | null = null;
+  private visuals: readonly TableVisual[] = [];
   private view: ViewMode = "2.5d";
   private mode: SceneMode = "service";
   private elementDrag: { tag: PickTag; group: Group; offsetX: number; offsetZ: number; moved: boolean } | null = null;
@@ -117,8 +126,7 @@ export class FloorScene {
     },
   ) {
     this.palette = readRoomPalette(host);
-    const hatchInk = this.palette["table-hatch"];
-    this.hatch = { stripes: patternTexture("stripes", hatchInk), dots: patternTexture("dots", hatchInk) };
+    this.hatch = hatchTextures(this.palette);
 
     this.renderer = new WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
@@ -130,7 +138,8 @@ export class FloorScene {
     this.renderer.domElement.style.display = "block";
     host.appendChild(this.renderer.domElement);
 
-    this.scene.add(new HemisphereLight(0xffffff, this.palette["room-wall"], 2.2));
+    this.sky = new HemisphereLight(0xffffff, this.palette["room-wall"], 2.2);
+    this.scene.add(this.sky);
     this.sun = new DirectionalLight(0xffffff, 1.6);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -165,6 +174,40 @@ export class FloorScene {
 
   /** Rebuilds the static room for a level and frames it. */
   setLevel(level: Level) {
+    this.buildLevel(level);
+    const newLevel = level.id !== this.levelId;
+    this.levelId = level.id;
+    const bounds = levelBounds(level);
+    this.levelBox = {
+      minX: cm(bounds.minX),
+      maxX: cm(bounds.maxX),
+      minZ: cm(bounds.minY),
+      maxZ: cm(bounds.maxY),
+      height: LEVEL_HEIGHT_M,
+    };
+    this.placeSun();
+    // Editing rebuilds the level on every change; keep the camera where the editor left it until the level changes.
+    if (this.mode === "service" || newLevel) this.fit(false);
+    else this.requestRender();
+  }
+
+  /**
+   * Recolours the room for a new theme or mode: rebuilds the meshes in the new palette and re-applies the table
+   * states, keeping the renderer, the camera and the selection as they are.
+   */
+  setPalette(palette: RoomPalette) {
+    this.palette = palette;
+    this.hatch.stripes.dispose();
+    this.hatch.dots.dispose();
+    this.hatch = hatchTextures(palette);
+    this.renderer.setClearColor(palette["room-paper"]);
+    this.sky.groundColor.copy(palette["room-wall"]);
+    if (this.level) this.buildLevel(this.level);
+    this.setTableVisuals(this.visuals);
+  }
+
+  private buildLevel(level: Level) {
+    this.level = level;
     disposeTree(this.levelGroup);
     this.levelGroup.clear();
     this.tables.clear();
@@ -192,21 +235,6 @@ export class FloorScene {
       this.landmarks.set(landmark.id, group);
       this.levelGroup.add(group);
     }
-
-    const newLevel = level.id !== this.levelId;
-    this.levelId = level.id;
-    const bounds = levelBounds(level);
-    this.levelBox = {
-      minX: cm(bounds.minX),
-      maxX: cm(bounds.maxX),
-      minZ: cm(bounds.minY),
-      maxZ: cm(bounds.maxY),
-      height: LEVEL_HEIGHT_M,
-    };
-    this.placeSun();
-    // Editing rebuilds the level on every change; keep the camera where the editor left it until the level changes.
-    if (this.mode === "service" || newLevel) this.fit(false);
-    else this.requestRender();
   }
 
   /** Edit mode lets tables and landmarks be dragged; service mode treats taps as selection. */
@@ -225,10 +253,7 @@ export class FloorScene {
   }
 
   setTableVisuals(visuals: readonly TableVisual[]) {
-    const hatchFor: Partial<Record<VisibleTableState, Texture>> = {
-      late: this.hatch.stripes,
-      blocked: this.hatch.dots,
-    };
+    this.visuals = visuals;
     // The editor draws tables in service as grey footprints so they read on the white floor in 2D.
     const footprint = this.mode === "edit";
     for (const visual of visuals) {
@@ -237,11 +262,13 @@ export class FloorScene {
       const color =
         footprint && visual.state === "free" ? this.palette["room-chair"] : this.palette[tableStateToken[visual.state]];
       parts.top.color.copy(color);
-      parts.top.map = hatchFor[visual.state] ?? null;
+      const pattern = tableStateCues[visual.state].pattern;
+      parts.top.map = pattern ? this.hatch[pattern] : null;
       parts.top.needsUpdate = true;
+      // Chairs take on a share of the state colour; the dark room keeps them close to neutral.
       parts.chairs.color
-        .copy(visual.state === "free" ? this.palette["room-chair"] : color)
-        .lerp(this.palette["room-floor"], 0.35);
+        .copy(this.palette["room-chair-wash"])
+        .lerp(visual.state === "free" ? this.palette["room-chair"] : color, this.palette.chairTint);
       const opacity = visual.dimmed ? 0.3 : 1;
       parts.top.opacity = opacity;
       parts.chairs.opacity = opacity;

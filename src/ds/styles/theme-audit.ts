@@ -249,7 +249,6 @@ function parseColorMix(args: string): Rgba {
 export function parseColor(value: string): Rgba {
   const trimmed = value.trim();
   if (trimmed === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
-  if (trimmed === "white") return { r: 1, g: 1, b: 1, a: 1 };
   const match = trimmed.match(/^([a-z-]+)\(([\s\S]*)\)$/);
   if (match?.[1] === "oklch") return parseOklch(match[2] ?? "");
   if (match?.[1] === "color-mix") return parseColorMix(match[2] ?? "");
@@ -275,6 +274,21 @@ export function relativeLuminance({ r, g, b }: Rgba): number {
 export function contrastRatio(a: Rgba, b: Rgba): number {
   const [la, lb] = [relativeLuminance(a), relativeLuminance(b)];
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** OKLCH lightness and chroma of a colour, for checks on a lightness ladder or a chroma budget. */
+export function toOklch(color: Rgba): { l: number; c: number; h: number } {
+  const { l, a, b } = rgbaToLab(color);
+  return { l, c: Math.hypot(a, b), h: ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360 };
+}
+
+/**
+ * A pattern texture painted with `ink` on white multiplies the fill under it. three.js samples the canvas texture
+ * without colour decoding, so the encoded ink value scales the fill in linear light.
+ */
+export function multiplyTexture(fill: Rgba, ink: Rgba): Rgba {
+  const scale = (f: number, i: number) => toGamma(toLinear(f) * i);
+  return { r: scale(fill.r, ink.r), g: scale(fill.g, ink.g), b: scale(fill.b, ink.b), a: 1 };
 }
 
 /** Euclidean distance in OKLab, used to keep the table states apart from each other. */
@@ -319,9 +333,32 @@ export function backdropExtremes(tokens: TokenMap): { lightest: Rgba; darkest: R
 
 type Surface = { name: string; color: Rgba };
 
+/** Room surfaces a control can float over: the 3D scene paints these, so a capsule can sit on any of them. */
+const ROOM_SURFACES = [
+  "--room-paper",
+  "--room-floor",
+  "--room-floor-outdoor",
+  "--room-wall",
+  "--room-landmark",
+  "--room-chair",
+  "--table-free",
+  "--table-arriving",
+  "--table-seated",
+  "--table-leaving",
+  "--table-late",
+  "--table-blocked",
+];
+
+/** Unselected labels in a segmented control and the room's own icon buttons use this share of the foreground. */
+const CONTROL_LABEL_ALPHA = 0.7;
+/** Landmark labels drawn straight on the room use this share of the room ink. */
+const ROOM_LABEL_ALPHA = 0.7;
+
+const withAlpha = (color: Rgba, alpha: number): Rgba => ({ ...color, a: color.a * alpha });
+
 /**
  * Every measured pair for one theme and mode: text and UI colours on cards, capsules and popovers over the backdrop's
- * extremes (capsules and popovers also over the white room), the opaque fills, and the room's table states.
+ * extremes, the opaque fills, the controls floating over the room, and the room itself (states, plates, labels).
  */
 export function auditTheme(rules: Rule[], theme: string, mode: ThemeMode): AuditRow[] {
   const tokens = themeTokens(rules, theme, mode);
@@ -334,19 +371,26 @@ export function auditTheme(rules: Rule[], theme: string, mode: ThemeMode): Audit
   };
 
   const { lightest, darkest } = backdropExtremes(tokens);
-  const room = color("--room-floor");
+  const floor = color("--room-floor");
+  const byLuminance = ROOM_SURFACES.map(color).sort((a, b) => relativeLuminance(a) - relativeLuminance(b));
+  const roomDarkest = byLuminance[0] ?? floor;
+  const roomLightest = byLuminance.at(-1) ?? floor;
   const behind = [
     { name: "backdrop light", color: lightest },
     { name: "backdrop dark", color: darkest },
   ];
+  const room = [
+    { name: "room, lightest", color: roomLightest },
+    { name: "room, darkest", color: roomDarkest },
+  ];
   const sheen = color("--glass-sheen");
-
-  const cards: Surface[] = behind.map((b) => ({ name: `card / ${b.name}`, color: over(color("--card"), b.color) }));
-  const capsules: Surface[] = [...behind, { name: "white room", color: room }].map((b) => ({
+  const capsule = (b: { name: string; color: Rgba }): Surface => ({
     name: `capsule / ${b.name}`,
     color: over(sheen, over(color("--glass-fill-solid"), brightness(b.color, number("--glass-brightness")))),
-  }));
-  const popovers: Surface[] = [...behind, { name: "white room", color: room }].map((b) => ({
+  });
+
+  const cards: Surface[] = behind.map((b) => ({ name: `card / ${b.name}`, color: over(color("--card"), b.color) }));
+  const popovers: Surface[] = [...behind, ...room].map((b) => ({
     name: `popover / ${b.name}`,
     color: over(color("--popover"), b.color),
   }));
@@ -359,10 +403,25 @@ export function auditTheme(rules: Rule[], theme: string, mode: ThemeMode): Audit
     check(`destructive text on ${surface.name}`, color("--destructive"), surface.color, TEXT);
     check(`brand (UI) on ${surface.name}`, color("--brand"), surface.color, UI);
     check(`azure (UI) on ${surface.name}`, color("--azure"), surface.color, UI);
+    check(`chart axis label (muted-foreground) on ${surface.name}`, color("--muted-foreground"), surface.color, TEXT);
+    for (const series of ["--chart-1", "--chart-2", "--chart-3"]) {
+      check(`${series.slice(2)} series (UI) on ${surface.name}`, color(series), surface.color, UI);
+    }
   }
-  for (const surface of capsules) {
+  for (const surface of [...behind.map(capsule), ...room.map(capsule)]) {
     check(`foreground on ${surface.name}`, color("--foreground"), surface.color, TEXT);
     check(`muted-foreground on ${surface.name}`, color("--muted-foreground"), surface.color, TEXT);
+  }
+  // Over the dark room the controls read their foreground from the room ink (off-white), see base.css.
+  const controlText = mode === "dark" ? color("--room-ink") : color("--foreground");
+  for (const surface of room.map(capsule)) {
+    check(`control text on ${surface.name}`, controlText, surface.color, TEXT);
+    check(
+      `control label and glyph (70%) on ${surface.name}`,
+      withAlpha(controlText, CONTROL_LABEL_ALPHA),
+      surface.color,
+      TEXT,
+    );
   }
   for (const surface of popovers) {
     check(`foreground on ${surface.name}`, color("--popover-foreground"), surface.color, TEXT);
@@ -375,19 +434,41 @@ export function auditTheme(rules: Rule[], theme: string, mode: ThemeMode): Audit
     check(`background text on ${fill.slice(2)} fill`, color("--background"), color(fill), TEXT);
   }
 
-  const white = parseColor("white");
   for (const state of ["arriving", "seated", "leaving", "late"]) {
-    check(`table-${state} on room floor (UI)`, color(`--table-${state}`), room, UI);
+    check(`table-${state} on room floor (UI)`, color(`--table-${state}`), floor, UI);
   }
-  check("white text on room-ink", white, color("--room-ink"), TEXT);
-  check("room-ink text on room floor", color("--room-ink"), room, TEXT);
+  check("table-free on room floor (UI)", color("--table-free"), floor, UI);
+  check("table-blocked on room floor (UI)", color("--table-blocked"), floor, UI);
+  if (mode === "dark") {
+    const hatch = color("--table-hatch");
+    const blocked = color("--table-blocked");
+    const late = color("--table-late");
+    check("hatch dots on table-blocked (UI)", multiplyTexture(blocked, hatch), blocked, UI);
+    check("hatch stripes on table-late (UI)", multiplyTexture(late, hatch), late, UI);
+  }
+  const plate = color("--room-plate");
+  check("plate on room floor (UI)", plate, floor, UI);
+  check("plate text on plate", color("--room-plate-foreground"), plate, TEXT);
+  check("plate rim on plate (UI)", color("--room-plate-rim"), plate, UI);
+  const chip = over(color("--room-chip"), floor);
+  check("detail chip text (room-ink) on chip", color("--room-ink"), chip, TEXT);
+  for (const surface of ["--room-floor", "--room-paper"]) {
+    const background = color(surface);
+    check(`room-ink text on ${surface.slice(2)}`, color("--room-ink"), background, TEXT);
+    check(
+      `room label (ink 70%) on ${surface.slice(2)}`,
+      withAlpha(color("--room-ink"), ROOM_LABEL_ALPHA),
+      background,
+      TEXT,
+    );
+  }
 
   return rows;
 }
 
-/** Smallest OKLab distance between the four coloured table states; they share one white room in every mode. */
-export function tableStateSeparation(rules: Rule[], theme: string): number {
-  const tokens = themeTokens(rules, theme, "light");
+/** Smallest OKLab distance between the four coloured table states of one mode's room. */
+export function tableStateSeparation(rules: Rule[], theme: string, mode: ThemeMode): number {
+  const tokens = themeTokens(rules, theme, mode);
   const states = ["arriving", "seated", "leaving", "late"].map((state) => tokenColor(tokens, `--table-${state}`));
   let minimum = Number.POSITIVE_INFINITY;
   for (let i = 0; i < states.length; i++) {
@@ -397,4 +478,21 @@ export function tableStateSeparation(rules: Rule[], theme: string): number {
     }
   }
   return minimum;
+}
+
+export type RoomTone = { token: string; l: number; c: number; h: number };
+
+/** OKLCH of every room token in one mode, for the lightness ladder and chroma budget of the dark room. */
+export function roomTones(rules: Rule[], theme: string, mode: ThemeMode): Record<string, RoomTone> {
+  const tokens = themeTokens(rules, theme, mode);
+  const names = Object.keys(tokens).filter(
+    (name) => (name.startsWith("--room-") || name.startsWith("--table-")) && name !== "--room-chair-tint",
+  );
+  return Object.fromEntries(names.map((name) => [name, { token: name, ...toOklch(tokenColor(tokens, name)) }]));
+}
+
+/** A plain number token such as `--room-chair-tint`. */
+export function tokenNumber(rules: Rule[], theme: string, mode: ThemeMode, name: string): number {
+  const tokens = themeTokens(rules, theme, mode);
+  return Number.parseFloat(resolve(tokens, `var(${name})`));
 }

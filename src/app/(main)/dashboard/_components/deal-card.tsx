@@ -32,7 +32,8 @@ export function DealCard({
   const customer = getCustomer(deal.customerId);
 
   return (
-    <Card size="sm" className={cn("ring-foreground/15 gap-0 px-3.5", toneTint[tone], className)}>
+    // A neutral deal keeps the Card's own glass surface; the other tones tint it.
+    <Card size="sm" className={cn("ring-foreground/15 gap-0 px-3.5", tone !== "neutral" && toneTint[tone], className)}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-foreground/85 text-[11px]">Closes {formatShortDate(deal.closeDate)}</span>
         <CardIconButton

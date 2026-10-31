@@ -14,6 +14,8 @@ import { SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { type ViewMode, ZOOM_BUTTON_STEP } from "./camera-math";
 import { type DiningTable, type FloorPlan, type Level, levelsTopDown } from "./floor-model";
 import { FloorScene, type SceneMode, type SceneMove } from "./floor-scene";
+import { readRoomPalette, watchRoomPalette } from "./room-colors";
+import { tableStateCues } from "./state-cues";
 import { type TableReading, tableStateLabels, type VisibleTableState } from "./table-state";
 
 const viewOptions: SegmentedOption<ViewMode>[] = [
@@ -26,7 +28,7 @@ const viewOptions: SegmentedOption<ViewMode>[] = [
 const DETAIL_SCALE_PX_PER_M = 46;
 
 const stateSwatch: Record<VisibleTableState, string> = {
-  free: "bg-(--table-free) ring-1 ring-(--room-chair)",
+  free: "bg-(--table-free) ring-1 ring-foreground/40",
   arriving: "bg-(--table-arriving)",
   seated: "bg-(--table-seated)",
   leaving: "bg-(--table-leaving)",
@@ -35,6 +37,12 @@ const stateSwatch: Record<VisibleTableState, string> = {
 };
 
 const LEGEND_ORDER: VisibleTableState[] = ["seated", "arriving", "leaving", "late", "free", "blocked"];
+
+/** The plate glyph of a state, repeated in the legend so the glyph is learnt from it. */
+function LegendIcon({ state }: { state: VisibleTableState }) {
+  const Icon = tableStateCues[state].icon;
+  return Icon ? <Icon aria-hidden="true" className="text-foreground/70 size-3" /> : null;
+}
 
 export type FloorViewProps = {
   plan: FloorPlan;
@@ -160,7 +168,13 @@ export function FloorView({
       onFrame: () => syncOverlay(),
     });
     engineRef.current = engine;
+    const stopWatching = watchRoomPalette(
+      document.documentElement,
+      () => readRoomPalette(host),
+      (palette) => engine.setPalette(palette),
+    );
     return () => {
+      stopWatching();
       engine.dispose();
       engineRef.current = null;
     };
@@ -215,7 +229,7 @@ export function FloorView({
   })).filter((entry) => !editing && entry.count > 0);
 
   return (
-    <div className={cn("relative isolate overflow-hidden rounded-[inherit] bg-(--room-paper)", className)}>
+    <div data-room className={cn("relative isolate overflow-hidden rounded-[inherit] bg-(--room-paper)", className)}>
       <div ref={hostRef} className="absolute inset-0" />
 
       <div ref={layerRef} className="group/plates pointer-events-none absolute inset-0" data-detail="false">
@@ -242,8 +256,8 @@ export function FloorView({
                     onLandmarkSelect?.(landmark.id);
                   }}
                   className={cn(
-                    "rounded-sm bg-white/80 px-1 outline-none focus-visible:ring-2 focus-visible:ring-(--room-ink)",
-                    landmark.id === selectedLandmarkId && "bg-(--room-ink) text-white",
+                    "rounded-sm bg-(--room-chip) px-1 outline-none focus-visible:ring-2 focus-visible:ring-(--room-ink)",
+                    landmark.id === selectedLandmarkId && "bg-(--room-plate) text-(--room-plate-foreground)",
                   )}
                 >
                   {landmark.label || landmark.kind}
@@ -266,6 +280,7 @@ export function FloorView({
           const reading = readings.get(table.id);
           const state = reading?.state ?? "free";
           const selected = table.id === selectedTableId;
+          const PlateIcon = tableStateCues[editing ? editingState(table) : state].icon;
           return (
             <button
               key={table.id}
@@ -293,15 +308,16 @@ export function FloorView({
             >
               <span
                 className={cn(
-                  "rounded-md bg-(--room-ink) px-1.5 py-0.5 text-[13px] leading-none font-semibold text-white shadow-sm tabular-nums",
-                  selected && "ring-2 ring-white ring-offset-2 ring-offset-(--room-ink)",
+                  "flex items-center gap-1 rounded-md bg-(--room-plate) px-1.5 py-0.5 text-[13px] leading-none font-semibold text-(--room-plate-foreground) tabular-nums shadow-sm ring-1 ring-(--room-plate-rim)",
+                  selected && "ring-2 ring-(--room-plate-foreground) ring-offset-2 ring-offset-(--room-plate)",
                 )}
               >
+                {PlateIcon && <PlateIcon aria-hidden="true" className="size-3" />}
                 {table.label}
               </span>
               <span
                 className={cn(
-                  "hidden max-w-36 truncate rounded-md bg-white/95 px-1.5 py-0.5 text-[10px] leading-tight text-(--room-ink) shadow-sm",
+                  "hidden max-w-36 truncate rounded-md bg-(--room-chip) px-1.5 py-0.5 text-[10px] leading-tight text-(--room-ink) shadow-sm",
                   !editing && "group-data-[detail=true]/plates:block",
                 )}
               >
@@ -319,14 +335,14 @@ export function FloorView({
           value={level?.id ?? ""}
           options={levelOptions}
           onValueChange={onLevelChange}
-          className="pointer-events-auto bg-(--room-ink)/85"
+          className="liquid-glass-solid pointer-events-auto"
         />
         <SegmentedControl
           label="Camera angle"
           value={view}
           options={viewOptions}
           onValueChange={changeView}
-          className="pointer-events-auto bg-(--room-ink)/85"
+          className="liquid-glass-solid pointer-events-auto"
         />
       </div>
 
@@ -336,41 +352,44 @@ export function FloorView({
         </div>
       )}
 
-      <ButtonGroup
-        orientation="vertical"
-        aria-label="Camera"
-        className="absolute right-3 bottom-3 rounded-xl bg-(--room-ink)/85 p-0.5 shadow-lg"
-      >
-        {[
-          { label: "Zoom in", icon: Plus, run: () => engineRef.current?.zoomBy(ZOOM_BUTTON_STEP) },
-          { label: "Zoom out", icon: Minus, run: () => engineRef.current?.zoomBy(1 / ZOOM_BUTTON_STEP) },
-          { label: "Fit the room", icon: Maximize, run: () => engineRef.current?.fit() },
-          { label: "Rotate 90°", icon: RotateCw, run: () => engineRef.current?.rotateQuarter() },
-        ].map((control) => (
-          <Tooltip key={control.label}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={control.label}
-                onClick={control.run}
-                className="size-8 text-white hover:bg-white/15 hover:text-white"
-              >
-                <control.icon />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">{control.label}</TooltipContent>
-          </Tooltip>
-        ))}
-      </ButtonGroup>
+      <div className="absolute right-3 bottom-3">
+        <ButtonGroup
+          orientation="vertical"
+          aria-label="Camera"
+          className="liquid-glass liquid-glass-solid rounded-2xl p-0.5"
+        >
+          {[
+            { label: "Zoom in", icon: Plus, run: () => engineRef.current?.zoomBy(ZOOM_BUTTON_STEP) },
+            { label: "Zoom out", icon: Minus, run: () => engineRef.current?.zoomBy(1 / ZOOM_BUTTON_STEP) },
+            { label: "Fit the room", icon: Maximize, run: () => engineRef.current?.fit() },
+            { label: "Rotate 90°", icon: RotateCw, run: () => engineRef.current?.rotateQuarter() },
+          ].map((control) => (
+            <Tooltip key={control.label}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={control.label}
+                  onClick={control.run}
+                  className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-8 rounded-xl"
+                >
+                  <control.icon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">{control.label}</TooltipContent>
+            </Tooltip>
+          ))}
+        </ButtonGroup>
+      </div>
 
       <ul className="absolute bottom-3 left-3 flex flex-wrap gap-1.5" aria-label="Tables by state">
         {counts.map(({ state, count }) => (
           <li
             key={state}
-            className="flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[11px] text-(--room-ink) shadow-sm"
+            className="liquid-glass liquid-glass-solid text-foreground flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px]"
           >
             <span aria-hidden="true" className={cn("size-2.5 rounded-full", stateSwatch[state])} />
+            <LegendIcon state={state} />
             {tableStateLabels[state]}
             <span className="tabular-nums">{count}</span>
           </li>

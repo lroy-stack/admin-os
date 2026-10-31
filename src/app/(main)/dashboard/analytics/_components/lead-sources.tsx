@@ -11,12 +11,12 @@ import { CardIconButton } from "@/ds/components";
 import type { GrowthReport } from "./growth-data";
 
 const channelColors: Record<LeadChannel, string> = {
-  Website: "var(--color-brand)",
-  Referral: "var(--color-salmon)",
-  LinkedIn: "var(--color-azure)",
-  Email: "color-mix(in oklab, var(--color-brand) 55%, transparent)",
-  Events: "color-mix(in oklab, var(--color-salmon) 55%, transparent)",
-  WhatsApp: "color-mix(in oklab, var(--color-azure) 55%, transparent)",
+  Website: "var(--chart-1)",
+  Referral: "var(--chart-2)",
+  LinkedIn: "var(--chart-3)",
+  Email: "color-mix(in oklab, var(--chart-1) 55%, transparent)",
+  Events: "color-mix(in oklab, var(--chart-2) 55%, transparent)",
+  WhatsApp: "var(--chart-4)",
 };
 
 const chartConfig = Object.fromEntries(

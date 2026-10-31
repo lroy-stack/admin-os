@@ -34,6 +34,39 @@
     border-radius: var(--card-radius-sm);
   }
 
+  /*
+  Text over the dark room is off-white, not #fff, to avoid halation on a dark surface (Material dark theme:
+  high-emphasis text is about 87 % white). The room's controls read their foreground from the room ink.
+  */
+  .dark [data-room] {
+    --foreground: var(--room-ink);
+  }
+
+  /* Menus and popovers are thick glass: blurred enough that the page behind never competes with their text. */
+  :is(
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="select-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"],
+    [data-slot="menubar-content"],
+    [data-slot="menubar-sub-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="combobox-content"]
+  ) {
+    -webkit-backdrop-filter: var(--popover-backdrop);
+    backdrop-filter: var(--popover-backdrop);
+  }
+
+  /*
+  Recharts 3 renders tick labels in their own layer, outside the `.recharts-cartesian-axis-tick` group the chart
+  primitive targets, so they kept the library's #666. Axis and tick labels read in the muted foreground.
+  */
+  [data-slot="chart"] .recharts-cartesian-axis-tick-value {
+    fill: var(--muted-foreground);
+  }
+
   html[data-font="inter"] body {
     --font-sans: var(--font-inter);
   }

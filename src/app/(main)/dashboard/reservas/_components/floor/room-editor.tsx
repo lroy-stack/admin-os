@@ -172,7 +172,7 @@ export function RoomEditorToolbar({
   }, []);
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-2xl bg-(--room-ink) p-1.5 text-white shadow-lg">
+    <div className="liquid-glass liquid-glass-solid text-foreground flex flex-wrap items-center justify-center gap-1.5 rounded-2xl p-1.5">
       <Badge className="mx-1">Editing {level.name}</Badge>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -180,14 +180,14 @@ export function RoomEditorToolbar({
             variant="ghost"
             size="sm"
             disabled={!targetZoneId}
-            className="text-white hover:bg-white/15 hover:text-white"
+            className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground"
           >
             <Plus data-icon="inline-start" />
             Table
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
+          <DropdownMenuLabel className="text-muted-foreground text-xs">
             Into {level.zones.find((zone) => zone.id === targetZoneId)?.name}
           </DropdownMenuLabel>
           {TABLE_PRESETS.map((preset) => (
@@ -202,7 +202,7 @@ export function RoomEditorToolbar({
       </DropdownMenu>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-white hover:bg-white/15 hover:text-white">
+          <Button variant="ghost" size="sm" className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground">
             <MapPin data-icon="inline-start" />
             Element
           </Button>
@@ -221,7 +221,7 @@ export function RoomEditorToolbar({
       <Button
         variant="ghost"
         size="sm"
-        className="text-white hover:bg-white/15 hover:text-white"
+        className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground"
         onClick={() => onEdit({ type: "addZone", levelId: level.id })}
       >
         <SquareDashed data-icon="inline-start" />
@@ -230,7 +230,7 @@ export function RoomEditorToolbar({
       <Button
         variant="ghost"
         size="sm"
-        className="text-white hover:bg-white/15 hover:text-white"
+        className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground"
         onClick={() => onEdit({ type: "addLevel" })}
       >
         <Layers data-icon="inline-start" />
@@ -241,7 +241,7 @@ export function RoomEditorToolbar({
           variant="ghost"
           size="icon"
           aria-label="Level and zones"
-          className="size-8 text-white hover:bg-white/15 hover:text-white"
+          className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-8"
           onClick={onOpenPanel}
         >
           <SlidersHorizontal />
@@ -252,7 +252,7 @@ export function RoomEditorToolbar({
         size="icon"
         aria-label="Undo"
         disabled={!canUndo}
-        className="size-8 text-white hover:bg-white/15 hover:text-white"
+        className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-8"
         onClick={onUndo}
       >
         <Undo2 />
@@ -263,7 +263,7 @@ export function RoomEditorToolbar({
             variant="ghost"
             size="icon"
             aria-label="More"
-            className="size-8 text-white hover:bg-white/15 hover:text-white"
+            className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-8"
           >
             <LayoutGrid />
           </Button>
@@ -757,7 +757,7 @@ export function RoomEditorPanel({
                 onCommit={(name) => onEdit({ type: "renameLevel", levelId: level.id, name })}
               />
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground">Zones</span>
+                <span className="text-muted-foreground text-xs">Zones</span>
                 <ItemGroup className="gap-1">
                   {level.zones.map((item) => (
                     <Item key={item.id} asChild size="xs" variant="outline">
@@ -768,7 +768,7 @@ export function RoomEditorPanel({
                             {item.tables.length} tables · {item.outdoor ? "outdoor" : "indoor"}
                           </ItemDescription>
                         </ItemContent>
-                        <ItemActions className="text-xs text-muted-foreground">Edit</ItemActions>
+                        <ItemActions className="text-muted-foreground text-xs">Edit</ItemActions>
                       </button>
                     </Item>
                   ))}
@@ -783,7 +783,7 @@ export function RoomEditorPanel({
                 <Trash2 data-icon="inline-start" />
                 Remove empty level
               </Button>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Drag tables and elements on the plan. Delete removes, [ and ] rotate, ⌘Z undoes, ⌘D duplicates.
               </p>
             </FieldGroup>
@@ -792,8 +792,8 @@ export function RoomEditorPanel({
           {levelIssues.length > 0 && (
             <ul className="flex flex-col gap-1" aria-label="Layout warnings">
               {levelIssues.map((issue) => (
-                <li key={issue.message} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <TriangleAlert className="size-3.5 text-salmon" aria-hidden="true" />
+                <li key={issue.message} className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <TriangleAlert className="text-salmon size-3.5" aria-hidden="true" />
                   {issue.message}
                 </li>
               ))}

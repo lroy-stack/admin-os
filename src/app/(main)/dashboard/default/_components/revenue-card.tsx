@@ -20,7 +20,7 @@ const rangeOptions: SegmentedOption<Range>[] = [
 ];
 
 const chartConfig = {
-  revenue: { label: "Won revenue", color: "var(--color-salmon)" },
+  revenue: { label: "Won revenue", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 export function RevenueCard({ series, target }: { series: RevenuePoint[]; target: number }) {
@@ -50,7 +50,7 @@ export function RevenueCard({ series, target }: { series: RevenuePoint[]; target
         </div>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
           <span className="flex items-center gap-1.5">
-            <span className="bg-salmon size-1.5 rounded-full" />
+            <span className="bg-chart-1 size-1.5 rounded-full" />
             Won revenue
           </span>
           <span className="flex items-center gap-1.5">

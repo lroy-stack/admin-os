@@ -20,9 +20,9 @@ const unitOptions: SegmentedOption<Unit>[] = [
 ];
 
 const chartConfig = {
-  enterprise: { label: "Enterprise", color: "var(--color-brand)" },
-  midMarket: { label: "Mid-market", color: "var(--color-salmon)" },
-  smb: { label: "SMB", color: "var(--color-azure)" },
+  enterprise: { label: "Enterprise", color: "var(--chart-1)" },
+  midMarket: { label: "Mid-market", color: "var(--chart-2)" },
+  smb: { label: "SMB", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
 const segmentKeys = ["enterprise", "midMarket", "smb"] as const;

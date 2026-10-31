@@ -328,7 +328,7 @@ export function Reservations() {
     ) : null;
 
   const assigningBanner = assigning ? (
-    <div className="flex items-center gap-2 rounded-full bg-(--room-ink) py-1 pr-1 pl-4 text-sm text-white shadow-lg">
+    <div className="liquid-glass liquid-glass-solid text-foreground flex items-center gap-2 rounded-full py-1 pr-1 pl-4 text-sm">
       {candidates.length > 0
         ? `Tap a table for ${assigning.guest} · ${assigning.partySize} guests · ${candidates.length} ${candidates.length === 1 ? "table fits" : "tables fit"}`
         : `No table is free for ${assigning.partySize} at ${formatClock(assigning.startMin)}`}
@@ -336,7 +336,7 @@ export function Reservations() {
         variant="ghost"
         size="icon"
         aria-label="Stop assigning"
-        className="size-7 rounded-full text-white hover:bg-white/15 hover:text-white"
+        className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-7 rounded-full"
         onClick={() => setAssigningId(null)}
       >
         <X />

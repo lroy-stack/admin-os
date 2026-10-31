@@ -11,11 +11,8 @@ value: tide
   --salmon: oklch(0.55 0.16 28);
   --azure: oklch(0.52 0.15 290);
 
-  /* Room states: the floor plan is a white room in both modes, so they stay at light-mode strength. */
-  --table-arriving: oklch(0.52 0.1 195);
+  /* Seated is the one room state not taken from the brand trio. */
   --table-seated: oklch(0.35 0.06 235);
-  --table-leaving: oklch(0.52 0.15 290);
-  --table-late: oklch(0.55 0.16 28);
 
   /* Seafoam and wet sand. */
   --app-backdrop:
@@ -34,6 +31,11 @@ value: tide
   --brand-foreground: oklch(0.2 0.04 200);
   --salmon: oklch(0.77 0.12 28);
   --azure: oklch(0.77 0.1 290);
+  /* Dark room states: mid lightness, about 0.6x the light-mode chroma, so they stay calm at night. */
+  --table-arriving: oklch(0.71 0.06 195);
+  --table-seated: oklch(0.63 0.04 95);
+  --table-leaving: oklch(0.66 0.09 290);
+  --table-late: oklch(0.68 0.1 30);
 
   /* Deep water: teal and green-blue light with a pale sand glint. */
   --app-backdrop:

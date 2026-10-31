@@ -18,7 +18,7 @@ import { describeReading, type TableReading, tableStateLabels, type VisibleTable
 const swatch: Record<VisibleTableState, string> = {
   free: "bg-(--table-free) ring-1 ring-border",
   arriving: "bg-(--table-arriving)",
-  seated: "bg-(--table-seated) ring-1 ring-white/40",
+  seated: "bg-(--table-seated)",
   leaving: "bg-(--table-leaving)",
   late: "bg-(--table-late)",
   blocked: "bg-(--table-blocked)",
@@ -48,7 +48,7 @@ export function TableCallout({
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col">
           <span className="text-base font-medium">{table.label}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {table.capacity} seats · {zoneName}
           </span>
         </div>
@@ -61,10 +61,10 @@ export function TableCallout({
       <p className="text-sm">{describeReading(reading)}</p>
 
       {reservation && (
-        <div className="flex flex-col gap-2 rounded-xl bg-foreground/5 p-3 ring-1 ring-border">
+        <div className="bg-foreground/5 ring-border flex flex-col gap-2 rounded-xl p-3 ring-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-medium">{reservation.guest}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="text-muted-foreground text-xs tabular-nums">
               {reservation.partySize}p · {formatClock(reservation.startMin)}–{formatClock(reservation.endMin)}
             </span>
           </div>
@@ -107,7 +107,7 @@ export function TableCallout({
         </div>
       )}
 
-      {reading.state === "blocked" && <p className="text-xs text-muted-foreground">Blocked today.</p>}
+      {reading.state === "blocked" && <p className="text-muted-foreground text-xs">Blocked today.</p>}
     </div>
   );
 }

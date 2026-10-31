@@ -11,11 +11,8 @@ value: rose
   --salmon: oklch(0.54 0.14 55);
   --azure: oklch(0.52 0.08 170);
 
-  /* Room states: the floor plan is a white room in both modes, so they stay at light-mode strength. */
-  --table-arriving: oklch(0.54 0.17 355);
+  /* Seated is the one room state not taken from the brand trio. */
   --table-seated: oklch(0.36 0.08 315);
-  --table-leaving: oklch(0.52 0.08 170);
-  --table-late: oklch(0.54 0.14 55);
 
   /* Blush and champagne with a sage leaf. */
   --app-backdrop:
@@ -34,6 +31,11 @@ value: rose
   --brand-foreground: oklch(0.22 0.05 355);
   --salmon: oklch(0.81 0.11 65);
   --azure: oklch(0.8 0.08 165);
+  /* Dark room states: mid lightness, about 0.6x the light-mode chroma, so they stay calm at night. */
+  --table-arriving: oklch(0.7 0.1 355);
+  --table-seated: oklch(0.63 0.05 305);
+  --table-leaving: oklch(0.68 0.05 170);
+  --table-late: oklch(0.72 0.085 60);
 
   /* Plum velvet: rose, mauve and a warm champagne glint. */
   --app-backdrop:
