@@ -1,4 +1,12 @@
-import { format, formatAmount, formatCalendarDate, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
+import {
+  format,
+  formatAmount,
+  formatCalendarDate,
+  formatNumber,
+  formatPercent,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
 
 import {
   getInvoiceDiscount,
@@ -22,7 +30,9 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
   const discountValue = Number.isFinite(invoice.discountValue) ? invoice.discountValue : 0;
   const discountLabel =
     invoice.discountType === "percent"
-      ? format(paper.discountPercent, locale, { percent: formatPercent(discountValue / 100, locale) })
+      ? format(paper.discountPercent, locale, {
+          percent: formatPercent(discountValue / 100, locale, { maxFractionDigits: 2 }),
+        })
       : paper.discount;
   const money = (value: number) => formatAmount(Number.isFinite(value) ? value : 0, invoice.currency, locale);
   const labelled = (label: string, value: string) => format(paper.labelled, locale, { label, value });
@@ -54,9 +64,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
           <div>
             <p>{paper.paymentAccount}</p>
             <p>{invoice.from.paymentAccountName}</p>
-            <p>
-              {paper.routingNumber} {invoice.from.routingNumber}
-            </p>
+            <p>{labelled(paper.routingNumber, invoice.from.routingNumber)}</p>
           </div>
         </section>
 
@@ -94,7 +102,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
               className="grid grid-cols-[1fr_74px_116px_116px] border-b border-[oklch(0.86_0_0)] px-3 py-4"
             >
               <span>{item.description}</span>
-              <span className="text-right">{item.quantity}</span>
+              <span className="text-right">{formatNumber(item.quantity, locale)}</span>
               <span className="text-right">{money(item.unitPrice)}</span>
               <span className="text-right">{money(getLineAmount(item))}</span>
             </div>
@@ -116,7 +124,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
                 <span>
                   {format(paper.taxLine, locale, {
                     tax: text.taxes[taxOption.id],
-                    rate: formatPercent(taxOption.rate / 100, locale),
+                    rate: formatPercent(taxOption.rate / 100, locale, { maxFractionDigits: 2 }),
                   })}
                 </span>
                 <span>{money(getInvoiceTax(invoice))}</span>

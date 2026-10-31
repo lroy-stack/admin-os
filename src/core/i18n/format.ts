@@ -28,14 +28,14 @@ export function formatCurrency(amountMinor: number, currency: string, locale: Lo
     "currency",
     locale,
     { currency },
-    () => new Intl.NumberFormat(locale, { style: "currency", currency }),
+    () => new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "narrowSymbol" }),
   );
   const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
   return formatter.format(amountMinor / 10 ** digits);
 }
 
 export interface AmountOptions {
-  /** Short form such as "$258.6K" or "258,6 Tsd. $". */
+  /** Short form such as "$258.6K" in English and "1,2 Mio. $" in German. */
   readonly compact?: boolean;
   /** Pins the number of decimals, for example 0 for whole-unit amounts; otherwise `Intl` decides. */
   readonly fractionDigits?: number;
@@ -47,7 +47,8 @@ export interface AmountOptions {
  */
 export function formatAmount(amount: number, currency: string, locale: Locale, options: AmountOptions = {}): string {
   const { compact = false, fractionDigits } = options;
-  const formatOptions: Intl.NumberFormatOptions = { style: "currency", currency };
+  // Narrow symbol everywhere, like `currencySymbol`: "£" in every locale instead of "GBP" (es) or "£GB" (fr).
+  const formatOptions: Intl.NumberFormatOptions = { style: "currency", currency, currencyDisplay: "narrowSymbol" };
   if (compact) {
     formatOptions.notation = "compact";
     formatOptions.maximumFractionDigits = fractionDigits ?? 1;
@@ -65,18 +66,21 @@ export function formatCompact(value: number, locale: Locale): string {
 }
 
 export interface PercentOptions {
-  readonly fractionDigits?: number;
+  /** The most decimals shown (default 0): 12.5 % needs `maxFractionDigits: 1` or more, else it rounds to 13 %. */
+  readonly maxFractionDigits?: number;
+  /** The fewest decimals shown (default 0): `minFractionDigits: 1` writes 12 % as "12.0%". */
+  readonly minFractionDigits?: number;
   /** Shows "+" on positive values (and "-" on negative ones), for changes versus a previous period. */
   readonly signed?: boolean;
 }
 
 /** `ratio` is a fraction: 0.64 is "64%" in English and "64 %" in German and French. */
 export function formatPercent(ratio: number, locale: Locale, options: PercentOptions = {}): string {
-  const { fractionDigits = 0, signed = false } = options;
+  const { maxFractionDigits = 0, minFractionDigits = 0, signed = false } = options;
   return formatNumber(ratio, locale, {
     style: "percent",
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
+    minimumFractionDigits: minFractionDigits,
+    maximumFractionDigits: Math.max(maxFractionDigits, minFractionDigits),
     signDisplay: signed ? "exceptZero" : "auto",
   });
 }

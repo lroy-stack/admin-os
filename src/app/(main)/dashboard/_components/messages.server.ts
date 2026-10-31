@@ -33,8 +33,8 @@ const es: DashboardMessages = {
     proposal: "Propuesta",
     negotiation: "Negociación",
     closing: "Cierre",
-    won: "Ganado",
-    lost: "Perdido",
+    won: "Ganada",
+    lost: "Perdida",
   },
 };
 

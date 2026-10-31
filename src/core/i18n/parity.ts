@@ -39,8 +39,12 @@ export function flattenMessages(dictionary: unknown): Map<string, Message> {
   return out;
 }
 
-// French typography (docs/i18n/glossary.md): a no-break space before : ; ? ! and typographic apostrophes.
+// French typography (docs/i18n/glossary.md): a no-break space before : ; ? ! and before % after a number, and
+// typographic apostrophes. U+00A0 is the no-break space, U+202F the narrow one.
 const FRENCH_PLAIN_SPACE_BEFORE_PUNCTUATION = / [:;?!]/;
+// No space at all. A colon in "https://x" or "10:30" is not a sentence colon, so it is left alone.
+const FRENCH_NO_SPACE_BEFORE_PUNCTUATION = /[^\s\u00a0\u202f](?:[;?!]|:(?!\/\/|\d))/;
+const PERCENT_WITHOUT_NO_BREAK_SPACE = /[\d}] ?%/;
 const STRAIGHT_APOSTROPHE = /'/;
 
 function problemsFor(locale: Locale, path: string, message: Message): string[] {
@@ -51,6 +55,12 @@ function problemsFor(locale: Locale, path: string, message: Message): string[] {
     for (const text of texts) {
       if (FRENCH_PLAIN_SPACE_BEFORE_PUNCTUATION.test(text)) {
         problems.push(`${where} has a plain space before : ; ? or !; use a no-break space (U+00A0)`);
+      }
+      if (FRENCH_NO_SPACE_BEFORE_PUNCTUATION.test(text)) {
+        problems.push(`${where} has no space before : ; ? or !; put a no-break space (U+00A0) before it`);
+      }
+      if (PERCENT_WITHOUT_NO_BREAK_SPACE.test(text)) {
+        problems.push(`${where} needs a no-break space (U+00A0 or U+202F) between a number and %`);
       }
       if (STRAIGHT_APOSTROPHE.test(text)) {
         problems.push(`${where} has a straight apostrophe; use ’ (U+2019)`);
@@ -76,8 +86,9 @@ function sameInEveryLocale(messages: readonly Message[]): boolean {
 /**
  * Runtime half of ADR 0007's completeness (the compiler covers the other half). Throws one error listing every
  * problem: missing locale or key, empty string, differing `{placeholders}`, a plural without `one`/`other`, a message
- * identical in all four locales (an untranslated copy), or French typography broken (a plain space before : ; ? !, a
- * straight apostrophe). `allowIdentical` lists the paths that may legitimately match everywhere, such as brand names.
+ * identical in all four locales (an untranslated copy), or French typography broken (a plain or missing space before
+ * : ; ? !, no no-break space before % after a number, a straight apostrophe). `allowIdentical` lists the paths that
+ * may match in every locale, such as brand names.
  */
 export function assertDictionaryParity(
   dictionary: Readonly<Record<Locale, unknown>>,

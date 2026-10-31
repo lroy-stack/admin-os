@@ -65,12 +65,12 @@ const es: OverviewMessages = {
   revenue: {
     title: "Ingresos",
     rangeLabel: "Periodo de ingresos",
-    ranges: { sixMonths: "6 m", twelveMonths: "12 m" },
+    ranges: { sixMonths: "6 meses", twelveMonths: "12 meses" },
     options: "Opciones de ingresos",
     openReports: "Abrir informes de crecimiento",
     summary: {
-      one: "ganado en {count} mes · {atTarget} en objetivo",
-      other: "ganado en {count} meses · {atTarget} de {count} en objetivo",
+      one: "ganado en {count} mes · objetivo cumplido en {atTarget} de {count}",
+      other: "ganado en {count} meses · objetivo cumplido en {atTarget} de {count}",
     },
     won: "Ingresos ganados",
     target: "Objetivo mensual · {amount}",
@@ -111,12 +111,12 @@ const de: OverviewMessages = {
   revenue: {
     title: "Umsatz",
     rangeLabel: "Umsatzzeitraum",
-    ranges: { sixMonths: "6 M", twelveMonths: "12 M" },
+    ranges: { sixMonths: "6 Mon.", twelveMonths: "12 Mon." },
     options: "Umsatzoptionen",
     openReports: "Wachstumsberichte öffnen",
     summary: {
-      one: "gewonnen in {count} Monat · {atTarget} über dem Ziel",
-      other: "gewonnen in {count} Monaten · {atTarget} von {count} über dem Ziel",
+      one: "gewonnen in {count} Monat · Ziel in {atTarget} von {count} erreicht",
+      other: "gewonnen in {count} Monaten · Ziel in {atTarget} von {count} erreicht",
     },
     won: "Gewonnener Umsatz",
     target: "Monatsziel · {amount}",
@@ -157,12 +157,12 @@ const fr: OverviewMessages = {
   revenue: {
     title: "Chiffre d’affaires",
     rangeLabel: "Période du chiffre d’affaires",
-    ranges: { sixMonths: "6 m", twelveMonths: "12 m" },
+    ranges: { sixMonths: "6 mois", twelveMonths: "12 mois" },
     options: "Options du chiffre d’affaires",
     openReports: "Ouvrir les rapports de croissance",
     summary: {
-      one: "gagné en {count} mois · {atTarget} à l’objectif",
-      other: "gagné en {count} mois · {atTarget} sur {count} à l’objectif",
+      one: "gagné en {count} mois · objectif atteint {atTarget} sur {count}",
+      other: "gagné en {count} mois · objectif atteint {atTarget} sur {count}",
     },
     won: "Chiffre d’affaires gagné",
     target: "Objectif mensuel : {amount}",

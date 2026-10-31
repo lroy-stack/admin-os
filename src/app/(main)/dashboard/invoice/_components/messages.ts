@@ -94,9 +94,11 @@ export interface InvoiceMessages {
     readonly invalidDate: string;
     readonly dueBeforeIssue: string;
     readonly descriptionRequired: string;
+    /** Placeholders: `{min}`, the bound the quantity must exceed. */
     readonly quantityPositive: string;
     readonly priceNotNegative: string;
     readonly discountNotNegative: string;
+    /** Placeholders: `{max}`, the largest allowed percentage. */
     readonly percentTooHigh: string;
   };
 }

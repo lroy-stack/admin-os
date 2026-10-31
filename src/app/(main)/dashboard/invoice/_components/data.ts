@@ -1,4 +1,4 @@
-import { addDays, format } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 
 import type { Currency } from "@/core/money/client";
 
@@ -59,17 +59,20 @@ export interface InvoiceFormValues {
 /** Demo line items; the descriptions are business text, so the server writes them in the request's locale. */
 export type InvoiceItemDescriptions = Readonly<Record<"hosting" | "analytics" | "support", string>>;
 
-/** The form's starting values. Dates are `yyyy-MM-dd`; `today` is a parameter so the server decides the day. */
+/**
+ * The form's starting values. Dates are `yyyy-MM-dd`; `today` is the business day from `clock.get` (the business time
+ * zone, never the server's), so the document is dated the same wherever the server runs.
+ */
 export function createDefaultInvoice(
-  today: Date,
+  today: string,
   currency: Currency,
   descriptions: InvoiceItemDescriptions,
 ): InvoiceFormValues {
   return {
     referenceNumber: "FL-0425",
     currency,
-    issuedDate: format(today, "yyyy-MM-dd"),
-    paymentDueDate: format(addDays(today, 14), "yyyy-MM-dd"),
+    issuedDate: today,
+    paymentDueDate: format(addDays(parseISO(today), 14), "yyyy-MM-dd"),
     from: {
       name: "Weblabs Studio",
       email: "hello@weblabs.studio",

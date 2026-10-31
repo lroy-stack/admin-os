@@ -16,15 +16,19 @@ type MetaDictionary = Readonly<Record<Locale, { readonly meta: PageMeta }>>;
  *   export const generateMetadata = () => pageMetadata("/dashboard/default", overviewMessages);
  *
  * It sets title, description, canonical URL and the Open Graph pair (`og:locale` per language). The root layout stays
- * static (ADR 0007), so pages cannot inherit these from it. `extra` is merged last, for example `robots`.
+ * static (ADR 0007), so pages cannot inherit these from it. `extra` is merged last, for example `robots`; its
+ * `openGraph` and `alternates` are merged field by field into the defaults, so adding an `og:image` or a language
+ * alternate does not drop `og:locale`, the title, the URL or the canonical.
  */
 export async function pageMetadata(path: string, dictionary: MetaDictionary, extra: Metadata = {}): Promise<Metadata> {
   const locale = await getLocale();
   const { title, description } = dictionary[locale].meta;
+  const { openGraph, alternates, ...rest } = extra;
   return {
     title,
     description,
-    alternates: { canonical: path },
+    ...rest,
+    alternates: { canonical: path, ...alternates },
     openGraph: {
       type: "website",
       siteName: APP_CONFIG.name,
@@ -32,7 +36,7 @@ export async function pageMetadata(path: string, dictionary: MetaDictionary, ext
       url: path,
       title,
       description,
-    },
-    ...extra,
+      ...openGraph,
+    } as Metadata["openGraph"],
   };
 }

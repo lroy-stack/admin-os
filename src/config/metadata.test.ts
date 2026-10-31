@@ -41,4 +41,22 @@ describe("pageMetadata", () => {
     const metadata = await pageMetadata("/x", dictionary, { robots: { index: false } });
     expect(metadata.robots).toEqual({ index: false });
   });
+
+  it("keeps og:locale, title, url and canonical when a page adds Open Graph and alternates fields", async () => {
+    cookieValue.locale = "de";
+    const metadata = await pageMetadata("/x", dictionary, {
+      openGraph: { images: ["/cover.png"] },
+      alternates: { languages: { fr: "/fr/x" } },
+    });
+    expect({ openGraph: metadata.openGraph, alternates: metadata.alternates }).toMatchObject({
+      openGraph: { locale: "de_DE", title: "Titel", url: "/x", images: ["/cover.png"] },
+      alternates: { canonical: "/x", languages: { fr: "/fr/x" } },
+    });
+  });
+
+  it("lets a page override a single default field", async () => {
+    cookieValue.locale = "en";
+    const metadata = await pageMetadata("/x", dictionary, { openGraph: { title: "Custom" } });
+    expect(metadata.openGraph).toMatchObject({ title: "Custom", locale: "en_US", url: "/x" });
+  });
 });

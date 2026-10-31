@@ -79,10 +79,10 @@ const en: InvoiceMessages = {
     invalidDate: "Pick a valid date.",
     dueBeforeIssue: "The due date can’t be before the issued date.",
     descriptionRequired: "Describe the item.",
-    quantityPositive: "Enter a quantity greater than 0.",
+    quantityPositive: "Enter a quantity greater than {min}.",
     priceNotNegative: "The price can’t be negative.",
     discountNotNegative: "The discount can’t be negative.",
-    percentTooHigh: "A percentage discount can’t exceed 100%.",
+    percentTooHigh: "A percentage discount can’t exceed {max}.",
   },
 };
 
@@ -162,10 +162,10 @@ const es: InvoiceMessages = {
     invalidDate: "Elige una fecha válida.",
     dueBeforeIssue: "El vencimiento no puede ser anterior a la emisión.",
     descriptionRequired: "Describe el concepto.",
-    quantityPositive: "Introduce una cantidad mayor que 0.",
+    quantityPositive: "Introduce una cantidad mayor que {min}.",
     priceNotNegative: "El precio no puede ser negativo.",
     discountNotNegative: "El descuento no puede ser negativo.",
-    percentTooHigh: "Un descuento porcentual no puede superar el 100 %.",
+    percentTooHigh: "Un descuento porcentual no puede superar el {max}.",
   },
 };
 
@@ -245,10 +245,10 @@ const de: InvoiceMessages = {
     invalidDate: "Wähle ein gültiges Datum.",
     dueBeforeIssue: "Das Fälligkeitsdatum darf nicht vor dem Rechnungsdatum liegen.",
     descriptionRequired: "Beschreibe die Position.",
-    quantityPositive: "Gib eine Menge größer als 0 ein.",
+    quantityPositive: "Gib eine Menge größer als {min} ein.",
     priceNotNegative: "Der Preis darf nicht negativ sein.",
     discountNotNegative: "Der Rabatt darf nicht negativ sein.",
-    percentTooHigh: "Ein prozentualer Rabatt darf 100 % nicht überschreiten.",
+    percentTooHigh: "Ein prozentualer Rabatt darf {max} nicht überschreiten.",
   },
 };
 
@@ -328,10 +328,10 @@ const fr: InvoiceMessages = {
     invalidDate: "Choisissez une date valide.",
     dueBeforeIssue: "L’échéance ne peut pas précéder la date d’émission.",
     descriptionRequired: "Décrivez la ligne.",
-    quantityPositive: "Saisissez une quantité supérieure à 0.",
+    quantityPositive: "Saisissez une quantité supérieure à {min}.",
     priceNotNegative: "Le prix ne peut pas être négatif.",
     discountNotNegative: "La remise ne peut pas être négative.",
-    percentTooHigh: "Une remise en pourcentage ne peut pas dépasser 100 %.",
+    percentTooHigh: "Une remise en pourcentage ne peut pas dépasser {max}.",
   },
 };
 

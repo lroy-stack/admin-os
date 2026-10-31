@@ -1,3 +1,4 @@
+import { formatNumber } from "./format";
 import type { Locale } from "./locale";
 
 /**
@@ -57,8 +58,18 @@ function selectForm(plural: Plural, locale: Locale, count: unknown): string {
   return plural[pluralRules(locale).select(count)] ?? plural.other;
 }
 
-/** Picks the plural form (when any) and fills `{name}` placeholders. Unknown placeholders are left visible. */
+const written = (value: string | number, locale: Locale) =>
+  typeof value === "number" ? formatNumber(value, locale) : value;
+
+/**
+ * Picks the plural form (when any) and fills `{name}` placeholders. Unknown placeholders are left visible. A numeric
+ * param is written for the locale after the plural is chosen ("1,234" in English, "1.234" in German), so the plural
+ * rules see the raw number; pass a string to print a value exactly as it is (a year, an id).
+ */
 export function format(message: Message, locale: Locale, params: MessageParams = {}): string {
   const template = typeof message === "string" ? message : selectForm(message, locale, params.count);
-  return template.replace(PLACEHOLDER, (whole, name: string) => (name in params ? String(params[name]) : whole));
+  return template.replace(PLACEHOLDER, (whole, name: string) => {
+    const value = params[name];
+    return value === undefined ? whole : written(value, locale);
+  });
 }

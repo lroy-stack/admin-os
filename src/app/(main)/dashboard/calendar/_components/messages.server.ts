@@ -60,7 +60,7 @@ const es: CalendarMessages = {
   title: "Agenda del equipo",
   kpis: {
     eventsInDays: { one: "Eventos en {count} día", other: "Eventos en {count} días" },
-    booked: "Reservado en reuniones",
+    booked: "En reuniones",
     focus: "Tiempo de concentración protegido",
     hours: "{hours} h",
   },
@@ -112,7 +112,7 @@ const de: CalendarMessages = {
     focus: "Geschützte Fokuszeit",
     hours: "{hours} h",
   },
-  stepper: { label: "Zeitraum wechseln", previous: "Voriger Zeitraum", today: "Heute", next: "Nächster Zeitraum" },
+  stepper: { label: "Zeitraum wechseln", previous: "Vorheriger Zeitraum", today: "Heute", next: "Nächster Zeitraum" },
   filter: {
     label: "Kalender",
     all: "Alle Kalender",
@@ -128,7 +128,7 @@ const de: CalendarMessages = {
     nothingScheduled: "In diesem Monat steht nichts mehr an.",
     allDay: "Ganztägig",
     timeRange: "{start} – {end}",
-    closingSoon: "Bald fällig",
+    closingSoon: "Abschluss in Kürze",
     openPipeline: "Pipeline öffnen",
   },
   demoEvents: {
@@ -167,8 +167,8 @@ const fr: CalendarMessages = {
     next: "Période suivante",
   },
   filter: {
-    label: "Agenda",
-    all: "Tous les agendas",
+    label: "Calendrier",
+    all: "Tous les calendriers",
     work: "Travail",
     personal: "Personnel",
     team: "Équipe",
@@ -181,7 +181,7 @@ const fr: CalendarMessages = {
     nothingScheduled: "Rien d’autre de prévu ce mois-ci.",
     allDay: "Toute la journée",
     timeRange: "{start} – {end}",
-    closingSoon: "Bientôt conclues",
+    closingSoon: "À conclure prochainement",
     openPipeline: "Ouvrir le pipeline",
   },
   demoEvents: {

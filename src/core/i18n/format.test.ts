@@ -30,7 +30,7 @@ describe("formatCurrency", () => {
     ["EUR", 123_456, "de", "1.234,56 €"],
     ["JPY", 1234, "en", "¥1,234"],
     ["KWD", 1_234_567, "en", "KWD 1,234.567"],
-    ["USD", 123_456, "fr", "1 234,56 $US"],
+    ["USD", 123_456, "fr", "1 234,56 $"],
   ] as const)("reads minor digits of %s: %i in %s", (currency, minor, locale, expected) => {
     expect(normalize(formatCurrency(minor, currency, locale))).toBe(expected);
   });

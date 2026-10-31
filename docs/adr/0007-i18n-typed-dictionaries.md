@@ -20,7 +20,7 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 >   `examplesNav`, still keyed by stable ids. The preset's own entries resolve `labelKey` on the server with the
 >   preset vocabulary (`textFor` in `src/config/vocabulary.server.ts`) and the client receives plain strings.
 > - The dashboard layout renders `lang={locale}` on its wrapper, so the language is right from the first byte even when
->   `Accept-Language` decided it; `<html lang>` is set by the boot script and restored when the provider unmounts.
+>   `Accept-Language` decided it; `<html lang>` is set by the boot script. Only the outermost `LocaleProvider` manages it and restores it on unmount; a nested provider (a page's bundles) never touches it.
 
 > **Amended 2026-10-31 (T6c, whole app in four languages, spec 001 D5):**
 >
@@ -60,7 +60,7 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 >
 > **Formats.** Everything user-visible goes through `@/core/i18n/client` (from `format.ts` and `chart-format.ts`):
 > `formatAmount` (major units, `compact` or `fractionDigits`), `formatCurrency` (minor units), `formatCompact`,
-> `formatPercent` (`signed`), `formatCalendarDate` (an ISO day, formatted in UTC so it never shifts), `formatLocalDate`
+> `formatPercent` (`signed`, `maxFractionDigits`, `minFractionDigits`, both default 0: 12.5 % needs `maxFractionDigits: 1` or more), `formatCalendarDate` (an ISO day, formatted in UTC so it never shifts), `formatLocalDate`
 > (a `Date` that a browser widget built in the device zone), `formatDate`/`formatTime` (business zone), `monthNames`,
 > `weekdayNames`, `weekdayNamesFromWeekStart`, `weekStart`, `currencyOptions`, `currencySymbol`, and for recharts
 > `chartFormatters(locale, currency)` or `useChartFormatters()`. No `toLocaleString`, no `Intl` constructor with a literal
@@ -68,27 +68,33 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 > The old `formatCurrency` in `src/lib/utils.ts` and `formatShortDate`, `formatMonth`, `formatTimeAgo` and `stageLabels` in
 > `src/lib/crm.ts` (hard-coded `en-US`, USD, English) stay only for screens not yet converted; whoever converts the last
 > caller deletes them, and T6e checks they are gone.
-> Widget locale packs live in a separate entry, `@/core/i18n/ui` (`dateFnsLocale` for `react-day-picker` and date-fns
-> options, `fullCalendarLocale` for FullCalendar), because the four date-fns packs and three FullCalendar packs are
-> about 30 KB; import them only where such a widget is mounted. The FullCalendar `locale` goes through the props that
-> `EventCalendarViews` already forwards (`{...restOptions}`), so `src/components/calendar` is untouched.
+> The date-fns locale packs live in a separate entry, `@/core/i18n/ui` (`dateFnsLocale` for `react-day-picker` and
+> date-fns options); import it only where such a widget is mounted. The FullCalendar packs sit next to their only
+> consumer, `dashboard/calendar/_components/full-calendar-locale.ts`, so no other dashboard bundles them. The FullCalendar
+> `locale` goes through the props that `EventCalendarViews` already forwards (`{...restOptions}`), so
+> `src/components/calendar` is untouched. Message placeholders: `format()` writes a numeric param with `formatNumber`
+> for the locale (after choosing the plural); pass a string to print a value as it is.
 >
 > **Demo content.** Business text in demo data (deal titles, event titles, line-item descriptions, email and chat
 > bodies, notes) is localized on the server before it reaches a client component. Two shapes, both complete by type:
 > a key-per-locale entry in the route dictionary (the calendar's `demoEvents`, the invoice's `demoItems`), or a
 > translation table next to shared data (`src/data/crm-text.ts`: `localizeDeals`, which throws for an untranslated
 > title, with a test that every deal is covered). People, companies, emails, addresses, brands and model codes stay as
-> they are. Content built from dates (`new Date()`) is built where the time zone is right: calendar events in the client,
-> the invoice's day on the server.
+> they are. Content built from dates is built where the clock is right: the invoice's day comes from the business clock
+> (`clock.get`, the business time zone, not the server's), and the calendar's demo events are built in an effect after
+> mount (`null` until then, like `upcoming`) because that component is also rendered on the server, whose clock and zone
+> are not the device's.
 >
 > **Currency.** The currency is a business setting, independent of the language: the locale decides how an amount is
 > written, never which currency it is in.
 >
 > - `CURRENCIES = ["USD", "EUR", "GBP"]` and `isCurrency` are in `src/core/money` (client entry `@/core/money/client`,
 >   without zod). A `Money` value carries its own currency and is formatted with it.
-> - Resolution mirrors the locale: the `currency` cookie, then the region of the first `Accept-Language` tag whose
->   region has an offered currency (es-ES, de-DE, fr-FR and the other euro-area regions give EUR, en-GB gives GBP, en-US
->   gives USD; a tag without a region says nothing), then `APP_CONFIG.i18n.defaultCurrency` (USD). `resolveCurrency` is
+> - Resolution mirrors the locale: the `currency` cookie, then the region of the first `Accept-Language` tag that has a region
+>   (es-ES, de-DE, fr-FR and the other euro-area regions give EUR, en-GB gives GBP, en-US gives USD; a tag without a
+>   region says nothing), then `APP_CONFIG.i18n.defaultCurrency` (USD). If that first region has no offered currency
+>   (de-CH, ja-JP), the default applies; a lower-q tag does not override it (spec D6). Every amount is written with the
+>   narrow symbol (`currencyDisplay: "narrowSymbol"`: "£" in all four languages), the same as the input adornment. `resolveCurrency` is
 >   pure and tested; `getCurrency()` sits next to `getLocale()`.
 > - Preferences has a Currency select directly under Language. `setCurrency(unknown)` validates, writes the cookie with
 >   the `locale` cookie's attributes, and the picker toasts a translated error like `setLocale`. "Restore defaults"
@@ -100,17 +106,23 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 >
 > **Enforcement.**
 >
-> - One Biome override in `biome.json` lists the finished folders and turns on two checks for them: `style/noJsxLiterals`
->   for text between tags, and the GritQL plugin `lint/no-visible-string-props.grit` for string literals in visible
->   props (`aria-label`, `placeholder`, `title`, `alt`, `label`, `description`, `tooltip`, and any prop ending in
->   `Label`, `Text`, `Title`, `Description` or `Placeholder`). The plugin lists visible props by name because Biome's
->   `noStrings` option cannot tell `aria-label` from `className`, and its `allowedStrings` is global. Punctuation and
->   symbols alone (":", "%", "/") are allowed by `noJsxLiterals`. A string built in an expression
->   (`` {`${name} (${rate})`} ``) is not flagged, so build text from dictionary templates, not from literals.
+> - One Biome override in `biome.json` lists the finished folders and turns on three checks for them:
+>   `style/noJsxLiterals` for text between tags, and two GritQL plugins. `lint/no-visible-string-props.grit` flags a
+>   string in a visible prop, however it is written: `prop="…"`, `prop={"…"}`, ``prop={`…`}`` and
+>   `prop={cond ? "…" : x}`. The props are `aria-label`, `placeholder`, `title`, `alt`, `label`, `description`,
+>   `tooltip`, `heading`, `caption`, `summary`, `message`, and any prop ending in `Label`, `Text`, `Title`,
+>   `Description`, `Placeholder` or `Message`. The plugin lists them by name because Biome's `noStrings` option cannot
+>   tell `aria-label` from `className`. `lint/no-visible-string-children.grit` flags the braced forms between tags:
+>   `{"…"}`, a template literal and a conditional with a string branch, including in `sr-only` text. A plain string
+>   with no letters (`"%"`, `"·"`, `"—"`) is punctuation and stays allowed, but a bare `:` between tags is flagged
+>   by `noJsxLiterals`, so write it as `{":"}` or put it in the template. `lint/fixtures.test.ts` runs Biome over
+>   `lint/fixtures/` (one file per leak or allowed case) with the repo config, so a change to the rules shows up as
+>   a test failure.
 > - **To finish a folder**, append it to the override's `includes` array in the same change that moves its last string
 >   into a dictionary. One line per route or folder, kept in group order. T6e widens the list to all of `src/app` and
 >   `src/components` except `ui/` and `calendar/`.
-> - `assertDictionaryParity` also rejects, in `fr`, a plain space before `: ; ? !` and a straight apostrophe.
+> - `assertDictionaryParity` also rejects, in `fr`, a plain space or no space before `: ; ? !`, a missing no-break space
+>   between a number (or `{placeholder}`) and `%`, and a straight apostrophe.
 >
 > **Glossary.** `docs/i18n/glossary.md` is the vocabulary and the register (es tú, de du, fr vous). One term per
 > concept; a new term is a new row in the same commit.
@@ -133,12 +145,15 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 >    `useMessages(key)`, `useLocale()`, `useCurrency()`, `useChartFormatters()`, all from `@/core/i18n/client` (never the
 >    barrel). Build strings with `format(template, locale, params)`; pick plurals with a `Plural`.
 > 7. **Formats.** Replace every number, date, currency and name list with the helpers above. FullCalendar gets
->    `locale={fullCalendarLocale(locale)}`; the shadcn `Calendar` gets `locale={dateFnsLocale(locale)}`.
+>    `locale={fullCalendarLocale(locale)}` (from the calendar route); the shadcn `Calendar` gets `locale={dateFnsLocale(locale)}`.
 > 8. **Validation.** A zod schema is built from the dictionary's `validation` messages (see `createInvoiceSchema`), so the
 >    client resolver and any server that parses the same data report the same sentence.
 > 9. **Gate.** Append the folder to the Biome override, then run `npm run check`, `npx tsc --noEmit`, `npm test` and
 >    `npm run build`. Check the screen in all four languages and, if it shows money, in all three currencies.
-> 10. **Do not** touch `src/components/ui` or `src/components/calendar`, edit the dictionary of a screen you do not
+> 10. **Review by hand what the linter cannot see.** The plugins only see literals written in the JSX. Check, in review:
+>     constants passed as props (`label={HINT}`), `.map` over arrays of label strings, `toast("…")` and other calls that
+>     show text, dictionaries written inside a component, and strings returned from helper functions.
+> 11. **Do not** touch `src/components/ui` or `src/components/calendar`, edit the dictionary of a screen you do not
 >     own, or leave an English literal "for now".
 
 ## Context

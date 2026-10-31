@@ -14,7 +14,7 @@ import {
   weekStart,
 } from "@/core/i18n";
 
-import { dateFnsLocale, fullCalendarLocale } from "./ui";
+import { dateFnsLocale } from "./ui";
 
 // TypeScript's lib does not declare `Intl.Locale#getWeekInfo` yet; Node 24 has it.
 interface WeekInfoLocale {
@@ -26,8 +26,8 @@ const normalize = (text: string) => text.replace(/[  ]/g, " ");
 describe("formatAmount", () => {
   it.each([
     ["en", { compact: true }, "$258.6K"],
-    ["es", { compact: true }, "258,6 mil US$"],
-    ["fr", { compact: true }, "258,6 k $US"],
+    ["es", { compact: true }, "258,6 mil $"],
+    ["fr", { compact: true }, "258,6 k $"],
     ["en", { fractionDigits: 0 }, "$258,600"],
     ["de", { fractionDigits: 0 }, "258.600 $"],
     ["en", {}, "$258,600.00"],
@@ -67,8 +67,26 @@ describe("formatPercent", () => {
     expect(formatPercent(ratio, "en", { signed: true })).toBe(expected);
   });
 
-  it("honours fraction digits", () => {
-    expect(formatPercent(0.1234, "en", { fractionDigits: 1 })).toBe("12.3%");
+  it("shows no decimals by default", () => {
+    expect(formatPercent(0.125, "en")).toBe("13%");
+  });
+
+  it.each([
+    ["en", "12.5%"],
+    ["es", "12,5 %"],
+    ["de", "12,5 %"],
+    ["fr", "12,5 %"],
+  ] as const)("keeps 12.5 % in %s with maxFractionDigits", (locale, expected) => {
+    expect(normalize(formatPercent(0.125, locale, { maxFractionDigits: 2 }))).toBe(expected);
+  });
+
+  it.each([
+    [0.12, { maxFractionDigits: 2 }, "12%"],
+    [0.1234, { maxFractionDigits: 1 }, "12.3%"],
+    [0.12, { minFractionDigits: 1, maxFractionDigits: 2 }, "12.0%"],
+    [0.12, { minFractionDigits: 1 }, "12.0%"],
+  ] as const)("writes %d with %o", (ratio, options, expected) => {
+    expect(formatPercent(ratio, "en", options)).toBe(expected);
   });
 });
 
@@ -133,14 +151,6 @@ describe("widget locale packs", () => {
 
   it.each(LOCALES)("gives date-fns a pack whose code starts with %s", (locale) => {
     expect(dateFnsLocale(locale).code?.startsWith(locale)).toBe(true);
-  });
-
-  it.each(["es", "de", "fr"] as const)("gives FullCalendar a %s pack with the same week start", (locale) => {
-    expect(fullCalendarLocale(locale)).toMatchObject({ code: locale, week: { dow: weekStart(locale) } });
-  });
-
-  it("leaves English to FullCalendar's built-in locale", () => {
-    expect(fullCalendarLocale("en")).toBe("en");
   });
 });
 

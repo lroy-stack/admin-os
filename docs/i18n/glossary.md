@@ -29,13 +29,26 @@ A concept has **one** translation per language across the whole app. Do not use 
 | Decimal and thousands | `1,234.5` | `1234,5` / `12.345,6` | `1.234,5` | `1 234,5` (narrow no-break space) |
 
 - Numbers, percentages, currency, dates, times, lists and plurals are **never typed**. They come from `Intl` through `@/core/i18n` (`formatAmount`, `formatPercent`, `formatCalendarDate`, `formatList`, `Plural`). That is what makes `12 %` and `1 234,56 €` correct.
-- The parity test (`assertDictionaryParity`) rejects, in `fr`, a plain space before `: ; ? !` and a straight apostrophe.
+- The parity test (`assertDictionaryParity`) rejects, in `fr`, a plain space or no space before `: ; ? !`, no no-break space between a number (or `{placeholder}`) and `%`, and a straight apostrophe.
 - A template such as `"{label}: {value}"` carries its own colon so French can put the no-break space in it (`"{label} : {value}"`). Never put `:` in JSX next to a translated label.
 - Quotation marks: avoid them in UI text. If unavoidable: en “…”, es «…», de „…“, fr « … » (no-break spaces inside).
 
 ## Currency
 
 The currency is a **business setting, independent of the language** (ADR 0007, amendment of the currency scope). Supported: USD, EUR, GBP. The dictionary never contains a currency symbol or the words "dollar" or "euro" for an amount; the amount is formatted by `Intl` with the business currency, or with the `Money` value's own currency. The picker names currencies with `Intl.DisplayNames` plus the symbol ("euro (€)", "Euro (€)", "Pfund Sterling (£)").
+
+## Status agreement (es, fr)
+
+A status agrees in gender and number with the noun it describes. The dictionary of a screen picks the form for the noun that screen shows; it never reuses the masculine form because the other screen did.
+
+| Noun | es | fr | Statuses |
+| --- | --- | --- | --- |
+| Deal | oportunidad (f) | affaire (f) | es Ganada, Perdida; fr Gagnée, Perdue |
+| Invoice | factura (f) | facture (f) | es Enviada, Pagada, Vencida; fr Envoyée, Payée |
+| Task | tarea (f) | tâche (f) | es Completada; fr Terminée |
+| Booking | reserva (f) | réservation (f) | es Confirmada, Cancelada; fr Confirmée, Annulée |
+
+German statuses are participles without gender in these positions and need no rule.
 
 ## Terms
 
@@ -45,10 +58,11 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | --- | --- | --- | --- | --- | --- |
 | Dashboard (one) | Dashboard | Panel | Dashboard | Tableau de bord | Nav group "Dashboards" is "Paneles" / "Dashboards" / "Tableaux de bord" |
 | Overview | Overview | Resumen | Übersicht | Aperçu | |
-| Sales overview | Sales Overview | Resumen de ventas | Vertriebsübersicht | Aperçu des ventes | Page title |
+| Sales overview | Sales overview | Resumen de ventas | Vertriebsübersicht | Aperçu des ventes | Page title |
 | Schedule (staff) | Schedule | Agenda | Termine | Planning | Nav label |
-| Team schedule | Team Schedule | Agenda del equipo | Teamkalender | Planning de l’équipe | Page title |
+| Team schedule | Team schedule | Agenda del equipo | Teamkalender | Planning de l’équipe | Page title |
 | Calendar (the widget) | Calendar | Calendario | Kalender | Calendrier | Calendar view, calendar filter |
+| All calendars | All calendars | Todos los calendarios | Alle Kalender | Tous les calendriers | "Agenda" in fr is a diary, not the filter |
 | Reservations | Reservations | Reservas | Reservierungen | Réservations | See booking |
 | Customers (the list) | Customers | Clientes | Kunden | Clients | |
 | Products | Products | Productos | Produkte | Produits | |
@@ -56,7 +70,7 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | Growth (analytics) | Growth | Crecimiento | Wachstum | Croissance | Nav label of the analytics screen |
 | Projects | Projects | Proyectos | Projekte | Projets | |
 | Tasks | Tasks | Tareas | Aufgaben | Tâches | |
-| Files | File Manager | Archivos | Dateien | Fichiers | |
+| Files | File manager | Archivos | Dateien | Fichiers | |
 | Inbox | Inbox | Bandeja de entrada | Posteingang | Boîte de réception | |
 | Email | Email | Correo | E-Mail | E-mail | |
 | Chat | Chat | Chat | Chat | Chat | Same word everywhere |
@@ -102,14 +116,15 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | Qualification | Qualification | Cualificación | Qualifizierung | Qualification | |
 | Proposal | Proposal | Propuesta | Angebot | Proposition | |
 | Negotiation | Negotiation | Negociación | Verhandlung | Négociation | |
-| Won | Won | Ganado | Gewonnen | Gagnée | fr agrees with "affaire" |
-| Lost | Lost | Perdido | Verloren | Perdue | |
+| Won | Won | Ganado / Ganada | Gewonnen | Gagné / Gagnée | A deal ("oportunidad", "affaire") is feminine |
+| Lost | Lost | Perdido / Perdida | Verloren | Perdu / Perdue | See "Status agreement" below |
 | Open | Open | Abierto | Offen | Ouvert | |
 | Closed | Closed | Cerrado | Geschlossen | Clos | |
 | Draft | Draft | Borrador | Entwurf | Brouillon | |
-| Sent | Sent | Enviado | Gesendet | Envoyé | |
-| Paid | Paid | Pagado | Bezahlt | Payé | |
-| Overdue | Overdue | Vencido | Überfällig | En retard | |
+| Sent | Sent | Enviado / Enviada | Gesendet | Envoyé / Envoyée | An invoice ("factura", "facture") is feminine |
+| Paid | Paid | Pagado / Pagada | Bezahlt | Payé / Payée | |
+| Overdue | Overdue | Vencido / Vencida | Überfällig | En retard | fr "En retard" does not agree |
+| Completed | Completed | Completado / Completada | Abgeschlossen | Terminé / Terminée | A task ("tarea", "tâche") is feminine |
 | Pending | Pending | Pendiente | Ausstehend | En attente | |
 | Confirmed | Confirmed | Confirmado | Bestätigt | Confirmé | |
 | Cancelled | Cancelled | Cancelado | Storniert | Annulé | de: "Storniert" for bookings and invoices; "Abgebrochen" only for an interrupted process |
@@ -138,15 +153,15 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | Concept | en | es | de | fr | Note |
 | --- | --- | --- | --- | --- | --- |
 | Invoice | Invoice | Factura | Rechnung | Facture | |
-| Reference number | Reference Number | Número de referencia | Referenznummer | Numéro de référence | |
-| Issued date | Issued Date | Fecha de emisión | Rechnungsdatum | Date d’émission | |
-| Due date | Due Date | Fecha de vencimiento | Fälligkeitsdatum | Date d’échéance | |
-| Billed to | Billed To | Facturar a | Rechnung an | Facturé à | |
+| Reference number | Reference number | Número de referencia | Referenznummer | Numéro de référence | |
+| Issued date | Issued date | Fecha de emisión | Rechnungsdatum | Date d’émission | |
+| Due date | Due date | Fecha de vencimiento | Fälligkeitsdatum | Date d’échéance | |
+| Billed to | Billed to | Facturar a | Rechnung an | Facturé à | |
 | Line item | Item | Concepto | Position | Ligne | |
 | Description | Description | Descripción | Beschreibung | Description | |
 | Quantity (short) | Units | Uds. | Menge | Qté | |
 | Unit price | Unit cost | Precio unitario | Einzelpreis | Prix unitaire | |
-| Line total | Line Total | Importe | Gesamt | Total ligne | |
+| Line total | Line total | Importe | Gesamt | Total ligne | |
 | Net amount | Net amount | Base imponible | Nettobetrag | Montant net | |
 | Discount | Discount | Descuento | Rabatt | Remise | |
 | Tax | Tax | Impuesto | Steuer | Taxe | |
@@ -165,7 +180,7 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | Concept | en | es | de | fr | Note |
 | --- | --- | --- | --- | --- | --- |
 | Save | Save | Guardar | Speichern | Enregistrer | |
-| Save as draft | Save as Draft | Guardar borrador | Als Entwurf speichern | Enregistrer le brouillon | |
+| Save as draft | Save as draft | Guardar borrador | Als Entwurf speichern | Enregistrer le brouillon | |
 | Cancel | Cancel | Cancelar | Abbrechen | Annuler | |
 | Delete | Delete | Eliminar | Löschen | Supprimer | es: "Eliminar", not "Borrar" |
 | Remove (from a list) | Remove | Quitar | Entfernen | Retirer | A line from an invoice: "Eliminar el concepto" is also fine; pick one per screen |
@@ -200,10 +215,12 @@ The currency is a **business setting, independent of the language** (ADR 0007, a
 | Month | Month | Mes | Monat | Mois | |
 | Year | Year | Año | Jahr | Année | |
 | Period | Period | Periodo | Zeitraum | Période | |
+| Previous period | Previous period | Periodo anterior | Vorheriger Zeitraum | Période précédente | |
 | Up next | Up next | Próximos | Als Nächstes | À venir | |
-| Closing soon | Closing soon | Próximos cierres | Bald fällig | Bientôt conclues | |
+| Closing soon | Closing soon | Próximos cierres | Abschluss in Kürze | À conclure prochainement | Deals about to close. de "Bald fällig" is for payments, not deals |
+| Months at target | at target in {atTarget} of {count} | objetivo cumplido en {atTarget} de {count} | Ziel in {atTarget} von {count} erreicht | objectif atteint {atTarget} sur {count} | Revenue card summary |
 | vs previous month | vs last month | vs. mes anterior | ggü. Vormonat | vs mois précédent | |
-| Months (short range) | 6M, 12M | 6 m, 12 m | 6 M, 12 M | 6 m, 12 m | |
+| Months (range option) | 6M, 12M | 6 meses, 12 meses | 6 Mon., 12 Mon. | 6 mois, 12 mois | Never "m" or "M" in es, de or fr: "M" reads as millions and "m" as metres |
 
 ### States and feedback
 

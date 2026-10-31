@@ -1,18 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { LOCALES } from "@/core/i18n";
+import { format, formatNumber, formatPercent, LOCALES, placeholdersOf } from "@/core/i18n";
 
 import { createDefaultInvoice, type InvoiceFormValues, type InvoiceLineItem } from "./data";
 import { createInvoiceSchema } from "./invoice-schema";
 import { invoiceMessages } from "./messages.server";
 
-const today = new Date("2026-10-31T12:00:00Z");
+const today = "2026-10-31";
 
 function validate(locale: (typeof LOCALES)[number], change: (invoice: ReturnType<typeof base>) => void) {
   const invoice = base(locale);
   change(invoice);
-  const result = createInvoiceSchema(invoiceMessages[locale].validation).safeParse(invoice);
+  const result = createInvoiceSchema(invoiceMessages[locale].validation, locale).safeParse(invoice);
   return result.success ? [] : result.error.issues.map((issue) => issue.message);
+}
+
+/** The dictionary sentence with its bound written for the locale, as the schema reports it. */
+function sentence(locale: (typeof LOCALES)[number], key: "quantityPositive" | "percentTooHigh") {
+  const params: Record<string, string> =
+    key === "quantityPositive" ? { min: formatNumber(0, locale) } : { max: formatPercent(1, locale) };
+  return format(invoiceMessages[locale].validation[key], locale, params);
 }
 
 function patchFirstItem(invoice: InvoiceFormValues, patch: Partial<InvoiceLineItem>) {
@@ -30,12 +37,12 @@ describe("invoice schema", () => {
 
   it.each(LOCALES)("reports a zero quantity in %s", (locale) => {
     const messages = validate(locale, (invoice) => patchFirstItem(invoice, { quantity: 0 }));
-    expect(messages).toEqual([invoiceMessages[locale].validation.quantityPositive]);
+    expect(messages).toEqual([sentence(locale, "quantityPositive")]);
   });
 
   it.each(LOCALES)("reports an emptied number input (NaN) as a quantity problem in %s", (locale) => {
     const messages = validate(locale, (invoice) => patchFirstItem(invoice, { quantity: Number.NaN }));
-    expect(messages).toEqual([invoiceMessages[locale].validation.quantityPositive]);
+    expect(messages).toEqual([sentence(locale, "quantityPositive")]);
   });
 
   it.each(LOCALES)("reports an empty reference in %s", (locale) => {
@@ -57,7 +64,7 @@ describe("invoice schema", () => {
       invoice.discountType = "percent";
       invoice.discountValue = 120;
     });
-    expect(messages).toEqual([invoiceMessages[locale].validation.percentTooHigh]);
+    expect(messages).toEqual([sentence(locale, "percentTooHigh")]);
   });
 
   it("rejects a currency the kit does not offer", () => {
@@ -65,5 +72,36 @@ describe("invoice schema", () => {
       Object.assign(invoice, { currency: "JPY" });
     });
     expect(messages).toHaveLength(1);
+  });
+
+  it.each(LOCALES)("keeps the bounds out of the %s sentences as placeholders", (locale) => {
+    const { quantityPositive, percentTooHigh } = invoiceMessages[locale].validation;
+    expect([placeholdersOf(quantityPositive), placeholdersOf(percentTooHigh)]).toEqual([["min"], ["max"]]);
+  });
+
+  it.each(LOCALES)("writes the quantity bound for the locale in %s", (locale) => {
+    const messages = validate(locale, (invoice) => patchFirstItem(invoice, { quantity: 0 }));
+    expect(messages[0]).toContain(formatNumber(0, locale));
+    expect(messages[0]).not.toContain("{");
+  });
+
+  it.each(LOCALES)("writes the percentage bound for the locale in %s", (locale) => {
+    const messages = validate(locale, (invoice) => {
+      invoice.discountType = "percent";
+      invoice.discountValue = 120;
+    });
+    expect(messages[0]).toContain(formatPercent(1, locale));
+    expect(messages[0]).not.toContain("{");
+  });
+});
+
+describe("the demo invoice's dates", () => {
+  it.each([
+    ["2026-10-31", "2026-11-14"],
+    ["2026-12-25", "2027-01-08"],
+    ["2026-03-20", "2026-04-03"],
+  ])("dates it %s and due 14 days later on %s, whatever the device zone", (day, due) => {
+    const invoice = createDefaultInvoice(day, "EUR", invoiceMessages.en.demoItems);
+    expect([invoice.issuedDate, invoice.paymentDueDate]).toEqual([day, due]);
   });
 });

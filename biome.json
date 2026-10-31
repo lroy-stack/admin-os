@@ -41,7 +41,8 @@
       "!dist",
       "!out",
       "!src/components/ui",
-      "!src/components/calendar"
+      "!src/components/calendar",
+      "!lint/fixtures"
     ]
   },
   "formatter": {
@@ -172,7 +173,7 @@
         "src/app/(main)/dashboard/(examples)/(legacy)/analytics-v1/**",
         "src/app/(main)/dashboard/(examples)/(legacy)/crm-v1/**"
       ],
-      "plugins": ["./lint/no-visible-string-props.grit"],
+      "plugins": ["./lint/no-visible-string-props.grit", "./lint/no-visible-string-children.grit"],
       "linter": {
         "rules": {
           "style": {

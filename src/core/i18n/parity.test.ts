@@ -61,6 +61,14 @@ describe("French typography", () => {
     ["a plain space before a colon", "Compte : x"],
     ["a plain space before a question mark", "Prêt ?"],
     ["a straight apostrophe", "l'équipe"],
+    ["no space before a colon", "Compte: x"],
+    ["no space before a semicolon", "Oui; non"],
+    ["no space before a question mark", "Prêt?"],
+    ["no space before an exclamation mark", "Terminé!"],
+    ["no space before a colon after a placeholder", "{label}: {value}"],
+    ["no space between a number and a percent sign", "Plafond 100%"],
+    ["a plain space between a number and a percent sign", "Plafond 100 %"],
+    ["no space between a placeholder and a percent sign", "{rate}%"],
   ] as const)("rejects %s", (_name, title) => {
     expect(() => assertDictionaryParity(withFrench(title))).toThrow("fr:title");
   });
@@ -69,6 +77,11 @@ describe("French typography", () => {
     ["a no-break space before a colon", "Compte\u00a0: x"],
     ["a narrow no-break space before a semicolon", "Oui\u202f; non"],
     ["a typographic apostrophe", "l’équipe"],
+    ["a no-break space before a percent sign", "Plafond 100\u00a0%"],
+    ["a narrow no-break space before a percent sign", "Plafond 100\u202f%"],
+    ["a colon inside a URL", "Voir https://exemple.fr"],
+    ["a colon inside a time", "Ouvre à 10:30"],
+    ["a percent sign with no number before it", "Le symbole % s’écrit ainsi"],
   ] as const)("accepts %s", (_name, title) => {
     expect(() => assertDictionaryParity(withFrench(title))).not.toThrow();
   });

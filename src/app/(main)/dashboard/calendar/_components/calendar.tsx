@@ -9,18 +9,18 @@ import listPlugin from "@fullcalendar/react/list";
 import multiMonthPlugin from "@fullcalendar/react/multimonth";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import { cn } from "cn";
-import { differenceInCalendarDays, differenceInMinutes, endOfMonth, startOfMonth } from "date-fns";
+import { differenceInCalendarDays, differenceInMinutes } from "date-fns";
 import { CalendarDays, Calendar as CalendarIcon, Clock, Plus, Target, XIcon } from "lucide-react";
 
 import { EventCalendarViews } from "@/components/calendar/event-calendar-views";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, formatLocalDate, useLocale, useMessages } from "@/core/i18n/client";
-import { fullCalendarLocale } from "@/core/i18n/ui";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { PageHeader, PeriodStepper, SegmentedControl, type SegmentedOption } from "@/ds/components";
 
 import { createDemoEvents, type DemoEvent } from "./events-data";
+import { fullCalendarLocale } from "./full-calendar-locale";
 import { calendarMessageKey } from "./messages";
 import { type ClosingDeal, ClosingSoon, type UpcomingEvent, UpNext } from "./schedule-sidebar";
 
@@ -62,29 +62,42 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
   const locale = useLocale();
   const controller = useCalendarController();
   const [selectedCalendar, setSelectedCalendar] = React.useState<(typeof calendarKeys)[number]>(calendarKeys[0]);
-  // Demo events in the active language; built on the client so their times are in the device's zone.
-  const demoEvents = React.useMemo(() => createDemoEvents(text.demoEvents, locale, new Date()), [text, locale]);
+  // Demo events in the active language, built after mount: this component also renders on the server, whose clock and
+  // time zone are not the device's, so reading `new Date()` during render would not match the client's markup.
+  const [demoEvents, setDemoEvents] = React.useState<DemoEvent[] | null>(null);
+  React.useEffect(() => {
+    setDemoEvents(createDemoEvents(text.demoEvents, locale, new Date()));
+  }, [text, locale]);
   // All-day items read as salmon bars; timed meetings take the default azure; focus blocks tint in the accent.
-  const scheduleEvents = demoEvents.map((event) => (isAllDay(event) ? { ...event, color: "var(--salmon)" } : event));
+  const scheduleEvents = (demoEvents ?? []).map((event) =>
+    isAllDay(event) ? { ...event, color: "var(--salmon)" } : event,
+  );
   const views: SegmentedOption<ViewKey>[] = [
     { value: "dayGridMonth", label: text.views.month },
     { value: "timeGridWeek", label: text.views.week },
     { value: "timeGridDay", label: text.views.day },
   ];
-  const [range, setRange] = React.useState(() => {
-    const now = new Date();
+  // The visible window, reported by FullCalendar's `datesSet`; the KPIs are derived from it and the events.
+  const [visible, setVisible] = React.useState<{ title: string; days: number; start: Date; end: Date } | null>(null);
+  const range = React.useMemo(() => {
+    const inRange =
+      demoEvents && visible
+        ? demoEvents.filter((event) => event.start >= visible.start && event.start < visible.end)
+        : [];
     return {
-      title: formatLocalDate(now, locale, { month: "long", year: "numeric" }),
-      days: differenceInCalendarDays(endOfMonth(now), startOfMonth(now)) + 1,
-      events: 0,
-      bookedMinutes: 0,
-      focusMinutes: 0,
+      events: inRange.length,
+      bookedMinutes: inRange
+        .filter((event) => !isBackground(event) && !isAllDay(event))
+        .reduce((total, event) => total + minutesBetween(event), 0),
+      focusMinutes: inRange.filter(isBackground).reduce((total, event) => total + minutesBetween(event), 0),
     };
-  });
+  }, [demoEvents, visible]);
   const [upcoming, setUpcoming] = React.useState<UpcomingEvent[] | null>(null);
 
-  // The clock is only read on the client so server and client markup match.
   React.useEffect(() => {
+    if (!demoEvents) {
+      return;
+    }
     const now = new Date();
     setUpcoming(
       demoEvents
@@ -111,7 +124,7 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
           {
             icon: CalendarDays,
             value: String(range.events),
-            label: format(text.kpis.eventsInDays, locale, { count: range.days }),
+            label: format(text.kpis.eventsInDays, locale, { count: visible?.days ?? 0 }),
           },
           {
             icon: Clock,
@@ -137,7 +150,7 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
           onNext={() => controller.next()}
         />
         <h2 className="ml-2 text-xl font-medium tracking-tight" aria-live="polite">
-          {range.title}
+          {visible?.title}
         </h2>
         <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
           <Select
@@ -227,18 +240,14 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
               },
               timeGrid: { tableHeaderClass: "bg-transparent" },
             }}
-            datesSet={(info) => {
-              const inRange = demoEvents.filter((event) => event.start >= info.start && event.start < info.end);
-              setRange({
+            datesSet={(info) =>
+              setVisible({
                 title: info.view.title,
                 days: differenceInCalendarDays(info.view.currentEnd, info.view.currentStart),
-                events: inRange.length,
-                bookedMinutes: inRange
-                  .filter((event) => !isBackground(event) && !isAllDay(event))
-                  .reduce((total, event) => total + minutesBetween(event), 0),
-                focusMinutes: inRange.filter(isBackground).reduce((total, event) => total + minutesBetween(event), 0),
-              });
-            }}
+                start: info.start,
+                end: info.end,
+              })
+            }
           />
         </Card>
         <div className="flex flex-col gap-4">

@@ -29,6 +29,18 @@ describe("format", () => {
     expect(format("Late by {minutes} min, {name}", "en", { minutes: 5, name: "Ana" })).toBe("Late by 5 min, Ana");
   });
 
+  it.each([
+    ["en", "1,234"],
+    ["de", "1.234"],
+    ["fr", "1\u202f234"],
+  ] as const)("writes a numeric placeholder for the %s locale", (locale, written) => {
+    expect(format("{n} guests", locale, { n: 1234 })).toBe(`${written} guests`);
+  });
+
+  it("prints a string param exactly as given, so a year or an id is not grouped", () => {
+    expect(format("Year {year}", "de", { year: "2026" })).toBe("Year 2026");
+  });
+
   it("leaves an unknown placeholder visible instead of hiding it", () => {
     expect(format("Hello {name}", "en", {})).toBe("Hello {name}");
   });
@@ -48,14 +60,14 @@ describe("format", () => {
     ["en", 1, "1 item"],
     ["en", 2, "2 items"],
     ["de", 1, "1 item"],
-    ["de", 1_000_000, "1000000 items"],
+    ["de", 1_000_000, "1.000.000 items"],
     ["fr", 0, "0 item"],
     ["fr", 1, "1 item"],
     ["fr", 2, "2 items"],
     ["es", 1, "1 item"],
     ["es", 2, "2 items"],
-    ["es", 1_000_000, "1000000 of items"],
-    ["fr", 1_000_000, "1000000 of items"],
+    ["es", 1_000_000, "1.000.000 of items"],
+    ["fr", 1_000_000, "1\u202f000\u202f000 of items"],
   ] as const)("selects the %s plural form for %i like Intl.PluralRules", (locale, n, expected) => {
     expect(format(noZero, locale, { count: n })).toBe(expected);
   });
@@ -70,6 +82,6 @@ describe("format", () => {
   );
 
   it("falls back to other when the category has no form", () => {
-    expect(format({ one: "x", other: "{count} others" }, "es", { count: 1_000_000 })).toBe("1000000 others");
+    expect(format({ one: "x", other: "{count} others" }, "es", { count: 1_000_000 })).toBe("1.000.000 others");
   });
 });

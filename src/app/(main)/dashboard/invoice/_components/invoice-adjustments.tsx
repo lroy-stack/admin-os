@@ -3,7 +3,7 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { currencySymbol, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
+import { currencySymbol, format, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
 
 import { type InvoiceFormValues, invoiceTaxOptions } from "./data";
 import { invoiceMessageKey } from "./messages";
@@ -37,7 +37,10 @@ export function InvoiceAdjustments() {
                   <SelectGroup>
                     {invoiceTaxOptions.map((taxOption) => (
                       <SelectItem key={taxOption.id} value={taxOption.id}>
-                        {`${text.taxes[taxOption.id]} (${formatPercent(taxOption.rate / 100, locale)})`}
+                        {format(text.paper.taxLine, locale, {
+                          tax: text.taxes[taxOption.id],
+                          rate: formatPercent(taxOption.rate / 100, locale, { maxFractionDigits: 2 }),
+                        })}
                       </SelectItem>
                     ))}
                   </SelectGroup>

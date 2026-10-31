@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { chartFormatters, currencyOptions, formatAmount, formatCurrency, LOCALES } from "@/core/i18n";
+import { chartFormatters, currencyOptions, currencySymbol, formatAmount, formatCurrency, LOCALES } from "@/core/i18n";
 import { CURRENCIES } from "@/core/money";
 
 // Every language and currency pair: the expected text comes from Intl itself, so no string is hand-written.
@@ -8,12 +8,33 @@ const MATRIX = LOCALES.flatMap((locale) => CURRENCIES.map((currency) => [locale,
 
 describe("amounts in every language and currency", () => {
   it.each(MATRIX)("%s writes %s through Intl", (locale, currency) => {
-    const intl = new Intl.NumberFormat(locale, { style: "currency", currency });
+    const intl = new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "narrowSymbol" });
     expect(formatAmount(1234.5, currency, locale)).toBe(intl.format(1234.5));
   });
 
+  it.each(MATRIX)("%s shows the same symbol for %s as the input adornment", (locale, currency) => {
+    expect(formatAmount(1, currency, locale)).toContain(currencySymbol(currency, locale));
+    expect(formatCurrency(100, currency, locale)).toContain(currencySymbol(currency, locale));
+  });
+
+  it.each([
+    ["es", "£"],
+    ["fr", "£"],
+    ["de", "£"],
+    ["en", "£"],
+  ] as const)("writes GBP with a plain pound sign in %s", (locale, symbol) => {
+    expect(formatAmount(10, "GBP", locale)).toContain(symbol);
+    expect(formatAmount(10, "GBP", locale)).not.toContain("GBP");
+    expect(formatAmount(10, "GBP", locale)).not.toContain("GB");
+  });
+
   it.each(MATRIX)("%s writes whole %s amounts", (locale, currency) => {
-    const intl = new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 });
+    const intl = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      currencyDisplay: "narrowSymbol",
+      maximumFractionDigits: 0,
+    });
     expect(formatAmount(1234.5, currency, locale, { fractionDigits: 0 })).toBe(intl.format(1234.5));
   });
 
@@ -21,6 +42,7 @@ describe("amounts in every language and currency", () => {
     const intl = new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
+      currencyDisplay: "narrowSymbol",
       notation: "compact",
       maximumFractionDigits: 1,
       minimumFractionDigits: 0,
@@ -29,12 +51,17 @@ describe("amounts in every language and currency", () => {
   });
 
   it.each(MATRIX)("%s writes %s stored in minor units", (locale, currency) => {
-    const intl = new Intl.NumberFormat(locale, { style: "currency", currency });
+    const intl = new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "narrowSymbol" });
     expect(formatCurrency(123_456, currency, locale)).toBe(intl.format(1234.56));
   });
 
   it.each(MATRIX)("%s chart formatters carry %s", (locale, currency) => {
-    const intl = new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 });
+    const intl = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      currencyDisplay: "narrowSymbol",
+      maximumFractionDigits: 0,
+    });
     expect(chartFormatters(locale, currency).currency(258_600)).toBe(intl.format(258_600));
   });
 });

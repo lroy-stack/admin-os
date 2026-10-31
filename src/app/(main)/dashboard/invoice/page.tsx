@@ -4,6 +4,9 @@ import { LocaleBundles } from "@/app/_components/locale-root";
 import { Button } from "@/components/ui/button";
 import { getCurrency, getLocale } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
+import { getRuntime } from "@/config/runtime";
+import { businessClockSchema } from "@/core/clock";
+import { isAwaitingApproval } from "@/core/result";
 
 import { createDefaultInvoice } from "./_components/data";
 import { Invoice } from "./_components/invoice";
@@ -12,10 +15,16 @@ import { invoiceBundle, invoiceMessages } from "./_components/messages.server";
 export const generateMetadata = () => pageMetadata("/dashboard/invoice", invoiceMessages);
 
 export default async function Page() {
-  const [locale, currency] = await Promise.all([getLocale(), getCurrency()]);
+  const [locale, currency, { client }] = await Promise.all([getLocale(), getCurrency(), getRuntime()]);
   const text = invoiceMessages[locale];
+  // The day is the business's (clock capability, ADR 0005), not the server's, which runs in UTC.
+  const answer = await client.call("clock.get", {});
+  if (isAwaitingApproval(answer) || !answer.ok) {
+    throw new Error("The business clock is unavailable.");
+  }
+  const { today } = businessClockSchema.parse(answer.value);
   // The demo document is seeded on the server in the request's language and the business currency.
-  const initialInvoice = createDefaultInvoice(new Date(), currency, text.demoItems);
+  const initialInvoice = createDefaultInvoice(today, currency, text.demoItems);
 
   return (
     <LocaleBundles bundles={[invoiceBundle]}>

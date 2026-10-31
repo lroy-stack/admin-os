@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, type ReactNode, use, useEffect } from "react";
+import { createContext, type ReactNode, use, useEffect, useMemo } from "react";
 
 import type { Currency } from "@/core/money/client";
 
@@ -25,8 +25,8 @@ function useLocaleValue(): LocaleValue {
 }
 
 /**
- * Receives the messages the server resolved for ONE locale (ADR 0007). It also keeps `<html lang>` in step, because
- * the static root layout cannot know the locale and the boot script only sees the cookie.
+ * Receives the messages the server resolved for ONE locale (ADR 0007). The outermost provider also keeps `<html lang>`
+ * in step, because the static root layout cannot know the locale and the boot script only sees the cookie.
  */
 export function LocaleProvider({
   locale,
@@ -43,19 +43,30 @@ export function LocaleProvider({
   // A provider inside another one (a route's bundles under the layout's) adds to the outer messages, so the
   // layout's shell and shared dictionaries stay reachable.
   const outer = use(LocaleContext);
-  const merged = outer ? { ...outer.messages, ...messages } : messages;
+  const outerMessages = outer?.messages;
+  const isOutermost = outer === null;
 
-  // Leaving the provider (for example to /auth/*) restores the page's own language.
+  // Only the outermost provider owns `<html lang>`: effects run child first, so a nested provider that restored "its"
+  // previous value would leave the page in the wrong language when it unmounts alone (navigating between pages).
+  // Leaving the outermost provider (for example to /auth/*) restores the page's own language.
   useEffect(() => {
+    if (!isOutermost) {
+      return;
+    }
     const root = document.documentElement;
     const previous = root.lang;
     root.lang = locale;
     return () => {
       root.lang = previous;
     };
-  }, [locale]);
+  }, [isOutermost, locale]);
 
-  return <LocaleContext.Provider value={{ locale, currency, messages: merged }}>{children}</LocaleContext.Provider>;
+  const value = useMemo<LocaleValue>(
+    () => ({ locale, currency, messages: outerMessages ? { ...outerMessages, ...messages } : messages }),
+    [locale, currency, messages, outerMessages],
+  );
+
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
 export function useLocale(): Locale {
@@ -70,7 +81,7 @@ export function useCurrency(): Currency {
 /** Tick and tooltip formatters for the active locale and business currency, for recharts props. */
 export function useChartFormatters(): ChartFormatters {
   const { locale, currency } = useLocaleValue();
-  return chartFormatters(locale, currency);
+  return useMemo(() => chartFormatters(locale, currency), [locale, currency]);
 }
 
 export function useMessages<T>(key: MessageKey<T>): T {
