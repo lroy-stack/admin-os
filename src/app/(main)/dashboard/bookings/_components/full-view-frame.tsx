@@ -4,6 +4,8 @@ import { type ReactNode, useEffect, useEffectEvent, useRef } from "react";
 
 import { cn } from "cn";
 
+import { AppBackdrop } from "@/ds/shell";
+
 /**
  * Makes everything around `frame` inert, up to <body>, so focus and screen readers stay inside it. Body-level
  * portals (popovers, menus, drawers, toasts) are left live. Returns the undo.
@@ -69,9 +71,12 @@ export function FullViewFrame({
       className={cn(
         "flex flex-col gap-6",
         className,
-        active && "bg-background/95 fixed inset-0 z-50 gap-3 p-3 backdrop-blur-xl md:p-4",
+        active && "bg-background fixed inset-0 z-50 isolate gap-3 p-3 md:p-4",
       )}
     >
+      {/* The layer covers the page, so it carries the theme's backdrop itself; bg-background stays as the opaque
+          fallback when the backdrop is off (reduced transparency). */}
+      {active && <AppBackdrop />}
       {children}
     </section>
   );
