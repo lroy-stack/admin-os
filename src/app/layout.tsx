@@ -5,21 +5,25 @@ import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_CONFIG } from "@/config/app-config";
+import { appMessages } from "@/config/app-messages.server";
 import { PREFERENCE_DEFAULTS, PreferencesStoreProvider, ThemeBootScript } from "@/ds/preferences";
 import { fontVars } from "@/lib/fonts/registry";
 
 import "./globals.css";
 
+// The root layout stays static (ADR 0007), so this is the default-locale fallback; pages set their own title,
+// description and og:locale through `pageMetadata`.
+const fallbackMeta = appMessages[APP_CONFIG.i18n.defaultLocale].meta;
+
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
   applicationName: APP_CONFIG.name,
   authors: [{ name: "Leroy Loewe", url: "https://github.com/lroy-stack" }],
-  title: APP_CONFIG.meta.title,
-  description: APP_CONFIG.meta.description,
+  title: fallbackMeta.title,
+  description: fallbackMeta.description,
   openGraph: {
     type: "website",
     siteName: APP_CONFIG.name,
-    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",

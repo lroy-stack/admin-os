@@ -47,8 +47,8 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     conflict: "Quelqu’un d’autre a modifié cet élément. Rechargez et réessayez.",
     unavailable: "Le service est indisponible pour le moment. Réessayez dans un instant.",
     timeout: "La requête a pris trop de temps. Réessayez.",
-    invalid_output: "Le service a renvoyé une réponse inattendue. Code d’erreur : {code}.",
-    generic: "Une erreur s’est produite. Code d’erreur : {code}.",
+    invalid_output: "Le service a renvoyé une réponse inattendue. Code d’erreur : {code}.",
+    generic: "Une erreur s’est produite. Code d’erreur : {code}.",
   },
 });
 

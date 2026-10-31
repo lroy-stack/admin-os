@@ -1,23 +1,29 @@
+"use client";
+
 import { cn } from "cn";
 import { Ellipsis } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { type OpenStage, stageProbability } from "@/data/crm";
+import {
+  format,
+  formatAmount,
+  formatCalendarDate,
+  formatPercent,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
+import { stageProbability } from "@/data/crm";
 import { CardIconButton, type Tone, toneTint } from "@/ds/components";
-import { formatShortDate, getCustomer, type OpenDeal, stageLabels } from "@/lib/crm";
-import { formatCurrency } from "@/lib/utils";
+import { getCustomer, type OpenDeal } from "@/lib/crm";
 
 import { MemberAvatars } from "./member-avatars";
+import { dashboardMessageKey } from "./messages";
 
-/** Pipeline stages read left to right as azure → accent → salmon → neutral. */
-export const stageTones: Record<OpenStage, Tone> = {
-  qualification: "azure",
-  proposal: "brand",
-  negotiation: "salmon",
-  closing: "neutral",
-};
-
-/** Deal tile shared by the Pipeline board and the Overview hot deals panel. */
+/**
+ * Deal tile shared by the Pipeline board and the Overview hot deals panel. `deal.title` is demo content: the caller
+ * localizes it (`localizeDeals`), the card does not.
+ */
 export function DealCard({
   deal,
   tone,
@@ -29,16 +35,23 @@ export function DealCard({
   showProbability?: boolean;
   className?: string;
 }) {
+  const text = useMessages(dashboardMessageKey);
+  const locale = useLocale();
+  const currency = useCurrency();
   const customer = getCustomer(deal.customerId);
 
   return (
     // A neutral deal keeps the Card's own glass surface; the other tones tint it.
     <Card size="sm" className={cn("ring-foreground/15 gap-0 px-3.5", tone !== "neutral" && toneTint[tone], className)}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-foreground/85 text-[11px]">Closes {formatShortDate(deal.closeDate)}</span>
+        <span className="text-foreground/85 text-[11px]">
+          {format(text.deal.closes, locale, {
+            date: formatCalendarDate(deal.closeDate, locale, { month: "short", day: "numeric" }),
+          })}
+        </span>
         <CardIconButton
           icon={Ellipsis}
-          label={`More actions for ${deal.title}`}
+          label={format(text.deal.moreActions, locale, { title: deal.title })}
           className="ring-foreground/25 size-7"
         />
       </div>
@@ -47,11 +60,14 @@ export function DealCard({
       <div className="mt-auto flex items-end justify-between gap-2 pt-5">
         <div className="flex flex-col gap-0.5">
           <span className="text-base leading-none font-medium tabular-nums">
-            {formatCurrency(deal.value, { noDecimals: true })}
+            {formatAmount(deal.value, currency, locale, { fractionDigits: 0 })}
           </span>
           {showProbability && (
             <span className="text-foreground/80 text-[10px]">
-              {stageLabels[deal.stage]} · {Math.round(stageProbability[deal.stage] * 100)}%
+              {format(text.deal.stageProbability, locale, {
+                stage: text.stages[deal.stage],
+                probability: formatPercent(stageProbability[deal.stage], locale),
+              })}
             </span>
           )}
         </div>

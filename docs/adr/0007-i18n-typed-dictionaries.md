@@ -19,6 +19,125 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 > - The dashboard layout renders `lang={locale}` on its wrapper, so the language is right from the first byte even when
 >   `Accept-Language` decided it; `<html lang>` is set by the boot script and restored when the provider unmounts.
 
+> **Amended 2026-10-31 (T6c, whole app in four languages, spec 001 D5):**
+>
+> **Route dictionaries.**
+>
+> - Every screen owns a dictionary in its route folder as a pair: `_components/messages.ts` (the interface, `messageKey`,
+>   no text, safe for client components) and `_components/messages.server.ts` (`en/es/de/fr`, `defineMessages`,
+>   `MessageBundle`). Page metadata is part of it: each dictionary has `meta: { title, description }`
+>   (`PageMeta` from `@/core/i18n/client`).
+> - Server components read it directly: `const text = await getMessages(messages)` (`src/config/locale.server.ts`), or
+>   `messages[await getLocale()]`. Client components read it with `useMessages(key)`. Both get the same text.
+> - A dictionary reaches client components through `LocaleBundles`. A nested `LocaleProvider` **adds** its messages to
+>   the outer one's, so the dashboard layout provides the shell, navigation, `common` (`src/components`) and
+>   `dashboard` (shared dashboard pieces) bundles once, and each page adds its own.
+> - Shared pieces that print text keep their strings in a shared dictionary: `src/components/common-messages*` for
+>   `src/components` (add a key only when two screens need it) and `dashboard/_components/messages*` for the pieces
+>   shared by dashboard screens (deal card, standalone button, pipeline stage names).
+> - A shared component that needs messages or the locale is a client component. A constant such as `stageTones`
+>   lives in a plain `.ts` file, because a client module's non-component exports are references on the server.
+>
+> **Locale roots.**
+>
+> - `src/app/_components/locale-root.tsx` has two server components. `LocaleRoot` resolves the locale and currency,
+>   renders `LocaleProvider` with the given bundles, and wraps the subtree in an element with `lang` (and an optional
+>   `className`). `LocaleBundles` is the same without the element, for a page inside a layout that already has a root.
+> - Every route group outside the dashboard has a `layout.tsx` that renders `<LocaleRoot>`: `(main)/auth`,
+>   `(main)/chat`, `(main)/mail`, `(main)/unauthorized`, `(external)`, and `not-found.tsx`. The dashboard layout uses
+>   `LocaleRoot` with the shell bundles. A group appends its bundles to its own layout.
+> - The root layout stays static. It keeps the default-locale title as a fallback, and `<html lang>` still comes from
+>   the boot script. Reading cookies in a layout makes the routes below it dynamic; the landing page (`/`) is now
+>   dynamic for that reason, until it adopts `[lang]` as this ADR already allows.
+>
+> **Metadata.** `pageMetadata(path, dictionary, extra?)` in `src/config/metadata.server.ts` returns title,
+> description, canonical URL and the Open Graph pair, with `og:locale` from `OG_LOCALES` (`en_US`, `es_ES`, `de_DE`,
+> `fr_FR`). A page exports `generateMetadata = () => pageMetadata("/dashboard/default", overviewMessages)`. The app
+> meta and the footer line moved out of `APP_CONFIG` into `src/config/app-messages.server.ts`.
+>
+> **Formats.** Everything user-visible goes through `@/core/i18n/client` (from `format.ts` and `chart-format.ts`):
+> `formatAmount` (major units, `compact` or `fractionDigits`), `formatCurrency` (minor units), `formatCompact`,
+> `formatPercent` (`signed`), `formatCalendarDate` (an ISO day, formatted in UTC so it never shifts), `formatLocalDate`
+> (a `Date` that a browser widget built in the device zone), `formatDate`/`formatTime` (business zone), `monthNames`,
+> `weekdayNames`, `weekdayNamesFromWeekStart`, `weekStart`, `currencyOptions`, `currencySymbol`, and for recharts
+> `chartFormatters(locale, currency)` or `useChartFormatters()`. No `toLocaleString`, no `Intl` constructor with a literal
+> locale, no `$` literal, no hand-written month or weekday arrays, no `format()` from date-fns for visible dates.
+> The old `formatCurrency` in `src/lib/utils.ts` and `formatShortDate`, `formatMonth`, `formatTimeAgo` and `stageLabels` in
+> `src/lib/crm.ts` (hard-coded `en-US`, USD, English) stay only for screens not yet converted; whoever converts the last
+> caller deletes them, and T6e checks they are gone.
+> Widget locale packs live in a separate entry, `@/core/i18n/ui` (`dateFnsLocale` for `react-day-picker` and date-fns
+> options, `fullCalendarLocale` for FullCalendar), because the four date-fns packs and three FullCalendar packs are
+> about 30 KB; import them only where such a widget is mounted. The FullCalendar `locale` goes through the props that
+> `EventCalendarViews` already forwards (`{...restOptions}`), so `src/components/calendar` is untouched.
+>
+> **Demo content.** Business text in demo data (deal titles, event titles, line-item descriptions, email and chat
+> bodies, notes) is localized on the server before it reaches a client component. Two shapes, both complete by type:
+> a key-per-locale entry in the route dictionary (the calendar's `demoEvents`, the invoice's `demoItems`), or a
+> translation table next to shared data (`src/data/crm-text.ts`: `localizeDeals`, which throws for an untranslated
+> title, with a test that every deal is covered). People, companies, emails, addresses, brands and model codes stay as
+> they are. Content built from dates (`new Date()`) is built where the time zone is right: calendar events in the client,
+> the invoice's day on the server.
+>
+> **Currency.** The currency is a business setting, independent of the language: the locale decides how an amount is
+> written, never which currency it is in.
+>
+> - `CURRENCIES = ["USD", "EUR", "GBP"]` and `isCurrency` are in `src/core/money` (client entry `@/core/money/client`,
+>   without zod). A `Money` value carries its own currency and is formatted with it.
+> - Resolution mirrors the locale: the `currency` cookie, then the region of the first `Accept-Language` tag whose
+>   region has an offered currency (es-ES, de-DE, fr-FR and the other euro-area regions give EUR, en-GB gives GBP, en-US
+>   gives USD; a tag without a region says nothing), then `APP_CONFIG.i18n.defaultCurrency` (USD). `resolveCurrency` is
+>   pure and tested; `getCurrency()` sits next to `getLocale()`.
+> - Preferences has a Currency select directly under Language. `setCurrency(unknown)` validates, writes the cookie with
+>   the `locale` cookie's attributes, and the picker toasts a translated error like `setLocale`. "Restore defaults"
+>   leaves both alone.
+> - `LocaleProvider` carries the currency: `useCurrency()`, `useChartFormatters()`. Plain numbers in demo data are the
+>   business's books **in the selected currency**; nothing converts and there are no exchange rates. A real adapter
+>   supplies the currency per amount. On the invoice the currency is a property of the document: it starts as the
+>   business currency and the form offers the three.
+>
+> **Enforcement.**
+>
+> - One Biome override in `biome.json` lists the finished folders and turns on two checks for them: `style/noJsxLiterals`
+>   for text between tags, and the GritQL plugin `lint/no-visible-string-props.grit` for string literals in visible
+>   props (`aria-label`, `placeholder`, `title`, `alt`, `label`, `description`, `tooltip`, and any prop ending in
+>   `Label`, `Text`, `Title`, `Description` or `Placeholder`). The plugin lists visible props by name because Biome's
+>   `noStrings` option cannot tell `aria-label` from `className`, and its `allowedStrings` is global. Punctuation and
+>   symbols alone (":", "%", "/") are allowed by `noJsxLiterals`. A string built in an expression
+>   (`` {`${name} (${rate})`} ``) is not flagged, so build text from dictionary templates, not from literals.
+> - **To finish a folder**, append it to the override's `includes` array in the same change that moves its last string
+>   into a dictionary. One line per route or folder, kept in group order. T6e widens the list to all of `src/app` and
+>   `src/components` except `ui/` and `calendar/`.
+> - `assertDictionaryParity` also rejects, in `fr`, a plain space before `: ; ? !` and a straight apostrophe.
+>
+> **Glossary.** `docs/i18n/glossary.md` is the vocabulary and the register (es tú, de du, fr vous). One term per
+> concept; a new term is a new row in the same commit.
+>
+> ### How to translate a screen
+>
+> 1. **Inventory.** List every visible string in the route: JSX text, `aria-label`, `placeholder`, `title`, `alt`,
+>    chart legends and axes, tooltips, toasts, validation messages, `generateMetadata`/`metadata`, enum and status
+>    labels, and demo content. Grep for `toLocale`, `Intl.`, `"en-US"`, `"en-GB"`, `format(` from date-fns, `$`, and
+>    hand-written month or weekday arrays.
+> 2. **Glossary first.** Reuse the glossary's terms. Add any missing concept as a row.
+> 3. **Dictionary.** Create `messages.ts` (interface, `meta`, plurals as `Plural`, `{placeholders}` for values, a key per
+>    demo text) and `messages.server.ts` (`en`, `es`, `de`, `fr`, `defineMessages`, a `MessageBundle`). Never put a
+>    number, date, percentage or currency symbol in a string; put `{placeholders}` and format the value.
+> 4. **Test.** Add `messages.test.ts` with `assertDictionaryParity(messages, allowIdentical)`. The allow-list holds only
+>    real proper nouns, abbreviations and punctuation-only joins, each with a comment. Run it before writing the UI.
+> 5. **Page.** `export const generateMetadata = () => pageMetadata(path, messages)`. In the page, get the locale and
+>    currency, wrap the content in `<LocaleBundles bundles={[bundle]}>`, and localize demo data on the server.
+> 6. **Components.** Server components: `await getMessages(messages)`, `getLocale()`, `getCurrency()`. Client components:
+>    `useMessages(key)`, `useLocale()`, `useCurrency()`, `useChartFormatters()`, all from `@/core/i18n/client` (never the
+>    barrel). Build strings with `format(template, locale, params)`; pick plurals with a `Plural`.
+> 7. **Formats.** Replace every number, date, currency and name list with the helpers above. FullCalendar gets
+>    `locale={fullCalendarLocale(locale)}`; the shadcn `Calendar` gets `locale={dateFnsLocale(locale)}`.
+> 8. **Validation.** A zod schema is built from the dictionary's `validation` messages (see `createInvoiceSchema`), so the
+>    client resolver and any server that parses the same data report the same sentence.
+> 9. **Gate.** Append the folder to the Biome override, then run `npm run check`, `npx tsc --noEmit`, `npm test` and
+>    `npm run build`. Check the screen in all four languages and, if it shows money, in all three currencies.
+> 10. **Do not** touch `src/components/ui` or `src/components/calendar`, edit the dictionary of a screen you do not
+>     own, or leave an English literal "for now".
+
 ## Context
 
 **The owner's requirement.** The kit ships in **English, Spanish, German and French** (`en`, `es`, `de`, `fr`), with

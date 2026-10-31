@@ -1,14 +1,25 @@
-import { format } from "date-fns";
 import { ArrowUpRight } from "lucide-react";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  format,
+  formatAmount,
+  formatCalendarDate,
+  formatLocalDate,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
 import { CardIconButton } from "@/ds/components";
-import { dealsClosingWithin, formatShortDate, getCustomer } from "@/lib/crm";
-import { formatCurrency } from "@/lib/utils";
+
+import { calendarMessageKey } from "./messages";
 
 export type UpcomingEvent = { id: string; title: string; start: Date; end?: Date; allDay: boolean };
+
+/** A deal as the sidebar shows it: the title is already in the request's locale. */
+export type ClosingDeal = { id: string; title: string; company: string; value: number; closeDate: string };
 
 function DateCapsule({ top, bottom }: { top: string; bottom: string }) {
   return (
@@ -19,12 +30,23 @@ function DateCapsule({ top, bottom }: { top: string; bottom: string }) {
   );
 }
 
+const TIME: Intl.DateTimeFormatOptions = { timeStyle: "short" };
+
 /** Next events after "now"; `events` is null until the client clock is known, to avoid hydration drift. */
 export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
+  const text = useMessages(calendarMessageKey).sidebar;
+  const locale = useLocale();
+
+  function timeLabel(event: UpcomingEvent) {
+    if (event.allDay) return text.allDay;
+    const start = formatLocalDate(event.start, locale, TIME);
+    return event.end ? format(text.timeRange, locale, { start, end: formatLocalDate(event.end, locale, TIME) }) : start;
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-normal">Up next</CardTitle>
+        <CardTitle className="text-sm font-normal">{text.upNext}</CardTitle>
       </CardHeader>
       <CardContent>
         <ItemGroup className="gap-1">
@@ -39,19 +61,18 @@ export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
                 </ItemContent>
               </Item>
             ))}
-          {events?.length === 0 && <p className="text-muted-foreground text-xs">Nothing else scheduled this month.</p>}
+          {events?.length === 0 && <p className="text-muted-foreground text-xs">{text.nothingScheduled}</p>}
           {events?.map((event) => (
             <Item key={event.id} size="sm" className="px-0">
               <ItemMedia>
-                <DateCapsule top={format(event.start, "EEE")} bottom={format(event.start, "d")} />
+                <DateCapsule
+                  top={formatLocalDate(event.start, locale, { weekday: "short" })}
+                  bottom={formatLocalDate(event.start, locale, { day: "numeric" })}
+                />
               </ItemMedia>
               <ItemContent className="min-w-0">
                 <ItemTitle className="truncate font-normal">{event.title}</ItemTitle>
-                <ItemDescription className="text-[11px]">
-                  {event.allDay
-                    ? "All day"
-                    : `${format(event.start, "HH:mm")}${event.end ? ` – ${format(event.end, "HH:mm")}` : ""}`}
-                </ItemDescription>
+                <ItemDescription className="text-[11px]">{timeLabel(event)}</ItemDescription>
               </ItemContent>
             </Item>
           ))}
@@ -61,39 +82,39 @@ export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
   );
 }
 
-const closingSoon = dealsClosingWithin(30).slice(0, 4);
-
 /** Deals from the pipeline whose expected close date lands in the next 30 days. */
-export function ClosingSoon() {
+export function ClosingSoon({ deals }: { deals: ClosingDeal[] }) {
+  const text = useMessages(calendarMessageKey).sidebar;
+  const locale = useLocale();
+  const currency = useCurrency();
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-normal">Closing soon</CardTitle>
+        <CardTitle className="text-sm font-normal">{text.closingSoon}</CardTitle>
         <CardAction>
-          <CardIconButton icon={ArrowUpRight} label="Open pipeline" href="/dashboard/crm" />
+          <CardIconButton icon={ArrowUpRight} label={text.openPipeline} href="/dashboard/crm" />
         </CardAction>
       </CardHeader>
       <CardContent>
         <ItemGroup className="gap-1">
-          {closingSoon.map((deal) => {
-            const [month, day] = formatShortDate(deal.closeDate).split(" ");
-            return (
-              <Item key={deal.id} size="sm" className="px-0">
-                <ItemMedia>
-                  <DateCapsule top={month ?? ""} bottom={day ?? ""} />
-                </ItemMedia>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="truncate font-normal">{deal.title}</ItemTitle>
-                  <ItemDescription className="truncate text-[11px]">
-                    {getCustomer(deal.customerId).company}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions className="text-xs tabular-nums">
-                  {formatCurrency(deal.value, { compact: true })}
-                </ItemActions>
-              </Item>
-            );
-          })}
+          {deals.map((deal) => (
+            <Item key={deal.id} size="sm" className="px-0">
+              <ItemMedia>
+                <DateCapsule
+                  top={formatCalendarDate(deal.closeDate, locale, { month: "short" })}
+                  bottom={formatCalendarDate(deal.closeDate, locale, { day: "numeric" })}
+                />
+              </ItemMedia>
+              <ItemContent className="min-w-0">
+                <ItemTitle className="truncate font-normal">{deal.title}</ItemTitle>
+                <ItemDescription className="truncate text-[11px]">{deal.company}</ItemDescription>
+              </ItemContent>
+              <ItemActions className="text-xs tabular-nums">
+                {formatAmount(deal.value, currency, locale, { compact: true })}
+              </ItemActions>
+            </Item>
+          ))}
         </ItemGroup>
       </CardContent>
     </Card>

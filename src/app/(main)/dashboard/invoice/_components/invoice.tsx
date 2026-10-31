@@ -1,14 +1,22 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
-import { defaultInvoiceValues, type InvoiceFormValues } from "./data";
+import { useMessages } from "@/core/i18n/client";
+
+import type { InvoiceFormValues } from "./data";
 import { InvoiceForm } from "./invoice-form";
 import { InvoicePreview } from "./invoice-preview";
+import { createInvoiceSchema } from "./invoice-schema";
+import { invoiceMessageKey } from "./messages";
 
-export function Invoice() {
+export function Invoice({ initialInvoice }: { initialInvoice: InvoiceFormValues }) {
+  const text = useMessages(invoiceMessageKey);
   const form = useForm<InvoiceFormValues>({
-    defaultValues: defaultInvoiceValues,
+    defaultValues: initialInvoice,
+    resolver: zodResolver(createInvoiceSchema(text.validation)),
+    mode: "onChange",
   });
   const invoice = useWatch({ control: form.control }) as InvoiceFormValues;
 

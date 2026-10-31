@@ -87,6 +87,7 @@ Keep a component inside its route until it is reused by another feature. Do not 
 - TypeScript strict mode is enabled. Use precise types and avoid `any`.
 - Use the existing `@/` import aliases.
 - Follow the Biome configuration: double quotes, semicolons, two-space indentation, sorted imports, and a 120-character line width.
+- Visible text, dates, numbers and currency are never hard-coded: each screen reads a four-language dictionary and the `Intl` helpers of `@/core/i18n/client`. Follow "How to translate a screen" in `docs/adr/0007-i18n-typed-dictionaries.md` and the terms in `docs/i18n/glossary.md`. Folders listed in the `overrides` of `biome.json` are enforced by lint.
 - Avoid unnecessary dependencies.
 - Keep changes focused and do not refactor unrelated files.
 

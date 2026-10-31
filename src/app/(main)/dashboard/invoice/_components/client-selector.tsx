@@ -5,20 +5,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
 import { type InvoiceFormValues, invoiceClients } from "./data";
+import { invoiceMessageKey } from "./messages";
 
 export function ClientSelector() {
+  const text = useMessages(invoiceMessageKey).client;
   const { control } = useFormContext<InvoiceFormValues>();
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-medium tracking-tight">Billed To</h2>
+        <h2 className="font-medium tracking-tight">{text.billedTo}</h2>
         <Button type="button" variant="ghost" size="sm">
           <Plus data-icon="inline-start" />
-          Add New Client
+          {text.add}
         </Button>
       </div>
 
@@ -30,7 +33,7 @@ export function ClientSelector() {
 
           return (
             <Field className="gap-1">
-              <FieldLabel className="text-xs">Client</FieldLabel>
+              <FieldLabel className="text-xs">{text.label}</FieldLabel>
               <Select
                 value={selectedClient.id}
                 onValueChange={(clientId) => {
@@ -42,7 +45,7 @@ export function ClientSelector() {
                 }}
               >
                 <SelectTrigger className="w-full data-[size=default]:h-auto">
-                  <SelectValue placeholder="Select client">
+                  <SelectValue placeholder={text.select}>
                     <div className="flex items-center gap-1.5">
                       <Avatar className="after:rounded-md">
                         <AvatarFallback className="bg-card text-foreground rounded-md">

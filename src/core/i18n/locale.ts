@@ -13,6 +13,14 @@ export const LOCALE_NAMES: Readonly<Record<Locale, string>> = {
   fr: "Français",
 };
 
+/** The `og:locale` of each language (Open Graph's `language_TERRITORY` form). */
+export const OG_LOCALES: Readonly<Record<Locale, string>> = {
+  en: "en_US",
+  es: "es_ES",
+  de: "de_DE",
+  fr: "fr_FR",
+};
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }

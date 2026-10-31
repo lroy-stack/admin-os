@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 
 import { isLocale, LOCALE_COOKIE } from "@/core/i18n";
+import { CURRENCY_COOKIE, isCurrency } from "@/core/money";
 
 import {
   getPreferencePersistence,
@@ -40,6 +41,17 @@ export async function setLocale(locale: unknown): Promise<void> {
     throw new Error("Unsupported locale");
   }
   await setValueToCookie(LOCALE_COOKIE, locale, { maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+}
+
+/**
+ * Stores the business currency in its cookie, with the same attributes as the language. The currency is a business
+ * setting independent of the language. Public endpoint: anything but one of `CURRENCIES` is rejected.
+ */
+export async function setCurrency(currency: unknown): Promise<void> {
+  if (!isCurrency(currency)) {
+    throw new Error("Unsupported currency");
+  }
+  await setValueToCookie(CURRENCY_COOKIE, currency, { maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 }
 
 export async function getPreference<K extends PreferenceKey>(key: K): Promise<PreferenceValueMap[K]> {

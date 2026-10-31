@@ -1,48 +1,31 @@
-import { ChartColumn, ChartPie, Trophy } from "lucide-react";
-
 import { deals, MONTHLY_REVENUE_TARGET, monthlyWon } from "@/data/crm";
-import type { HeaderKpi } from "@/ds/components";
-import { formatMonth, monthTotal, openDeals, openStages, sumValue, weightedValue } from "@/lib/crm";
-import { formatCurrency } from "@/lib/utils";
+import { monthTotal, openDeals, openStages, sumValue, weightedValue } from "@/lib/crm";
 
+/** Raw figures only: amounts are in the business currency and months are ISO ("2026-05"). Formatting happens in the page. */
 export type RevenuePoint = { month: string; revenue: number };
 
 export const revenueSeries: RevenuePoint[] = monthlyWon.map((month) => ({
-  month: formatMonth(month.month),
+  month: month.month,
   revenue: monthTotal(month),
 }));
 
 export const revenueTarget = MONTHLY_REVENUE_TARGET;
 
 const [previousMonth, currentMonth] = revenueSeries.slice(-2).map((point) => point.revenue);
-const monthChange =
-  previousMonth && currentMonth ? Math.round(((currentMonth - previousMonth) / previousMonth) * 100) : 0;
 
 const wonCount = deals.filter((deal) => deal.stage === "won").length;
 const lostCount = deals.filter((deal) => deal.stage === "lost").length;
 
-export const overviewKpis: HeaderKpi[] = [
-  {
-    icon: Trophy,
-    value: formatCurrency(currentMonth ?? 0, { noDecimals: true }),
-    label: "Won this month",
-    badge: {
-      text: `${monthChange > 0 ? "+" : ""}${monthChange}% vs last month`,
-      tone: monthChange < 0 ? "salmon" : "azure",
-    },
-  },
-  {
-    icon: ChartColumn,
-    value: formatCurrency(sumValue(openDeals), { noDecimals: true }),
-    label: "Open pipeline",
-  },
-  {
-    icon: ChartPie,
-    value: `${Math.round((wonCount / (wonCount + lostCount)) * 100)}%`,
-    label: "Win rate, closed deals",
-  },
-];
+export const overviewFigures = {
+  wonThisMonth: currentMonth ?? 0,
+  /** Fraction versus the previous month: 0.12 is +12%. */
+  monthChange: previousMonth && currentMonth ? (currentMonth - previousMonth) / previousMonth : 0,
+  openPipeline: sumValue(openDeals),
+  /** Fraction of closed deals that were won. */
+  winRate: wonCount / (wonCount + lostCount),
+};
 
+/** The six open deals with the highest weighted value, still with their English demo titles. */
 export const hotDeals = [...openDeals].sort((a, b) => weightedValue(b) - weightedValue(a)).slice(0, 6);
 
 const quotaTarget = MONTHLY_REVENUE_TARGET * revenueSeries.length;

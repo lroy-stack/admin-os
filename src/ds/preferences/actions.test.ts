@@ -7,7 +7,7 @@ vi.mock("@/lib/fonts/registry", () => ({ fontKeys: ["outfit"] }));
 
 vi.mock("next/headers", () => ({ cookies: async () => ({ set, get: vi.fn() }) }));
 
-const { setLocale } = await import("./actions");
+const { setCurrency, setLocale } = await import("./actions");
 
 describe("setLocale", () => {
   beforeEach(() => {
@@ -22,5 +22,21 @@ describe("setLocale", () => {
   it("stores a valid locale for a year, site-wide, same-site lax", async () => {
     await setLocale("fr");
     expect(set).toHaveBeenCalledWith("locale", "fr", { path: "/", maxAge: 31_536_000, sameSite: "lax" });
+  });
+});
+
+describe("setCurrency", () => {
+  beforeEach(() => {
+    set.mockClear();
+  });
+
+  it.each([["JPY"], ["usd"], [""], [{}], [undefined], [["EUR"]]])("rejects %j and writes nothing", async (value) => {
+    await expect(setCurrency(value)).rejects.toThrow("Unsupported currency");
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it.each([["USD"], ["EUR"], ["GBP"]])("stores %s for a year, site-wide, same-site lax", async (currency) => {
+    await setCurrency(currency);
+    expect(set).toHaveBeenCalledWith("currency", currency, { path: "/", maxAge: 31_536_000, sameSite: "lax" });
   });
 });

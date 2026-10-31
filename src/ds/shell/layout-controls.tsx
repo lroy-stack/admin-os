@@ -11,9 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { isLocale, LOCALE_NAMES, LOCALES, useLocale, useMessages } from "@/core/i18n/client";
+import {
+  currencyOptions,
+  isLocale,
+  LOCALE_NAMES,
+  LOCALES,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
+import { isCurrency } from "@/core/money/client";
 import { PREFERENCE_REGISTRY, THEME_PRESET_OPTIONS, usePreferencesStore } from "@/ds/preferences";
-import { setLocale } from "@/ds/preferences/actions";
+import { setCurrency, setLocale } from "@/ds/preferences/actions";
 import { fontOptions } from "@/lib/fonts/registry";
 
 import { shellMessageKey } from "./messages";
@@ -23,6 +32,8 @@ export function LayoutControls() {
   const { preferences: text } = useMessages(shellMessageKey);
   const locale = useLocale();
   const [pendingLocale, setPendingLocale] = useOptimistic(locale);
+  const currency = useCurrency();
+  const [pendingCurrency, setPendingCurrency] = useOptimistic(currency);
   const [, startTransition] = useTransition();
   const { values, resolvedThemeMode, setPreference, resetPreferences } = usePreferencesStore(
     useShallow((state) => ({
@@ -80,6 +91,18 @@ export function LayoutControls() {
       } catch {
         // The optimistic value reverts when the transition ends; tell the owner why.
         toast.error(text.languageFailed);
+      }
+    });
+  };
+
+  const onCurrencyChange = (value: string) => {
+    if (!isCurrency(value)) return;
+    startTransition(async () => {
+      setPendingCurrency(value);
+      try {
+        await setCurrency(value);
+      } catch {
+        toast.error(text.currencyFailed);
       }
     });
   };
@@ -160,6 +183,24 @@ export function LayoutControls() {
             </div>
 
             <div className="space-y-1">
+              <Label className="text-xs font-medium">{text.currency}</Label>
+              <Select value={pendingCurrency} onValueChange={onCurrencyChange}>
+                <SelectTrigger size="sm" className="w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {currencyOptions(locale).map((option) => (
+                      <SelectItem key={option.value} className="text-xs" value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
               <Label className="text-xs font-medium">{text.themeMode}</Label>
               <ToggleGroup
                 size="sm"
@@ -205,7 +246,7 @@ export function LayoutControls() {
               </ToggleGroup>
             </div>
 
-            {/* Deliberately leaves the language alone: its default comes from Accept-Language, not the registry. */}
+            {/* Deliberately leaves language and currency alone: their defaults come from Accept-Language, not the registry. */}
             <Button type="button" size="sm" variant="outline" className="w-full text-xs" onClick={resetPreferences}>
               {text.restoreDefaults}
             </Button>

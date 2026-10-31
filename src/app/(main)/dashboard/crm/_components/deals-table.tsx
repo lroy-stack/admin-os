@@ -4,8 +4,8 @@ import { TonePill } from "@/ds/components";
 import { formatShortDate, getCustomer, type OpenDeal, stageLabels } from "@/lib/crm";
 import { formatCurrency } from "@/lib/utils";
 
-import { stageTones } from "../../_components/deal-card";
 import { MemberAvatars } from "../../_components/member-avatars";
+import { stageTones } from "../../_components/stage-tones";
 
 export function DealsTable({ deals }: { deals: OpenDeal[] }) {
   return (

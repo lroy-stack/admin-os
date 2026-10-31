@@ -131,37 +131,20 @@
   },
   "overrides": [
     {
-      "includes": ["src/ds/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noJsxLiterals": "error"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/engines/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noJsxLiterals": "error"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/modules/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noJsxLiterals": "error"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/verticals/**"],
+      "includes": [
+        "src/ds/**",
+        "src/engines/**",
+        "src/modules/**",
+        "src/verticals/**",
+        "src/app/_components/**",
+        "src/app/(main)/dashboard/layout.tsx",
+        "src/app/(main)/dashboard/_components/**",
+        "src/components/date-range-picker.tsx",
+        "src/app/(main)/dashboard/default/**",
+        "src/app/(main)/dashboard/invoice/**",
+        "src/app/(main)/dashboard/calendar/**"
+      ],
+      "plugins": ["./lint/no-visible-string-props.grit"],
       "linter": {
         "rules": {
           "style": {

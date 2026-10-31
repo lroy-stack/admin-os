@@ -1,6 +1,9 @@
+"use client";
+
 import { cn } from "cn";
 
 import { Avatar, AvatarFallback, AvatarGroup } from "@/components/ui/avatar";
+import { formatList, useLocale } from "@/core/i18n/client";
 import type { TeamMemberId } from "@/data/crm";
 import { getMember } from "@/lib/crm";
 
@@ -25,8 +28,16 @@ export function MemberAvatar({ id, className }: { id: TeamMemberId; className?: 
 
 /** Overlapping owner avatars; the ring color follows the surface behind them via `ringClassName`. */
 export function MemberAvatars({ ids, ringClassName }: { ids: readonly TeamMemberId[]; ringClassName?: string }) {
+  const locale = useLocale();
   return (
-    <AvatarGroup role="group" className="-space-x-1.5" aria-label={ids.map((id) => getMember(id).name).join(", ")}>
+    <AvatarGroup
+      role="group"
+      className="-space-x-1.5"
+      aria-label={formatList(
+        ids.map((id) => getMember(id).name),
+        locale,
+      )}
+    >
       {ids.map((id) => (
         <MemberAvatar key={id} id={id} className={cn("ring-foreground/20 ring-2", ringClassName)} />
       ))}

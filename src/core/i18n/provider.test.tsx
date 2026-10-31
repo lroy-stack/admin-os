@@ -12,7 +12,7 @@ function Title({ messageKeyToRead }: { messageKeyToRead: typeof registered }) {
 
 const render = (key: typeof registered) =>
   renderToStaticMarkup(
-    <LocaleProvider locale="de" messages={{ registered: { title: "Hallo" } }}>
+    <LocaleProvider locale="de" currency="EUR" messages={{ registered: { title: "Hallo" } }}>
       <Title messageKeyToRead={key} />
     </LocaleProvider>,
   );
@@ -28,5 +28,29 @@ describe("useMessages", () => {
 
   it("throws outside a LocaleProvider", () => {
     expect(() => renderToStaticMarkup(<Title messageKeyToRead={registered} />)).toThrow("Missing LocaleProvider");
+  });
+});
+
+const outerKey = messageKey<{ title: string }>("outer");
+const innerKey = messageKey<{ title: string }>("inner");
+
+function Both() {
+  return (
+    <p>
+      {useMessages(outerKey).title}+{useMessages(innerKey).title}
+    </p>
+  );
+}
+
+describe("nested LocaleProvider", () => {
+  it("adds its messages to the outer ones", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider locale="fr" currency="EUR" messages={{ outer: { title: "Layout" } }}>
+        <LocaleProvider locale="fr" currency="EUR" messages={{ inner: { title: "Page" } }}>
+          <Both />
+        </LocaleProvider>
+      </LocaleProvider>,
+    );
+    expect(html).toBe("<p>Layout+Page</p>");
   });
 });

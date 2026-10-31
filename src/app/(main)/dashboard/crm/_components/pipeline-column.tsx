@@ -6,7 +6,8 @@ import { CardIconButton, toneSolid, toneWash } from "@/ds/components";
 import { type OpenDeal, stageLabels, sumValue } from "@/lib/crm";
 import { formatCurrency } from "@/lib/utils";
 
-import { DealCard, stageTones } from "../../_components/deal-card";
+import { DealCard } from "../../_components/deal-card";
+import { stageTones } from "../../_components/stage-tones";
 
 export function PipelineColumn({ stage, deals }: { stage: OpenStage; deals: OpenDeal[] }) {
   const tone = stageTones[stage];

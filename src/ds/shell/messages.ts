@@ -34,6 +34,7 @@ export interface ShellMessages {
     readonly font: string;
     readonly fontPlaceholder: string;
     readonly language: string;
+    readonly currency: string;
     readonly themeMode: string;
     readonly modes: { readonly light: string; readonly dark: string; readonly system: string };
     /** Placeholders: `{mode}`. */
@@ -45,6 +46,8 @@ export interface ShellMessages {
     readonly restoreDefaults: string;
     /** Shown in a toast when the language could not be saved. */
     readonly languageFailed: string;
+    /** Shown in a toast when the currency could not be saved. */
+    readonly currencyFailed: string;
   };
 }
 

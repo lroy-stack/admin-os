@@ -53,3 +53,27 @@ describe("untranslated messages", () => {
     expect(() => assertDictionaryParity({ ...untranslated, fr: ok("D") })).not.toThrow();
   });
 });
+
+describe("French typography", () => {
+  const withFrench = (title: string) => ({ ...complete, fr: { ...ok("D"), title } });
+
+  it.each([
+    ["a plain space before a colon", "Compte : x"],
+    ["a plain space before a question mark", "Prêt ?"],
+    ["a straight apostrophe", "l'équipe"],
+  ] as const)("rejects %s", (_name, title) => {
+    expect(() => assertDictionaryParity(withFrench(title))).toThrow("fr:title");
+  });
+
+  it.each([
+    ["a no-break space before a colon", "Compte\u00a0: x"],
+    ["a narrow no-break space before a semicolon", "Oui\u202f; non"],
+    ["a typographic apostrophe", "l’équipe"],
+  ] as const)("accepts %s", (_name, title) => {
+    expect(() => assertDictionaryParity(withFrench(title))).not.toThrow();
+  });
+
+  it("leaves other languages alone", () => {
+    expect(() => assertDictionaryParity({ ...complete, en: { ...ok("A"), title: "Account : x" } })).not.toThrow();
+  });
+});

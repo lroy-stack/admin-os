@@ -2,11 +2,15 @@
 
 import { createContext, type ReactNode, use, useEffect } from "react";
 
+import type { Currency } from "@/core/money/client";
+
+import { type ChartFormatters, chartFormatters } from "./chart-format";
 import type { Locale } from "./locale";
 import type { MessageKey, ResolvedMessages } from "./namespace";
 
 interface LocaleValue {
   readonly locale: Locale;
+  readonly currency: Currency;
   readonly messages: ResolvedMessages;
 }
 
@@ -26,13 +30,21 @@ function useLocaleValue(): LocaleValue {
  */
 export function LocaleProvider({
   locale,
+  currency,
   messages,
   children,
 }: {
   locale: Locale;
+  /** The business currency (a setting, independent of the language). */
+  currency: Currency;
   messages: ResolvedMessages;
   children: ReactNode;
 }) {
+  // A provider inside another one (a route's bundles under the layout's) adds to the outer messages, so the
+  // layout's shell and shared dictionaries stay reachable.
+  const outer = use(LocaleContext);
+  const merged = outer ? { ...outer.messages, ...messages } : messages;
+
   // Leaving the provider (for example to /auth/*) restores the page's own language.
   useEffect(() => {
     const root = document.documentElement;
@@ -43,11 +55,22 @@ export function LocaleProvider({
     };
   }, [locale]);
 
-  return <LocaleContext.Provider value={{ locale, messages }}>{children}</LocaleContext.Provider>;
+  return <LocaleContext.Provider value={{ locale, currency, messages: merged }}>{children}</LocaleContext.Provider>;
 }
 
 export function useLocale(): Locale {
   return useLocaleValue().locale;
+}
+
+/** The business currency: what plain amounts in demo data and charts are written in. A `Money` uses its own. */
+export function useCurrency(): Currency {
+  return useLocaleValue().currency;
+}
+
+/** Tick and tooltip formatters for the active locale and business currency, for recharts props. */
+export function useChartFormatters(): ChartFormatters {
+  const { locale, currency } = useLocaleValue();
+  return chartFormatters(locale, currency);
 }
 
 export function useMessages<T>(key: MessageKey<T>): T {

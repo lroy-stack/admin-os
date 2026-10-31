@@ -9,37 +9,30 @@ import listPlugin from "@fullcalendar/react/list";
 import multiMonthPlugin from "@fullcalendar/react/multimonth";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import { cn } from "cn";
-import { differenceInCalendarDays, differenceInMinutes, endOfMonth, format, startOfMonth } from "date-fns";
+import { differenceInCalendarDays, differenceInMinutes, endOfMonth, startOfMonth } from "date-fns";
 import { CalendarDays, Calendar as CalendarIcon, Clock, Plus, Target, XIcon } from "lucide-react";
 
 import { EventCalendarViews } from "@/components/calendar/event-calendar-views";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, formatLocalDate, useLocale, useMessages } from "@/core/i18n/client";
+import { fullCalendarLocale } from "@/core/i18n/ui";
 import { PageHeader, PeriodStepper, SegmentedControl, type SegmentedOption } from "@/ds/components";
 
-import { demoEvents } from "./events-data";
-import { ClosingSoon, type UpcomingEvent, UpNext } from "./schedule-sidebar";
+import { createDemoEvents, type DemoEvent } from "./events-data";
+import { calendarMessageKey } from "./messages";
+import { type ClosingDeal, ClosingSoon, type UpcomingEvent, UpNext } from "./schedule-sidebar";
 
 type ViewKey = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
-const views: SegmentedOption<ViewKey>[] = [
-  { value: "dayGridMonth", label: "Month" },
-  { value: "timeGridWeek", label: "Week" },
-  { value: "timeGridDay", label: "Day" },
-];
+const viewKeys = ["dayGridMonth", "timeGridWeek", "timeGridDay"] as const satisfies readonly ViewKey[];
 
-const calendars = [
-  { key: "all", label: "All calendars" },
-  { key: "work", label: "Work" },
-  { key: "personal", label: "Personal" },
-  { key: "team", label: "Team" },
-  { key: "focus", label: "Focus time" },
-];
+const calendarKeys = ["all", "work", "personal", "team", "focus"] as const;
 
 const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, multiMonthPlugin];
 
-type ScheduleEvent = (typeof demoEvents)[number];
+type ScheduleEvent = DemoEvent;
 
 function isAllDay(event: ScheduleEvent) {
   return "allDay" in event && event.allDay === true;
@@ -53,13 +46,10 @@ function endOf(event: ScheduleEvent) {
   return "end" in event ? event.end : undefined;
 }
 
-// All-day items read as salmon bars; timed meetings take the default azure; focus blocks tint in the accent.
-const scheduleEvents = demoEvents.map((event) => (isAllDay(event) ? { ...event, color: "var(--salmon)" } : event));
-
 const glassBorder = "border border-foreground/8";
 
 function isViewKey(value: string | undefined): value is ViewKey {
-  return views.some((view) => view.value === value);
+  return viewKeys.some((view) => view === value);
 }
 
 function minutesBetween(event: ScheduleEvent) {
@@ -67,13 +57,24 @@ function minutesBetween(event: ScheduleEvent) {
   return end ? differenceInMinutes(end, event.start) : 0;
 }
 
-export function Calendar() {
+export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
+  const text = useMessages(calendarMessageKey);
+  const locale = useLocale();
   const controller = useCalendarController();
-  const [selectedCalendar, setSelectedCalendar] = React.useState(calendars[0].key);
+  const [selectedCalendar, setSelectedCalendar] = React.useState<(typeof calendarKeys)[number]>(calendarKeys[0]);
+  // Demo events in the active language; built on the client so their times are in the device's zone.
+  const demoEvents = React.useMemo(() => createDemoEvents(text.demoEvents, locale, new Date()), [text, locale]);
+  // All-day items read as salmon bars; timed meetings take the default azure; focus blocks tint in the accent.
+  const scheduleEvents = demoEvents.map((event) => (isAllDay(event) ? { ...event, color: "var(--salmon)" } : event));
+  const views: SegmentedOption<ViewKey>[] = [
+    { value: "dayGridMonth", label: text.views.month },
+    { value: "timeGridWeek", label: text.views.week },
+    { value: "timeGridDay", label: text.views.day },
+  ];
   const [range, setRange] = React.useState(() => {
     const now = new Date();
     return {
-      title: format(now, "MMMM yyyy"),
+      title: formatLocalDate(now, locale, { month: "long", year: "numeric" }),
       days: differenceInCalendarDays(endOfMonth(now), startOfMonth(now)) + 1,
       events: 0,
       bookedMinutes: 0,
@@ -98,27 +99,39 @@ export function Calendar() {
           allDay: isAllDay(event),
         })),
     );
-  }, []);
+  }, [demoEvents]);
 
-  const activeView = isViewKey(controller.view?.type) ? controller.view.type : views[0].value;
+  const activeView = isViewKey(controller.view?.type) ? controller.view.type : viewKeys[0];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Team Schedule"
+        title={text.title}
         kpis={[
-          { icon: CalendarDays, value: String(range.events), label: `Events in ${range.days} days` },
-          { icon: Clock, value: `${Math.round(range.bookedMinutes / 60)} h`, label: "Booked in meetings" },
-          { icon: Target, value: `${Math.round(range.focusMinutes / 60)} h`, label: "Protected focus time" },
+          {
+            icon: CalendarDays,
+            value: String(range.events),
+            label: format(text.kpis.eventsInDays, locale, { count: range.days }),
+          },
+          {
+            icon: Clock,
+            value: format(text.kpis.hours, locale, { hours: Math.round(range.bookedMinutes / 60) }),
+            label: text.kpis.booked,
+          },
+          {
+            icon: Target,
+            value: format(text.kpis.hours, locale, { hours: Math.round(range.focusMinutes / 60) }),
+            label: text.kpis.focus,
+          },
         ]}
       />
 
       <div className="flex flex-wrap items-center gap-2">
         <PeriodStepper
-          label="Change period"
-          previousLabel="Previous period"
-          todayLabel="Today"
-          nextLabel="Next period"
+          label={text.stepper.label}
+          previousLabel={text.stepper.previous}
+          todayLabel={text.stepper.today}
+          nextLabel={text.stepper.next}
           onPrevious={() => controller.prev()}
           onToday={() => controller.today()}
           onNext={() => controller.next()}
@@ -127,30 +140,39 @@ export function Calendar() {
           {range.title}
         </h2>
         <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-          <Select value={selectedCalendar} onValueChange={setSelectedCalendar}>
-            <SelectTrigger className="liquid-glass h-8! w-44 rounded-full border-0 text-xs">
+          <Select
+            value={selectedCalendar}
+            onValueChange={(value) => {
+              const next = calendarKeys.find((key) => key === value);
+              if (next) setSelectedCalendar(next);
+            }}
+          >
+            <SelectTrigger
+              aria-label={text.filter.label}
+              className="liquid-glass h-8! w-44 rounded-full border-0 text-xs"
+            >
               <CalendarIcon />
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper">
               <SelectGroup>
-                {calendars.map((calendar) => (
-                  <SelectItem key={calendar.key} value={calendar.key}>
-                    {calendar.label}
+                {calendarKeys.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {text.filter[key]}
                   </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>
           </Select>
           <SegmentedControl
-            label="Calendar view"
+            label={text.views.label}
             value={activeView}
             options={views}
             onValueChange={(view) => controller.changeView(view)}
           />
           <Button className="liquid-glass-brand h-9 rounded-full px-4">
             <Plus data-icon="inline-start" />
-            Add event
+            {text.addEvent}
           </Button>
         </div>
       </div>
@@ -159,7 +181,8 @@ export function Calendar() {
         <Card className="gap-0 overflow-hidden p-2 sm:p-3">
           <EventCalendarViews
             controller={controller}
-            initialView={views[0].value}
+            initialView={viewKeys[0]}
+            locale={fullCalendarLocale(locale)}
             plugins={[...plugins]}
             popoverCloseContent={() => <XIcon className="text-muted-foreground group-hover:text-foreground size-5" />}
             events={scheduleEvents}
@@ -220,7 +243,7 @@ export function Calendar() {
         </Card>
         <div className="flex flex-col gap-4">
           <UpNext events={upcoming} />
-          <ClosingSoon />
+          <ClosingSoon deals={closingSoon} />
         </div>
       </div>
     </div>

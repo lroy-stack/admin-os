@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Globe } from "lucide-react";
 import type { Metadata } from "next";
 
-import { APP_CONFIG } from "@/config/app-config";
+import { getCopyright } from "@/config/app-messages.server";
 
 import { RegisterForm } from "../../_components/register-form";
 import { GoogleButton } from "../../_components/social-auth/google-button";
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RegisterV2() {
+export default async function RegisterV2() {
   return (
     <>
       <div className="mx-auto flex w-full flex-col justify-center space-y-8 sm:w-[350px]">
@@ -44,7 +44,7 @@ export default function RegisterV2() {
       </div>
 
       <div className="absolute bottom-5 flex w-full justify-between px-10">
-        <div className="text-sm">{APP_CONFIG.copyright}</div>
+        <div className="text-sm">{await getCopyright()}</div>
         <div className="flex items-center gap-1 text-sm">
           <Globe className="text-muted-foreground size-4" />
           ENG

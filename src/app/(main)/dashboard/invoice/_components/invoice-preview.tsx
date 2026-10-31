@@ -6,9 +6,11 @@ import { Download, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { useMessages } from "@/core/i18n/client";
 
 import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_SCALE, INVOICE_PAPER_WIDTH, type InvoiceFormValues } from "./data";
 import { InvoicePaper } from "./invoice-paper";
+import { invoiceMessageKey } from "./messages";
 import { PrintInvoice } from "./print-invoice";
 import { useVisibleCenterPosition } from "./use-visible-center-position";
 
@@ -17,6 +19,7 @@ function handlePrint() {
 }
 
 export function InvoicePreview({ invoice }: { invoice: InvoiceFormValues }) {
+  const text = useMessages(invoiceMessageKey).preview;
   const previewBodyRef = React.useRef<HTMLDivElement>(null);
   const paperLayout = useVisibleCenterPosition(previewBodyRef, {
     height: INVOICE_PAPER_HEIGHT,
@@ -29,15 +32,15 @@ export function InvoicePreview({ invoice }: { invoice: InvoiceFormValues }) {
       <PrintInvoice invoice={invoice} />
       <div className="bg-card flex flex-col rounded-xl border">
         <div className="flex items-center justify-between px-4 py-4">
-          <h2 className="text-lg font-medium">Preview</h2>
+          <h2 className="text-lg font-medium">{text.title}</h2>
           <ButtonGroup>
             <Button type="button" variant="outline" onClick={handlePrint}>
               <Printer data-icon="inline-start" />
-              Print
+              {text.print}
             </Button>
             <Button type="button" variant="outline">
               <Download data-icon="inline-start" />
-              Download PDF
+              {text.download}
             </Button>
           </ButtonGroup>
         </div>
@@ -47,9 +50,7 @@ export function InvoicePreview({ invoice }: { invoice: InvoiceFormValues }) {
           className="@container/preview relative min-h-[calc(100svh-15rem)] flex-1 rounded-b-xl bg-stone-200 p-4 dark:bg-stone-800"
         >
           {paperLayout === null ? (
-            <div className="text-muted-foreground absolute inset-0 grid place-items-center text-sm">
-              Loading Preview
-            </div>
+            <div className="text-muted-foreground absolute inset-0 grid place-items-center text-sm">{text.loading}</div>
           ) : null}
           <div
             style={{

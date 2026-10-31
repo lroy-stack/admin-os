@@ -1,10 +1,10 @@
 import Link from "next/link";
 
-import type { Metadata } from "next";
-
 import { AppLogo } from "@/components/app-logo";
 import { Separator } from "@/components/ui/separator";
 import { APP_CONFIG } from "@/config/app-config";
+import { appMessages } from "@/config/app-messages.server";
+import { pageMetadata } from "@/config/metadata.server";
 
 import { Footer } from "./_components/footer";
 import { Intro } from "./_components/intro";
@@ -13,21 +13,7 @@ import { Overview } from "./_components/overview";
 import { Showcase } from "./_components/showcase";
 import styles from "./landing.module.css";
 
-export const metadata: Metadata = {
-  title: APP_CONFIG.meta.title,
-  description: APP_CONFIG.meta.description,
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    type: "website",
-    siteName: APP_CONFIG.name,
-    locale: "en_US",
-    url: "/",
-    title: APP_CONFIG.meta.title,
-    description: APP_CONFIG.meta.description,
-  },
-};
+export const generateMetadata = () => pageMetadata("/", appMessages);
 
 export default function Home() {
   const websiteJsonLd = {

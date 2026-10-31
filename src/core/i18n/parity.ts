@@ -39,11 +39,24 @@ export function flattenMessages(dictionary: unknown): Map<string, Message> {
   return out;
 }
 
+// French typography (docs/i18n/glossary.md): a no-break space before : ; ? ! and typographic apostrophes.
+const FRENCH_PLAIN_SPACE_BEFORE_PUNCTUATION = / [:;?!]/;
+const STRAIGHT_APOSTROPHE = /'/;
+
 function problemsFor(locale: Locale, path: string, message: Message): string[] {
   const where = `${locale}:${path}`;
-  const problems = formsOf(message)
-    .filter((text) => text.trim() === "")
-    .map(() => `${where} has an empty string`);
+  const texts = formsOf(message);
+  const problems = texts.filter((text) => text.trim() === "").map(() => `${where} has an empty string`);
+  if (locale === "fr") {
+    for (const text of texts) {
+      if (FRENCH_PLAIN_SPACE_BEFORE_PUNCTUATION.test(text)) {
+        problems.push(`${where} has a plain space before : ; ? or !; use a no-break space (U+00A0)`);
+      }
+      if (STRAIGHT_APOSTROPHE.test(text)) {
+        problems.push(`${where} has a straight apostrophe; use ’ (U+2019)`);
+      }
+    }
+  }
   if (typeof message !== "string") {
     for (const required of ["one", "other"] as const) {
       if (typeof message[required] !== "string") {
@@ -62,8 +75,9 @@ function sameInEveryLocale(messages: readonly Message[]): boolean {
 
 /**
  * Runtime half of ADR 0007's completeness (the compiler covers the other half). Throws one error listing every
- * problem: missing locale or key, empty string, differing `{placeholders}`, a plural without `one`/`other`, or a message identical in all four locales (an untranslated copy).
- * `allowIdentical` lists the paths that may legitimately match everywhere, such as brand names.
+ * problem: missing locale or key, empty string, differing `{placeholders}`, a plural without `one`/`other`, a message
+ * identical in all four locales (an untranslated copy), or French typography broken (a plain space before : ; ? !, a
+ * straight apostrophe). `allowIdentical` lists the paths that may legitimately match everywhere, such as brand names.
  */
 export function assertDictionaryParity(
   dictionary: Readonly<Record<Locale, unknown>>,

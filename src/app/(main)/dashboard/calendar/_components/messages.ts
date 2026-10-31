@@ -1,0 +1,63 @@
+import { type MessageKey, messageKey, type PageMeta, type Plural } from "@/core/i18n/client";
+
+/** Text of /dashboard/calendar (Team Schedule), including its demo events. */
+export interface CalendarMessages {
+  readonly meta: PageMeta;
+  readonly title: string;
+  readonly kpis: {
+    /** Placeholders: `{count}`, the number of days in the visible range. */
+    readonly eventsInDays: Plural;
+    readonly booked: string;
+    readonly focus: string;
+    /** Placeholders: `{hours}`. */
+    readonly hours: string;
+  };
+  readonly stepper: {
+    readonly label: string;
+    readonly previous: string;
+    readonly today: string;
+    readonly next: string;
+  };
+  readonly filter: {
+    readonly label: string;
+    readonly all: string;
+    readonly work: string;
+    readonly personal: string;
+    readonly team: string;
+    readonly focus: string;
+  };
+  readonly views: {
+    readonly label: string;
+    readonly month: string;
+    readonly week: string;
+    readonly day: string;
+  };
+  readonly addEvent: string;
+  readonly sidebar: {
+    readonly upNext: string;
+    readonly nothingScheduled: string;
+    readonly allDay: string;
+    /** Placeholders: `{start}`, `{end}`. */
+    readonly timeRange: string;
+    readonly closingSoon: string;
+    readonly openPipeline: string;
+  };
+  /** Demo events: text a business writes in its own language. */
+  readonly demoEvents: {
+    readonly monthlyPlanning: string;
+    readonly designReview: string;
+    readonly clientCheckIn: string;
+    readonly productWorkshop: string;
+    readonly standup: string;
+    readonly financeSync: string;
+    readonly focusBlock: string;
+    readonly sprintPlanning: string;
+    readonly opsHandoff: string;
+    readonly quarterlyReport: string;
+    readonly resetDay: string;
+    /** Placeholders: `{name}`. */
+    readonly birthday: string;
+  };
+}
+
+export const calendarMessageKey: MessageKey<CalendarMessages> = messageKey<CalendarMessages>("calendar");

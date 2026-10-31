@@ -1,0 +1,11 @@
+language js(typescript, jsx)
+
+// Finished screens carry no visible text in their markup (spec 001, AC2). `style/noJsxLiterals` covers JSX text;
+// this plugin covers string literals in the props that screen readers or eyes read. The list is by prop name
+// because Biome's `noStrings` option cannot tell `aria-label` from `className`.
+// See docs/adr/0007-i18n-typed-dictionaries.md ("How to translate a screen").
+JsxAttribute(name=$name, initializer=JsxAttributeInitializerClause(value=$value)) as $attribute where {
+  $name <: r"^(?:aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|placeholder|title|alt|label|description|tooltip|helperText|emptyText|emptyLabel|[a-zA-Z]*Label|[a-zA-Z]*Text|[a-zA-Z]*Title|[a-zA-Z]*Description|[a-zA-Z]*Placeholder)$",
+  $value <: JsxString(),
+  register_diagnostic(span=$attribute, message="Visible text belongs in the route's dictionary (docs/adr/0007-i18n-typed-dictionaries.md), not in this prop.", severity="error")
+}

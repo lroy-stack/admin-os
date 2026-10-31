@@ -32,6 +32,7 @@ const en: ShellMessages = {
     font: "Font",
     fontPlaceholder: "Select font",
     language: "Language",
+    currency: "Currency",
     themeMode: "Theme mode",
     modes: { light: "Light", dark: "Dark", system: "System" },
     themeCycle: "Current theme: {mode}. Click to cycle themes",
@@ -41,6 +42,7 @@ const en: ShellMessages = {
     navbarStyles: { sticky: "Sticky", scroll: "Scroll" },
     restoreDefaults: "Restore defaults",
     languageFailed: "Could not change the language. Try again.",
+    currencyFailed: "Could not change the currency. Try again.",
   },
 };
 
@@ -72,6 +74,7 @@ const es: ShellMessages = {
     font: "Fuente",
     fontPlaceholder: "Elegir fuente",
     language: "Idioma",
+    currency: "Moneda",
     themeMode: "Apariencia",
     modes: { light: "Claro", dark: "Oscuro", system: "Sistema" },
     themeCycle: "Apariencia: {mode}. Haz clic para cambiarla",
@@ -81,6 +84,7 @@ const es: ShellMessages = {
     navbarStyles: { sticky: "Fija", scroll: "Se desplaza" },
     restoreDefaults: "Restablecer valores predeterminados",
     languageFailed: "No se pudo cambiar el idioma. Inténtalo de nuevo.",
+    currencyFailed: "No se pudo cambiar la moneda. Inténtalo de nuevo.",
   },
 };
 
@@ -112,6 +116,7 @@ const de: ShellMessages = {
     font: "Schrift",
     fontPlaceholder: "Schrift auswählen",
     language: "Sprache",
+    currency: "Währung",
     themeMode: "Darstellung",
     modes: { light: "Hell", dark: "Dunkel", system: "System" },
     themeCycle: "Darstellung: {mode}. Klicken zum Wechseln",
@@ -121,6 +126,7 @@ const de: ShellMessages = {
     navbarStyles: { sticky: "Fixiert", scroll: "Nicht fixiert" },
     restoreDefaults: "Zurücksetzen",
     languageFailed: "Die Sprache konnte nicht geändert werden. Bitte versuche es erneut.",
+    currencyFailed: "Die Währung konnte nicht geändert werden. Bitte versuche es erneut.",
   },
 };
 
@@ -131,7 +137,7 @@ const fr: ShellMessages = {
     unread: { one: "{count} notification non lue", other: "{count} notifications non lues" },
   },
   account: {
-    label: "Compte : {name}",
+    label: "Compte : {name}",
     account: "Compte",
     billing: "Facturation",
     notifications: "Notifications",
@@ -152,15 +158,17 @@ const fr: ShellMessages = {
     font: "Police",
     fontPlaceholder: "Choisir une police",
     language: "Langue",
+    currency: "Devise",
     themeMode: "Apparence",
     modes: { light: "Clair", dark: "Sombre", system: "Système" },
-    themeCycle: "Apparence : {mode}. Cliquez pour la changer",
+    themeCycle: "Apparence : {mode}. Cliquez pour la changer",
     pageLayout: "Mise en page",
     layouts: { centered: "Centrée", fullWidth: "Pleine largeur" },
     navbarBehavior: "Comportement de la barre",
     navbarStyles: { sticky: "Fixe", scroll: "Défile" },
     restoreDefaults: "Réinitialiser",
     languageFailed: "Impossible de changer la langue. Veuillez réessayer.",
+    currencyFailed: "Impossible de changer la devise. Veuillez réessayer.",
   },
 };
 
