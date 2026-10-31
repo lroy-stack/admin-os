@@ -1,6 +1,7 @@
 import { File, FileArchive, FileChartColumn, FileImage, FileText } from "lucide-react";
 
-export type FileKind = "document" | "spreadsheet" | "design" | "pdf" | "archive";
+export const fileKinds = ["archive", "design", "document", "pdf", "spreadsheet"] as const;
+export type FileKind = (typeof fileKinds)[number];
 export type FileManagerView = "grid" | "list";
 
 export const fileIcons = {
@@ -11,27 +12,42 @@ export const fileIcons = {
   spreadsheet: FileChartColumn,
 } satisfies Record<FileKind, typeof File>;
 
-export const fileKindLabels: Record<FileKind, string> = {
-  archive: "Archive",
-  design: "Design",
-  document: "Document",
-  pdf: "PDF",
-  spreadsheet: "Spreadsheet",
-};
+export type FolderId =
+  | "brand-assets"
+  | "product-design"
+  | "legal-documents"
+  | "research"
+  | "marketing"
+  | "team-resources";
 
-export interface FileManagerFolder {
-  id: string;
-  name: string;
+export type FileId =
+  | "product-roadmap"
+  | "design-system"
+  | "campaign-performance"
+  | "research-notes"
+  | "release-assets"
+  | "handoff-checklist"
+  | "quarterly-budget"
+  | "mobile-app-prototype"
+  | "partnership-agreement"
+  | "product-launch-brief"
+  | "brand-exports";
+
+/** The demo workspace's "now": relative times and dates below are measured against it. */
+export const FILES_AS_OF = "2026-10-31T18:00:00Z";
+
+/** Raw demo records: names come from the dictionary, sizes are bytes and times are ISO instants. */
+export interface FolderRecord {
+  id: FolderId;
   fileCount: number;
-  size: string;
+  bytes: number;
   updatedAt: string;
 }
 
-export interface FileManagerFile {
-  id: string;
-  name: string;
+export interface FileRecord {
+  id: FileId;
   kind: FileKind;
-  size: string;
+  bytes: number;
   owner: string;
   ownerInitials: string;
   modifiedAt: string;
@@ -39,170 +55,144 @@ export interface FileManagerFile {
   starred: boolean;
 }
 
-export const folders: FileManagerFolder[] = [
-  {
-    id: "brand-assets",
-    name: "Brand assets",
-    fileCount: 24,
-    size: "1.8 GB",
-    updatedAt: "12 min ago",
-  },
-  {
-    id: "product-design",
-    name: "Product design",
-    fileCount: 38,
-    size: "4.6 GB",
-    updatedAt: "Yesterday",
-  },
-  {
-    id: "legal-documents",
-    name: "Legal documents",
-    fileCount: 16,
-    size: "840 MB",
-    updatedAt: "Jul 29",
-  },
-  {
-    id: "research",
-    name: "Research",
-    fileCount: 11,
-    size: "620 MB",
-    updatedAt: "Jul 27",
-  },
-  {
-    id: "marketing",
-    name: "Marketing",
-    fileCount: 29,
-    size: "2.3 GB",
-    updatedAt: "Jul 25",
-  },
-  {
-    id: "team-resources",
-    name: "Team resources",
-    fileCount: 18,
-    size: "1.2 GB",
-    updatedAt: "Jul 22",
-  },
+/** What the screen renders: names, sizes and times already written for the request's language. */
+export interface FileManagerFolder {
+  id: FolderId;
+  name: string;
+  fileCount: number;
+  size: string;
+  updated: string;
+}
+
+export interface FileManagerFile {
+  id: FileId;
+  name: string;
+  kind: FileKind;
+  size: string;
+  owner: string;
+  ownerInitials: string;
+  modified: string;
+  shared: boolean;
+  starred: boolean;
+}
+
+export const folderRecords: FolderRecord[] = [
+  { id: "brand-assets", fileCount: 24, bytes: 1_800_000_000, updatedAt: "2026-10-31T17:48:00Z" },
+  { id: "product-design", fileCount: 38, bytes: 4_600_000_000, updatedAt: "2026-10-30T14:00:00Z" },
+  { id: "legal-documents", fileCount: 16, bytes: 840_000_000, updatedAt: "2026-10-26T09:30:00Z" },
+  { id: "research", fileCount: 11, bytes: 620_000_000, updatedAt: "2026-10-24T11:15:00Z" },
+  { id: "marketing", fileCount: 29, bytes: 2_300_000_000, updatedAt: "2026-10-22T16:40:00Z" },
+  { id: "team-resources", fileCount: 18, bytes: 1_200_000_000, updatedAt: "2026-10-19T08:20:00Z" },
 ];
 
-export const files: FileManagerFile[] = [
+export const fileRecords: FileRecord[] = [
   {
     id: "product-roadmap",
-    name: "Product roadmap 2027.pdf",
     kind: "pdf",
-    size: "8.4 MB",
+    bytes: 8_400_000,
     owner: "Alex Morgan",
     ownerInitials: "AK",
-    modifiedAt: "5 minutes ago",
+    modifiedAt: "2026-10-31T17:55:00Z",
     shared: true,
     starred: true,
   },
   {
     id: "design-system",
-    name: "Design system foundations.fig",
     kind: "design",
-    size: "24.1 MB",
+    bytes: 24_100_000,
     owner: "Aiy",
     ownerInitials: "AY",
-    modifiedAt: "2 hours ago",
+    modifiedAt: "2026-10-31T16:00:00Z",
     shared: true,
     starred: false,
   },
   {
     id: "campaign-performance",
-    name: "Campaign performance.xlsx",
     kind: "spreadsheet",
-    size: "2.7 MB",
+    bytes: 2_700_000,
     owner: "Ammar Khan",
     ownerInitials: "AM",
-    modifiedAt: "Yesterday",
+    modifiedAt: "2026-10-30T12:00:00Z",
     shared: false,
     starred: false,
   },
   {
     id: "research-notes",
-    name: "Customer research notes.docx",
     kind: "document",
-    size: "1.2 MB",
+    bytes: 1_200_000,
     owner: "Aiy",
     ownerInitials: "AY",
-    modifiedAt: "Jul 29, 2026",
+    modifiedAt: "2026-10-26T10:00:00Z",
     shared: true,
     starred: true,
   },
   {
     id: "release-assets",
-    name: "Release assets.zip",
     kind: "archive",
-    size: "186 MB",
+    bytes: 186_000_000,
     owner: "Alex Morgan",
     ownerInitials: "AK",
-    modifiedAt: "Jul 28, 2026",
+    modifiedAt: "2026-10-25T15:30:00Z",
     shared: false,
     starred: false,
   },
   {
     id: "handoff-checklist",
-    name: "Handoff checklist.pdf",
     kind: "pdf",
-    size: "940 KB",
+    bytes: 940_000,
     owner: "Ammar Khan",
     ownerInitials: "AM",
-    modifiedAt: "Jul 26, 2026",
+    modifiedAt: "2026-10-23T09:10:00Z",
     shared: true,
     starred: false,
   },
   {
     id: "quarterly-budget",
-    name: "Quarterly budget forecast.xlsx",
     kind: "spreadsheet",
-    size: "3.8 MB",
+    bytes: 3_800_000,
     owner: "Alex Morgan",
     ownerInitials: "AK",
-    modifiedAt: "Jul 24, 2026",
+    modifiedAt: "2026-10-21T13:45:00Z",
     shared: true,
     starred: false,
   },
   {
     id: "mobile-app-prototype",
-    name: "Mobile app prototype.fig",
     kind: "design",
-    size: "18.6 MB",
+    bytes: 18_600_000,
     owner: "Ammar Khan",
     ownerInitials: "AM",
-    modifiedAt: "Jul 23, 2026",
+    modifiedAt: "2026-10-20T17:05:00Z",
     shared: true,
     starred: true,
   },
   {
     id: "partnership-agreement",
-    name: "Partnership agreement.docx",
     kind: "document",
-    size: "620 KB",
+    bytes: 620_000,
     owner: "Ammar Khan",
     ownerInitials: "AM",
-    modifiedAt: "Jul 21, 2026",
+    modifiedAt: "2026-10-18T11:20:00Z",
     shared: false,
     starred: false,
   },
   {
     id: "product-launch-brief",
-    name: "Product launch brief.pdf",
     kind: "pdf",
-    size: "4.2 MB",
+    bytes: 4_200_000,
     owner: "Alex Morgan",
     ownerInitials: "AK",
-    modifiedAt: "Jul 19, 2026",
+    modifiedAt: "2026-10-16T14:00:00Z",
     shared: true,
     starred: false,
   },
   {
     id: "brand-exports",
-    name: "Brand exports.zip",
     kind: "archive",
-    size: "72 MB",
+    bytes: 72_000_000,
     owner: "Alex Morgan",
     ownerInitials: "AK",
-    modifiedAt: "Jul 17, 2026",
+    modifiedAt: "2026-10-14T10:30:00Z",
     shared: false,
     starred: false,
   },

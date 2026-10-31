@@ -7,51 +7,57 @@ import { siEbay, siGoogle, siMeta, siShopify, siTiktok } from "simple-icons";
 import { SimpleIcon } from "@/components/simple-icon";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
+import {
+  format,
+  formatCompact,
+  formatNumber,
+  formatPercent,
+  type Locale,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
+
+import { ecommerceMessageKey } from "./messages";
 
 const trafficSources = [
   {
     name: "Meta",
-    visits: "5,640",
+    visits: 5640,
     share: 38,
-    change: "+18%",
+    change: 0.18,
     icon: siMeta,
   },
   {
     name: "Google",
-    visits: "3,740",
+    visits: 3740,
     share: 25,
-    change: "-6%",
+    change: -0.06,
     icon: siGoogle,
   },
   {
     name: "Shopify",
-    visits: "2,960",
+    visits: 2960,
     share: 20,
-    change: "+7%",
+    change: 0.07,
     icon: siShopify,
   },
   {
     name: "TikTok",
-    visits: "1,340",
+    visits: 1340,
     share: 10,
-    change: "+9%",
+    change: 0.09,
     icon: siTiktok,
   },
   {
     name: "eBay",
-    visits: "1,080",
+    visits: 1080,
     share: 7,
-    change: "-3%",
+    change: -0.03,
     icon: siEbay,
   },
 ] as const;
 
-const trafficSourcesConfig = {
-  share: {
-    label: "Visits",
-    color: "var(--chart-1)",
-  },
-} satisfies ChartConfig;
+const totalVisits = 14_800;
 
 type IconLabelProps = {
   height?: number | string;
@@ -63,9 +69,11 @@ type IconLabelProps = {
 
 type SourceLabelProps = LabelProps & {
   index?: number;
+  locale: Locale;
 };
 
 type SourceChangeLabelProps = LabelProps & {
+  locale: Locale;
   value?: number | string;
 };
 
@@ -105,7 +113,7 @@ function TrafficSourceIconLabel({ height, index, width, x, y }: IconLabelProps) 
   );
 }
 
-function TrafficSourceNameLabel({ height, index, x, y }: SourceLabelProps) {
+function TrafficSourceNameLabel({ height, index, locale, x, y }: SourceLabelProps) {
   if (typeof index !== "number") {
     return null;
   }
@@ -125,21 +133,21 @@ function TrafficSourceNameLabel({ height, index, x, y }: SourceLabelProps) {
         {source.name}
       </tspan>
       <tspan className="fill-muted-foreground" fontSize={12} x={2} y={yValue + heightValue / 2 + 11}>
-        {source.visits}
+        {formatNumber(source.visits, locale)}
       </tspan>
     </text>
   );
 }
 
-function TrafficSourceChangeLabel({ height, value, y }: SourceChangeLabelProps) {
+function TrafficSourceChangeLabel({ height, locale, value, y }: SourceChangeLabelProps) {
   const yValue = getNumber(y);
   const heightValue = getNumber(height);
 
-  if (typeof value !== "string" || Number.isNaN(yValue) || Number.isNaN(heightValue)) {
+  if (typeof value !== "number" || Number.isNaN(yValue) || Number.isNaN(heightValue)) {
     return null;
   }
 
-  const isNegative = value.startsWith("-");
+  const isNegative = value < 0;
 
   return (
     <text
@@ -151,18 +159,24 @@ function TrafficSourceChangeLabel({ height, value, y }: SourceChangeLabelProps) 
       x="100%"
       y={yValue + heightValue / 2}
     >
-      {value}
+      {formatPercent(value, locale, { signed: true })}
     </text>
   );
 }
 
 export function TrafficSources() {
+  const text = useMessages(ecommerceMessageKey).sources;
+  const locale = useLocale();
+  const trafficSourcesConfig = {
+    share: { label: text.visitsSeries, color: "var(--chart-1)" },
+  } satisfies ChartConfig;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-muted-foreground text-sm font-normal">Traffic Sources</CardTitle>
+        <CardTitle className="text-muted-foreground text-sm font-normal">{text.title}</CardTitle>
         <CardDescription className="text-foreground text-xl leading-none tracking-tight tabular-nums">
-          14.8K visits
+          {format(text.visits, locale, { count: totalVisits, value: formatCompact(totalVisits, locale) })}
         </CardDescription>
         <CardAction>
           <ArrowUpRight className="size-4" />
@@ -206,15 +220,15 @@ export function TrafficSources() {
               dataKey="share"
               fill="var(--color-share)"
               fillOpacity={0.5}
-              name="Visits"
+              name={text.visitsSeries}
               radius={8}
               stroke="var(--color-share)"
               strokeOpacity={0.1}
               strokeWidth={0.5}
             >
-              <LabelList content={<TrafficSourceNameLabel />} dataKey="name" />
+              <LabelList content={<TrafficSourceNameLabel locale={locale} />} dataKey="name" />
               <LabelList content={<TrafficSourceIconLabel />} dataKey="share" />
-              <LabelList content={<TrafficSourceChangeLabel />} dataKey="change" />
+              <LabelList content={<TrafficSourceChangeLabel locale={locale} />} dataKey="change" />
             </Bar>
           </BarChart>
         </ChartContainer>

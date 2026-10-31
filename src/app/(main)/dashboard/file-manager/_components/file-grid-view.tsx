@@ -7,15 +7,19 @@ import { Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-import { type FileManagerFile, fileIcons, fileKindLabels } from "./data";
+import { type FileManagerFile, fileIcons } from "./data";
 import { FileActions } from "./file-actions";
+import { fileManagerMessageKey } from "./messages";
 
 interface FileGridViewProps {
   files: FileManagerFile[];
 }
 
 export function FileGridView({ files }: FileGridViewProps) {
+  const text = useMessages(fileManagerMessageKey);
+  const locale = useLocale();
   const [gridFiles, setGridFiles] = useState(files);
 
   function toggleStar(fileId: string) {
@@ -39,21 +43,23 @@ export function FileGridView({ files }: FileGridViewProps) {
                     "absolute top-2 right-2 opacity-0 group-hover/file:opacity-100 focus-visible:opacity-100",
                     file.starred && "opacity-100",
                   )}
-                  aria-label={file.starred ? `Unstar ${file.name}` : `Star ${file.name}`}
+                  aria-label={format(file.starred ? text.files.unstar : text.files.star, locale, { name: file.name })}
                   onClick={() => toggleStar(file.id)}
                 >
                   <Star className={cn(file.starred && "fill-current")} />
                 </Button>
                 <div className="text-muted-foreground absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 text-xs">
-                  <span>{fileKindLabels[file.kind]}</span>
-                  <span>{file.size}</span>
+                  <span className="min-w-0 break-words">{text.kinds[file.kind]}</span>
+                  <span className="shrink-0 tabular-nums">{file.size}</span>
                 </div>
               </div>
             </CardContent>
             <CardHeader>
-              <CardTitle className="truncate">{file.name}</CardTitle>
-              <CardDescription className="truncate">
-                Modified {file.modifiedAt} by {file.owner}
+              <CardTitle className="line-clamp-2 block w-full break-words hyphens-auto" title={file.name}>
+                {file.name}
+              </CardTitle>
+              <CardDescription className="line-clamp-2 break-words hyphens-auto">
+                {format(text.files.modifiedBy, locale, { when: file.modified, owner: file.owner })}
               </CardDescription>
               <CardAction>
                 <FileActions file={file} onToggleStar={() => toggleStar(file.id)} />

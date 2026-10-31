@@ -1,13 +1,14 @@
-export const orderFilters = ["All", "Needs action", "Unfulfilled", "Unpaid", "Returns"] as const;
+export const orderFilters = ["all", "needsAction", "unfulfilled", "unpaid", "returns"] as const;
 
 export type OrderFilter = (typeof orderFilters)[number];
 
+/** Demo orders: `total` is in major units of the business currency and `date` is the shop's wall-clock time. */
 export type OrderRow = {
   id: string;
   date: string;
   customer: string;
-  payment: "Paid" | "Pending" | "Refunded";
-  total: string;
-  items: string;
-  fulfillment: "Fulfilled" | "Returned" | "Unfulfilled";
+  payment: "paid" | "pending" | "refunded";
+  total: number;
+  itemCount: number;
+  fulfillment: "fulfilled" | "returned" | "unfulfilled";
 };

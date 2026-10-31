@@ -5,25 +5,27 @@ import { useState } from "react";
 import { Download, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useMessages } from "@/core/i18n/client";
 import { type TeamMemberId, team } from "@/data/crm";
 import { CardIconButton, FilterChip, SearchCapsule, SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { getCustomer, type OpenDeal, openStages } from "@/lib/crm";
 
 import { MemberAvatar } from "../../_components/member-avatars";
 import { DealsTable } from "./deals-table";
+import { crmMessageKey } from "./messages";
 import { OutcomeColumn } from "./outcome-column";
 import { PipelineColumn } from "./pipeline-column";
 
 type View = "board" | "list";
 
-const viewOptions: SegmentedOption<View>[] = [
-  { value: "board", label: "Board" },
-  { value: "list", label: "List" },
-];
-
 type Outcome = { count: number; value: number };
 
 export function DealPipeline({ deals, outcomes }: { deals: OpenDeal[]; outcomes: { won: Outcome; lost: Outcome } }) {
+  const text = useMessages(crmMessageKey);
+  const viewOptions: SegmentedOption<View>[] = [
+    { value: "board", label: text.view.board },
+    { value: "list", label: text.view.list },
+  ];
   const [view, setView] = useState<View>("board");
   const [query, setQuery] = useState("");
   const [owners, setOwners] = useState<ReadonlySet<TeamMemberId>>(new Set());
@@ -47,8 +49,13 @@ export function DealPipeline({ deals, outcomes }: { deals: OpenDeal[]; outcomes:
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <SearchCapsule label="Search deals" placeholder="Search deals..." value={query} onValueChange={setQuery} />
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Filter by owner">
+        <SearchCapsule
+          label={text.searchLabel}
+          placeholder={text.searchPlaceholder}
+          value={query}
+          onValueChange={setQuery}
+        />
+        <ul className="flex flex-wrap items-center gap-1.5" aria-label={text.ownerFilter}>
           {team.map((member) => (
             <li key={member.id}>
               <FilterChip
@@ -62,11 +69,11 @@ export function DealPipeline({ deals, outcomes }: { deals: OpenDeal[]; outcomes:
           ))}
         </ul>
         <div className="flex items-center gap-2 lg:ml-auto">
-          <SegmentedControl label="Pipeline view" value={view} options={viewOptions} onValueChange={setView} />
-          <CardIconButton icon={Download} label="Export deals" className="liquid-glass size-9 ring-0" />
+          <SegmentedControl label={text.view.label} value={view} options={viewOptions} onValueChange={setView} />
+          <CardIconButton icon={Download} label={text.exportDeals} className="liquid-glass size-9 ring-0" />
           <Button className="liquid-glass-brand h-9 rounded-full px-4">
             <Plus data-icon="inline-start" />
-            New deal
+            {text.newDeal}
           </Button>
         </div>
       </div>

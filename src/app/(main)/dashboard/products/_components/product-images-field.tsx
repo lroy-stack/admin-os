@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/attachment";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-export const productImageTypes = ["image/jpeg", "image/png", "image/webp"];
-export const maxProductImageSize = 5 * 1024 * 1024;
+import { productsMessageKey } from "./messages";
+import { maxProductImageSize, maxProductImages, productImageTypes } from "./product-schema";
+
+const maxImageMegabytes = maxProductImageSize / (1024 * 1024);
 
 interface ProductImagePreview {
   file: File;
@@ -37,14 +40,17 @@ interface ProductImagesFieldProps {
 }
 
 export function ProductImagesField({ files, onChange, onBlur, inputRef, error }: ProductImagesFieldProps) {
+  const text = useMessages(productsMessageKey);
+  const locale = useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<ProductImagePreview[]>([]);
 
   useEffect(() => {
     const images = files.map((file): ProductImagePreview => {
-      if (!productImageTypes.includes(file.type)) return { file, rejection: "Use JPG, PNG, or WebP images." };
-      if (file.size === 0) return { file, rejection: "This file is empty." };
-      if (file.size > maxProductImageSize) return { file, rejection: "Image exceeds the 5 MB limit." };
+      if (!productImageTypes.includes(file.type)) return { file, rejection: text.validation.imageType };
+      if (file.size === 0) return { file, rejection: text.images.empty };
+      if (file.size > maxProductImageSize)
+        return { file, rejection: format(text.images.tooLarge, locale, { size: maxImageMegabytes }) };
       return { file, url: URL.createObjectURL(file) };
     });
     setPreviews(images);
@@ -53,11 +59,11 @@ export function ProductImagesField({ files, onChange, onBlur, inputRef, error }:
         if (image.url) URL.revokeObjectURL(image.url);
       }
     };
-  }, [files]);
+  }, [files, text, locale]);
 
   return (
     <Field data-invalid={!!error}>
-      <FieldLabel htmlFor="add-product-images-trigger">Product images (optional)</FieldLabel>
+      <FieldLabel htmlFor="add-product-images-trigger">{text.images.label}</FieldLabel>
       <input
         ref={fileInputRef}
         type="file"
@@ -91,12 +97,14 @@ export function ProductImagesField({ files, onChange, onBlur, inputRef, error }:
         aria-describedby={error ? "add-product-images-help add-product-images-error" : "add-product-images-help"}
       >
         <ImagePlus data-icon="inline-start" />
-        Add images
+        {text.images.add}
       </Button>
-      <FieldDescription id="add-product-images-help">Up to 5 JPG, PNG, or WebP images, 5 MB each.</FieldDescription>
+      <FieldDescription id="add-product-images-help">
+        {format(text.images.help, locale, { max: maxProductImages, size: maxImageMegabytes })}
+      </FieldDescription>
       {error && <FieldError id="add-product-images-error">{error}</FieldError>}
       {previews.length > 0 && (
-        <AttachmentGroup aria-label="Selected product images">
+        <AttachmentGroup aria-label={text.images.selected}>
           {previews.map(({ file, url, rejection }, index) => (
             <Attachment
               key={`${file.name}-${file.size}-${file.lastModified}`}
@@ -112,18 +120,17 @@ export function ProductImagesField({ files, onChange, onBlur, inputRef, error }:
                 <AttachmentTitle title={file.name}>{file.name}</AttachmentTitle>
                 <AttachmentDescription title={rejection}>
                   {rejection}
-                  {!rejection && (
-                    <>
-                      {Math.max(1, Math.round(file.size / 1024))} KB{index === 0 && " · Cover image"}
-                    </>
-                  )}
+                  {!rejection &&
+                    format(index === 0 ? text.images.coverSize : text.images.fileSize, locale, {
+                      size: Math.max(1, Math.round(file.size / 1024)),
+                    })}
                 </AttachmentDescription>
               </AttachmentContent>
               <AttachmentActions>
                 <AttachmentAction
                   type="button"
                   variant="secondary"
-                  aria-label={`Remove ${file.name}`}
+                  aria-label={format(text.images.remove, locale, { name: file.name })}
                   onClick={() => onChange(files.filter((item) => item !== file))}
                 >
                   <X />
@@ -135,7 +142,7 @@ export function ProductImagesField({ files, onChange, onBlur, inputRef, error }:
       )}
       {files.length > 0 && (
         <Button type="button" variant="ghost" size="sm" className="w-fit" onClick={() => onChange([])}>
-          Clear images
+          {text.images.clear}
         </Button>
       )}
     </Field>

@@ -9,8 +9,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
 import type { FileManagerFile } from "./data";
+import { fileManagerMessageKey } from "./messages";
 
 interface FileActionsProps {
   file: FileManagerFile;
@@ -18,33 +20,36 @@ interface FileActionsProps {
 }
 
 export function FileActions({ file, onToggleStar }: FileActionsProps) {
+  const text = useMessages(fileManagerMessageKey).files;
+  const locale = useLocale();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${file.name}`}>
+        <Button variant="ghost" size="icon-sm" aria-label={format(text.actionsFor, locale, { name: file.name })}>
           <MoreVertical />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-48" align="end">
+      <DropdownMenuContent className="min-w-48" align="end">
         <DropdownMenuGroup>
           <DropdownMenuItem onSelect={onToggleStar}>
             <Star />
-            {file.starred ? "Remove from starred" : "Add to starred"}
+            {file.starred ? text.removeFromStarred : text.addToStarred}
           </DropdownMenuItem>
           <DropdownMenuItem>
             <Download />
-            Download
+            {text.download}
           </DropdownMenuItem>
           <DropdownMenuItem>
             <Share2 />
-            Copy share link
+            {text.copyLink}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem variant="destructive">
             <Trash2 />
-            Move to trash
+            {text.moveToTrash}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

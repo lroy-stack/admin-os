@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { Locale } from "@/core/i18n/client";
 
 import type { Deal } from "./crm";
@@ -121,7 +123,7 @@ export function localizeDealTitle(title: string, locale: Locale): string {
   }
   const translations = dealTitleTranslations[title];
   if (!translations) {
-    throw new Error(`No ${locale} translation for the demo deal "${title}"; add it to src/data/crm-text.ts`);
+    throw new Error(`No ${locale} translation for the demo deal "${title}"; add it to src/data/crm-text.server.ts`);
   }
   return translations[locale];
 }

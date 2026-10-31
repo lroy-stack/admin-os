@@ -18,9 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import type { Product } from "./data";
+import { productsMessageKey } from "./messages";
 
 const headerIcons: Record<string, typeof Package> = {
   name: Package,
@@ -39,16 +41,25 @@ export function ProductsTable({
   table: ReactTable<DataTableFeatures, Product>;
   onReset: () => void;
 }) {
+  const clearFilters = useMessages(productsMessageKey).clearFilters;
+  const text = useMessages(productsMessageKey).table;
+  const locale = useLocale();
   const { pageIndex, pageSize } = table.state.pagination;
   const total = table.getFilteredRowModel().rows.length;
   const selected = table.getSelectedRowModel().rows.length;
   const pageCount = Math.max(1, table.getPageCount());
   const pageStart = Math.max(0, Math.min(pageIndex - 2, pageCount - 5));
+  const rangeText = format(text.range, locale, {
+    count: total,
+    from: total ? pageIndex * pageSize + 1 : 0,
+    to: Math.min((pageIndex + 1) * pageSize, total),
+    total,
+  });
   const pages = Array.from({ length: Math.min(5, pageCount) }, (_, index) => pageStart + index);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col *:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:flex-1 *:data-[slot=table-container]:overflow-auto">
-      <Table aria-label="Products" className="border-border/60 min-w-280 border-separate border-spacing-0 border-b">
+      <Table aria-label={text.label} className="border-border/60 min-w-280 border-separate border-spacing-0 border-b">
         <TableHeader className="bg-background sticky top-0 z-10">
           {table.getHeaderGroups().map((group) => (
             <TableRow key={group.id} className="border-border/60 hover:bg-transparent">
@@ -119,11 +130,11 @@ export function ProductsTable({
               <TableCell colSpan={table.getVisibleLeafColumns().length}>
                 <Empty>
                   <EmptyHeader>
-                    <EmptyTitle>No products found</EmptyTitle>
-                    <EmptyDescription>Try another search or clear your filters.</EmptyDescription>
+                    <EmptyTitle>{text.emptyTitle}</EmptyTitle>
+                    <EmptyDescription>{text.emptyDescription}</EmptyDescription>
                   </EmptyHeader>
                   <Button variant="outline" size="sm" onClick={onReset}>
-                    Clear filters
+                    {clearFilters}
                   </Button>
                 </Empty>
               </TableCell>
@@ -134,11 +145,10 @@ export function ProductsTable({
       <footer className="bg-background flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-t px-4 py-2 text-sm">
         <div className="text-muted-foreground flex flex-wrap items-center gap-4">
           <span className="tabular-nums" aria-live="polite">
-            {total ? pageIndex * pageSize + 1 : 0} – {Math.min((pageIndex + 1) * pageSize, total)} of {total} products
-            {selected > 0 && ` · ${selected} selected`}
+            {selected > 0 ? format(text.rangeSelected, locale, { range: rangeText, selected }) : rangeText}
           </span>
           <div className="flex items-center gap-2">
-            <label htmlFor="products-page-size">Rows per page</label>
+            <label htmlFor="products-page-size">{text.rowsPerPage}</label>
             <Select
               value={String(pageSize)}
               onValueChange={(value) => {
@@ -161,11 +171,11 @@ export function ProductsTable({
             </Select>
           </div>
         </div>
-        <nav aria-label="Product pages" className="flex items-center gap-1">
+        <nav aria-label={text.pagesLabel} className="flex items-center gap-1">
           <Button
             variant="outline"
             size="icon-sm"
-            aria-label="Previous page"
+            aria-label={text.previousPage}
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.previousPage()}
           >
@@ -176,7 +186,7 @@ export function ProductsTable({
               key={page}
               variant={page === pageIndex ? "secondary" : "ghost"}
               size="icon-sm"
-              aria-label={`Page ${page + 1}`}
+              aria-label={format(text.page, locale, { page: page + 1 })}
               aria-current={page === pageIndex ? "page" : undefined}
               onClick={() => table.setPageIndex(page)}
             >
@@ -186,7 +196,7 @@ export function ProductsTable({
           <Button
             variant="outline"
             size="icon-sm"
-            aria-label="Next page"
+            aria-label={text.nextPage}
             disabled={!table.getCanNextPage()}
             onClick={() => table.nextPage()}
           >

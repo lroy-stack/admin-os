@@ -15,12 +15,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { getMessages } from "@/config/locale.server";
 
-export function FileManagerToolbar() {
+import { fileKinds } from "./data";
+import { fileManagerMessages } from "./messages.server";
+
+export async function FileManagerToolbar() {
+  const text = await getMessages(fileManagerMessages);
+
   return (
     <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
       <InputGroup className="md:max-w-lg">
-        <InputGroupInput placeholder="Search files and folders..." aria-label="Search files and folders" />
+        <InputGroupInput placeholder={text.search.placeholder} aria-label={text.search.label} />
         <InputGroupAddon>
           <Search />
         </InputGroupAddon>
@@ -30,16 +36,16 @@ export function FileManagerToolbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <SlidersHorizontal data-icon="inline-start" />
-              Filter & sort
+              {text.filter.trigger}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Show</DropdownMenuLabel>
+              <DropdownMenuLabel>{text.filter.show}</DropdownMenuLabel>
               <DropdownMenuRadioGroup value="all">
-                <DropdownMenuRadioItem value="all">All files</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="starred">Starred</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="shared">Shared</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="all">{text.filter.allFiles}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="starred">{text.filter.starred}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="shared">{text.filter.shared}</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -47,17 +53,17 @@ export function FileManagerToolbar() {
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <SlidersHorizontal />
-                  File type
+                  {text.filter.fileType}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent sideOffset={8}>
                   <DropdownMenuGroup>
                     <DropdownMenuRadioGroup value="all">
-                      <DropdownMenuRadioItem value="all">All types</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="archive">Archive</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="design">Design</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="document">Document</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="pdf">PDF</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="spreadsheet">Spreadsheet</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="all">{text.filter.allTypes}</DropdownMenuRadioItem>
+                      {fileKinds.map((kind) => (
+                        <DropdownMenuRadioItem key={kind} value={kind}>
+                          {text.kinds[kind]}
+                        </DropdownMenuRadioItem>
+                      ))}
                     </DropdownMenuRadioGroup>
                   </DropdownMenuGroup>
                 </DropdownMenuSubContent>
@@ -65,14 +71,14 @@ export function FileManagerToolbar() {
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <ArrowUpDown />
-                  Sort by
+                  {text.filter.sortBy}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent sideOffset={8}>
                   <DropdownMenuGroup>
                     <DropdownMenuRadioGroup value="modified">
-                      <DropdownMenuRadioItem value="modified">Last modified</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="size">File size</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="modified">{text.filter.lastModified}</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="name">{text.filter.name}</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="size">{text.filter.fileSize}</DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </DropdownMenuGroup>
                 </DropdownMenuSubContent>

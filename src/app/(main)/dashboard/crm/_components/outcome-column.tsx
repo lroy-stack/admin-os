@@ -1,7 +1,9 @@
 import { cn } from "cn";
 import { CircleOff, Trophy } from "lucide-react";
 
-import { formatCurrency } from "@/lib/utils";
+import { format, formatAmount, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
+
+import { crmMessageKey } from "./messages";
 
 type Outcome = { count: number; value: number };
 
@@ -37,16 +39,25 @@ function OutcomeTile({
 
 /** Narrow summary column for deals closed this month. */
 export function OutcomeColumn({ won, lost }: { won: Outcome; lost: Outcome }) {
+  const text = useMessages(crmMessageKey).outcomes;
+  const locale = useLocale();
+  const currency = useCurrency();
+
   return (
-    <aside aria-label="Closed this month" className="flex w-28 shrink-0 snap-start flex-col gap-2.5 self-start lg:w-24">
+    <aside aria-label={text.label} className="flex w-28 shrink-0 snap-start flex-col gap-2.5 self-start lg:w-24">
       <OutcomeTile
-        title="Won"
-        detail={`${won.count} this month`}
-        value={formatCurrency(won.value, { compact: true })}
+        title={text.won}
+        detail={format(text.wonDetail, locale, { count: won.count })}
+        value={formatAmount(won.value, currency, locale, { compact: true })}
         icon={Trophy}
         highlighted
       />
-      <OutcomeTile title="Lost" detail={`${lost.count} closed lost`} icon={CircleOff} highlighted={false} />
+      <OutcomeTile
+        title={text.lost}
+        detail={format(text.lostDetail, locale, { count: lost.count })}
+        icon={CircleOff}
+        highlighted={false}
+      />
     </aside>
   );
 }

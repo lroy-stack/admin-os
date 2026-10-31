@@ -1,7 +1,7 @@
 import { LocaleBundles } from "@/app/_components/locale-root";
 import { getCurrency, getLocale } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
-import { localizeDeals } from "@/data/crm-text";
+import { localizeDeals } from "@/data/crm-text.server";
 import { PageHeader } from "@/ds/components";
 
 import { HotDeals } from "./_components/hot-deals";

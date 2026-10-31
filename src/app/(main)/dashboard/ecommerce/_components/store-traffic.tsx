@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { format, subMinutes } from "date-fns";
+import { subMinutes } from "date-fns";
 import { ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from "recharts";
 
@@ -15,6 +15,9 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { format, formatCompact, formatLocalDate, useLocale, useMessages } from "@/core/i18n/client";
+
+import { ecommerceMessageKey } from "./messages";
 
 const trafficIntervalMinutes = 15;
 
@@ -126,40 +129,33 @@ function getTrafficData() {
   }));
 }
 
-const trafficConfig = {
-  visitors: {
-    label: "Visitors",
-    color: "var(--chart-3)",
-  },
-  anomalies: {
-    label: "Anomalies",
-    color: "var(--destructive)",
-  },
-} satisfies ChartConfig;
-
-function formatTrafficTooltipLabel(value: string) {
-  return format(new Date(value), "h:mm a, do MMMM yyyy");
-}
+const totalVisits = 12_900;
 
 export function StoreTraffic() {
+  const text = useMessages(ecommerceMessageKey).traffic;
+  const locale = useLocale();
+  const trafficConfig = {
+    visitors: { label: text.visitors, color: "var(--chart-3)" },
+    anomalies: { label: text.anomalies, color: "var(--destructive)" },
+  } satisfies ChartConfig;
   const [trafficData] = useState(() => getTrafficData());
   const firstTrafficTimestamp = trafficData[0].timestamp;
   const lastTrafficTimestamp = trafficData.at(-1)?.timestamp ?? "";
 
   function formatTrafficTick(value: string) {
     if (value === firstTrafficTimestamp) {
-      return "24h ago";
+      return text.hoursAgo;
     }
 
-    return value === lastTrafficTimestamp ? "now" : "";
+    return value === lastTrafficTimestamp ? text.now : "";
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-muted-foreground text-sm font-normal">Store Traffic</CardTitle>
+        <CardTitle className="text-muted-foreground text-sm font-normal">{text.title}</CardTitle>
         <CardDescription className="text-foreground text-xl leading-none tracking-tight tabular-nums">
-          12.9K visits
+          {format(text.visits, locale, { count: totalVisits, value: formatCompact(totalVisits, locale) })}
         </CardDescription>
         <CardAction>
           <ArrowUpRight className="size-4" />
@@ -187,7 +183,13 @@ export function StoreTraffic() {
             />
             <YAxis axisLine={false} domain={[0, 650]} tickLine={false} tickMargin={6} width={36} yAxisId="traffic" />
             <ChartTooltip
-              content={<ChartTooltipContent labelFormatter={(value) => formatTrafficTooltipLabel(String(value))} />}
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(value) =>
+                    formatLocalDate(new Date(String(value)), locale, { dateStyle: "long", timeStyle: "short" })
+                  }
+                />
+              }
               cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
             />
             <ChartLegend align="right" verticalAlign="top" className="justify-end" content={<ChartLegendContent />} />

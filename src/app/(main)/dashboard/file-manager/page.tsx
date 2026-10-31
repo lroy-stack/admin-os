@@ -1,74 +1,85 @@
 import Link from "next/link";
 
 import { FolderPlus, Grid2X2, List, Upload } from "lucide-react";
-import type { Metadata } from "next";
 
+import { LocaleBundles } from "@/app/_components/locale-root";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getLocale } from "@/config/locale.server";
+import { pageMetadata } from "@/config/metadata.server";
 
-import { type FileManagerView, files, folders } from "./_components/data";
+import { type FileManagerView, fileRecords, folderRecords } from "./_components/data";
+import { toFileRows, toFolderRows } from "./_components/file-format";
 import { FileGridView } from "./_components/file-grid-view";
 import { FileListView } from "./_components/file-list-view";
 import { FileManagerToolbar } from "./_components/file-manager-toolbar";
 import { FoldersSection } from "./_components/folders-section";
+import { fileManagerBundle, fileManagerMessages } from "./_components/messages.server";
 
-export const metadata: Metadata = {
-  title: "Open Source File Manager with shadcn/ui",
-  description:
-    "Explore an open source file manager for browsing, organizing, uploading, and viewing files and folders.",
-  alternates: {
-    canonical: "/dashboard/file-manager",
-  },
-};
+export const generateMetadata = () => pageMetadata("/dashboard/file-manager", fileManagerMessages);
 
 interface PageProps {
   searchParams: Promise<{ view?: string | string[] }>;
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const { view } = await searchParams;
+  const [{ view }, locale] = await Promise.all([searchParams, getLocale()]);
+  const text = fileManagerMessages[locale];
   const activeView: FileManagerView = view === "list" ? "list" : "grid";
+  // Names, sizes and times are written here, in the request's language, before they reach a client component.
+  const folders = toFolderRows(folderRecords, text.names.folders, locale);
+  const files = toFileRows(fileRecords, text.names.files, locale);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl leading-none tracking-tight">My files</h1>
-          <p className="text-muted-foreground text-sm">Organize, share, and find workspace files.</p>
+    <LocaleBundles bundles={[fileManagerBundle]}>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="text-3xl leading-none tracking-tight">{text.title}</h1>
+            <p className="text-muted-foreground text-sm">{text.subtitle}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline">
+              <FolderPlus data-icon="inline-start" />
+              {text.newFolder}
+            </Button>
+            <Button>
+              <Upload data-icon="inline-start" />
+              {text.upload}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <FolderPlus data-icon="inline-start" />
-            New folder
-          </Button>
-          <Button>
-            <Upload data-icon="inline-start" />
-            Upload
-          </Button>
+        <FileManagerToolbar />
+        <FoldersSection folders={folders} />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="min-w-0 text-lg font-medium">{text.files.title}</h2>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              spacing={0}
+              value={activeView}
+              aria-label={text.files.viewLabel}
+              className="shrink-0"
+            >
+              <ToggleGroupItem value="grid" asChild>
+                <Link href="?view=grid" prefetch={false} replace scroll={false}>
+                  <Grid2X2 />
+                  {text.files.gridView}
+                </Link>
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" asChild>
+                <Link href="?view=list" prefetch={false} replace scroll={false}>
+                  <List />
+                  {text.files.listView}
+                </Link>
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          {activeView === "list" ? <FileListView files={files} /> : <FileGridView files={files} />}
         </div>
       </div>
-      <FileManagerToolbar />
-      <FoldersSection folders={folders} />
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-medium">All files</h2>
-          <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={activeView} aria-label="File view">
-            <ToggleGroupItem value="grid" asChild>
-              <Link href="?view=grid" prefetch={false} replace scroll={false}>
-                <Grid2X2 />
-                Grid View
-              </Link>
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" asChild>
-              <Link href="?view=list" prefetch={false} replace scroll={false}>
-                <List />
-                List View
-              </Link>
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-        {activeView === "list" ? <FileListView files={files} /> : <FileGridView files={files} />}
-      </div>
-    </div>
+    </LocaleBundles>
   );
 }

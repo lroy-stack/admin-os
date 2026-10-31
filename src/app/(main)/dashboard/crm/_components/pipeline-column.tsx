@@ -1,15 +1,21 @@
 import { cn } from "cn";
 import { Plus } from "lucide-react";
 
+import { format, formatAmount, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
 import type { OpenStage } from "@/data/crm";
 import { CardIconButton, toneSolid, toneWash } from "@/ds/components";
-import { type OpenDeal, stageLabels, sumValue } from "@/lib/crm";
-import { formatCurrency } from "@/lib/utils";
+import { type OpenDeal, sumValue } from "@/lib/crm";
 
 import { DealCard } from "../../_components/deal-card";
+import { dashboardMessageKey } from "../../_components/messages";
 import { stageTones } from "../../_components/stage-tones";
+import { crmMessageKey } from "./messages";
 
 export function PipelineColumn({ stage, deals }: { stage: OpenStage; deals: OpenDeal[] }) {
+  const text = useMessages(crmMessageKey);
+  const stageName = useMessages(dashboardMessageKey).stages[stage];
+  const locale = useLocale();
+  const currency = useCurrency();
   const tone = stageTones[stage];
   const headingId = `stage-${stage}`;
 
@@ -26,17 +32,17 @@ export function PipelineColumn({ stage, deals }: { stage: OpenStage; deals: Open
           <div className="flex items-center gap-2">
             <span className={cn("size-2 rounded-full", toneSolid[tone])} />
             <h2 id={headingId} className="text-sm">
-              {stageLabels[stage]}
+              {stageName}
             </h2>
             <span className="bg-foreground/10 text-foreground/70 rounded-full px-1.5 py-0.5 text-[10px] leading-none tabular-nums">
               {deals.length}
             </span>
           </div>
           <span className="text-muted-foreground text-[11px] tabular-nums">
-            {formatCurrency(sumValue(deals), { compact: true })}
+            {formatAmount(sumValue(deals), currency, locale, { compact: true })}
           </span>
         </div>
-        <CardIconButton icon={Plus} label={`Add deal to ${stageLabels[stage]}`} />
+        <CardIconButton icon={Plus} label={format(text.addToStage, locale, { stage: stageName })} />
       </header>
       <ul className="flex flex-col gap-2.5">
         {deals.map((deal) => (
@@ -46,7 +52,7 @@ export function PipelineColumn({ stage, deals }: { stage: OpenStage; deals: Open
         ))}
         {deals.length === 0 && (
           <li className="border-border text-muted-foreground rounded-2xl border border-dashed px-3 py-6 text-center text-xs">
-            No deals match these filters
+            {text.noMatches}
           </li>
         )}
       </ul>

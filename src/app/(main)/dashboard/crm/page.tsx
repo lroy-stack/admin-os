@@ -1,24 +1,26 @@
-import type { Metadata } from "next";
-
+import { LocaleBundles } from "@/app/_components/locale-root";
+import { getCurrency, getLocale } from "@/config/locale.server";
+import { pageMetadata } from "@/config/metadata.server";
+import { localizeDeals } from "@/data/crm-text.server";
 import { PageHeader } from "@/ds/components";
 import { openDeals } from "@/lib/crm";
 
 import { DealPipeline } from "./_components/deal-pipeline";
-import { outcomes, pipelineKpis } from "./_components/pipeline-data";
+import { crmBundle, crmMessages } from "./_components/messages.server";
+import { outcomes, pipelineFigures, pipelineKpis } from "./_components/pipeline-data";
 
-export const metadata: Metadata = {
-  title: "Deal Pipeline",
-  description: "Open deals by stage with close dates, values and owners, plus deals won and lost this month.",
-  alternates: {
-    canonical: "/dashboard/crm",
-  },
-};
+export const generateMetadata = () => pageMetadata("/dashboard/crm", crmMessages);
 
-export default function Page() {
+export default async function Page() {
+  const [locale, currency] = await Promise.all([getLocale(), getCurrency()]);
+  const text = crmMessages[locale];
+
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Deal Pipeline" kpis={pipelineKpis} />
-      <DealPipeline deals={openDeals} outcomes={outcomes} />
-    </div>
+    <LocaleBundles bundles={[crmBundle]}>
+      <div className="flex flex-col gap-6">
+        <PageHeader title={text.title} kpis={pipelineKpis(pipelineFigures, text.kpis, locale, currency)} />
+        <DealPipeline deals={localizeDeals(openDeals, locale)} outcomes={outcomes} />
+      </div>
+    </LocaleBundles>
   );
 }

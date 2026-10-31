@@ -1,7 +1,7 @@
 import { LocaleBundles } from "@/app/_components/locale-root";
 import { getLocale } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
-import { localizeDeals } from "@/data/crm-text";
+import { localizeDeals } from "@/data/crm-text.server";
 import { dealsClosingWithin, getCustomer } from "@/lib/crm";
 
 import { Calendar } from "./_components/calendar";

@@ -9,7 +9,6 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -17,20 +16,31 @@ import {
 } from "@/components/ui/pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { format, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
 
-import { recentOrdersColumns } from "./recent-orders-table/columns";
+import { ecommerceMessageKey } from "./messages";
+import { createRecentOrdersColumns } from "./recent-orders-table/columns";
 import recentOrdersData from "./recent-orders-table/data.json";
-import {
-  formatOrderCount,
-  formatSelectedOrderCount,
-  preventPaginationNavigation,
-} from "./recent-orders-table/formatters";
+import { preventPaginationNavigation } from "./recent-orders-table/formatters";
 import { type OrderFilter, type OrderRow, orderFilters } from "./recent-orders-table/schema";
 
 const recentOrders = recentOrdersData as OrderRow[];
 
+/** The ellipsis between page numbers; `PaginationEllipsis` ships an English screen-reader text, and this one is hidden. */
+function PaginationGap() {
+  return (
+    <span aria-hidden="true" className="flex size-8 items-center justify-center">
+      <MoreHorizontal className="size-4" />
+    </span>
+  );
+}
+
 export function RecentOrders() {
+  const text = useMessages(ecommerceMessageKey).orders;
+  const locale = useLocale();
+  const currency = useCurrency();
+  const columns = React.useMemo(() => createRecentOrdersColumns(text, locale, currency), [text, locale, currency]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -42,7 +52,7 @@ export function RecentOrders() {
   const table = useTable({
     features: dataTableFeatures,
     data: recentOrders,
-    columns: recentOrdersColumns,
+    columns,
     state: {
       rowSelection,
       sorting,
@@ -57,14 +67,16 @@ export function RecentOrders() {
     onPaginationChange: setPagination,
   });
 
-  const activeFilter = (table.getColumn("statusSummary")?.getFilterValue() as OrderFilter | undefined) ?? "All";
+  const activeFilter = (table.getColumn("statusSummary")?.getFilterValue() as OrderFilter | undefined) ?? "all";
   const orderCount = table.getFilteredRowModel().rows.length;
   const selectedOrderCount = table.getSelectedRowModel().rows.length;
   const visibleOrderCount = table.getRowModel().rows.length;
   const currentPage = table.state.pagination.pageIndex + 1;
   const pageCount = table.getPageCount();
   const orderCountDescription =
-    selectedOrderCount > 0 ? formatSelectedOrderCount(selectedOrderCount) : formatOrderCount(activeFilter, orderCount);
+    selectedOrderCount > 0
+      ? format(text.counts.selected, locale, { count: selectedOrderCount })
+      : format(text.counts[activeFilter], locale, { count: orderCount });
   const pageNumbers = React.useMemo(() => {
     if (pageCount <= 3) {
       return Array.from({ length: pageCount }, (_, index) => index + 1);
@@ -79,45 +91,48 @@ export function RecentOrders() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-muted-foreground text-sm font-normal">Recent Orders</CardTitle>
+        <CardTitle className="text-muted-foreground text-sm font-normal">{text.title}</CardTitle>
         <CardDescription className="text-foreground text-xl leading-none tracking-tight tabular-nums">
           {orderCountDescription}
         </CardDescription>
         <CardAction className="flex items-center gap-1">
-          <Button aria-label="Open orders" size="icon-sm" variant="outline">
+          <Button aria-label={text.openOrders} size="icon-sm" variant="outline">
             <ArrowUpRight />
           </Button>
-          <Button aria-label="Download orders" size="icon-sm" variant="outline">
+          <Button aria-label={text.downloadOrders} size="icon-sm" variant="outline">
             <Download />
           </Button>
-          <Button size="icon-sm" variant="outline">
+          <Button aria-label={text.moreOptions} size="icon-sm" variant="outline">
             <MoreHorizontal />
           </Button>
         </CardAction>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4 px-0">
-        <div className="flex items-center justify-between px-4">
-          <ToggleGroup
-            className="bg-muted text-muted-foreground **:data-[slot=toggle-group-item]:text-foreground/60 **:data-[slot=toggle-group-item]:hover:text-foreground [&_[data-slot=toggle-group-item][data-state=on]]:bg-background [&_[data-slot=toggle-group-item][data-state=on]]:text-foreground dark:[&_[data-slot=toggle-group-item][data-state=on]]:border-input dark:[&_[data-slot=toggle-group-item][data-state=on]]:bg-input/30 p-0.75 **:data-[slot=toggle-group-item]:rounded-md **:data-[slot=toggle-group-item]:border **:data-[slot=toggle-group-item]:border-transparent [&_[data-slot=toggle-group-item][data-state=on]]:shadow-sm"
-            onValueChange={(value) => {
-              if (!value) return;
-              table.getColumn("statusSummary")?.setFilterValue(value === "All" ? undefined : value);
-              table.setPageIndex(0);
-            }}
-            size="sm"
-            spacing={1}
-            type="single"
-            value={activeFilter}
-          >
-            {orderFilters.map((filter) => (
-              <ToggleGroupItem key={filter} value={filter}>
-                {filter}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+        <div className="flex items-center justify-between gap-2 px-4">
+          <div className="min-w-0 overflow-x-auto">
+            <ToggleGroup
+              className="bg-muted text-muted-foreground **:data-[slot=toggle-group-item]:text-foreground/60 **:data-[slot=toggle-group-item]:hover:text-foreground [&_[data-slot=toggle-group-item][data-state=on]]:bg-background [&_[data-slot=toggle-group-item][data-state=on]]:text-foreground dark:[&_[data-slot=toggle-group-item][data-state=on]]:border-input dark:[&_[data-slot=toggle-group-item][data-state=on]]:bg-input/30 p-0.75 **:data-[slot=toggle-group-item]:rounded-md **:data-[slot=toggle-group-item]:border **:data-[slot=toggle-group-item]:border-transparent [&_[data-slot=toggle-group-item][data-state=on]]:shadow-sm"
+              onValueChange={(value) => {
+                if (!value) return;
+                table.getColumn("statusSummary")?.setFilterValue(value === "all" ? undefined : value);
+                table.setPageIndex(0);
+              }}
+              size="sm"
+              spacing={1}
+              type="single"
+              value={activeFilter}
+            >
+              {orderFilters.map((filter) => (
+                <ToggleGroupItem key={filter} value={filter}>
+                  {text.filters[filter]}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
 
           <Button
+            aria-label={text.sortByDate}
             size="icon-sm"
             variant="outline"
             onClick={() => table.getColumn("date")?.toggleSorting(table.getColumn("date")?.getIsSorted() === "asc")}
@@ -153,7 +168,7 @@ export function RecentOrders() {
               ) : (
                 <TableRow>
                   <TableCell className="h-24 text-center" colSpan={table.getVisibleLeafColumns().length}>
-                    No orders found.
+                    {text.empty}
                   </TableCell>
                 </TableRow>
               )}
@@ -161,15 +176,21 @@ export function RecentOrders() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-between gap-4 px-4 pb-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pb-1">
           <p className="text-muted-foreground text-sm">
-            Viewing {visibleOrderCount} out of {orderCount.toLocaleString()} orders
+            {format(text.viewing, locale, {
+              count: orderCount,
+              visible: visibleOrderCount,
+              total: orderCount,
+            })}
           </p>
 
-          <Pagination className="mx-0 w-auto justify-end">
+          <Pagination aria-label={text.pagination.label} className="mx-0 w-auto justify-end">
             <PaginationContent className="gap-1.5">
               <PaginationItem>
                 <PaginationPrevious
+                  aria-label={text.pagination.goToPrevious}
+                  text={text.pagination.previous}
                   className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : undefined}
                   href="#"
                   onClick={(event) => {
@@ -180,7 +201,7 @@ export function RecentOrders() {
               </PaginationItem>
               {pageNumbers[0] > 1 ? (
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <PaginationGap />
                 </PaginationItem>
               ) : null}
               {pageNumbers.map((pageNumber) => (
@@ -199,11 +220,13 @@ export function RecentOrders() {
               ))}
               {pageNumbers[pageNumbers.length - 1] < pageCount ? (
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <PaginationGap />
                 </PaginationItem>
               ) : null}
               <PaginationItem>
                 <PaginationNext
+                  aria-label={text.pagination.goToNext}
+                  text={text.pagination.next}
                   className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : undefined}
                   href="#"
                   onClick={(event) => {

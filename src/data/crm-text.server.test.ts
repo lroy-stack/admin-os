@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { LOCALES } from "@/core/i18n";
 
 import { deals } from "./crm";
-import { localizeDeals, localizeDealTitle, translatedDealTitles } from "./crm-text";
+import { localizeDeals, localizeDealTitle, translatedDealTitles } from "./crm-text.server";
 
 describe("demo deal titles", () => {
   it.each(deals.map((deal) => [deal.id, deal.title] as const))("deal %s (%s) is translated", (_id, title) => {

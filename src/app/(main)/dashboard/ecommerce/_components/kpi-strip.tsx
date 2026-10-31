@@ -1,11 +1,23 @@
 "use client";
 
-import { format, parse } from "date-fns";
 import { ArrowUpRight, DollarSign, PackageCheck, ReceiptText, RotateCcw, ShoppingBag, Users } from "lucide-react";
 import { Area, Bar, CartesianGrid, ComposedChart, XAxis, YAxis } from "recharts";
 
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import {
+  format,
+  formatAmount,
+  formatCalendarDate,
+  formatNumber,
+  formatPercent,
+  useChartFormatters,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
+
+import { ecommerceMessageKey } from "./messages";
 
 const revenueBucketRanges = ["01-05", "06-10", "11-15", "16-20", "21-25", "26-31"] as const;
 const profitMultipliers = [0.24, 0.28, 0.26] as const;
@@ -25,67 +37,79 @@ const revenueBucketValues = [
   [6900, 7400, 8100, 8600, 8200, 9360],
 ] as const;
 
-const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "short" });
-
+/** Calendar-day bucket of a month, in UTC so the server and the browser agree. */
 function getRollingRevenueBuckets() {
-  const currentMonth = new Date();
-  currentMonth.setDate(1);
+  const now = new Date();
+  const currentMonth = now.getUTCFullYear() * 12 + now.getUTCMonth();
 
   return revenueBucketValues.map((values, index) => {
-    const monthDate = new Date(currentMonth);
-    monthDate.setMonth(currentMonth.getMonth() - (revenueBucketValues.length - 1 - index));
-
-    return {
-      month: `${monthFormatter.format(monthDate)} ${String(monthDate.getFullYear()).slice(-2)}`,
-      values,
-    };
+    const month = currentMonth - (revenueBucketValues.length - 1 - index);
+    const monthStart = `${Math.floor(month / 12)}-${String((month % 12) + 1).padStart(2, "0")}-01`;
+    return { monthStart, values };
   });
 }
 
-const revenueOverviewData = getRollingRevenueBuckets().flatMap(({ month, values }) =>
+const revenueOverviewData = getRollingRevenueBuckets().flatMap(({ monthStart, values }) =>
   values.map((revenue, index) => ({
-    period: `${month} ${revenueBucketRanges[index]}`,
+    period: `${monthStart}|${revenueBucketRanges[index]}`,
     profit: Math.round(revenue * profitMultipliers[index % profitMultipliers.length]),
     revenue,
   })),
 );
 
-const revenueOverviewConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "var(--foreground)",
-  },
-  profit: {
-    label: "Profit",
-    color: "var(--muted-foreground)",
-  },
-} satisfies ChartConfig;
+/** Demo figures of the six KPI cards, in the business currency. Changes are fractions (0.158 is +15.8%). */
+const figures = {
+  totalSales: 48_560,
+  totalSalesChange: 0.158,
+  totalOrders: 379,
+  totalOrdersChange: 0.083,
+  customers: 820,
+  customersChange: 0.125,
+  averageOrder: 128,
+  averageOrderChange: -4.2,
+  returnRequests: 18,
+  returnRequestsChange: 0.006,
+  stockAccuracy: 0.97,
+  stockAccuracyPoints: 2.4,
+};
 
-function formatMonthTick(value: string) {
-  const parts = value.split(" ");
-  const range = parts.at(-1);
-  const month = parts.slice(0, -1).join(" ");
-
-  return range === "11-15" ? month : "";
-}
-
-function formatTooltipLabel(value: string) {
-  const parts = value.split(" ");
-  const range = parts.at(-1);
-  const month = parse(parts.slice(0, -1).join(" "), "MMM yy", new Date());
-  const [start, end] = String(range).split("-");
-  const lastDayOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const startDate = new Date(month.getFullYear(), month.getMonth(), Number(start));
-  const endDate = new Date(month.getFullYear(), month.getMonth(), Math.min(Number(end), lastDayOfMonth));
-
-  return `${format(month, "MMM")} ${format(startDate, "do")} - ${format(endDate, "do")}, ${format(month, "yyyy")}`;
-}
-
-function formatCurrencyTooltipValue(value: unknown) {
-  return typeof value === "number" ? `$${value.toLocaleString()}` : String(value ?? "");
+function splitPeriod(value: string) {
+  const [monthStart = "", range = ""] = value.split("|");
+  return { monthStart, range };
 }
 
 export function KpiStrip() {
+  const text = useMessages(ecommerceMessageKey).kpis;
+  const locale = useLocale();
+  const currency = useCurrency();
+  const fmt = useChartFormatters();
+  const percent = (ratio: number) => formatPercent(ratio, locale, { signed: true, fractionDigits: 1 });
+  const revenueOverviewConfig = {
+    revenue: { label: text.revenue, color: "var(--foreground)" },
+    profit: { label: text.profit, color: "var(--muted-foreground)" },
+  } satisfies ChartConfig;
+
+  function formatMonthTick(value: string) {
+    const { monthStart, range } = splitPeriod(value);
+    return range === "11-15" ? formatCalendarDate(monthStart, locale, { month: "short", year: "2-digit" }) : "";
+  }
+
+  function formatTooltipLabel(value: string) {
+    const { monthStart, range } = splitPeriod(value);
+    const [first = "1", last = "1"] = range.split("-");
+    const [year = 1970, month = 1] = monthStart.split("-").map(Number);
+    const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const day = (n: number) => `${monthStart.slice(0, 8)}${String(n).padStart(2, "0")}`;
+    return format(text.dateRange, locale, {
+      start: formatCalendarDate(day(Number(first)), locale, { month: "short", day: "numeric" }),
+      end: formatCalendarDate(day(Math.min(Number(last), lastDayOfMonth)), locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    });
+  }
+
   return (
     <div className="bg-card ring-foreground/10 h-full overflow-hidden rounded-xl ring-1 xl:col-span-12">
       <div>
@@ -93,108 +117,117 @@ export function KpiStrip() {
           <div className="grid grid-cols-1 md:grid-cols-2 md:grid-rows-3 xl:col-span-5 xl:border-r">
             <Card className="border-border h-full rounded-none border-0 border-b ring-0 md:border-r">
               <CardHeader>
-                <CardTitle className="text-sm font-normal">Total Sales</CardTitle>
+                <CardTitle className="text-sm font-normal">{text.totalSales}</CardTitle>
                 <CardDescription className="text-foreground text-3xl leading-none tracking-tight tabular-nums">
-                  $48,560.00
+                  {formatAmount(figures.totalSales, currency, locale, { fractionDigits: 2 })}
                 </CardDescription>
                 <CardAction className="bg-muted grid size-6 place-items-center rounded-sm">
                   <DollarSign className="text-foreground size-3" />
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  <span className="text-green-700 dark:text-green-300">+15.8%</span>
-                  <span className="text-muted-foreground"> vs last week</span>
+                <div className="flex flex-wrap gap-x-1 text-sm">
+                  <span className="text-green-700 dark:text-green-300">{percent(figures.totalSalesChange)}</span>
+                  <span className="text-muted-foreground">{text.vsLastWeek}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-border h-full rounded-none border-0 border-b ring-0">
               <CardHeader>
-                <CardTitle className="text-sm font-normal">Total Orders</CardTitle>
+                <CardTitle className="text-sm font-normal">{text.totalOrders}</CardTitle>
                 <CardDescription className="text-foreground text-3xl leading-none tracking-tight tabular-nums">
-                  379
+                  {formatNumber(figures.totalOrders, locale)}
                 </CardDescription>
                 <CardAction className="bg-muted grid size-6 place-items-center rounded-sm">
                   <ShoppingBag className="text-foreground size-3" />
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  <span className="text-green-700 dark:text-green-300">+8.3%</span>
-                  <span className="text-muted-foreground"> vs last week</span>
+                <div className="flex flex-wrap gap-x-1 text-sm">
+                  <span className="text-green-700 dark:text-green-300">{percent(figures.totalOrdersChange)}</span>
+                  <span className="text-muted-foreground">{text.vsLastWeek}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-border h-full rounded-none border-0 border-b ring-0 md:border-r">
               <CardHeader>
-                <CardTitle className="text-sm font-normal">Customer Growth</CardTitle>
+                <CardTitle className="text-sm font-normal">{text.customerGrowth}</CardTitle>
                 <CardDescription className="text-foreground text-3xl leading-none tracking-tight tabular-nums">
-                  820
+                  {formatNumber(figures.customers, locale)}
                 </CardDescription>
                 <CardAction className="bg-muted grid size-6 place-items-center rounded-sm">
                   <Users className="text-foreground size-3" />
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  <span className="text-green-700 dark:text-green-300">+12.5%</span>
-                  <span className="text-muted-foreground"> vs last month</span>
+                <div className="flex flex-wrap gap-x-1 text-sm">
+                  <span className="text-green-700 dark:text-green-300">{percent(figures.customersChange)}</span>
+                  <span className="text-muted-foreground">{text.vsLastMonth}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-border h-full rounded-none border-0 border-b ring-0">
               <CardHeader>
-                <CardTitle className="text-sm font-normal">Average Order</CardTitle>
+                <CardTitle className="text-sm font-normal">{text.averageOrder}</CardTitle>
                 <CardDescription className="text-foreground text-3xl leading-none tracking-tight tabular-nums">
-                  $128
+                  {formatAmount(figures.averageOrder, currency, locale, { fractionDigits: 0 })}
                 </CardDescription>
                 <CardAction className="bg-muted grid size-6 place-items-center rounded-sm">
                   <ReceiptText className="text-foreground size-3" />
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  <span className="text-destructive">-$4.20</span>
-                  <span className="text-muted-foreground"> vs last week</span>
+                <div className="flex flex-wrap gap-x-1 text-sm">
+                  <span className="text-destructive">
+                    {formatAmount(figures.averageOrderChange, currency, locale, { fractionDigits: 2 })}
+                  </span>
+                  <span className="text-muted-foreground">{text.vsLastWeek}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-border h-full rounded-none border-0 border-b ring-0 md:border-r md:border-b-0">
               <CardHeader>
-                <CardTitle className="text-sm font-normal">Return Requests</CardTitle>
+                <CardTitle className="text-sm font-normal">{text.returnRequests}</CardTitle>
                 <CardDescription className="text-foreground text-3xl leading-none tracking-tight tabular-nums">
-                  18
+                  {formatNumber(figures.returnRequests, locale)}
                 </CardDescription>
                 <CardAction className="bg-muted grid size-6 place-items-center rounded-sm">
                   <RotateCcw className="text-foreground size-3" />
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  <span className="text-destructive">+0.6%</span>
-                  <span className="text-muted-foreground"> vs last month</span>
+                <div className="flex flex-wrap gap-x-1 text-sm">
+                  <span className="text-destructive">{percent(figures.returnRequestsChange)}</span>
+                  <span className="text-muted-foreground">{text.vsLastMonth}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="h-full rounded-none border-0 ring-0">
               <CardHeader>
-                <CardTitle className="text-sm font-normal">Stock Accuracy</CardTitle>
+                <CardTitle className="text-sm font-normal">{text.stockAccuracy}</CardTitle>
                 <CardDescription className="text-foreground text-3xl leading-none tracking-tight tabular-nums">
-                  97%
+                  {formatPercent(figures.stockAccuracy, locale)}
                 </CardDescription>
                 <CardAction className="bg-muted grid size-6 place-items-center rounded-sm">
                   <PackageCheck className="text-foreground size-3" />
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  <span className="text-green-700 dark:text-green-300">+2.4 pts</span>
-                  <span className="text-muted-foreground"> vs last audit</span>
+                <div className="flex flex-wrap gap-x-1 text-sm">
+                  <span className="text-green-700 dark:text-green-300">
+                    {format(text.points, locale, {
+                      value: formatNumber(figures.stockAccuracyPoints, locale, {
+                        signDisplay: "exceptZero",
+                        minimumFractionDigits: 1,
+                      }),
+                    })}
+                  </span>
+                  <span className="text-muted-foreground">{text.vsLastAudit}</span>
                 </div>
               </CardContent>
             </Card>
@@ -202,7 +235,7 @@ export function KpiStrip() {
 
           <Card className="h-full rounded-none border-0 ring-0 xl:col-span-7">
             <CardHeader>
-              <CardTitle className="font-normal">Sales Overview</CardTitle>
+              <CardTitle className="font-normal">{text.salesOverview}</CardTitle>
               <CardAction>
                 <ArrowUpRight className="size-4" />
               </CardAction>
@@ -256,7 +289,7 @@ export function KpiStrip() {
                             <div className="flex flex-1 items-center justify-between leading-none">
                               <span className="text-muted-foreground">{String(name ?? "")}</span>
                               <span className="text-foreground font-mono font-medium tabular-nums">
-                                {formatCurrencyTooltipValue(value)}
+                                {typeof value === "number" ? fmt.currency(value) : String(value ?? "")}
                               </span>
                             </div>
                           </>
@@ -273,7 +306,7 @@ export function KpiStrip() {
                     barSize={4}
                     dataKey="profit"
                     fill="var(--color-profit)"
-                    name="Profit"
+                    name={text.profit}
                     opacity={0.18}
                     radius={[6, 6, 0, 0]}
                   />
@@ -282,7 +315,7 @@ export function KpiStrip() {
                     dataKey="revenue"
                     fill="none"
                     filter="url(#sales-line-glow)"
-                    name="Revenue"
+                    name={text.revenue}
                     stroke="var(--color-revenue)"
                     strokeWidth={1.8}
                     type="linear"

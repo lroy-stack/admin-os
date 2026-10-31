@@ -10,19 +10,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { getLocale } from "@/config/locale.server";
+import { format } from "@/core/i18n/client";
 
 import type { FileManagerFolder } from "./data";
+import { fileManagerMessages } from "./messages.server";
 
 interface FoldersSectionProps {
   folders: FileManagerFolder[];
 }
 
-export function FoldersSection({ folders }: FoldersSectionProps) {
+export async function FoldersSection({ folders }: FoldersSectionProps) {
+  const locale = await getLocale();
+  const text = fileManagerMessages[locale].folders;
+
   return (
     <section className="flex flex-col gap-2" aria-labelledby="folders-heading">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Folders</h2>
-        <span className="text-muted-foreground text-sm">{folders.length} folders</span>
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="folders-heading" className="min-w-0 text-lg font-medium">
+          {text.title}
+        </h2>
+        <span className="text-muted-foreground shrink-0 text-sm">
+          {format(text.count, locale, { count: folders.length })}
+        </span>
       </div>
       {folders.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -34,33 +44,44 @@ export function FoldersSection({ folders }: FoldersSectionProps) {
                     <Folder className="size-4.5" />
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
-                    <CardTitle className="truncate leading-none">{folder.name}</CardTitle>
-                    <CardDescription className="text-xs">{folder.fileCount} files</CardDescription>
+                    <CardTitle
+                      className="line-clamp-2 block w-full leading-tight break-words hyphens-auto"
+                      title={folder.name}
+                    >
+                      {folder.name}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {format(text.files, locale, { count: folder.fileCount })}
+                    </CardDescription>
                   </div>
                 </div>
                 <CardAction>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${folder.name}`}>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={format(text.actionsFor, locale, { name: folder.name })}
+                      >
                         <MoreVertical />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuGroup>
-                        <DropdownMenuItem>Open folder</DropdownMenuItem>
-                        <DropdownMenuItem>Copy share link</DropdownMenuItem>
-                        <DropdownMenuItem>Rename</DropdownMenuItem>
+                        <DropdownMenuItem>{text.open}</DropdownMenuItem>
+                        <DropdownMenuItem>{text.copyLink}</DropdownMenuItem>
+                        <DropdownMenuItem>{text.rename}</DropdownMenuItem>
                       </DropdownMenuGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </CardAction>
               </CardHeader>
-              <CardContent className="text-muted-foreground flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="size-3.5" />
-                  <span>Updated {folder.updatedAt}</span>
+              <CardContent className="text-muted-foreground flex items-start justify-between gap-3 text-xs">
+                <div className="flex min-w-0 items-start gap-1.5">
+                  <Clock className="mt-0.5 size-3.5 shrink-0" />
+                  <span className="break-words">{format(text.updated, locale, { when: folder.updated })}</span>
                 </div>
-                <span>{folder.size}</span>
+                <span className="shrink-0 tabular-nums">{folder.size}</span>
               </CardContent>
             </Card>
           ))}
@@ -71,8 +92,8 @@ export function FoldersSection({ folders }: FoldersSectionProps) {
             <EmptyMedia variant="icon">
               <Folder />
             </EmptyMedia>
-            <EmptyTitle>No folders yet</EmptyTitle>
-            <EmptyDescription>Create a folder to organize your files.</EmptyDescription>
+            <EmptyTitle>{text.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{text.emptyDescription}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}
