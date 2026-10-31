@@ -16,6 +16,9 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 >   `defaultErrorMessages` and the zod schemas. A dependency-cruiser rule enforces it for every `.tsx` file.
 > - Shell chrome strings are `ShellMessages` in `src/ds/shell`. Route titles belong to the app: `NavMessages` in
 >   `src/navigation/shell`, keyed by the stable ids of the nav registry (never by index), so the T6b manifest keeps them.
+>   **T6b:** `src/navigation` is gone. The showcase titles are `ExamplesMessages` (namespace `examples`) next to
+>   `examplesNav`, still keyed by stable ids. The preset's own entries resolve `labelKey` on the server with the
+>   preset vocabulary (`textFor` in `src/config/vocabulary.server.ts`) and the client receives plain strings.
 > - The dashboard layout renders `lang={locale}` on its wrapper, so the language is right from the first byte even when
 >   `Accept-Language` decided it; `<html lang>` is set by the boot script and restored when the provider unmounts.
 

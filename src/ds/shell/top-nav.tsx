@@ -16,7 +16,7 @@ import { LiquidThumb, useLiquidThumb } from "@/ds/components";
 import { AccountMenu } from "./account-menu";
 import { isActiveLink } from "./active-link";
 import { shellMessageKey } from "./messages";
-import type { ShellAccount, ShellBrand, ShellNavItem } from "./types";
+import type { ShellAccount, ShellBrand, ShellDemo, ShellNavItem } from "./types";
 
 // Demo count until the feed engine supplies the real one.
 const UNREAD_NOTIFICATIONS = 1;
@@ -106,12 +106,15 @@ function useScrolledPast(offset: number) {
 export function TopNav({
   brand,
   items,
-  accounts,
+  account,
+  demo,
   inboxHref,
 }: {
   brand: ShellBrand;
   items: readonly ShellNavItem[];
-  accounts: readonly ShellAccount[];
+  account: ShellAccount;
+  /** The demo switches; omitted outside the demo build. */
+  demo?: ShellDemo;
   /** Where the inbox button goes; the app owns its routes. */
   inboxHref: string;
 }) {
@@ -152,7 +155,7 @@ export function TopNav({
             <span className="bg-destructive absolute top-2 right-2.5 size-1.5 rounded-full" />
             <span className="sr-only">{format(header.unread, locale, { count: UNREAD_NOTIFICATIONS })}</span>
           </Button>
-          <AccountMenu accounts={accounts} />
+          <AccountMenu account={account} demo={demo} />
         </div>
       </div>
 

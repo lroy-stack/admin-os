@@ -16,6 +16,14 @@ const en: ShellMessages = {
     billing: "Billing",
     notifications: "Notifications",
     logOut: "Log out",
+    demo: {
+      title: "Demo",
+      role: "View as",
+      preset: "Business type",
+      reset: "Reset demo data",
+      resetDone: "Demo data reset.",
+      failed: "Could not apply the change. Try again.",
+    },
   },
   search: {
     open: "Search",
@@ -58,6 +66,14 @@ const es: ShellMessages = {
     billing: "Facturación",
     notifications: "Notificaciones",
     logOut: "Cerrar sesión",
+    demo: {
+      title: "Demo",
+      role: "Ver como",
+      preset: "Tipo de negocio",
+      reset: "Restablecer datos de demo",
+      resetDone: "Datos de demo restablecidos.",
+      failed: "No se pudo aplicar el cambio. Inténtalo de nuevo.",
+    },
   },
   search: {
     open: "Buscar",
@@ -100,6 +116,14 @@ const de: ShellMessages = {
     billing: "Abrechnung",
     notifications: "Benachrichtigungen",
     logOut: "Abmelden",
+    demo: {
+      title: "Demo",
+      role: "Ansicht als",
+      preset: "Betriebsart",
+      reset: "Demodaten zurücksetzen",
+      resetDone: "Demodaten zurückgesetzt.",
+      failed: "Die Änderung konnte nicht übernommen werden. Bitte versuche es erneut.",
+    },
   },
   search: {
     open: "Suchen",
@@ -142,6 +166,14 @@ const fr: ShellMessages = {
     billing: "Facturation",
     notifications: "Notifications",
     logOut: "Se déconnecter",
+    demo: {
+      title: "Démo",
+      role: "Afficher en tant que",
+      preset: "Type d’activité",
+      reset: "Réinitialiser les données de démo",
+      resetDone: "Données de démo réinitialisées.",
+      failed: "Impossible d’appliquer le changement. Veuillez réessayer.",
+    },
   },
   search: {
     open: "Rechercher",

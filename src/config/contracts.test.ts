@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { catalogPermissions, moduleOf, permissionsOf, ROLE_IDS } from "@/core/access";
-import { accessMessages } from "@/core/access/server";
+import { catalogPermissions, KERNEL_MODULES, moduleOf, permissionsOf, ROLE_IDS } from "@/core/access";
 import {
   assertDictionaryParity,
   flattenMessages,
@@ -14,15 +13,10 @@ import {
 } from "@/core/i18n";
 import type { NavEntry } from "@/core/nav";
 import { bookingSchema } from "@/modules/bookings";
-import { bookingsMessages } from "@/modules/bookings/server";
 import { catalogItemSchema } from "@/modules/catalog";
-import { catalogMessages } from "@/modules/catalog/server";
 import { assetSchema, customerSchema } from "@/modules/customers";
-import { customersMessages } from "@/modules/customers/server";
 import { areaSchema, resourceSchema } from "@/modules/resources";
-import { resourcesMessages } from "@/modules/resources/server";
 import { shiftSchema, staffMemberSchema } from "@/modules/staff";
-import { staffMessages } from "@/modules/staff/server";
 import { hospitality } from "@/verticals/hospitality";
 import { hospitalitySeed, hospitalityVocabulary } from "@/verticals/hospitality/server";
 import { salon } from "@/verticals/salon";
@@ -32,6 +26,7 @@ import { workshopSeed, workshopVocabulary } from "@/verticals/workshop/server";
 
 import { CATALOG } from "./catalog";
 import { type ExtensionEntity, VERTICALS, type VerticalId, type VerticalPreset } from "./vertical";
+import { MODULE_MESSAGES } from "./vocabulary.server";
 
 interface PresetUnderTest {
   readonly id: VerticalId;
@@ -70,21 +65,12 @@ const extSlots = {
   booking: ["bookings", true],
 } as const satisfies Record<ExtensionEntity, readonly [string, boolean]>;
 
-const moduleMessages: Readonly<Record<string, Readonly<Record<Locale, unknown>>>> = {
-  access: accessMessages,
-  bookings: bookingsMessages,
-  catalog: catalogMessages,
-  customers: customersMessages,
-  resources: resourcesMessages,
-  staff: staffMessages,
-};
-
 /** `<module>.<path>` -> message, per locale. */
 const knownMessages = Object.fromEntries(
   LOCALES.map((locale) => [
     locale,
     new Map(
-      Object.entries(moduleMessages).flatMap(([moduleId, dictionary]) =>
+      Object.entries(MODULE_MESSAGES).flatMap(([moduleId, dictionary]) =>
         [...flattenMessages(dictionary[locale])].map(([path, message]) => [`${moduleId}.${path}`, message] as const),
       ),
     ),
@@ -185,7 +171,14 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
     });
 
     it.each(entries)("nav entry %s refers only to enabled modules", (_id, entry) => {
-      expect(modulesOfEntry(entry).filter((moduleId) => !preset.modules.includes(moduleId))).toEqual([]);
+      const available: readonly string[] = [...KERNEL_MODULES, ...preset.modules];
+      expect(modulesOfEntry(entry).filter((moduleId) => !available.includes(moduleId))).toEqual([]);
+    });
+
+    it.each(entries)("nav entry %s has a group label in every locale", (_id, entry) => {
+      expect(LOCALES.map((locale) => typeof knownMessages[locale].get(`nav.groups.${entry.group}`))).toEqual(
+        LOCALES.map(() => "string"),
+      );
     });
 
     it.each(entries)("nav entry %s has a text label in every locale", (_id, entry) => {
@@ -246,7 +239,7 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
 });
 
 describe("module messages", () => {
-  it.each(Object.entries(moduleMessages))("%s passes the dictionary parity check", (_module, dictionary) => {
+  it.each(Object.entries(MODULE_MESSAGES))("%s passes the dictionary parity check", (_module, dictionary) => {
     expect(() => assertDictionaryParity(dictionary)).not.toThrow();
   });
 });

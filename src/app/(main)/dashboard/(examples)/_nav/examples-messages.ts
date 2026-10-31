@@ -1,12 +1,10 @@
 import { messageKey } from "@/core/i18n/client";
 
-/** Every id the shell labels: the sidebar groups, then the links and sub-links the shell picks from the registry. */
-export type NavLabelId =
+/** Every id of `examplesNav`: its groups, then its items. */
+export type ExampleLabelId =
   | "dashboards"
   | "pages"
   | "legacy"
-  | "misc"
-  | "default"
   | "crm"
   | "finance"
   | "analytics"
@@ -21,7 +19,6 @@ export type NavLabelId =
   | "email"
   | "chat"
   | "calendar"
-  | "bookings"
   | "kanban"
   | "tasks"
   | "invoice"
@@ -33,14 +30,12 @@ export type NavLabelId =
   | "auth-login-v2"
   | "auth-register-v1"
   | "auth-register-v2"
-  | "legacy-dashboards"
   | "legacy-default"
   | "legacy-crm"
   | "legacy-finance"
-  | "legacy-analytics"
-  | "others";
+  | "legacy-analytics";
 
-/** Titles of the template's navigation, by stable id. Chrome strings live in `ShellMessages` (ds). */
-export type NavMessages = Readonly<Record<NavLabelId, string>>;
+/** Titles of the template's showcase screens, by stable id. Chrome strings live in `ShellMessages` (ds). */
+export type ExamplesMessages = Readonly<Record<ExampleLabelId, string>>;
 
-export const navMessageKey = messageKey<NavMessages>("nav");
+export const examplesMessageKey = messageKey<ExamplesMessages>("examples");

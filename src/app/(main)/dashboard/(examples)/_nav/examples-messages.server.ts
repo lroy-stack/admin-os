@@ -2,14 +2,12 @@ import "server-only";
 
 import { defineMessages, type MessageBundle } from "@/core/i18n";
 
-import { type NavMessages, navMessageKey } from "./nav-messages";
+import { type ExamplesMessages, examplesMessageKey } from "./examples-messages";
 
-const en: NavMessages = {
+const en: ExamplesMessages = {
   dashboards: "Dashboards",
   pages: "Pages",
   legacy: "Legacy",
-  misc: "Misc",
-  default: "Overview",
   crm: "Pipeline",
   finance: "Finance",
   analytics: "Growth",
@@ -24,7 +22,6 @@ const en: NavMessages = {
   email: "Email",
   chat: "Chat",
   calendar: "Schedule",
-  bookings: "Reservations",
   kanban: "Projects",
   tasks: "Tasks",
   invoice: "Invoice",
@@ -36,20 +33,16 @@ const en: NavMessages = {
   "auth-login-v2": "Login v2",
   "auth-register-v1": "Register v1",
   "auth-register-v2": "Register v2",
-  "legacy-dashboards": "Dashboards",
   "legacy-default": "Default V1",
   "legacy-crm": "CRM V1",
   "legacy-finance": "Finance V1",
   "legacy-analytics": "Analytics V1",
-  others: "Others",
 };
 
-const es: NavMessages = {
+const es: ExamplesMessages = {
   dashboards: "Paneles",
   pages: "Páginas",
   legacy: "Versiones anteriores",
-  misc: "Varios",
-  default: "Resumen",
   crm: "Embudo",
   finance: "Finanzas",
   analytics: "Crecimiento",
@@ -64,7 +57,6 @@ const es: NavMessages = {
   email: "Correo",
   chat: "Chat",
   calendar: "Agenda",
-  bookings: "Reservas",
   kanban: "Proyectos",
   tasks: "Tareas",
   invoice: "Factura",
@@ -76,20 +68,16 @@ const es: NavMessages = {
   "auth-login-v2": "Inicio de sesión v2",
   "auth-register-v1": "Registro v1",
   "auth-register-v2": "Registro v2",
-  "legacy-dashboards": "Paneles",
   "legacy-default": "Predeterminado V1",
   "legacy-crm": "CRM V1",
   "legacy-finance": "Finanzas V1",
   "legacy-analytics": "Analítica V1",
-  others: "Otros",
 };
 
-const de: NavMessages = {
+const de: ExamplesMessages = {
   dashboards: "Dashboards",
   pages: "Seiten",
   legacy: "Frühere Versionen",
-  misc: "Sonstiges",
-  default: "Übersicht",
   crm: "Pipeline",
   finance: "Finanzen",
   analytics: "Wachstum",
@@ -104,7 +92,6 @@ const de: NavMessages = {
   email: "E-Mail",
   chat: "Chat",
   calendar: "Termine",
-  bookings: "Reservierungen",
   kanban: "Projekte",
   tasks: "Aufgaben",
   invoice: "Rechnung",
@@ -116,20 +103,16 @@ const de: NavMessages = {
   "auth-login-v2": "Anmeldung v2",
   "auth-register-v1": "Registrierung v1",
   "auth-register-v2": "Registrierung v2",
-  "legacy-dashboards": "Dashboards",
   "legacy-default": "Standard V1",
   "legacy-crm": "CRM V1",
   "legacy-finance": "Finanzen V1",
   "legacy-analytics": "Analysen V1",
-  others: "Weitere",
 };
 
-const fr: NavMessages = {
+const fr: ExamplesMessages = {
   dashboards: "Tableaux de bord",
   pages: "Pages",
   legacy: "Anciennes versions",
-  misc: "Divers",
-  default: "Aperçu",
   crm: "Pipeline",
   finance: "Finance",
   analytics: "Croissance",
@@ -144,7 +127,6 @@ const fr: NavMessages = {
   email: "E-mail",
   chat: "Chat",
   calendar: "Planning",
-  bookings: "Réservations",
   kanban: "Projets",
   tasks: "Tâches",
   invoice: "Facture",
@@ -156,15 +138,16 @@ const fr: NavMessages = {
   "auth-login-v2": "Connexion v2",
   "auth-register-v1": "Inscription v1",
   "auth-register-v2": "Inscription v2",
-  "legacy-dashboards": "Tableaux de bord",
   "legacy-default": "Par défaut V1",
   "legacy-crm": "CRM V1",
   "legacy-finance": "Finance V1",
   "legacy-analytics": "Analyses V1",
-  others: "Autres",
 };
 
-export const navMessages = defineMessages<NavMessages>({ en, es, de, fr });
+export const examplesMessages = defineMessages<ExamplesMessages>({ en, es, de, fr });
 
 /** Pass to `resolveMessages` in the layout that mounts the shell. */
-export const navBundle: MessageBundle<NavMessages> = { key: navMessageKey, dictionary: navMessages };
+export const examplesBundle: MessageBundle<ExamplesMessages> = {
+  key: examplesMessageKey,
+  dictionary: examplesMessages,
+};

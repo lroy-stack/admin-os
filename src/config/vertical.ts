@@ -26,11 +26,19 @@ export type VerticalId = keyof typeof VERTICALS;
 
 export const DEFAULT_VERTICAL: VerticalId = "hospitality";
 
-/** `VERTICAL` pins one preset per deployment; unset means the default and an unknown value fails loudly. */
-const verticalIdSchema = z.enum(Object.keys(VERTICALS) as [VerticalId, ...VerticalId[]]).default(DEFAULT_VERTICAL);
+/** A preset id as the demo cookie and the environment spell it. */
+export const verticalIdSchema = z.enum(Object.keys(VERTICALS) as [VerticalId, ...VerticalId[]]);
 
-export function resolveVertical(raw: string | undefined): (typeof VERTICALS)[VerticalId] {
-  const parsed = verticalIdSchema.safeParse(raw === "" ? undefined : raw);
+/**
+ * The preset of a request: the demo cookie wins when it names a known preset (an invalid one is ignored), then
+ * `VERTICAL` pins one per deployment, then the default. An unknown `VERTICAL` fails loudly.
+ */
+export function resolveVertical(raw: string | undefined, preferred?: string): (typeof VERTICALS)[VerticalId] {
+  const fromCookie = verticalIdSchema.safeParse(preferred);
+  if (fromCookie.success) {
+    return VERTICALS[fromCookie.data];
+  }
+  const parsed = verticalIdSchema.default(DEFAULT_VERTICAL).safeParse(raw === "" ? undefined : raw);
   if (!parsed.success) {
     throw new Error(
       `VERTICAL must be one of ${Object.keys(VERTICALS).join(", ")}; got "${String(raw)}". Set it in the environment or unset it for "${DEFAULT_VERTICAL}".`,

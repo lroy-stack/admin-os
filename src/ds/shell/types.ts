@@ -40,3 +40,23 @@ export type ShellSearchGroup = {
   readonly label: string;
   readonly items: readonly ShellSearchItem[];
 };
+
+/** One choice of a demo switch. */
+export type ShellChoice = {
+  readonly id: string;
+  readonly label: string;
+};
+
+/** A demo switch: the app owns the choices and what selecting one does (a Server Action in practice). */
+export type ShellSwitch = {
+  readonly value: string;
+  readonly options: readonly ShellChoice[];
+  readonly onSelect: (id: string) => Promise<void>;
+};
+
+/** The demo switches of the account menu (ADR 0006): act as a role, view another preset, restore the demo data. */
+export type ShellDemo = {
+  readonly role: ShellSwitch;
+  readonly preset: ShellSwitch;
+  readonly onReset: () => Promise<void>;
+};

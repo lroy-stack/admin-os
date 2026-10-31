@@ -87,9 +87,9 @@ module.exports = {
     {
       name: "ds-is-domain-free",
       severity: "error",
-      comment: `ds never imports demo data or static navigation (${SEE})`,
+      comment: `ds never imports demo data (${SEE})`,
       from: { path: "^src/ds/" },
-      to: { path: "^src/(data|navigation)/" },
+      to: { path: "^src/data/" },
     },
   ],
   options: {

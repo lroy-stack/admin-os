@@ -8,4 +8,13 @@ export { railButtonClassName } from "./rail-button";
 export { SearchDialog } from "./search-dialog";
 export { ThemeSwitcher } from "./theme-switcher";
 export { TopNav } from "./top-nav";
-export type { ShellAccount, ShellBrand, ShellNavItem, ShellSearchGroup, ShellSearchItem } from "./types";
+export type {
+  ShellAccount,
+  ShellBrand,
+  ShellChoice,
+  ShellDemo,
+  ShellNavItem,
+  ShellSearchGroup,
+  ShellSearchItem,
+  ShellSwitch,
+} from "./types";

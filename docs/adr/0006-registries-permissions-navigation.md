@@ -2,6 +2,31 @@
 
 Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/002-reference-console/spec.md` (D4), `ia.md` §1, §3 · Related: ADR 0003–0005
 
+> **Amended 2026-10-31 (T6b):**
+>
+> - **Pure core.** `can(access, permission)` is in `src/core/access/can.ts`; `visibleNavIds(manifest, access,
+>   enabledModules)` is in `src/core/nav`. Both are fail-closed. Kernel modules (`access`, `clock`) count as enabled,
+>   so an aggregator such as Home gates on `requiredModule: "access"` and every actor sees it. `AccessProvider` and
+>   `useCan` are the client entry `src/core/access/client.tsx`.
+> - **Data flow.** The dashboard layout reads `getRuntime()`, computes the visible ids on the server and resolves each
+>   visible label (`textFor`, preset vocabulary first) and group label. The client receives `NavData` (preset id,
+>   visible ids, labels) and picks the entries from `VERTICALS[presetId].nav`; hidden entries are never sent.
+>   `buildShellNav` (`_components/nav-model.ts`) turns it into the three props-driven lists.
+> - **Manifests list only routes that exist:** Home (`nav.home`, pointing at `/dashboard/default` until T10 builds
+>   Home) and Bookings. Staff, resources, catalog and customers come back with their screens. `nav.groups.<group>`
+>   labels the search groups; the contract test requires them in four locales.
+> - **Examples.** The showcase screens stay reachable as the static `examplesNav`, shown only on the demo build
+>   (mock adapter), after the preset's own entries: top-nav pills (Pipeline, Finance, Growth, Schedule, Projects,
+>   Customers), rail buttons (Tasks, Email, Chat, Files, Invoice, Products) and the full list, grouped (Dashboards,
+>   Pages, Authentication, Legacy), in the search dialog. `default` (now Home), `bookings` and the disabled "Others"
+>   placeholder (with its `coming-soon` page) were dropped. Titles are translated by `ExamplesMessages`, keyed by
+>   stable ids.
+> - **Demo switches** live in the account menu (props-driven `ShellDemo`): role (`demo_role`), preset
+>   (`demo_preset`, read first by `getVertical()`, invalid values ignored) and reset. They are Server Actions in
+>   `_components/demo-actions.ts`: `unknown` input parsed with zod, cookie attributes like `locale`, refused unless
+>   `DATA_ADAPTER=mock`. The cookie is `demo_role`, not `studio_demo_role`. The fake account list is replaced by the
+>   acting identity.
+
 ## Context
 
 **Navigation today:**

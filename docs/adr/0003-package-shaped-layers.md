@@ -205,7 +205,7 @@ The rules:
 - **No relative escape.** A relative import cannot leave its engine, module or preset, nor the `core` or `ds` layer;
   crossing a package needs the alias.
 - **Same-layer isolation.** One engine does not import another engine, and one preset does not import another preset.
-- **`ds` is domain-free.** It never imports `src/data` or `src/navigation`.
+- **`ds` is domain-free.** It never imports `src/data`. Navigation reaches it as props.
 - **Also on:** `import "server-only"` in every `server.ts`.
 
 New packages are covered without editing the config.

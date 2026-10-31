@@ -1,11 +1,24 @@
-import { CalendarClock, LayoutGrid, UserCog, Users, Wrench } from "lucide-react";
+import { CalendarClock, House } from "lucide-react";
 
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
 
 import { assetExtSchema, bookingExtSchema, catalogItemExtSchema, staffExtSchema } from "./extensions";
 
+/**
+ * Only routes that exist are listed (ADR 0006). Home points at the overview route until the Home screen replaces it;
+ * the other areas join with their modules' screens.
+ */
 const nav = [
+  {
+    id: "home",
+    href: "/dashboard/default",
+    labelKey: "nav.home",
+    icon: House,
+    placement: "area",
+    group: "overview",
+    requiredModule: "access",
+  },
   {
     id: "bookings",
     href: "/dashboard/bookings",
@@ -14,42 +27,6 @@ const nav = [
     placement: "area",
     group: "operations",
     requiredPermission: "read:bookings",
-  },
-  {
-    id: "customers",
-    href: "/dashboard/customers",
-    labelKey: "customers.title",
-    icon: Users,
-    placement: "area",
-    group: "business",
-    requiredPermission: "read:customers",
-  },
-  {
-    id: "resources",
-    href: "/dashboard/resources",
-    labelKey: "resources.title",
-    icon: LayoutGrid,
-    placement: "area",
-    group: "operations",
-    requiredPermission: "read:resources",
-  },
-  {
-    id: "catalog",
-    href: "/dashboard/catalog",
-    labelKey: "catalog.title",
-    icon: Wrench,
-    placement: "tool",
-    group: "business",
-    requiredPermission: "read:catalog",
-  },
-  {
-    id: "staff",
-    href: "/dashboard/staff",
-    labelKey: "staff.title",
-    icon: UserCog,
-    placement: "tool",
-    group: "operations",
-    requiredPermission: "read:staff",
   },
 ] as const satisfies NavManifest;
 

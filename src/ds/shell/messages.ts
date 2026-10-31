@@ -18,6 +18,16 @@ export interface ShellMessages {
     readonly billing: string;
     readonly notifications: string;
     readonly logOut: string;
+    readonly demo: {
+      /** Heading of the demo switches. */
+      readonly title: string;
+      readonly role: string;
+      readonly preset: string;
+      readonly reset: string;
+      readonly resetDone: string;
+      /** Shown in a toast when a switch could not be applied. */
+      readonly failed: string;
+    };
   };
   readonly search: {
     readonly open: string;

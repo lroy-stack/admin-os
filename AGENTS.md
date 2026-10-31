@@ -73,7 +73,7 @@ Keep a component inside its route until it is reused by another feature. Do not 
 3. Reuse the existing dashboard shell, local components, layout controls, and theme tokens.
 4. Break each new page into focused components inside the route's `_components/` directory. Keep `page.tsx` small and focused on composing those pieces.
 5. Keep `page.tsx` as a Server Component by default. Move interactive or browser-dependent code into a dedicated Client Component.
-6. Add the screen to `src/navigation/sidebar/sidebar-items.ts` when it should appear in the dashboard navigation.
+6. Add the screen to the `nav` manifest of the presets that offer it (`src/verticals/<preset>/index.ts`, gated by a permission or a module) when it belongs in the product, or to `examplesNav` (`src/app/(main)/dashboard/(examples)/_nav/examples-nav.ts`, with its translations) when it is a template showcase. Never list a route that does not exist.
 7. Decide the information hierarchy before choosing widgets. Let the content determine the page structure.
 8. Keep the established visual rhythm where it fits: compact spacing, clear typography hierarchy, responsive action rows, and grids that collapse cleanly on smaller screens.
 9. Widget selection is not a fixed formula. Try different arrangements of cards, resource rows, meters, charts, tabs, empty states, and actions, then keep the version that communicates the content clearly and feels consistent with the project.

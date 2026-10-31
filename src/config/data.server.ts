@@ -61,6 +61,9 @@ const storeFor = (vertical: VerticalId): SessionStore<DemoSeed> => {
 
 const adapterKindSchema = z.enum(["mock"]).default("mock");
 
+/** The demo build runs on the mock adapter; only then are the visitor's demo switches (role, preset, reset) honoured. */
+export const isDemoAdapter = (): boolean => adapterKindSchema.safeParse(process.env.DATA_ADAPTER || undefined).success;
+
 /**
  * The adapter for this request. `DATA_ADAPTER` selects it (only `mock` ships with the kit; a real backend adds its
  * own here), `MOCK_CLOCK=live` swaps the seeded moment for real time.

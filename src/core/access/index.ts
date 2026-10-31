@@ -3,9 +3,13 @@ import { z } from "zod";
 import { type AnyCapability, type Catalog, defineCapability, type Permission } from "@/core/capability";
 import type { ModuleId } from "@/core/nav";
 
+export { type Access, can } from "./can";
+
 export const ROLE_IDS = ["owner", "manager", "staff"] as const;
 
 export type RoleId = (typeof ROLE_IDS)[number];
+
+export const roleIdSchema = z.enum(ROLE_IDS);
 
 /**
  * How a role is derived from the catalogue (ADR 0006):
