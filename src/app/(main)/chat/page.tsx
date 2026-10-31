@@ -1,15 +1,8 @@
-import type { Metadata } from "next";
-
 import { ChatApp } from "@/app/(main)/dashboard/chat/_components/chat-app";
+import { chatMessages } from "@/app/(main)/dashboard/chat/_components/messages.server";
+import { pageMetadata } from "@/config/metadata.server";
 
-export const metadata: Metadata = {
-  title: "Open Source Chat Interface with shadcn/ui",
-  description:
-    "Explore an open source chat interface with conversation search, message threads, internal notes, and contact details.",
-  alternates: {
-    canonical: "/chat",
-  },
-};
+export const generateMetadata = () => pageMetadata("/chat", chatMessages);
 
 export default function Page() {
   return (

@@ -43,12 +43,16 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
 import { type Message as ChatMessage, type Contact, currentUser } from "./data";
+import { chatMessageKey } from "./messages";
 
 interface ChatThreadProps {
   contact: Contact;
+  /** The day the thread started, formatted for the separator above the messages. */
+  dayLabel: string;
   messages: ChatMessage[];
   onOpenContact?: () => void;
   onBack?: () => void;
@@ -56,18 +60,29 @@ interface ChatThreadProps {
   className?: string;
 }
 
-export function ChatThread({ contact, messages, onOpenContact, onBack, showBackButton, className }: ChatThreadProps) {
+export function ChatThread({
+  contact,
+  dayLabel,
+  messages,
+  onOpenContact,
+  onBack,
+  showBackButton,
+  className,
+}: ChatThreadProps) {
+  const text = useMessages(chatMessageKey);
+  const locale = useLocale();
+
   return (
     <div className={cn("flex h-full flex-col py-3", className)}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4 px-2">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {showBackButton && (
               <Button
                 variant="ghost"
                 size="icon-sm"
                 className="md:hidden"
-                aria-label="Back to conversations"
+                aria-label={text.thread.back}
                 onClick={onBack}
               >
                 <ArrowLeft />
@@ -77,40 +92,42 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
               <AvatarFallback className="bg-background text-foreground">{getInitials(contact.name)}</AvatarFallback>
               <AvatarBadge className="bg-green-600 dark:bg-green-800" />
             </Avatar>
-            <div>
-              <div className="text-sm font-medium">{contact.name}</div>
-              <div className="text-muted-foreground text-xs leading-3">{contact.role}</div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium">{contact.name}</div>
+              <div className="text-muted-foreground truncate text-xs leading-4" title={contact.role}>
+                {contact.role}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Call">
+                <Button variant="ghost" size="icon-sm" aria-label={text.thread.call}>
                   <PhoneCall />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Call</TooltipContent>
+              <TooltipContent>{text.thread.call}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Tag">
+                <Button variant="ghost" size="icon-sm" aria-label={text.thread.tag}>
                   <Tag />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Tag</TooltipContent>
+              <TooltipContent>{text.thread.tag}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Snooze">
+                <Button variant="ghost" size="icon-sm" aria-label={text.thread.snooze}>
                   <AlarmClock />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Snooze</TooltipContent>
+              <TooltipContent>{text.thread.snooze}</TooltipContent>
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="More actions">
+                <Button variant="ghost" size="icon-sm" aria-label={text.thread.moreActions}>
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
@@ -118,20 +135,20 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                 <DropdownMenuGroup>
                   <DropdownMenuItem onSelect={onOpenContact}>
                     <UserRound />
-                    View profile
+                    {text.thread.viewProfile}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Copy />
-                    Copy email
+                    {text.thread.copyEmail}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Flag />
-                    Mark priority
+                    {text.thread.markPriority}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem variant="destructive">Block contact</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive">{text.thread.blockContact}</DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -146,7 +163,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
           <MessageScrollerViewport>
             <MessageScrollerContent className="gap-6 px-2 py-8">
               <Marker variant="separator">
-                <MarkerContent>May 6, 2026</MarkerContent>
+                <MarkerContent>{dayLabel}</MarkerContent>
               </Marker>
 
               {messages.map((message) => {
@@ -179,7 +196,10 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                           <Bubble variant={isOutbound ? "default" : "muted"} align={message.align}>
                             <BubbleContent>{message.text}</BubbleContent>
                             {message.reaction ? (
-                              <BubbleReactions aria-label={`Reaction: ${message.reaction}`} align={reactionAlign}>
+                              <BubbleReactions
+                                aria-label={format(text.thread.reaction, locale, { emoji: message.reaction })}
+                                align={reactionAlign}
+                              >
                                 <span>{message.reaction}</span>
                               </BubbleReactions>
                             ) : null}
@@ -204,18 +224,18 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
             className="w-full justify-start gap-2 border-b px-3 group-data-horizontal/tabs:h-10 **:data-[slot=tabs-trigger]:border-x-0 **:data-[slot=tabs-trigger]:px-6"
           >
             <TabsTrigger value="reply" className="flex-none px-1">
-              Reply
+              {text.thread.reply}
             </TabsTrigger>
             <TabsTrigger value="note" className="flex-none px-1">
-              Internal note
+              {text.thread.internalNote}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="reply" className="m-0">
-            <MessageComposer placeholder="Type your message..." />
+            <MessageComposer placeholder={text.thread.replyPlaceholder} />
           </TabsContent>
           <TabsContent value="note" className="m-0">
-            <MessageComposer placeholder="Write an internal note..." />
+            <MessageComposer placeholder={text.thread.notePlaceholder} />
           </TabsContent>
         </Tabs>
       </div>
@@ -224,6 +244,8 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
 }
 
 function MessageComposer({ placeholder }: { placeholder: string }) {
+  const text = useMessages(chatMessageKey);
+
   return (
     <form
       className="w-full"
@@ -237,24 +259,24 @@ function MessageComposer({ placeholder }: { placeholder: string }) {
           className="min-h-14 px-3 py-2.5 text-sm ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
         />
         <InputGroupAddon align="block-end">
-          <InputGroupButton aria-label="Format" type="button" size="icon-sm">
+          <InputGroupButton aria-label={text.thread.format} type="button" size="icon-sm">
             <Type />
           </InputGroupButton>
-          <InputGroupButton aria-label="Emoji" type="button" size="icon-sm">
+          <InputGroupButton aria-label={text.thread.emoji} type="button" size="icon-sm">
             <Smile />
           </InputGroupButton>
-          <InputGroupButton aria-label="Attach file" type="button" size="icon-sm">
+          <InputGroupButton aria-label={text.thread.attach} type="button" size="icon-sm">
             <Paperclip />
           </InputGroupButton>
-          <InputGroupButton aria-label="Insert link" type="button" size="icon-sm">
+          <InputGroupButton aria-label={text.thread.insertLink} type="button" size="icon-sm">
             <Link />
           </InputGroupButton>
-          <InputGroupButton aria-label="AI assist" type="button" size="icon-sm" variant="outline">
+          <InputGroupButton aria-label={text.thread.aiAssist} type="button" size="icon-sm" variant="outline">
             <Sparkles />
           </InputGroupButton>
           <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto">
             <Send />
-            <span className="sr-only">Send</span>
+            <span className="sr-only">{text.thread.send}</span>
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>

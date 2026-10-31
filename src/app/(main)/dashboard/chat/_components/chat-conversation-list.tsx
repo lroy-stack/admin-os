@@ -10,9 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, formatNumber, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
-import type { Conversation } from "./data";
+import { type Conversation, conversationTabs } from "./data";
+import { chatMessageKey } from "./messages";
 import { useChat } from "./use-chat";
 
 interface ChatConversationListProps {
@@ -23,6 +25,8 @@ interface ChatConversationListProps {
 
 export function ChatConversationList({ conversations, onSelectConversation, className }: ChatConversationListProps) {
   const [chat, setChat] = useChat();
+  const text = useMessages(chatMessageKey);
+  const locale = useLocale();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -46,15 +50,16 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
             variant="ghost"
             size="icon-sm"
             onClick={toggleSidebar}
+            aria-label={text.list.toggleSidebar}
             className="[&_svg]:transition-transform [&_svg]:duration-300"
           >
             {isCollapsed ? <PanelRightClose /> : <PanelRightOpen />}
           </Button>
           <Separator orientation="vertical" className="mr-1.5 h-4 data-vertical:self-center" />
-          <h1 className="text-xl leading-none font-medium">Inbox</h1>
+          <h1 className="text-xl leading-none font-medium">{text.list.title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" aria-label={text.list.filter}>
             <Filter />
           </Button>
         </div>
@@ -64,19 +69,16 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
 
       <Tabs defaultValue="all">
         <TabsList variant="line" className="w-full border-b px-0 **:data-[slot=tabs-trigger]:border-x-0">
-          <TabsTrigger value="all">
-            All
-            <span className="text-muted-foreground text-xs">(24)</span>
-          </TabsTrigger>
-          <TabsTrigger value="open">
-            Open
-            <span className="text-muted-foreground text-xs">(18)</span>
-          </TabsTrigger>
-          <TabsTrigger value="snoozed">
-            Snoozed
-            <span className="text-muted-foreground text-xs">(2)</span>
-          </TabsTrigger>
-          <TabsTrigger value="closed">Closed</TabsTrigger>
+          {conversationTabs.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {text.list.tabs[tab.id]}
+              {"count" in tab && (
+                <span className="text-muted-foreground text-xs">
+                  {format(text.list.tabCount, locale, { count: tab.count })}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
         </TabsList>
       </Tabs>
 
@@ -89,7 +91,7 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
             {conversationGroups.map(({ group, conversations }) => (
               <Collapsible key={group} defaultOpen>
                 <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-1 px-3 py-2 text-xs font-medium [&[data-state=open]>svg]:rotate-180">
-                  {group}
+                  {text.list.groups[group]}
                   <ChevronDown className="size-3 transition-transform" />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -126,8 +128,10 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
 
                             <div className="w-0 flex-1 overflow-hidden">
                               <div className="flex w-full items-center justify-between gap-2">
-                                <div className="truncate text-sm leading-5 font-medium">{conversation.name}</div>
-                                <span className="text-muted-foreground text-xs leading-5 text-nowrap">
+                                <div className="min-w-0 truncate text-sm leading-5 font-medium">
+                                  {conversation.name}
+                                </div>
+                                <span className="text-muted-foreground shrink-0 text-xs leading-5 text-nowrap">
                                   {conversation.time}
                                 </span>
                               </div>
@@ -142,7 +146,7 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
                                 </div>
 
                                 <div className="flex items-center gap-1">
-                                  {conversation.group === "Pinned" && (
+                                  {conversation.group === "pinned" && (
                                     <div className="grid size-5 place-items-center">
                                       <Pin className="size-3 fill-current opacity-70" />
                                     </div>
@@ -150,7 +154,10 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
 
                                   {conversation.isUnread && (
                                     <div className="bg-primary/90 text-primary-foreground grid size-5 place-items-center rounded-full text-xs">
-                                      {conversation.unreadCount}
+                                      <span aria-hidden="true">{formatNumber(conversation.unreadCount, locale)}</span>
+                                      <span className="sr-only">
+                                        {format(text.list.unread, locale, { count: conversation.unreadCount })}
+                                      </span>
                                     </div>
                                   )}
                                 </div>

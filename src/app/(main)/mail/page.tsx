@@ -1,15 +1,8 @@
-import type { Metadata } from "next";
-
 import { MailApp } from "@/app/(main)/dashboard/mail/_components/mail-app";
+import { mailMessages } from "@/app/(main)/dashboard/mail/_components/messages.server";
+import { pageMetadata } from "@/config/metadata.server";
 
-export const metadata: Metadata = {
-  title: "Open Source Email Client with shadcn/ui",
-  description:
-    "Explore an open source email client with inbox navigation, message search, reading, replying, and archiving.",
-  alternates: {
-    canonical: "/mail",
-  },
-};
+export const generateMetadata = () => pageMetadata("/mail", mailMessages);
 
 export default function Page() {
   return (

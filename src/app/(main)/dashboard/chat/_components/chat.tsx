@@ -5,6 +5,7 @@ import { type CSSProperties, useState } from "react";
 import { cn } from "cn";
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { useMessages } from "@/core/i18n/client";
 import { useIsLg } from "@/hooks/use-lg";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -12,6 +13,7 @@ import { ChatConversationList } from "./chat-conversation-list";
 import { ChatProfileDetails } from "./chat-profile-details";
 import { ChatThread } from "./chat-thread";
 import type { Conversation } from "./data";
+import { chatMessageKey } from "./messages";
 import { useChat } from "./use-chat";
 
 interface ChatProps {
@@ -20,6 +22,7 @@ interface ChatProps {
 
 export function Chat({ conversations }: ChatProps) {
   const [chat] = useChat();
+  const text = useMessages(chatMessageKey);
   const [showContact, setShowContact] = useState(false);
   const [showThread, setShowThread] = useState(false);
   const isLg = useIsLg();
@@ -47,6 +50,7 @@ export function Chat({ conversations }: ChatProps) {
         />
         <ChatThread
           contact={activeConversation.contact}
+          dayLabel={activeConversation.dayLabel}
           messages={activeConversation.messages}
           showBackButton={isMobile}
           onBack={() => setShowThread(false)}
@@ -78,8 +82,8 @@ export function Chat({ conversations }: ChatProps) {
       {!isLg && (
         <Sheet open={showContact} onOpenChange={setShowContact}>
           <SheetContent side="right" className="w-80 p-0" showCloseButton={false}>
-            <SheetTitle className="sr-only">Contact profile</SheetTitle>
-            <SheetDescription className="sr-only">View contact details and activity</SheetDescription>
+            <SheetTitle className="sr-only">{text.profile.sheetTitle}</SheetTitle>
+            <SheetDescription className="sr-only">{text.profile.sheetDescription}</SheetDescription>
             <ChatProfileDetails contact={activeConversation.contact} onClose={() => setShowContact(false)} />
           </SheetContent>
         </Sheet>

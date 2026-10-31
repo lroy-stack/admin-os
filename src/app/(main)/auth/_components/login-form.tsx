@@ -1,23 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-const formSchema = z.object({
-  email: z.email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  remember: z.boolean().optional(),
-});
+import { createLoginSchema, PASSWORD_MIN_LENGTH } from "./auth-schema";
+import { authMessageKey } from "./messages";
 
-function onSubmit(data: z.infer<typeof formSchema>) {
-  toast("You submitted the following values", {
+type LoginValues = z.infer<ReturnType<typeof createLoginSchema>>;
+
+function showSubmitted(title: string, data: LoginValues) {
+  toast(title, {
     description: (
       <pre className="mt-2 w-[320px] rounded-md bg-neutral-950 p-4">
         <code className="text-white">{JSON.stringify(data, null, 2)}</code>
@@ -27,8 +29,18 @@ function onSubmit(data: z.infer<typeof formSchema>) {
 }
 
 export function LoginForm() {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const text = useMessages(authMessageKey);
+  const locale = useLocale();
+  const schema = useMemo(
+    () =>
+      createLoginSchema({
+        emailInvalid: text.validation.emailInvalid,
+        passwordTooShort: format(text.validation.passwordTooShort, locale, { min: PASSWORD_MIN_LENGTH }),
+      }),
+    [text, locale],
+  );
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       password: "",
@@ -37,19 +49,23 @@ export function LoginForm() {
   });
 
   return (
-    <form noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form
+      noValidate
+      onSubmit={form.handleSubmit((data) => showSubmitted(text.submitted, data))}
+      className="flex flex-col gap-4"
+    >
       <FieldGroup className="gap-4">
         <Controller
           control={form.control}
           name="email"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="login-email">Email Address</FieldLabel>
+              <FieldLabel htmlFor="login-email">{text.fields.email}</FieldLabel>
               <Input
                 {...field}
                 id="login-email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={text.fields.emailPlaceholder}
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
               />
@@ -62,12 +78,12 @@ export function LoginForm() {
           name="password"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="login-password">Password</FieldLabel>
+              <FieldLabel htmlFor="login-password">{text.fields.password}</FieldLabel>
               <Input
                 {...field}
                 id="login-password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={text.fields.passwordPlaceholder}
                 autoComplete="current-password"
                 aria-invalid={fieldState.invalid}
               />
@@ -89,7 +105,7 @@ export function LoginForm() {
               />
               <FieldContent>
                 <FieldLabel htmlFor="login-remember" className="font-normal">
-                  Remember me for 30 days
+                  {text.fields.remember}
                 </FieldLabel>
                 {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
               </FieldContent>
@@ -98,7 +114,7 @@ export function LoginForm() {
         />
       </FieldGroup>
       <Button className="w-full" type="submit">
-        Login
+        {text.actions.login}
       </Button>
     </form>
   );

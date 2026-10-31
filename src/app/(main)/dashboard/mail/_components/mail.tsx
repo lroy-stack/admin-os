@@ -5,6 +5,7 @@ import * as React from "react";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useMessages } from "@/core/i18n/client";
 import { setClientCookie } from "@/lib/cookie.client";
 
 import type { Mail } from "./data";
@@ -16,6 +17,7 @@ import {
   MAIL_LIST_PANEL_ID,
 } from "./mail-layout-config";
 import { MailView } from "./mail-view";
+import { mailMessageKey } from "./messages";
 import { useMail } from "./use-mail";
 
 interface MailProps {
@@ -27,6 +29,7 @@ interface MailProps {
 
 export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
   const { isMobile } = useSidebar();
+  const text = useMessages(mailMessageKey);
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -35,7 +38,7 @@ export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT],
 
   if (!isMounted) {
     return (
-      <div className="text-muted-foreground flex size-full items-center justify-center text-sm">Loading mail...</div>
+      <div className="text-muted-foreground flex size-full items-center justify-center text-sm">{text.loading}</div>
     );
   }
 
@@ -48,6 +51,7 @@ export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT],
 
 function MailMobileLayout({ mails, standaloneHref }: Pick<MailProps, "mails" | "standaloneHref">) {
   const [mail] = useMail();
+  const text = useMessages(mailMessageKey);
   const [isMailOpen, setIsMailOpen] = React.useState(false);
   const selectedMail = mails.find((item) => item.id === mail.selected) || null;
 
@@ -57,8 +61,8 @@ function MailMobileLayout({ mails, standaloneHref }: Pick<MailProps, "mails" | "
 
       <Drawer open={isMailOpen} onOpenChange={setIsMailOpen}>
         <DrawerContent>
-          <DrawerTitle className="sr-only">Mail message</DrawerTitle>
-          <DrawerDescription className="sr-only">Read the selected email message</DrawerDescription>
+          <DrawerTitle className="sr-only">{text.view.drawerTitle}</DrawerTitle>
+          <DrawerDescription className="sr-only">{text.view.drawerDescription}</DrawerDescription>
           <MailView mail={selectedMail} onClose={() => setIsMailOpen(false)} />
         </DrawerContent>
       </Drawer>

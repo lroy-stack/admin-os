@@ -1,12 +1,12 @@
 import { cn } from "cn";
 import { differenceInDays } from "date-fns/differenceInDays";
-import { format } from "date-fns/format";
-import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format, formatLocalDate, formatRelative, type Locale, useLocale, useMessages } from "@/core/i18n/client";
 
 import type { Mail } from "./data";
+import { mailMessageKey } from "./messages";
 import { useMail } from "./use-mail";
 
 type MailGroup = {
@@ -22,6 +22,8 @@ interface MailListProps {
 
 export function MailList({ groups, onSelectMail }: MailListProps) {
   const [mail, setMail] = useMail();
+  const text = useMessages(mailMessageKey);
+  const locale = useLocale();
 
   return (
     <ScrollArea className="**:data-[slot=scroll-area-viewport]:scroll-fade min-h-0 flex-1">
@@ -29,7 +31,7 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
         {groups.map((group) => (
           <section key={group.id} className="flex flex-col gap-1.5">
             <div className="text-muted-foreground mx-3 text-xs">
-              {group.title} ({group.items.length})
+              {format(text.inbox.groupTitle, locale, { title: group.title, count: group.items.length })}
             </div>
 
             <div className="flex flex-col">
@@ -58,9 +60,9 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
                       <AvatarFallback className="bg-background rounded-sm">{item.from.name[0]}</AvatarFallback>
                     </Avatar>
 
-                    <div className="space-y-2">
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="min-w-0">
                           <div
                             className={cn(
                               "flex items-center gap-2 truncate text-sm font-normal",
@@ -85,7 +87,7 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
                             mail.selected === item.id && "text-foreground",
                           )}
                         >
-                          {formatMailDate(item.receivedAt)}
+                          {formatMailDate(item.receivedAt, locale)}
                         </div>
                       </div>
 
@@ -102,12 +104,12 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
   );
 }
 
-function formatMailDate(date: string) {
+function formatMailDate(date: string, locale: Locale) {
   const mailDate = new Date(date);
 
   if (differenceInDays(new Date(), mailDate) <= 3) {
-    return formatDistanceToNow(mailDate, { addSuffix: true });
+    return formatRelative(mailDate, new Date(), locale);
   }
 
-  return format(mailDate, "d MMM yyyy");
+  return formatLocalDate(mailDate, locale, { day: "numeric", month: "short", year: "numeric" });
 }

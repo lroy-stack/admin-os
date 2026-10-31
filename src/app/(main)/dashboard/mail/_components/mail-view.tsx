@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "cn";
-import { format } from "date-fns/format";
 import {
   Archive,
   ChevronDown,
@@ -36,8 +35,10 @@ import {
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { format, formatLocalDate, useLocale, useMessages } from "@/core/i18n/client";
 
 import type { Mail } from "./data";
+import { mailMessageKey } from "./messages";
 import { useMail } from "./use-mail";
 
 interface MailDisplayProps {
@@ -47,6 +48,8 @@ interface MailDisplayProps {
 
 export function MailView({ mail, onClose }: MailDisplayProps) {
   const [, setMail] = useMail();
+  const text = useMessages(mailMessageKey);
+  const locale = useLocale();
 
   function handleClose() {
     setMail({ selected: null });
@@ -59,29 +62,29 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
         <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Close message" onClick={handleClose}>
+              <Button variant="ghost" size="icon-sm" aria-label={text.view.close} onClick={handleClose}>
                 <X />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Close message</TooltipContent>
+            <TooltipContent>{text.view.close}</TooltipContent>
           </Tooltip>
           <Separator className="h-4 data-vertical:self-center" orientation="vertical" />
           <div className="flex items-center gap-0">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Previous message">
+                <Button variant="ghost" size="icon-sm" aria-label={text.view.previous}>
                   <ChevronLeft />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Previous message</TooltipContent>
+              <TooltipContent>{text.view.previous}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Next message">
+                <Button variant="ghost" size="icon-sm" aria-label={text.view.next}>
                   <ChevronRight />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Next message</TooltipContent>
+              <TooltipContent>{text.view.next}</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -89,33 +92,33 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
         <div className="ml-auto flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Pin thread">
+              <Button variant="ghost" size="icon-sm" aria-label={text.view.pinThread}>
                 <Pin />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Pin thread</TooltipContent>
+            <TooltipContent>{text.view.pinThread}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Archive">
+              <Button variant="ghost" size="icon-sm" aria-label={text.view.archive}>
                 <Archive />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Archive</TooltipContent>
+            <TooltipContent>{text.view.archive}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Reply">
+              <Button variant="ghost" size="icon-sm" aria-label={text.view.reply}>
                 <Reply />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Reply</TooltipContent>
+            <TooltipContent>{text.view.reply}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label="More actions">
+                  <Button variant="ghost" size="icon-sm" aria-label={text.view.moreActions}>
                     <EllipsisVertical />
                   </Button>
                 </TooltipTrigger>
@@ -124,36 +127,36 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <ReplyAll />
-                    Reply all
+                    {text.view.replyAll}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Forward />
-                    Forward
+                    {text.view.forward}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <MailOpen />
-                    Mark as unread
+                    {text.view.markUnread}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Tag />
-                    Add label
+                    {text.view.addLabel}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <TooltipContent>More actions</TooltipContent>
+            <TooltipContent>{text.view.moreActions}</TooltipContent>
           </Tooltip>
           <Separator className="h-4 data-vertical:self-center" orientation="vertical" />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Move to trash">
+              <Button variant="ghost" size="icon-sm" aria-label={text.view.moveToTrash}>
                 <Trash2 className="text-destructive" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Move to trash</TooltipContent>
+            <TooltipContent>{text.view.moveToTrash}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -164,10 +167,17 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
         {mail ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3">
             <div className="space-y-1.5">
-              <div className="leading-none font-medium">{mail.subject}</div>
+              <div className="leading-snug font-medium break-words hyphens-auto">{mail.subject}</div>
 
               <div className="text-muted-foreground text-xs leading-none">
-                {format(new Date(mail.receivedAt), "EEE, d MMM yyyy, h:mm a")}
+                {formatLocalDate(new Date(mail.receivedAt), locale, {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
               </div>
             </div>
 
@@ -178,20 +188,21 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
                 <AvatarFallback className="bg-background rounded-sm">{mail.from.name[0]}</AvatarFallback>
               </Avatar>
 
-              <div className="flex h-full flex-col gap-1">
-                <div className="flex items-center gap-2">
+              <div className="flex h-full min-w-0 flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-x-2">
                   <div className="text-xs">{mail.from.name}</div>
                   <Separator className="h-3 data-vertical:self-center" orientation="vertical" />
                   <div className="text-muted-foreground text-xs">{mail.from.email}</div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-x-2">
                   <div className="text-muted-foreground text-xs">
-                    To: <span className="text-foreground">{mail.to.map((recipient) => recipient.name).join(", ")}</span>
+                    {text.view.to}{" "}
+                    <span className="text-foreground">{mail.to.map((recipient) => recipient.name).join(", ")}</span>
                   </div>
 
                   {mail.cc?.length ? (
                     <div className="text-muted-foreground text-xs">
-                      Cc:{" "}
+                      {text.view.cc}{" "}
                       <span className="text-foreground">{mail.cc.map((recipient) => recipient.name).join(", ")}</span>
                     </div>
                   ) : null}
@@ -214,7 +225,7 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
                         "data-[state=open]:text-muted-foreground data-[state=open]:bg-transparent",
                       )}
                     >
-                      Attachments ({mail.attachments.length})
+                      {format(text.view.attachments, locale, { count: mail.attachments.length })}
                       <ChevronDown className="group-data-[state=open]:rotate-180" />
                     </Button>
                   </CollapsibleTrigger>
@@ -244,15 +255,18 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
                 <InputGroupAddon align="inline-start">
                   <Reply />
                 </InputGroupAddon>
-                <InputGroupInput className="text-xs" placeholder={`Reply ${mail.from.name}...`} />
+                <InputGroupInput
+                  className="text-xs"
+                  placeholder={format(text.view.replyPlaceholder, locale, { name: mail.from.name })}
+                />
                 <InputGroupAddon className="gap-1" align="inline-end">
-                  <InputGroupButton variant="ghost">
+                  <InputGroupButton variant="ghost" aria-label={text.view.emoji}>
                     <Smile />
                   </InputGroupButton>
-                  <InputGroupButton variant="ghost">
+                  <InputGroupButton variant="ghost" aria-label={text.view.attach}>
                     <Paperclip />
                   </InputGroupButton>
-                  <InputGroupButton variant="ghost">
+                  <InputGroupButton variant="ghost" aria-label={text.view.send}>
                     <Send />
                   </InputGroupButton>
                 </InputGroupAddon>
@@ -260,7 +274,7 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
             </div>
           </div>
         ) : (
-          <div className="text-muted-foreground grid h-full place-items-center text-sm">No email selected</div>
+          <div className="text-muted-foreground grid h-full place-items-center text-sm">{text.view.empty}</div>
         )}
       </div>
     </div>

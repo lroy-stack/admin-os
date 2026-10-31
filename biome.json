@@ -158,7 +158,14 @@
         "src/app/(main)/dashboard/roles/**",
         "src/app/(main)/dashboard/users/**",
         "src/app/(main)/dashboard/academy/**",
-        "src/app/(main)/dashboard/infrastructure/**"
+        "src/app/(main)/dashboard/infrastructure/**",
+        "src/app/(main)/dashboard/mail/**",
+        "src/app/(main)/dashboard/chat/**",
+        "src/app/(main)/mail/**",
+        "src/app/(main)/chat/**",
+        "src/app/(main)/auth/**",
+        "src/app/(main)/unauthorized/**",
+        "src/app/not-found*"
       ],
       "plugins": ["./lint/no-visible-string-props.grit"],
       "linter": {

@@ -32,12 +32,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { format, formatNumber, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
 import { accounts, type MailNavItem, mailNavigation } from "./data";
+import { mailMessageKey } from "./messages";
 
 export function MailSidebar() {
   const { state } = useSidebar();
+  const text = useMessages(mailMessageKey);
+  const locale = useLocale();
   const isCollapsed = state === "collapsed";
   const [selectedAccount, setSelectedAccount] = React.useState(accounts[0]);
 
@@ -52,7 +56,7 @@ export function MailSidebar() {
                   variant="ghost"
                   size="icon-sm"
                   className={accountTriggerClassName}
-                  aria-label={`Open ${selectedAccount.label} menu`}
+                  aria-label={format(text.sidebar.openMenuOf, locale, { name: selectedAccount.label })}
                 >
                   <AccountMarker account={selectedAccount} isSelected />
                 </Button>
@@ -84,7 +88,7 @@ export function MailSidebar() {
                     key={account.id}
                     className={accountTriggerClassName}
                     value={String(account.id)}
-                    aria-label={`Select ${account.label}`}
+                    aria-label={format(text.sidebar.selectAccount, locale, { name: account.label })}
                   >
                     <AccountMarker account={account} />
                   </ToggleGroupItem>
@@ -93,7 +97,7 @@ export function MailSidebar() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label="Open account menu">
+                  <Button variant="ghost" size="icon-sm" aria-label={text.sidebar.openAccountMenu}>
                     <EllipsisVertical />
                   </Button>
                 </DropdownMenuTrigger>
@@ -112,34 +116,52 @@ export function MailSidebar() {
 
         <Button size={isCollapsed ? "icon-sm" : "sm"} variant="outline" className="group-data-[state=expanded]:w-full">
           <PenLine data-icon="inline-start" />
-          <span className="group-data-[state=collapsed]:hidden">New email</span>
+          <span className="group-data-[state=collapsed]:hidden">{text.sidebar.newEmail}</span>
         </Button>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarMenu className="gap-1">{mailNavigation.navMain.map(renderNavItem)}</SidebarMenu>
+          <SidebarMenu className="gap-1">
+            {mailNavigation.navMain.map((nav) => (
+              <NavEntry key={nav.id} nav={nav} />
+            ))}
+          </SidebarMenu>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-normal">Folders</SidebarGroupLabel>
-          <SidebarMenu className="gap-1">{mailNavigation.folders.map(renderNavItem)}</SidebarMenu>
+          <SidebarGroupLabel className="font-normal">{text.sidebar.folders}</SidebarGroupLabel>
+          <SidebarMenu className="gap-1">
+            {mailNavigation.folders.map((nav) => (
+              <NavEntry key={nav.id} nav={nav} />
+            ))}
+          </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu className="gap-1">{mailNavigation.navFooter.map(renderNavItem)}</SidebarMenu>
+        <SidebarMenu className="gap-1">
+          {mailNavigation.navFooter.map((nav) => (
+            <NavEntry key={nav.id} nav={nav} />
+          ))}
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
 }
 
-function renderNavItem(nav: MailNavItem) {
+function NavEntry({ nav }: { nav: MailNavItem }) {
+  const text = useMessages(mailMessageKey);
+  const locale = useLocale();
+  const title = text.nav[nav.id];
+
   return (
-    <SidebarMenuItem key={nav.id}>
-      <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={nav.isActive} tooltip={nav.title}>
+    <SidebarMenuItem>
+      <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={nav.isActive} tooltip={title}>
         <nav.icon />
-        <span className="font-medium">{nav.title}</span>
+        <span className="font-medium">{title}</span>
       </SidebarMenuButton>
-      {nav.label && <SidebarMenuBadge className="font-medium">{nav.label}</SidebarMenuBadge>}
+      {nav.count !== undefined && (
+        <SidebarMenuBadge className="font-medium">{formatNumber(nav.count, locale)}</SidebarMenuBadge>
+      )}
     </SidebarMenuItem>
   );
 }
@@ -180,11 +202,13 @@ function AccountMenuContent({
   onSelectAccount: (account: Account) => void;
   showAccounts?: boolean;
 } & Pick<React.ComponentProps<typeof DropdownMenuContent>, "align" | "side">) {
+  const text = useMessages(mailMessageKey);
+
   return (
     <DropdownMenuContent className="w-56" {...props}>
       {showAccounts && (
         <>
-          <DropdownMenuLabel>Accounts</DropdownMenuLabel>
+          <DropdownMenuLabel>{text.sidebar.accounts}</DropdownMenuLabel>
           <DropdownMenuGroup>
             <DropdownMenuRadioGroup
               value={String(selectedAccountId)}
@@ -212,22 +236,22 @@ function AccountMenuContent({
       <DropdownMenuGroup>
         <DropdownMenuItem>
           <UserPlus />
-          Add account
+          {text.sidebar.addAccount}
         </DropdownMenuItem>
         <DropdownMenuItem>
           <UsersRound />
-          Manage accounts
+          {text.sidebar.manageAccounts}
         </DropdownMenuItem>
         <DropdownMenuItem>
           <Settings2 />
-          Account settings
+          {text.sidebar.accountSettings}
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuItem>
           <LogOut />
-          Sign out
+          {text.sidebar.signOut}
         </DropdownMenuItem>
       </DropdownMenuGroup>
     </DropdownMenuContent>

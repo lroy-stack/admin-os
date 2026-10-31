@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { type Mail, mails } from "./data";
+import { MAIL_IDS, type Mail } from "./data";
 
 type Config = {
   selected: Mail["id"] | null;
@@ -13,7 +13,7 @@ type MailStore = {
 
 const useMailStore = create<MailStore>((set) => ({
   mail: {
-    selected: mails[0].id,
+    selected: MAIL_IDS[0],
   },
   setMail: (mail) => set({ mail }),
 }));

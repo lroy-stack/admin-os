@@ -1,27 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-const formSchema = z
-  .object({
-    email: z.email({ message: "Please enter a valid email address." }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-    confirmPassword: z.string().min(6, { message: "Confirm Password must be at least 6 characters." }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
+import { createRegisterSchema, PASSWORD_MIN_LENGTH } from "./auth-schema";
+import { authMessageKey } from "./messages";
 
-function onSubmit(data: z.infer<typeof formSchema>) {
-  toast("You submitted the following values", {
+type RegisterValues = z.infer<ReturnType<typeof createRegisterSchema>>;
+
+function showSubmitted(title: string, data: RegisterValues) {
+  toast(title, {
     description: (
       <pre className="mt-2 w-[320px] rounded-md bg-neutral-950 p-4">
         <code className="text-white">{JSON.stringify(data, null, 2)}</code>
@@ -31,8 +28,18 @@ function onSubmit(data: z.infer<typeof formSchema>) {
 }
 
 export function RegisterForm() {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const text = useMessages(authMessageKey);
+  const locale = useLocale();
+  const schema = useMemo(() => {
+    const params = { min: PASSWORD_MIN_LENGTH };
+    return createRegisterSchema({
+      ...text.validation,
+      passwordTooShort: format(text.validation.passwordTooShort, locale, params),
+      confirmTooShort: format(text.validation.confirmTooShort, locale, params),
+    });
+  }, [text, locale]);
+  const form = useForm<RegisterValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       password: "",
@@ -41,19 +48,23 @@ export function RegisterForm() {
   });
 
   return (
-    <form noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form
+      noValidate
+      onSubmit={form.handleSubmit((data) => showSubmitted(text.submitted, data))}
+      className="flex flex-col gap-4"
+    >
       <FieldGroup className="gap-4">
         <Controller
           control={form.control}
           name="email"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="register-email">Email Address</FieldLabel>
+              <FieldLabel htmlFor="register-email">{text.fields.email}</FieldLabel>
               <Input
                 {...field}
                 id="register-email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={text.fields.emailPlaceholder}
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
               />
@@ -66,12 +77,12 @@ export function RegisterForm() {
           name="password"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="register-password">Password</FieldLabel>
+              <FieldLabel htmlFor="register-password">{text.fields.password}</FieldLabel>
               <Input
                 {...field}
                 id="register-password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={text.fields.passwordPlaceholder}
                 autoComplete="new-password"
                 aria-invalid={fieldState.invalid}
               />
@@ -84,12 +95,12 @@ export function RegisterForm() {
           name="confirmPassword"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="register-confirm-password">Confirm Password</FieldLabel>
+              <FieldLabel htmlFor="register-confirm-password">{text.fields.confirmPassword}</FieldLabel>
               <Input
                 {...field}
                 id="register-confirm-password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={text.fields.passwordPlaceholder}
                 autoComplete="new-password"
                 aria-invalid={fieldState.invalid}
               />
@@ -99,7 +110,7 @@ export function RegisterForm() {
         />
       </FieldGroup>
       <Button className="w-full" type="submit">
-        Register
+        {text.actions.register}
       </Button>
     </form>
   );

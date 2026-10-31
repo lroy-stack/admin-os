@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useMessages } from "@/core/i18n/client";
 
 import { OpenStandaloneButton } from "../../_components/open-standalone-button";
 import type { Mail } from "./data";
 import { MailList } from "./mail-list";
+import { mailMessageKey } from "./messages";
 
 interface MailInboxProps {
   mails: Mail[];
@@ -18,6 +20,7 @@ interface MailInboxProps {
 }
 
 export function MailInbox({ mails, onSelectMail, standaloneHref }: MailInboxProps) {
+  const text = useMessages(mailMessageKey);
   const pinnedMails = mails.filter((mail) => mail.isPinned);
   const unpinnedMails = mails.filter((mail) => !mail.isPinned);
 
@@ -27,16 +30,16 @@ export function MailInbox({ mails, onSelectMail, standaloneHref }: MailInboxProp
         <div className="flex items-center">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-2 ml-1 h-4 data-vertical:self-center" />
-          <h1 className="text-xl leading-none font-medium">Inbox</h1>
+          <h1 className="text-xl leading-none font-medium">{text.inbox.title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" aria-label={text.inbox.viewOptions}>
             <SlidersHorizontal />
           </Button>
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" aria-label={text.inbox.refresh}>
             <RotateCcw />
           </Button>
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" aria-label={text.inbox.moreActions}>
             <Ellipsis />
           </Button>
           {standaloneHref && <OpenStandaloneButton href={standaloneHref} />}
@@ -49,7 +52,7 @@ export function MailInbox({ mails, onSelectMail, standaloneHref }: MailInboxProp
 
       <div className="px-2">
         <InputGroup className="h-7 w-full rounded-md">
-          <InputGroupInput className="h-7" placeholder="Search..." />
+          <InputGroupInput className="h-7" placeholder={text.inbox.search} aria-label={text.inbox.search} />
           <InputGroupAddon>
             <Search />
           </InputGroupAddon>
@@ -61,12 +64,12 @@ export function MailInbox({ mails, onSelectMail, standaloneHref }: MailInboxProp
           groups={[
             {
               id: "pinned",
-              title: "Pinned",
+              title: text.inbox.pinned,
               items: pinnedMails,
             },
             {
               id: "inbox",
-              title: "Inbox",
+              title: text.inbox.title,
               items: unpinnedMails,
             },
           ]}

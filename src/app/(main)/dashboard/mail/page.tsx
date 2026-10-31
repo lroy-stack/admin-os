@@ -1,19 +1,10 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/config/metadata.server";
 
 import { MailApp } from "./_components/mail-app";
+import { mailMessages } from "./_components/messages.server";
 
-export const metadata: Metadata = {
-  title: "Open Source Email Client with shadcn/ui",
-  description:
-    "Explore an open source email client with inbox navigation, message search, reading, replying, and archiving.",
-  robots: {
-    index: false,
-    follow: true,
-  },
-  alternates: {
-    canonical: "/mail",
-  },
-};
+// The embedded page is a copy of /mail: it names the standalone page as canonical and stays out of the index.
+export const generateMetadata = () => pageMetadata("/mail", mailMessages, { robots: { index: false, follow: true } });
 
 export default function Page() {
   return (

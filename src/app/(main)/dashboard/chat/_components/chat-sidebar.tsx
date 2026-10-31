@@ -25,11 +25,12 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
+import { formatNumber, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
-import { channelItems, currentUser, navItems, viewItems } from "./data";
+import { channelItems, currentUser, type NavItem, navItems, viewItems } from "./data";
+import { chatMessageKey } from "./messages";
 
 const channelBrandIcons = {
   whatsapp: siWhatsapp,
@@ -38,8 +39,7 @@ const channelBrandIcons = {
 } as const;
 
 export function ChatSidebar() {
-  const { state } = useSidebar();
-  const _isCollapsed = state === "collapsed";
+  const text = useMessages(chatMessageKey);
 
   return (
     <Sidebar collapsible="offcanvas" className="**:data-[sidebar=sidebar]:bg-background absolute inset-y-0 h-full">
@@ -47,47 +47,34 @@ export function ChatSidebar() {
         <SidebarGroup>
           <SidebarMenu className="gap-1">
             {navItems.map((item) => (
-              <SidebarMenuItem key={item.id}>
-                <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={item.isActive} tooltip={item.title}>
-                  <item.icon />
-                  <span className="font-medium">{item.title}</span>
-                </SidebarMenuButton>
-                {item.label && <SidebarMenuBadge className="font-medium">{item.label}</SidebarMenuBadge>}
-              </SidebarMenuItem>
+              <ChatNavEntry key={item.id} item={item} title={text.nav[item.id]} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-normal">Channels</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-normal">{text.sidebar.channels}</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {channelItems.map((item) => (
-              <SidebarMenuItem key={item.id}>
-                <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={item.isActive} tooltip={item.title}>
-                  {item.id in channelBrandIcons ? (
-                    <SimpleIcon icon={channelBrandIcons[item.id as keyof typeof channelBrandIcons]} />
-                  ) : (
-                    <item.icon />
-                  )}
-                  <span className="font-medium">{item.title}</span>
-                </SidebarMenuButton>
-                {item.label && <SidebarMenuBadge className="font-medium">{item.label}</SidebarMenuBadge>}
-              </SidebarMenuItem>
+              <ChatNavEntry
+                key={item.id}
+                item={item}
+                title={text.channels[item.id]}
+                brandIcon={
+                  item.id in channelBrandIcons
+                    ? channelBrandIcons[item.id as keyof typeof channelBrandIcons]
+                    : undefined
+                }
+              />
             ))}
           </SidebarMenu>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-normal">Views</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-normal">{text.sidebar.views}</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {viewItems.map((item) => (
-              <SidebarMenuItem key={item.id}>
-                <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={item.isActive} tooltip={item.title}>
-                  <item.icon />
-                  <span className="font-medium">{item.title}</span>
-                </SidebarMenuButton>
-                {item.label && <SidebarMenuBadge className="font-medium">{item.label}</SidebarMenuBadge>}
-              </SidebarMenuItem>
+              <ChatNavEntry key={item.id} item={item} title={text.views[item.id]} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
@@ -106,11 +93,11 @@ export function ChatSidebar() {
                   <Avatar>
                     <AvatarFallback className="text-xs">{getInitials(currentUser.name)}</AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{currentUser.name}</span>
                     <span className="text-muted-foreground truncate text-xs">{currentUser.email}</span>
                   </div>
-                  <EllipsisVertical className="ml-auto size-4" />
+                  <EllipsisVertical className="ml-auto size-4 shrink-0" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56" side="top">
@@ -119,7 +106,7 @@ export function ChatSidebar() {
                     <Avatar>
                       <AvatarFallback className="text-xs">{getInitials(currentUser.name)}</AvatarFallback>
                     </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
+                    <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-medium">{currentUser.name}</span>
                       <span className="text-muted-foreground truncate text-xs">{currentUser.email}</span>
                     </div>
@@ -129,17 +116,17 @@ export function ChatSidebar() {
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <UserRound />
-                    Account
+                    {text.sidebar.account}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings />
-                    Settings
+                    {text.sidebar.settings}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <LogOut />
-                  Log out
+                  {text.sidebar.logOut}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -147,5 +134,29 @@ export function ChatSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function ChatNavEntry({
+  item,
+  title,
+  brandIcon,
+}: {
+  item: NavItem<string>;
+  title: string;
+  brandIcon?: React.ComponentProps<typeof SimpleIcon>["icon"];
+}) {
+  const locale = useLocale();
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={item.isActive} tooltip={title}>
+        {brandIcon ? <SimpleIcon icon={brandIcon} /> : <item.icon />}
+        <span className="font-medium">{title}</span>
+      </SidebarMenuButton>
+      {item.count !== undefined && (
+        <SidebarMenuBadge className="font-medium">{formatNumber(item.count, locale)}</SidebarMenuBadge>
+      )}
+    </SidebarMenuItem>
   );
 }
