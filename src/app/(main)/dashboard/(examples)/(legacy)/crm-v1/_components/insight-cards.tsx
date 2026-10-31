@@ -5,11 +5,17 @@ import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, XAxis, Y
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { formatNumber, format as formatText, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
+import {
+  formatNumber,
+  formatPercent,
+  format as formatText,
+  useChartFormatters,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
 import { CurrencyTooltipContent } from "@/ds/components";
 
 import { leadSourceColors, leadsBySourceChartData, projectRevenueChartData, projectRevenueSummary } from "./crm.config";
-import { formatRate } from "./crm-format";
 import { crmV1MessageKey } from "./messages";
 
 export function InsightCards() {
@@ -159,7 +165,7 @@ export function InsightCards() {
         <CardFooter>
           <p className="text-muted-foreground text-xs">
             {formatText(t.projectSummary, locale, {
-              progress: formatRate(projectRevenueSummary.averageProgress, locale, { digits: 0 }),
+              progress: formatPercent(projectRevenueSummary.averageProgress, locale),
               count: projectRevenueSummary.aboveTarget,
             })}
           </p>

@@ -83,7 +83,8 @@ export function KpiStrip() {
   const locale = useLocale();
   const currency = useCurrency();
   const fmt = useChartFormatters();
-  const percent = (ratio: number) => formatPercent(ratio, locale, { signed: true, fractionDigits: 1 });
+  const percent = (ratio: number) =>
+    formatPercent(ratio, locale, { signed: true, minFractionDigits: 1, maxFractionDigits: 1 });
   const revenueOverviewConfig = {
     revenue: { label: text.revenue, color: "var(--foreground)" },
     profit: { label: text.profit, color: "var(--muted-foreground)" },

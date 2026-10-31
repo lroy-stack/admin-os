@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   formatAmount,
   formatNumber,
+  formatPercent,
   format as formatText,
   useChartFormatters,
   useCurrency,
@@ -36,7 +37,7 @@ import {
   type RiskView,
   riskViews,
 } from "./analytics-data";
-import { formatDays, formatPoints, formatRate, formatSignedAmount } from "./analytics-format";
+import { formatDays, formatPoints, formatSignedAmount } from "./analytics-format";
 import { analyticsV1MessageKey } from "./messages";
 
 const STALLED_THRESHOLD_DAYS = 14;
@@ -163,7 +164,13 @@ function SummaryRow({ revenueSeries }: { revenueSeries: Array<{ day: string; rev
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{formatRate(overviewFigures.revenueChange, locale, { signed: true })}</Badge>
+          <Badge variant="secondary">
+            {formatPercent(overviewFigures.revenueChange, locale, {
+              signed: true,
+              minFractionDigits: 1,
+              maxFractionDigits: 1,
+            })}
+          </Badge>
           <Badge variant="secondary">{formatSignedAmount(overviewFigures.revenueDelta, currency, locale)}</Badge>
         </div>
 

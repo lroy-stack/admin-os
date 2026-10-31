@@ -39,6 +39,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import {
   format,
   formatCalendarDate,
+  formatPercent,
   type Locale,
   useChartFormatters,
   useLocale,
@@ -48,7 +49,6 @@ import type { DataTableFeatures } from "@/ds/data-table";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { type DefaultV1Messages, defaultV1MessageKey } from "../messages";
-import { formatOneDecimalPercent } from "../percent";
 import { VisitorsTooltip } from "../visitors-tooltip";
 import { type ProposalSectionsRow, sectionStatuses, sectionTypes } from "./schema";
 
@@ -167,7 +167,9 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
               <Separator />
               <div className="grid gap-2">
                 <div className="flex gap-2 leading-none font-medium">
-                  {format(text.drawer.trend, locale, { change: formatOneDecimalPercent(0.052, locale) })}{" "}
+                  {format(text.drawer.trend, locale, {
+                    change: formatPercent(0.052, locale, { minFractionDigits: 1, maxFractionDigits: 1 }),
+                  })}{" "}
                   <TrendingUpIcon />
                 </div>
                 <div className="text-muted-foreground">

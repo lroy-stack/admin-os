@@ -4,10 +4,17 @@ import { Bar, CartesianGrid, ComposedChart, Dot, LabelList, Line, ReferenceLine,
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { formatAmount, format as formatText, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
+import {
+  formatAmount,
+  formatPercent,
+  format as formatText,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
 
 import { forecastFigures, forecastWeeks } from "./analytics-data";
-import { formatPoints, formatRate } from "./analytics-format";
+import { formatPoints } from "./analytics-format";
 import { analyticsV1MessageKey } from "./messages";
 
 const FORECAST_WEEKS = forecastWeeks.length;
@@ -18,7 +25,7 @@ export function DriversForecastTarget() {
   const locale = useLocale();
   const currency = useCurrency();
   const weekLabel = (week: number | string) => formatText(t.weekShort, locale, { week: Number(week) });
-  const percentValue = (value: number) => formatRate(value / 100, locale, { digits: 0 });
+  const percentValue = (value: number) => formatPercent(value / 100, locale);
 
   const forecastChartConfig = {
     closedWon: { label: t.closedWon, color: "var(--chart-1)" },
@@ -44,7 +51,7 @@ export function DriversForecastTarget() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <MetricChip
             label={t.attainment}
-            value={formatRate(forecastFigures.attainment, locale)}
+            value={formatPercent(forecastFigures.attainment, locale, { minFractionDigits: 1, maxFractionDigits: 1 })}
             note={t.attainmentNote}
           />
           <MetricChip
@@ -56,7 +63,7 @@ export function DriversForecastTarget() {
           />
           <MetricChip
             label={t.confidence}
-            value={formatRate(forecastFigures.confidence, locale)}
+            value={formatPercent(forecastFigures.confidence, locale, { minFractionDigits: 1, maxFractionDigits: 1 })}
             note={t.confidenceNote}
           />
         </div>
@@ -84,7 +91,10 @@ export function DriversForecastTarget() {
                   className="w-52"
                   payload={(props.payload ?? []).map((item) => ({
                     ...item,
-                    value: typeof item.value === "number" ? formatRate(item.value / 100, locale) : item.value,
+                    value:
+                      typeof item.value === "number"
+                        ? formatPercent(item.value / 100, locale, { minFractionDigits: 1, maxFractionDigits: 1 })
+                        : item.value,
                   }))}
                 />
               )}

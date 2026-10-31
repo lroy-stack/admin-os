@@ -6,7 +6,6 @@ import { getCurrency, getLocale } from "@/config/locale.server";
 import { format, formatAmount, formatNumber, formatPercent } from "@/core/i18n/client";
 
 import { defaultV1Messages } from "./messages.server";
-import { formatOneDecimalPercent } from "./percent";
 
 // Demo figures: the business's books in the selected currency, nothing is converted.
 const TOTAL_REVENUE = 1250;
@@ -23,7 +22,7 @@ export async function SectionCards() {
       key: "revenue",
       label: text.totalRevenue.label,
       value: formatAmount(TOTAL_REVENUE, currency, locale, { fractionDigits: 2 }),
-      change: formatOneDecimalPercent(0.125, locale, true),
+      change: formatPercent(0.125, locale, { signed: true, minFractionDigits: 1, maxFractionDigits: 1 }),
       up: true,
       trend: text.totalRevenue.trend,
       caption: format(text.totalRevenue.caption, locale, { count: CAPTION_MONTHS }),
@@ -41,7 +40,7 @@ export async function SectionCards() {
       key: "accounts",
       label: text.activeAccounts.label,
       value: formatNumber(ACTIVE_ACCOUNTS, locale),
-      change: formatOneDecimalPercent(0.125, locale, true),
+      change: formatPercent(0.125, locale, { signed: true, minFractionDigits: 1, maxFractionDigits: 1 }),
       up: true,
       trend: text.activeAccounts.trend,
       caption: text.activeAccounts.caption,
@@ -49,8 +48,8 @@ export async function SectionCards() {
     {
       key: "growth",
       label: text.growthRate.label,
-      value: formatOneDecimalPercent(GROWTH_RATE, locale),
-      change: formatOneDecimalPercent(GROWTH_RATE, locale, true),
+      value: formatPercent(GROWTH_RATE, locale, { minFractionDigits: 1, maxFractionDigits: 1 }),
+      change: formatPercent(GROWTH_RATE, locale, { signed: true, minFractionDigits: 1, maxFractionDigits: 1 }),
       up: true,
       trend: text.growthRate.trend,
       caption: text.growthRate.caption,

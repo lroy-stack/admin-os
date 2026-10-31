@@ -47,7 +47,7 @@ export async function KpiCards() {
             </span>
             <Badge className={deltaBadgeClassName}>
               <ArrowUp />
-              {formatPercent(0.028, locale, { fractionDigits: 1 })}
+              {formatPercent(0.028, locale, { minFractionDigits: 1, maxFractionDigits: 1 })}
             </Badge>
           </div>
           <div className="text-muted-foreground text-right text-xs">
@@ -58,11 +58,11 @@ export async function KpiCards() {
         <KpiCard title={kpis.attendance}>
           <div className="flex items-center gap-2">
             <span className="text-foreground shrink-0 text-3xl leading-none tracking-tight tabular-nums">
-              {formatPercent(0.942, locale, { fractionDigits: 1 })}
+              {formatPercent(0.942, locale, { minFractionDigits: 1, maxFractionDigits: 1 })}
             </span>
             <Badge className={deltaBadgeClassName}>
               <ArrowUp />
-              {formatPercent(0.011, locale, { fractionDigits: 1 })}
+              {formatPercent(0.011, locale, { minFractionDigits: 1, maxFractionDigits: 1 })}
             </Badge>
           </div>
           <div className="text-muted-foreground text-right text-xs">{kpis.attendanceNote}</div>

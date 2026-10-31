@@ -19,7 +19,6 @@ import {
 } from "@/core/i18n/client";
 
 import { actionItems, pipelineLeadsChange, regionSalesData, salesPipelineChartData } from "./crm.config";
-import { formatRate } from "./crm-format";
 import { crmV1MessageKey } from "./messages";
 
 const priorityTone = {
@@ -64,7 +63,9 @@ export function OperationalCards() {
         </CardContent>
         <CardFooter>
           <p className="text-muted-foreground text-xs">
-            {formatText(text.pipelineIncrease, locale, { change: formatRate(pipelineLeadsChange, locale) })}
+            {formatText(text.pipelineIncrease, locale, {
+              change: formatPercent(pipelineLeadsChange, locale, { minFractionDigits: 1, maxFractionDigits: 1 }),
+            })}
           </p>
         </CardFooter>
       </Card>
@@ -88,7 +89,11 @@ export function OperationalCards() {
                         region.growth > 0 ? "text-green-500" : "text-destructive",
                       )}
                     >
-                      {formatRate(region.growth, locale, { signed: true })}
+                      {formatPercent(region.growth, locale, {
+                        signed: true,
+                        minFractionDigits: 1,
+                        maxFractionDigits: 1,
+                      })}
                     </span>
                   </div>
                 </div>

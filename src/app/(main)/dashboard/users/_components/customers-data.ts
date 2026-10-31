@@ -1,6 +1,6 @@
 import { ChartColumn, Phone, UsersRound } from "lucide-react";
 
-import { format, formatAmount, formatNumber, formatPercent, type Locale } from "@/core/i18n";
+import { format, formatAmount, formatNumber, formatPercent, type Locale } from "@/core/i18n/client";
 import type { Currency } from "@/core/money";
 import { CRM_AS_OF, type Customer, customers } from "@/data/crm";
 import type { HeaderKpi } from "@/ds/components";

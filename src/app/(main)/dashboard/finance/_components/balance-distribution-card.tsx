@@ -116,7 +116,7 @@ export function BalanceDistributionCard() {
                 <p className="font-medium tabular-nums">{fmt.currency(item.amount)}</p>
               </div>
               <div className="shrink-0 font-medium tabular-nums">
-                {formatPercent(item.share, locale, { fractionDigits: 1 })}
+                {formatPercent(item.share, locale, { minFractionDigits: 1, maxFractionDigits: 1 })}
               </div>
             </div>
           ))}

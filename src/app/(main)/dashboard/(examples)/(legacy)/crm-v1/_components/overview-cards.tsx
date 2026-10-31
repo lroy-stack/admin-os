@@ -9,6 +9,7 @@ import {
   formatAmount,
   formatCalendarDate,
   formatNumber,
+  formatPercent,
   format as formatText,
   useChartFormatters,
   useCurrency,
@@ -18,7 +19,6 @@ import {
 import { CurrencyTooltipContent } from "@/ds/components";
 
 import { LAST_MONTH, leadsChartData, overviewFigures, proposalsChartData, revenueChartData } from "./crm.config";
-import { formatRate } from "./crm-format";
 import { crmV1MessageKey } from "./messages";
 
 const SIX_MONTHS = 6;
@@ -73,7 +73,11 @@ export function OverviewCards() {
         <CardFooter className="flex items-center justify-between gap-2">
           <span className="text-xl font-semibold tabular-nums">{formatNumber(totalNewLeads, locale)}</span>
           <span className="text-sm font-medium text-green-500 tabular-nums">
-            {formatRate(overviewFigures.newLeadsChange, locale, { signed: true })}
+            {formatPercent(overviewFigures.newLeadsChange, locale, {
+              signed: true,
+              minFractionDigits: 1,
+              maxFractionDigits: 1,
+            })}
           </span>
         </CardFooter>
       </Card>
@@ -123,7 +127,11 @@ export function OverviewCards() {
             {formatAmount(overviewFigures.revenue, currency, locale, { fractionDigits: 0 })}
           </p>
           <div className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500 tabular-nums">
-            {formatRate(overviewFigures.revenueChange, locale, { signed: true })}
+            {formatPercent(overviewFigures.revenueChange, locale, {
+              signed: true,
+              minFractionDigits: 1,
+              maxFractionDigits: 1,
+            })}
           </div>
         </CardContent>
       </Card>
@@ -141,7 +149,11 @@ export function OverviewCards() {
           </div>
           <p className="text-2xl font-medium tabular-nums">{formatNumber(overviewFigures.projectsWon, locale)}</p>
           <div className="bg-destructive/10 text-destructive w-fit rounded-md px-2 py-1 text-xs font-medium tabular-nums">
-            {formatRate(overviewFigures.projectsWonChange, locale, { signed: true })}
+            {formatPercent(overviewFigures.projectsWonChange, locale, {
+              signed: true,
+              minFractionDigits: 1,
+              maxFractionDigits: 1,
+            })}
           </div>
         </CardContent>
       </Card>

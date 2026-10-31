@@ -66,7 +66,10 @@ export async function InfrastructureHeader() {
           <Badge variant="outline" className="h-auto gap-1 rounded-sm px-1.5 py-0.5">
             <span className="size-2 rounded-full bg-green-600 dark:bg-green-500" />
             {format(text.summary.globalUptime, locale, {
-              value: formatPercent(infrastructureSummary.globalUptime, locale, { fractionDigits: 2 }),
+              value: formatPercent(infrastructureSummary.globalUptime, locale, {
+                minFractionDigits: 2,
+                maxFractionDigits: 2,
+              }),
             })}
           </Badge>
         </div>

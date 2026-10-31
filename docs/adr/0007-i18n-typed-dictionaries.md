@@ -113,7 +113,7 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 >   `tooltip`, `heading`, `caption`, `summary`, `message`, and any prop ending in `Label`, `Text`, `Title`,
 >   `Description`, `Placeholder` or `Message`. The plugin lists them by name because Biome's `noStrings` option cannot
 >   tell `aria-label` from `className`. `lint/no-visible-string-children.grit` flags the braced forms between tags:
->   `{"…"}`, a template literal and a conditional with a string branch, including in `sr-only` text. A plain string
+>   `{"…"}`, a template literal whose fixed parts contain letters (`` `${title} · ${company}` `` is data and punctuation, so it is allowed) and a conditional with a string branch, including in `sr-only` text. A plain string
 >   with no letters (`"%"`, `"·"`, `"—"`) is punctuation and stays allowed, but a bare `:` between tags is flagged
 >   by `noJsxLiterals`, so write it as `{":"}` or put it in the template. `lint/fixtures.test.ts` runs Biome over
 >   `lint/fixtures/` (one file per leak or allowed case) with the repo config, so a change to the rules shows up as

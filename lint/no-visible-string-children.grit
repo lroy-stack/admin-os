@@ -2,13 +2,14 @@ language js(typescript, jsx)
 
 // The braced half of `style/noJsxLiterals`, which only sees raw JSX text: `{"text"}`, ``{`text ${x}`}`` and
 // `{cond ? "yes" : "no"}` as a child, including inside `sr-only` elements. A plain string with no letters
-// ("%", "·", "—") is punctuation, not text, and stays allowed.
+// ("%", "·", "—") is punctuation, not text, and stays allowed; so is a template whose fixed parts have no letters.
 // See docs/adr/0007-i18n-typed-dictionaries.md ("How to translate a screen").
 JsxExpressionChild(expression=$expression) as $child where {
   $expression <: or {
     and { JsStringLiteralExpression(),
     r".*\p{L}.*" },
-    JsTemplateExpression(),
+    and { JsTemplateExpression(),
+    contains JsTemplateChunkElement() as $chunk where $chunk <: r".*\p{L}.*" },
     JsConditionalExpression(consequent=and { JsStringLiteralExpression(),
     r".*\p{L}.*" }),
     JsConditionalExpression(alternate=and { JsStringLiteralExpression(),

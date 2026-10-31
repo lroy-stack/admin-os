@@ -13,7 +13,8 @@ export async function OverviewKpis() {
   const [text, locale, currency] = await Promise.all([getMessages(financeMessages), getLocale(), getCurrency()]);
   const amount = (value: number, compact = false) =>
     formatAmount(value, currency, locale, compact ? { compact } : { fractionDigits: 0 });
-  const change = (ratio: number) => formatPercent(ratio, locale, { signed: true, fractionDigits: 1 });
+  const change = (ratio: number) =>
+    formatPercent(ratio, locale, { signed: true, minFractionDigits: 1, maxFractionDigits: 1 });
   const kpis = text.kpis;
 
   return (
@@ -75,7 +76,7 @@ export async function OverviewKpis() {
               <div className="text-3xl leading-none tracking-tight tabular-nums">{formatPercent(0.28, locale)}</div>
               <p className="text-muted-foreground text-xs break-words">
                 {format(kpis.savingsRateChange, locale, {
-                  percent: formatPercent(0.256, locale, { fractionDigits: 1 }),
+                  percent: formatPercent(0.256, locale, { minFractionDigits: 1, maxFractionDigits: 1 }),
                 })}
               </p>
             </div>

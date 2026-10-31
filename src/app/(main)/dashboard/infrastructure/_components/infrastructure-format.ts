@@ -1,4 +1,4 @@
-import { formatNumber, type Locale } from "@/core/i18n";
+import { formatNumber, type Locale } from "@/core/i18n/client";
 
 import type { InfrastructureEnvironment } from "./infrastructure-data";
 

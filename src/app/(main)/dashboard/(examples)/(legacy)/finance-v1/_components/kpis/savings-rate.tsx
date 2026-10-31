@@ -29,7 +29,7 @@ export async function SavingsRate() {
             <p className="text-xl font-medium tabular-nums">{formatPercent(0.32, locale)}</p>
             <span className="text-xs">
               {format(text.kpis.versusLastMonth, locale, {
-                change: formatPercent(0.035, locale, { signed: true, fractionDigits: 1 }),
+                change: formatPercent(0.035, locale, { signed: true, minFractionDigits: 1, maxFractionDigits: 1 }),
               })}
             </span>
           </div>

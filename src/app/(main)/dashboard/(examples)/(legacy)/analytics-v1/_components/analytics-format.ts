@@ -1,17 +1,6 @@
 import { format, formatNumber, type Locale } from "@/core/i18n/client";
 import type { Currency } from "@/core/money/client";
 
-/** 0.724 becomes "72.4%" in English and "72,4 %" in German and French. `Intl` writes the sign and the space. */
-export function formatRate(ratio: number, locale: Locale, options: { digits?: number; signed?: boolean } = {}): string {
-  const { digits = 1, signed = false } = options;
-  return formatNumber(ratio, locale, {
-    style: "percent",
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-    signDisplay: signed ? "exceptZero" : "auto",
-  });
-}
-
 /** A whole-unit amount with its sign shown ("+$107,000"), in the business currency. */
 export function formatSignedAmount(amount: number, currency: Currency, locale: Locale): string {
   return formatNumber(amount, locale, {

@@ -34,7 +34,9 @@ export async function MonthlyCashFlow() {
         <Separator />
         <p className="text-muted-foreground flex items-center gap-1 text-xs">
           <TrendingUp aria-hidden="true" className="size-4 shrink-0" />
-          {format(text.kpis.versusLastMonth, locale, { change: formatPercent(0.041, locale, { fractionDigits: 1 }) })}
+          {format(text.kpis.versusLastMonth, locale, {
+            change: formatPercent(0.041, locale, { minFractionDigits: 1, maxFractionDigits: 1 }),
+          })}
         </p>
       </CardContent>
     </Card>
