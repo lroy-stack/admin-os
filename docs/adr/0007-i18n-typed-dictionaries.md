@@ -26,7 +26,7 @@ every string translated: no partial dictionaries.
 
 **This repo today:**
 
-- About 25 screens with hard-coded English. For example `reservas/_components/reservations.tsx` has
+- About 25 screens with hard-coded English. For example `bookings/_components/reservations.tsx` has
   `{ value: "floor", label: "Floor" }`, and `shell/app-rail.tsx` has `aria-label="Quick access"`.
 - The root layout is static with `lang="en"` (`src/app/layout.tsx`). `ThemeBootScript` applies preferences from
   cookies and localStorage before paint, so that the root layout can stay static (`src/scripts/theme-boot.tsx`).

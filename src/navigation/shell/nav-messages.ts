@@ -21,7 +21,7 @@ export type NavLabelId =
   | "email"
   | "chat"
   | "calendar"
-  | "reservas"
+  | "bookings"
   | "kanban"
   | "tasks"
   | "invoice"

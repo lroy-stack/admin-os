@@ -1,7 +1,7 @@
 import { type NavMainLinkItem, sidebarItems } from "@/navigation/sidebar/sidebar-items";
 
 // The shell picks its entries from the sidebar registry so titles, urls and icons stay in one place.
-const TOP_NAV_IDS = ["default", "crm", "users", "calendar", "reservas", "finance", "analytics", "kanban"] as const;
+const TOP_NAV_IDS = ["default", "crm", "users", "calendar", "bookings", "finance", "analytics", "kanban"] as const;
 const RAIL_IDS = ["tasks", "email", "chat", "file-manager", "invoice", "products"] as const;
 
 const linkItems = sidebarItems

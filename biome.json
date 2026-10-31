@@ -101,7 +101,8 @@
     },
     "domains": {
       "next": "recommended",
-      "react": "recommended"
+      "react": "recommended",
+      "playwright": "none"
     }
   },
   "css": {
@@ -166,6 +167,14 @@
           "style": {
             "noJsxLiterals": "error"
           }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/**", "playwright.config.ts"],
+      "linter": {
+        "domains": {
+          "playwright": "recommended"
         }
       }
     }

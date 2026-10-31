@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { FloorPlan } from "./floor-model";
 import { applyEdit, type PlanEdit } from "./plan-edits";
 
-const STORAGE_KEY = "reservas.floor-plan.v1";
+const STORAGE_KEY = "bookings.floor-plan.v1";
 const MAX_UNDO = 50;
 
 const tableSchema = z.object({

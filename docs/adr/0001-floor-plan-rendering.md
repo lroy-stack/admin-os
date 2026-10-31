@@ -24,7 +24,7 @@ reuse its proven approach instead of designing a new one.
 ## Decision
 
 Option 3. Add `three` (same major as reference, `^0.185`) and `@types/three`. The scene lives in
-`src/app/(main)/dashboard/reservas/_components/floor/` until another screen needs it, behind one client component
+`src/app/(main)/dashboard/bookings/_components/floor/` until another screen needs it, behind one client component
 loaded with `next/dynamic` (`ssr: false`) so three ships only when the Floor view opens. All geometry, state and
 rail logic stays in pure modules that do not import three.
 

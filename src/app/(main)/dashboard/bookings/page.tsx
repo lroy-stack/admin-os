@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     "Tonight's service: floor occupancy, a table-by-table timeline and the reservation list with next steps.",
   alternates: {
-    canonical: "/dashboard/reservas",
+    canonical: "/dashboard/bookings",
   },
 };
 

@@ -20,7 +20,7 @@ What the code shows today:
   - `header/search-dialog.tsx:21-22` reads `sidebar-items.ts` directly.
 - **Shared components are bound to the CRM demo dataset.** `_components/deal-card.tsx:5-6` and
   `member-avatars.tsx:4-5` import `@/data/crm` and `@/lib/crm`.
-- **Pure logic is bound to mock data.** `reservas/_components/floor/table-state.ts:2` and
+- **Pure logic is bound to mock data.** `bookings/_components/floor/table-state.ts:2` and
   `reservation-status.ts:2` import `SERVICE_NOW_MIN` and `LATE_AFTER_MIN` from the mock file
   `reservations-data.ts`. That ties them to a mock clock and to a hard-coded business rule.
 - **The design system is mixed into the app stylesheet.** `src/app/globals.css` (565 lines) holds:
@@ -241,7 +241,7 @@ Decide between them when there are two external users.
 
 - **F0 is a pure move.** ds leaves `src/app`, the shell becomes props-driven, the boundary rules land and the
   `(examples)` group is created. Behaviour does not change. Verify with `npm run build`, `npm test`, `npm run check`,
-  and screenshots of Overview, Reservas and Calendar.
+  and screenshots of Overview, Bookings and Calendar.
 - **AGENTS.md** (§ Co-location-based structure) needs the new top-level folders and the extraction table on
   acceptance; the owner edits it.
 - **The import rule:** imports that cross a layer use `@/`; relative imports stay inside one package.

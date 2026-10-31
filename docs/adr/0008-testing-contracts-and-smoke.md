@@ -7,7 +7,7 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 **What exists:**
 
 - Vitest 5 runs through `npm test` (`vitest run`, no config file).
-- Tests sit next to pure modules: `reservas/_components/floor/*.test.ts` and `rail/rail-plan.test.ts`.
+- Tests sit next to pure modules: `bookings/_components/floor/*.test.ts` and `rail/rail-plan.test.ts`.
 - ADR 0001 added Vitest for the pure floor-plan logic.
 - AGENTS.md still says "There is currently no automated test command", which is stale.
 

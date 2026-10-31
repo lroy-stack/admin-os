@@ -25,8 +25,8 @@ Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/00
 - **85 client components under `src/app` hold in-memory mock arrays.**
   - The pages are mostly Server Components that import mock modules directly; for example `crm/page.tsx` imports
     `openDeals` from `@/lib/crm`.
-  - Each route ships its own data file (`kanban/_components/data.ts`, `reservas/_components/reservations-data.ts`).
-- **The room plan persists in localStorage** (`reservas/_components/floor/use-floor-plan.ts`).
+  - Each route ships its own data file (`kanban/_components/data.ts`, `bookings/_components/reservations-data.ts`).
+- **The room plan persists in localStorage** (`bookings/_components/floor/use-floor-plan.ts`).
 - **There is no seam.** Porting a screen would mean rewriting every data import.
 
 **Platform facts:**

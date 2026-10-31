@@ -170,9 +170,9 @@ export const sidebarItems: NavGroup[] = [
         icon: Calendar,
       },
       {
-        id: "reservas",
+        id: "bookings",
         title: "Reservations",
-        url: "/dashboard/reservas",
+        url: "/dashboard/bookings",
         icon: CalendarCheck,
         badge: "new",
       },

@@ -95,7 +95,7 @@ const alertLabels: Record<Alert, string> = { unassigned: "unassigned", late: "ru
 
 const WALK_IN_STAY_MIN = 90;
 const NO_TABLES: ReadonlySet<string> = new Set();
-const RAIL_COLLAPSED_KEY = "reservas.rail-collapsed";
+const RAIL_COLLAPSED_KEY = "bookings.rail-collapsed";
 
 /** Tables that can take `party` for its whole booking. */
 function fittingTables(locations: readonly TableLocation[], party: Reservation, reservations: readonly Reservation[]) {

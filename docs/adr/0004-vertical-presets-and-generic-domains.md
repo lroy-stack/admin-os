@@ -17,7 +17,7 @@ vehicles as customer assets, bays, parts, quotes and invoices) stress-test the n
 
 - `src/navigation/shell/shell-items.ts:4` lists `reservas` among the top-nav ids, and the route slug is the Spanish
   `/dashboard/reservas`.
-- `reservas/_components/reservations-data.ts` mixes three things:
+- `bookings/_components/reservations-data.ts` mixes three things:
   - seed data: Spanish surnames, `language: "Spanish"`;
   - a channel list: `web | phone | walk-in | assistant`;
   - business rules: `LATE_AFTER_MIN = 10` and a fixed `SERVICE_NOW_MIN`.
@@ -101,7 +101,7 @@ Option 3.
 
 - **When:** each slug is renamed in the slice that redesigns its page, with a redirect from the old slug in
   `next.config.mjs` `redirects()`.
-- **First:** `reservas` → `bookings`, because it is the only Spanish and vertical slug in a generic layer.
+- **First (done 2026-10-31):** `reservas` → `bookings`, because it is the only Spanish and vertical slug in a generic layer.
 - **Approval:** this amends spec D1 ("paths kept") for the template and needs the owner's acceptance. reference's port
   keeps reference's own slugs.
 
@@ -151,7 +151,7 @@ view.
    - `reservations-data.ts` and `floor/venue.ts` move to `src/verticals/hospitality/server.ts` seeds.
 2. **S3b (Reservas parity):**
    - the route is renamed `bookings` and reads through the seam;
-   - `reservas/_components/floor/` moves to `src/verticals/hospitality/floor/` and is registered as the `floor`
+   - `bookings/_components/floor/` moves to `src/verticals/hospitality/floor/` and is registered as the `floor`
      booking view;
    - the floor plan's localStorage persistence is replaced by `resources.plan.*` capabilities.
 3. **Second consumer of the scene** (Configuración › Sala lighting preview, S10):
