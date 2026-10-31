@@ -4,6 +4,9 @@
 so that a hair salon or a car repair workshop can run on the same modules. No AI slop, no over-engineering: well
 designed, reusable at every level, and ready to be managed by an AI assistant through its own MCP server.
 
+**[Open the live demo →](https://admin-os.l-roy-lwe.workers.dev)** It runs on Cloudflare Workers with the demo data
+of the mock adapter, in English, Spanish, German or French.
+
 > [!NOTE]
 > admin-OS is in active development towards its first release (`v0.1`). Some modules below are built, others are
 > in progress. See [Status](#status). The screenshots show the demo data that ships with the mock adapter.
@@ -152,7 +155,26 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run test:e2e` | Shell smoke on a production build (Playwright) |
 | `npm run check` | Lint, format and layer boundaries (Biome, dependency-cruiser) |
 | `npm run media` | Rebuilds the screenshots and recordings in `media/` |
+| `npm run preview` | Cloudflare Workers build, served locally on workerd |
+| `npm run deploy` | Cloudflare Workers build and deploy |
 | `npm run mcp:stdio` | MCP server over stdio |
+
+## Deploy
+
+The live demo runs on Cloudflare Workers through the [OpenNext adapter](https://opennext.js.org/cloudflare). To
+deploy your own:
+
+1. Rename the worker in [`wrangler.jsonc`](wrangler.jsonc): its `name` and the `WORKER_SELF_REFERENCE` service.
+2. Log in once with `npx wrangler login`.
+3. Build and deploy with your public URL, which the build writes into canonical and Open Graph links:
+
+   ```bash
+   NEXT_PUBLIC_SITE_URL=https://<worker>.<subdomain>.workers.dev npm run deploy
+   ```
+
+On the mock adapter the MCP endpoint accepts the public demo tokens; set your own with
+`npx wrangler secret put MCP_TOKENS`. Data an assistant changes through MCP lives in the worker's memory and resets
+when Cloudflare recycles the instance. Any Node.js host works too: `npm run build && npm run start`.
 
 ## MCP
 
@@ -161,7 +183,8 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
 
 - **Streamable HTTP** at `/api/mcp`, with a bearer token. `MCP_TOKENS` maps tokens to roles (see
   [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`,
-  `demo-manager-token` and `demo-staff-token` work. Each token has its own demo data.
+  `demo-manager-token` and `demo-staff-token` work. Each token has its own demo data. The live demo serves it at
+  `https://admin-os.l-roy-lwe.workers.dev/api/mcp` with the same demo tokens.
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
 
 Claude Code, from the repository root:
