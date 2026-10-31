@@ -16,16 +16,16 @@ function table(
 /** Mock venue: a street-level dining room and bar, and a rooftop terrace linked by stairs. */
 export const mockVenue: FloorPlan = {
   id: "venue",
-  name: "Main venue",
+  name: "",
   levels: [
     {
       id: "street",
-      name: "Street level",
+      name: "",
       index: 0,
       zones: [
         {
           id: "dining",
-          name: "Dining room",
+          name: "",
           outdoor: false,
           outline: { xCm: 0, yCm: 0, widthCm: 1200, depthCm: 800 },
           wallHeightCm: 120,
@@ -48,7 +48,7 @@ export const mockVenue: FloorPlan = {
         },
         {
           id: "bar",
-          name: "Bar",
+          name: "",
           outdoor: false,
           outline: { xCm: 1200, yCm: 0, widthCm: 600, depthCm: 800 },
           wallHeightCm: 120,
@@ -65,7 +65,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "kitchen",
           kind: "kitchen",
-          label: "Kitchen",
+          label: "",
           xCm: 1020,
           yCm: 140,
           widthCm: 260,
@@ -76,7 +76,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "restrooms",
           kind: "restrooms",
-          label: "Restrooms",
+          label: "",
           xCm: 1020,
           yCm: 680,
           widthCm: 240,
@@ -86,7 +86,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "entrance",
           kind: "entrance",
-          label: "Entrance",
+          label: "",
           xCm: 530,
           yCm: 850,
           widthCm: 180,
@@ -96,7 +96,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "bar-counter",
           kind: "bar",
-          label: "Bar",
+          label: "",
           xCm: 1500,
           yCm: 110,
           widthCm: 420,
@@ -106,7 +106,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "stairs-up",
           kind: "stairs",
-          label: "Stairs to terrace",
+          label: "",
           xCm: 1690,
           yCm: 660,
           widthCm: 160,
@@ -118,12 +118,12 @@ export const mockVenue: FloorPlan = {
     },
     {
       id: "rooftop",
-      name: "Rooftop",
+      name: "",
       index: 1,
       zones: [
         {
           id: "terrace",
-          name: "Terrace",
+          name: "",
           outdoor: true,
           outline: { xCm: 0, yCm: 0, widthCm: 1000, depthCm: 700 },
           wallHeightCm: 100,
@@ -144,7 +144,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "stairs-down",
           kind: "stairs",
-          label: "Stairs to street level",
+          label: "",
           xCm: 900,
           yCm: 600,
           widthCm: 160,
@@ -155,7 +155,7 @@ export const mockVenue: FloorPlan = {
         {
           id: "service-bar",
           kind: "bar",
-          label: "Service bar",
+          label: "",
           xCm: 600,
           yCm: 630,
           widthCm: 240,

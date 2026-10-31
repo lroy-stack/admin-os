@@ -29,10 +29,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getLocale, getMessages } from "@/config/locale.server";
+import { format, formatPercent, type Locale } from "@/core/i18n/client";
 
 import type { InfrastructureEnvironment, InfrastructureGroup } from "./infrastructure-data";
+import { formatLatency, formatUptime } from "./infrastructure-format";
+import type { InfrastructureMessages } from "./messages";
+import { infrastructureMessages } from "./messages.server";
 
-export function ProjectEnvironments({ group }: { group: InfrastructureGroup }) {
+export async function ProjectEnvironments({ group }: { group: InfrastructureGroup }) {
+  const [text, locale] = await Promise.all([getMessages(infrastructureMessages), getLocale()]);
+  const projectName = text.projects[group.id];
+
   return (
     <Collapsible
       defaultOpen
@@ -47,51 +55,55 @@ export function ProjectEnvironments({ group }: { group: InfrastructureGroup }) {
             <ChevronDown className="group-data-[state=open]:rotate-180" />
             <div className="flex min-w-0 items-baseline gap-1.5 text-left">
               <span className="shrink-0 leading-none font-medium">{group.organization}</span>
-              <span className="text-muted-foreground min-w-0 truncate text-sm">({group.name})</span>
+              <span className="text-muted-foreground min-w-0 text-sm break-words">{`(${projectName})`}</span>
             </div>
           </Button>
         </CollapsibleTrigger>
         <div className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end">
           <Button variant="ghost" size="sm" className="-ml-1.5 sm:ml-0">
             <Plus data-icon="inline-start" />
-            Add Environment
+            {text.project.addEnvironment}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon-sm">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={format(text.project.actions, locale, { project: projectName })}
+              >
                 <EllipsisVertical />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-40" align="end">
+            <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuGroup>
                 {group.rows.length > 0 ? (
                   <DropdownMenuItem>
                     <FileText />
-                    Activity Logs
+                    {text.project.activityLogs}
                   </DropdownMenuItem>
                 ) : null}
                 <DropdownMenuItem>
                   <Terminal />
-                  Open Console
+                  {text.project.openConsole}
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Settings />
-                  Project Settings
+                  {text.project.settings}
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <RefreshCw />
-                  Sync Status
+                  {text.project.syncStatus}
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Bell />
-                  Manage Alerts
+                  {text.project.manageAlerts}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem>
                   <Copy />
-                  Copy Project ID
+                  {text.project.copyProjectId}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -100,13 +112,25 @@ export function ProjectEnvironments({ group }: { group: InfrastructureGroup }) {
       </div>
 
       <CollapsibleContent>
-        {group.rows.length > 0 ? <EnvironmentTable rows={group.rows} /> : <EmptyProjectState />}
+        {group.rows.length > 0 ? (
+          <EnvironmentTable rows={group.rows} text={text} locale={locale} />
+        ) : (
+          <EmptyProjectState text={text} />
+        )}
       </CollapsibleContent>
     </Collapsible>
   );
 }
 
-function EnvironmentTable({ rows }: { rows: InfrastructureEnvironment[] }) {
+function EnvironmentTable({
+  rows,
+  text,
+  locale,
+}: {
+  rows: InfrastructureEnvironment[];
+  text: InfrastructureMessages;
+  locale: Locale;
+}) {
   return (
     <div className="[&::-webkit-scrollbar-thumb]:bg-border scrollbar-thin [scrollbar-color:var(--border)_transparent] overflow-x-auto **:data-[slot=table-container]:overflow-visible [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
       <Table className="min-w-[1700px] table-fixed **:data-[slot='table-cell']:px-5 **:data-[slot='table-head']:px-5">
@@ -125,16 +149,16 @@ function EnvironmentTable({ rows }: { rows: InfrastructureEnvironment[] }) {
           <TableRow>
             <TableHead className="font-medium">
               <span className="inline-flex items-center gap-1">
-                Domain <ArrowUpDown className="size-4" />
+                {text.table.domain} <ArrowUpDown className="size-4" />
               </span>
             </TableHead>
-            <TableHead>Platform</TableHead>
-            <TableHead>Environment</TableHead>
-            <TableHead>Health</TableHead>
-            <TableHead>Latency</TableHead>
-            <TableHead>Uptime</TableHead>
-            <TableHead>Resources</TableHead>
-            <TableHead>Server</TableHead>
+            <TableHead>{text.table.platform}</TableHead>
+            <TableHead>{text.table.environment}</TableHead>
+            <TableHead>{text.table.health}</TableHead>
+            <TableHead>{text.table.latency}</TableHead>
+            <TableHead>{text.table.uptime}</TableHead>
+            <TableHead>{text.table.resources}</TableHead>
+            <TableHead>{text.table.server}</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -154,91 +178,96 @@ function EnvironmentTable({ rows }: { rows: InfrastructureEnvironment[] }) {
               </TableCell>
               <TableCell>
                 <Badge
-                  variant={row.environment === "Expired" ? "destructive" : "secondary"}
+                  variant={row.environment === "expired" ? "destructive" : "secondary"}
                   className={cn(
                     "rounded-sm px-1.5 py-0.5",
-                    row.environment === "Production" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                    row.environment === "Staging" && "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+                    row.environment === "production" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    row.environment === "staging" && "bg-sky-500/10 text-sky-600 dark:text-sky-400",
                   )}
                 >
-                  {row.environment}
+                  {text.environments[row.environment]}
                 </Badge>
               </TableCell>
               <TableCell>
                 <Badge
-                  variant={row.status === "Online" ? "secondary" : "destructive"}
+                  variant={row.status === "online" ? "secondary" : "destructive"}
                   className={cn(
                     "rounded-sm px-1.5 py-0.5",
-                    row.status === "Online" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    row.status === "online" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
                   )}
                 >
                   <span
                     className={cn(
                       "size-1.5 rounded-full",
-                      row.status === "Online" ? "bg-emerald-500" : "bg-destructive",
+                      row.status === "online" ? "bg-emerald-500" : "bg-destructive",
                     )}
                   />
-                  {row.status}
+                  {text.health[row.status]}
                 </Badge>
               </TableCell>
               <TableCell>
                 <span className="text-muted-foreground inline-flex items-center gap-1.5 tabular-nums">
                   <CircleGauge className="size-4" />
-                  {row.latency}
+                  {formatLatency(row.latencyMs, locale)}
                 </span>
               </TableCell>
               <TableCell>
                 <span className="text-muted-foreground inline-flex items-center gap-1.5 tabular-nums">
                   <Clock3 className="size-4" />
-                  {row.uptime}
+                  {formatUptime(row.uptime, locale)}
                 </span>
               </TableCell>
               <TableCell>
                 <div className="grid grid-cols-3 gap-4">
-                  <ResourceMeter label="CPU" value={row.resources.cpu} />
-                  <ResourceMeter label="RAM" value={row.resources.ram} />
-                  <ResourceMeter label="Disk" value={row.resources.disk} />
+                  <ResourceMeter label={text.resources.cpu} value={row.resources.cpu} locale={locale} />
+                  <ResourceMeter label={text.resources.ram} value={row.resources.ram} locale={locale} />
+                  <ResourceMeter label={text.resources.disk} value={row.resources.disk} locale={locale} />
                 </div>
               </TableCell>
               <TableCell>
                 <span className="flex flex-col font-medium">
-                  {row.server}
+                  {row.server ?? text.table.customServer}
                   <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                     <span
                       aria-hidden="true"
                       className={cn("ring-foreground/10 shrink-0 rounded-xs text-sm ring-1", `flag:${row.countryCode}`)}
                     />
-                    {row.countryCode} · {row.plan}
+                    {`${row.countryCode} · ${row.plan}`}
                   </span>
                 </span>
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm" className="-mr-2">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="-mr-2"
+                      aria-label={format(text.table.rowActions, locale, { domain: row.domain })}
+                    >
                       <SquareTerminal />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-40" align="end">
+                  <DropdownMenuContent className="w-48" align="end">
                     <DropdownMenuGroup>
                       <DropdownMenuItem>
                         <FileText />
-                        View Logs
+                        {text.table.viewLogs}
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Terminal />
-                        Open Console
+                        {text.table.openConsole}
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <RefreshCw />
-                        Restart
+                        {text.table.restart}
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
                       <DropdownMenuItem>
                         <Copy />
-                        Copy URL
+                        {text.table.copyUrl}
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
@@ -252,7 +281,7 @@ function EnvironmentTable({ rows }: { rows: InfrastructureEnvironment[] }) {
   );
 }
 
-function ResourceMeter({ label, value }: { label: string; value: number }) {
+function ResourceMeter({ label, value, locale }: { label: string; value: number; locale: Locale }) {
   const isCritical = value >= 70;
   const isWarning = value >= 55;
 
@@ -267,7 +296,7 @@ function ResourceMeter({ label, value }: { label: string; value: number }) {
             isCritical && "text-destructive",
           )}
         >
-          {value}%
+          {formatPercent(value / 100, locale)}
         </span>
       </span>
       <span className="bg-muted-foreground/20 block h-1.5 overflow-hidden rounded-full">
@@ -284,12 +313,12 @@ function ResourceMeter({ label, value }: { label: string; value: number }) {
   );
 }
 
-function EmptyProjectState() {
+function EmptyProjectState({ text }: { text: InfrastructureMessages }) {
   return (
     <div className="bg-muted/50 flex min-h-24 items-center justify-center border-t p-4">
       <div className="flex items-center gap-2">
         <CircleDashed className="size-4" />
-        <p className="text-sm font-medium">No environments in this project</p>
+        <p className="text-sm font-medium">{text.project.noEnvironments}</p>
       </div>
     </div>
   );

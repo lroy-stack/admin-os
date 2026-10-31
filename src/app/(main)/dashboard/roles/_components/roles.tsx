@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { type ColumnFiltersState, type PaginationState, useTable } from "@tanstack/react-table";
 import { AlertTriangle, ChevronRight, FileUp, Search } from "lucide-react";
@@ -9,37 +9,24 @@ import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
 
-import { rolesColumns } from "./roles-table/columns";
-import type { Role } from "./roles-table/data";
+import { rolesMessageKey } from "./messages";
+import { createRolesColumns, ownerName } from "./roles-table/columns";
+import { type Role, roleOwners } from "./roles-table/data";
 import { RolesTable } from "./roles-table/table";
 
-function getRoleTypeFilter(groupFilter: string) {
-  if (groupFilter === "System roles") {
-    return "System";
-  }
+type TypeFilter = "all" | "system" | "custom";
 
-  if (groupFilter === "Custom roles") {
-    return "Custom";
-  }
-
-  return "All";
-}
-
-function getRoleGroupFilterValue(typeFilter: string) {
-  if (typeFilter === "System") {
-    return "System roles";
-  }
-
-  if (typeFilter === "Custom") {
-    return "Custom roles";
-  }
-
-  return undefined;
+function getRoleTypeFilter(groupFilter: string): TypeFilter {
+  return groupFilter === "system" || groupFilter === "custom" ? groupFilter : "all";
 }
 
 export function Roles({ roles }: { roles: Role[] }) {
+  const text = useMessages(rolesMessageKey);
+  const locale = useLocale();
+  const columns = useMemo(() => createRolesColumns(text, locale), [text, locale]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -49,7 +36,7 @@ export function Roles({ roles }: { roles: Role[] }) {
   const table = useTable({
     features: dataTableFeatures,
     data: roles,
-    columns: rolesColumns,
+    columns,
     defaultColumn: {
       size: 140,
       minSize: 80,
@@ -67,23 +54,24 @@ export function Roles({ roles }: { roles: Role[] }) {
   const search = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";
   const groupFilter = (table.getColumn("group")?.getFilterValue() as string | undefined) ?? "";
   const typeFilter = getRoleTypeFilter(groupFilter);
-  const ownerFilter = (table.getColumn("owner")?.getFilterValue() as string | undefined) ?? "All";
-  const statusFilter = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? "All";
+  const ownerFilter = (table.getColumn("owner")?.getFilterValue() as string | undefined) ?? "all";
+  const statusFilter = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? "all";
+  const reviewCount = roles.filter((role) => role.status === "needsReview").length;
 
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl tracking-tight">Roles & Permissions</h1>
-          <p className="text-muted-foreground text-sm">Manage access roles and permissions across your organization.</p>
+          <h1 className="text-3xl tracking-tight break-words hyphens-auto">{text.title}</h1>
+          <p className="text-muted-foreground text-sm">{text.subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline">
             <FileUp data-icon="inline-start" />
-            Import JSON
+            {text.actions.importJson}
           </Button>
-          <Button size="sm">Create role</Button>
+          <Button size="sm">{text.actions.createRole}</Button>
         </div>
       </div>
 
@@ -92,20 +80,20 @@ export function Roles({ roles }: { roles: Role[] }) {
           variant="line"
           className="w-full justify-start gap-2 border-b ps-0 *:data-[slot=tabs-trigger]:flex-none"
         >
-          <TabsTrigger value="roles">Roles</TabsTrigger>
-          <TabsTrigger value="permission-sets">Permission sets</TabsTrigger>
-          <TabsTrigger value="access-reviews">Access reviews</TabsTrigger>
+          <TabsTrigger value="roles">{text.tabs.roles}</TabsTrigger>
+          <TabsTrigger value="permission-sets">{text.tabs.permissionSets}</TabsTrigger>
+          <TabsTrigger value="access-reviews">{text.tabs.accessReviews}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="roles">
           <div className="flex flex-col gap-4">
             <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
               <AlertTriangle className="size-4" />
-              <AlertTitle>Review required</AlertTitle>
-              <AlertDescription>3 roles have unreviewed permission changes.</AlertDescription>
+              <AlertTitle>{text.review.title}</AlertTitle>
+              <AlertDescription>{format(text.review.description, locale, { count: reviewCount })}</AlertDescription>
               <AlertAction>
                 <Button size="sm" variant="link">
-                  Review changes
+                  {text.review.action}
                   <ChevronRight data-icon="inline-end" />
                 </Button>
               </AlertAction>
@@ -119,7 +107,8 @@ export function Roles({ roles }: { roles: Role[] }) {
                   </InputGroupAddon>
                   <InputGroupInput
                     className="h-7"
-                    placeholder="Search roles..."
+                    aria-label={text.search.label}
+                    placeholder={text.search.placeholder}
                     value={search}
                     onChange={(e) => {
                       table.getColumn("search")?.setFilterValue(e.target.value || undefined);
@@ -132,19 +121,19 @@ export function Roles({ roles }: { roles: Role[] }) {
                   <Select
                     value={typeFilter}
                     onValueChange={(v) => {
-                      table.getColumn("group")?.setFilterValue(getRoleGroupFilterValue(v));
+                      table.getColumn("group")?.setFilterValue(v === "all" ? undefined : v);
                       table.setPageIndex(0);
                     }}
                   >
                     <SelectTrigger size="sm">
-                      <span className="text-muted-foreground">Type:</span>
-                      <SelectValue placeholder="All" />
+                      <span className="text-muted-foreground">{text.filters.type}</span>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent position="popper" align="start">
                       <SelectGroup>
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="System">System</SelectItem>
-                        <SelectItem value="Custom">Custom</SelectItem>
+                        <SelectItem value="all">{text.filters.all}</SelectItem>
+                        <SelectItem value="system">{text.filters.system}</SelectItem>
+                        <SelectItem value="custom">{text.filters.custom}</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -152,21 +141,22 @@ export function Roles({ roles }: { roles: Role[] }) {
                   <Select
                     value={ownerFilter}
                     onValueChange={(v) => {
-                      table.getColumn("owner")?.setFilterValue(v === "All" ? undefined : v);
+                      table.getColumn("owner")?.setFilterValue(v === "all" ? undefined : v);
                       table.setPageIndex(0);
                     }}
                   >
                     <SelectTrigger size="sm">
-                      <span className="text-muted-foreground">Owner:</span>
-                      <SelectValue placeholder="All" />
+                      <span className="text-muted-foreground">{text.filters.owner}</span>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent position="popper" align="start">
                       <SelectGroup>
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="System">System</SelectItem>
-                        <SelectItem value="Jane Doe">Jane Doe</SelectItem>
-                        <SelectItem value="Alex Kim">Alex Kim</SelectItem>
-                        <SelectItem value="Chris Lee">Chris Lee</SelectItem>
+                        <SelectItem value="all">{text.filters.all}</SelectItem>
+                        {roleOwners.map((owner) => (
+                          <SelectItem key={owner} value={owner}>
+                            {ownerName(owner, text)}
+                          </SelectItem>
+                        ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -174,19 +164,19 @@ export function Roles({ roles }: { roles: Role[] }) {
                   <Select
                     value={statusFilter}
                     onValueChange={(v) => {
-                      table.getColumn("status")?.setFilterValue(v === "All" ? undefined : v);
+                      table.getColumn("status")?.setFilterValue(v === "all" ? undefined : v);
                       table.setPageIndex(0);
                     }}
                   >
                     <SelectTrigger size="sm">
-                      <span className="text-muted-foreground">Status:</span>
-                      <SelectValue placeholder="All" />
+                      <span className="text-muted-foreground">{text.filters.status}</span>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent position="popper" align="start">
                       <SelectGroup>
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Needs review">Needs review</SelectItem>
+                        <SelectItem value="all">{text.filters.all}</SelectItem>
+                        <SelectItem value="active">{text.filters.active}</SelectItem>
+                        <SelectItem value="needsReview">{text.filters.needsReview}</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -199,12 +189,12 @@ export function Roles({ roles }: { roles: Role[] }) {
         </TabsContent>
         <TabsContent value="permission-sets">
           <div className="text-muted-foreground flex h-full items-center justify-center rounded-md border border-dashed text-sm">
-            Permission Sets Coming Soon
+            {text.comingSoon.permissionSets}
           </div>
         </TabsContent>
         <TabsContent value="access-reviews">
           <div className="text-muted-foreground flex h-full items-center justify-center rounded-md border border-dashed text-sm">
-            Access Reviews Coming Soon
+            {text.comingSoon.accessReviews}
           </div>
         </TabsContent>
       </Tabs>

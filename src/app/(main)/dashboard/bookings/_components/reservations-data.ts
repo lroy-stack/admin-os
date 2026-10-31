@@ -13,16 +13,46 @@ export type ReservationStatus = "pending" | "confirmed" | "seated" | "completed"
 
 export type Channel = "web" | "phone" | "walk-in" | "assistant";
 
+/** Short labels under the guest name: diet, occasion, service notes. The text lives in the dictionary. */
+export type TagId =
+  | "askedBill"
+  | "regular"
+  | "glutenFree"
+  | "anniversary"
+  | "lactoseFree"
+  | "birthdayCake"
+  | "stroller"
+  | "quietTable"
+  | "companyDinner";
+
+/** Booking notes of the demo data; real notes are free text the guest or the host wrote. */
+export type NoteId =
+  | "coeliacGuest"
+  | "dessertCandle"
+  | "cakeWithCoffee"
+  | "strollerSpace"
+  | "quietCorner"
+  | "setMenu"
+  | "cancelledByGuest";
+
+export type AllergyId = "glutenAllergy" | "lactoseAllergy" | "nutsOneGuest";
+
+/** The language a guest speaks, as a code the dictionary names. */
+export type GuestLanguage = "es" | "en" | "ca" | "de";
+
 export type GuestProfile = {
   visits: number;
+  /** In the business currency, in major units. */
   averageSpend: number;
-  lastVisit: string;
-  language: string;
-  allergies: string | null;
+  /** Days since the last visit: 0 is today, null is a first visit. */
+  lastVisitDaysAgo: number | null;
+  language: GuestLanguage | null;
+  allergy: AllergyId | null;
 };
 
 export type Reservation = {
   id: string;
+  /** A surname (a proper noun). Empty for a walk-in, which the screen names in the active language. */
   guest: string;
   partySize: number;
   startMin: number;
@@ -30,9 +60,8 @@ export type Reservation = {
   status: ReservationStatus;
   tableIds: string[];
   channel: Channel;
-  /** Short labels shown under the guest name: diet, occasion, service notes. */
-  tags: string[];
-  note: string | null;
+  tags: TagId[];
+  note: NoteId | null;
   profile: GuestProfile;
 };
 
@@ -41,9 +70,9 @@ const at = (hours: number, minutes = 0) => hours * 60 + minutes;
 const firstVisit: GuestProfile = {
   visits: 1,
   averageSpend: 0,
-  lastVisit: "First visit",
-  language: "Spanish",
-  allergies: null,
+  lastVisitDaysAgo: null,
+  language: "es",
+  allergy: null,
 };
 
 export const serviceReservations: Reservation[] = [
@@ -56,9 +85,9 @@ export const serviceReservations: Reservation[] = [
     status: "seated",
     tableIds: ["S2"],
     channel: "web",
-    tags: ["Asked for the bill", "Regular"],
+    tags: ["askedBill", "regular"],
     note: null,
-    profile: { visits: 14, averageSpend: 58, lastVisit: "2 weeks ago", language: "Spanish", allergies: null },
+    profile: { visits: 14, averageSpend: 58, lastVisitDaysAgo: 14, language: "es", allergy: null },
   },
   {
     id: "R-1042",
@@ -71,7 +100,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 3, averageSpend: 41, lastVisit: "2 months ago", language: "Spanish", allergies: null },
+    profile: { visits: 3, averageSpend: 41, lastVisitDaysAgo: 60, language: "es", allergy: null },
   },
   {
     id: "R-1043",
@@ -82,9 +111,9 @@ export const serviceReservations: Reservation[] = [
     status: "seated",
     tableIds: ["S3"],
     channel: "phone",
-    tags: ["Gluten-free"],
-    note: "One guest is coeliac",
-    profile: { visits: 6, averageSpend: 52, lastVisit: "1 month ago", language: "Spanish", allergies: "Gluten" },
+    tags: ["glutenFree"],
+    note: "coeliacGuest",
+    profile: { visits: 6, averageSpend: 52, lastVisitDaysAgo: 30, language: "es", allergy: "glutenAllergy" },
   },
   {
     id: "R-1044",
@@ -95,9 +124,9 @@ export const serviceReservations: Reservation[] = [
     status: "seated",
     tableIds: ["T2"],
     channel: "web",
-    tags: ["Gluten-free", "Anniversary"],
-    note: "Candle on the dessert",
-    profile: { visits: 2, averageSpend: 67, lastVisit: "1 year ago", language: "Spanish", allergies: "Gluten" },
+    tags: ["glutenFree", "anniversary"],
+    note: "dessertCandle",
+    profile: { visits: 2, averageSpend: 67, lastVisitDaysAgo: 365, language: "es", allergy: "glutenAllergy" },
   },
   {
     id: "R-1045",
@@ -110,7 +139,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 5, averageSpend: 44, lastVisit: "3 weeks ago", language: "Spanish", allergies: null },
+    profile: { visits: 5, averageSpend: 44, lastVisitDaysAgo: 21, language: "es", allergy: null },
   },
   {
     id: "R-1046",
@@ -123,11 +152,11 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 4, averageSpend: 49, lastVisit: "5 weeks ago", language: "Spanish", allergies: null },
+    profile: { visits: 4, averageSpend: 49, lastVisitDaysAgo: 35, language: "es", allergy: null },
   },
   {
     id: "R-1047",
-    guest: "Walk-in",
+    guest: "",
     partySize: 2,
     startMin: at(20, 20),
     endMin: at(21, 50),
@@ -147,9 +176,9 @@ export const serviceReservations: Reservation[] = [
     status: "confirmed",
     tableIds: ["S5"],
     channel: "phone",
-    tags: ["Lactose-free"],
+    tags: ["lactoseFree"],
     note: null,
-    profile: { visits: 8, averageSpend: 61, lastVisit: "1 week ago", language: "Spanish", allergies: "Lactose" },
+    profile: { visits: 8, averageSpend: 61, lastVisitDaysAgo: 7, language: "es", allergy: "lactoseAllergy" },
   },
   {
     id: "R-1049",
@@ -162,7 +191,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 1, averageSpend: 38, lastVisit: "3 months ago", language: "English", allergies: null },
+    profile: { visits: 1, averageSpend: 38, lastVisitDaysAgo: 90, language: "en", allergy: null },
   },
   {
     id: "R-1050",
@@ -173,9 +202,9 @@ export const serviceReservations: Reservation[] = [
     status: "confirmed",
     tableIds: ["S7"],
     channel: "web",
-    tags: ["Birthday cake"],
-    note: "Bring the cake out with the coffees",
-    profile: { visits: 2, averageSpend: 55, lastVisit: "6 months ago", language: "Spanish", allergies: null },
+    tags: ["birthdayCake"],
+    note: "cakeWithCoffee",
+    profile: { visits: 2, averageSpend: 55, lastVisitDaysAgo: 180, language: "es", allergy: null },
   },
   {
     id: "R-1051",
@@ -186,9 +215,9 @@ export const serviceReservations: Reservation[] = [
     status: "confirmed",
     tableIds: ["S1"],
     channel: "web",
-    tags: ["Regular"],
+    tags: ["regular"],
     note: null,
-    profile: { visits: 9, averageSpend: 63, lastVisit: "3 weeks ago", language: "English", allergies: null },
+    profile: { visits: 9, averageSpend: 63, lastVisitDaysAgo: 21, language: "en", allergy: null },
   },
   {
     id: "R-1052",
@@ -199,9 +228,9 @@ export const serviceReservations: Reservation[] = [
     status: "confirmed",
     tableIds: ["S6"],
     channel: "phone",
-    tags: ["Stroller"],
-    note: "Needs space for a stroller",
-    profile: { visits: 3, averageSpend: 47, lastVisit: "4 months ago", language: "Spanish", allergies: null },
+    tags: ["stroller"],
+    note: "strollerSpace",
+    profile: { visits: 3, averageSpend: 47, lastVisitDaysAgo: 120, language: "es", allergy: null },
   },
   {
     id: "R-1053",
@@ -214,7 +243,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 1, averageSpend: 0, lastVisit: "First visit", language: "Catalan", allergies: null },
+    profile: { visits: 1, averageSpend: 0, lastVisitDaysAgo: null, language: "ca", allergy: null },
   },
   {
     id: "R-1054",
@@ -225,9 +254,9 @@ export const serviceReservations: Reservation[] = [
     status: "confirmed",
     tableIds: ["T5"],
     channel: "assistant",
-    tags: ["Gluten-free"],
+    tags: ["glutenFree"],
     note: null,
-    profile: { visits: 2, averageSpend: 42, lastVisit: "2 months ago", language: "Spanish", allergies: "Gluten" },
+    profile: { visits: 2, averageSpend: 42, lastVisitDaysAgo: 60, language: "es", allergy: "glutenAllergy" },
   },
   {
     id: "R-1055",
@@ -238,9 +267,9 @@ export const serviceReservations: Reservation[] = [
     status: "confirmed",
     tableIds: [],
     channel: "phone",
-    tags: ["Quiet table"],
-    note: "Prefers a quiet corner",
-    profile: { visits: 5, averageSpend: 50, lastVisit: "1 month ago", language: "Spanish", allergies: null },
+    tags: ["quietTable"],
+    note: "quietCorner",
+    profile: { visits: 5, averageSpend: 50, lastVisitDaysAgo: 30, language: "es", allergy: null },
   },
   {
     id: "R-1056",
@@ -253,7 +282,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 2, averageSpend: 39, lastVisit: "8 months ago", language: "German", allergies: null },
+    profile: { visits: 2, averageSpend: 39, lastVisitDaysAgo: 240, language: "de", allergy: null },
   },
   {
     id: "R-1057",
@@ -279,7 +308,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 6, averageSpend: 46, lastVisit: "2 weeks ago", language: "Spanish", allergies: null },
+    profile: { visits: 6, averageSpend: 46, lastVisitDaysAgo: 14, language: "es", allergy: null },
   },
   {
     id: "R-1059",
@@ -290,14 +319,14 @@ export const serviceReservations: Reservation[] = [
     status: "pending",
     tableIds: [],
     channel: "phone",
-    tags: ["Company dinner"],
-    note: "Asked for a set menu for the whole table",
+    tags: ["companyDinner"],
+    note: "setMenu",
     profile: {
       visits: 1,
       averageSpend: 0,
-      lastVisit: "First visit",
-      language: "Spanish",
-      allergies: "Nuts (one guest)",
+      lastVisitDaysAgo: null,
+      language: "es",
+      allergy: "nutsOneGuest",
     },
   },
   {
@@ -311,7 +340,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 3, averageSpend: 52, lastVisit: "1 month ago", language: "Spanish", allergies: null },
+    profile: { visits: 3, averageSpend: 52, lastVisitDaysAgo: 30, language: "es", allergy: null },
   },
   {
     id: "R-1061",
@@ -324,7 +353,7 @@ export const serviceReservations: Reservation[] = [
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 11, averageSpend: 35, lastVisit: "Today", language: "Spanish", allergies: null },
+    profile: { visits: 11, averageSpend: 35, lastVisitDaysAgo: 0, language: "es", allergy: null },
   },
   {
     id: "R-1062",
@@ -336,8 +365,8 @@ export const serviceReservations: Reservation[] = [
     tableIds: [],
     channel: "web",
     tags: [],
-    note: "Cancelled by the guest this afternoon",
-    profile: { visits: 2, averageSpend: 44, lastVisit: "5 months ago", language: "Spanish", allergies: null },
+    note: "cancelledByGuest",
+    profile: { visits: 2, averageSpend: 44, lastVisitDaysAgo: 150, language: "es", allergy: null },
   },
   {
     id: "R-1063",

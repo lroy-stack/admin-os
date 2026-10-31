@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { ArrowRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
@@ -12,14 +14,10 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
-const chartData = [
-  { className: "G11A", submitted: 14, pending: 18, overdue: 2 },
-  { className: "G11B", submitted: 22, pending: 7, overdue: 3 },
-  { className: "G11C", submitted: 10, pending: 19, overdue: 5 },
-  { className: "G11D", submitted: 17, pending: 15, overdue: 6 },
-  { className: "G11E", submitted: 24, pending: 4, overdue: 2 },
-];
+import { assignmentCounts } from "./academy-data";
+import { academyMessageKey } from "./messages";
 
 function SubmittedLegendIcon() {
   return <span className="bg-chart-3 block size-2 rounded-[2px]" />;
@@ -33,24 +31,6 @@ function OverdueLegendIcon() {
   return <span className="bg-destructive block size-2 rounded-[2px]" />;
 }
 
-const chartConfig = {
-  submitted: {
-    label: "Submitted",
-    color: "var(--chart-3)",
-    icon: SubmittedLegendIcon,
-  },
-  pending: {
-    label: "Pending",
-    color: "var(--chart-2)",
-    icon: PendingLegendIcon,
-  },
-  overdue: {
-    label: "Overdue",
-    color: "var(--destructive)",
-    icon: OverdueLegendIcon,
-  },
-} satisfies ChartConfig;
-
 function AssignmentDotPattern({ color, id }: { color: string; id: string }) {
   return (
     <pattern id={id} width="6" height="6" patternUnits="userSpaceOnUse">
@@ -62,12 +42,35 @@ function AssignmentDotPattern({ color, id }: { color: string; id: string }) {
 }
 
 export function AssignmentStatus() {
+  const text = useMessages(academyMessageKey);
+  const locale = useLocale();
+
+  const chartConfig = useMemo(
+    () =>
+      ({
+        submitted: { label: text.assignments.submitted, color: "var(--chart-3)", icon: SubmittedLegendIcon },
+        pending: { label: text.assignments.pending, color: "var(--chart-2)", icon: PendingLegendIcon },
+        overdue: { label: text.assignments.overdue, color: "var(--destructive)", icon: OverdueLegendIcon },
+      }) satisfies ChartConfig,
+    [text],
+  );
+  const chartData = useMemo(
+    () =>
+      assignmentCounts.map((row) => ({
+        className: format(text.classCode, locale, { section: `11${row.section}` }),
+        submitted: row.submitted,
+        pending: row.pending,
+        overdue: row.overdue,
+      })),
+    [text, locale],
+  );
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-sm">Assignment Status</CardTitle>
+        <CardTitle className="text-sm">{text.assignments.title}</CardTitle>
         <CardAction className="text-muted-foreground flex items-center gap-1 text-xs">
-          View Report <ArrowRight className="size-4" />
+          {text.assignments.viewReport} <ArrowRight className="size-4" aria-hidden="true" />
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -81,7 +84,7 @@ export function AssignmentStatus() {
             <CartesianGrid vertical={false} />
             <XAxis axisLine={false} dataKey="className" tickLine={false} tickMargin={10} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent hideIndicator />} />
-            <ChartLegend content={<ChartLegendContent className="justify-start" />} verticalAlign="top" />
+            <ChartLegend content={<ChartLegendContent className="flex-wrap justify-start" />} verticalAlign="top" />
             <Bar
               dataKey="submitted"
               fill="url(#assignment-submitted-pattern)"

@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { ArrowRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -7,61 +9,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { format, formatPercent, type Locale, useLocale, useMessages, weekdayNames } from "@/core/i18n/client";
 
-const performanceHighlights = [
-  {
-    className: "G11A",
-    start: 1.25,
-    duration: 1.45,
-    subject: "Pure Math",
-    score: 84,
-    students: [
-      { initials: "OD", name: "Olivia Davis", achievement: "Top Performer", score: 96 },
-      { initials: "EM", name: "Ethan Miller", achievement: "Problem-Solving Excellence", score: 91 },
-      { initials: "SW", name: "Sophia Wilson", achievement: "Most Improved", score: 88 },
-    ],
-  },
-  {
-    className: "G11B",
-    start: 0.72,
-    duration: 1.75,
-    subject: "Literature",
-    score: 78,
-    students: [{ initials: "IA", name: "Isabella Anderson", achievement: "Critical Analysis Award", score: 93 }],
-  },
-  {
-    className: "G11C",
-    start: 1.35,
-    duration: 1.9,
-    subject: "Physics",
-    score: 80,
-    students: [
-      { initials: "AB", name: "Alexander Brown", achievement: "Top Performer", score: 95 },
-      { initials: "MG", name: "Mia Garcia", achievement: "Laboratory Excellence", score: 92 },
-      { initials: "NM", name: "Noah Martinez", achievement: "Most Improved", score: 87 },
-    ],
-  },
-  {
-    className: "G11D",
-    start: 2.22,
-    duration: 1.66,
-    subject: "History",
-    score: 73,
-    students: [
-      { initials: "ET", name: "Emma Taylor", achievement: "Research Excellence", score: 90 },
-      { initials: "WJ", name: "William Johnson", achievement: "Consistent Performer", score: 86 },
-    ],
-  },
-];
+import { type Highlight, performanceHighlights } from "./academy-data";
+import { type AcademyMessages, academyMessageKey } from "./messages";
 
-const chartConfig = {
-  duration: {
-    label: "Score",
-    color: "var(--chart-3)",
-  },
-} satisfies ChartConfig;
-
-type PerformanceHighlight = (typeof performanceHighlights)[number];
+type HighlightRow = Highlight & { className: string };
 
 function PerformanceHighlightBar({
   height = 0,
@@ -69,12 +22,16 @@ function PerformanceHighlightBar({
   width = 0,
   x = 0,
   y = 0,
+  text,
+  locale,
 }: {
   height?: number;
-  payload?: PerformanceHighlight;
+  payload?: HighlightRow;
   width?: number;
   x?: number;
   y?: number;
+  text: AcademyMessages;
+  locale: Locale;
 }) {
   if (!payload) {
     return null;
@@ -88,6 +45,7 @@ function PerformanceHighlightBar({
   const avatarStart = x + 8;
   const avatarY = barY + (barHeight - avatarSize) / 2 - 1.5;
   const labelX = avatarStart + payload.students.length * 14 + 14;
+  const subject = text.performance.subjects[payload.subject];
 
   return (
     <g>
@@ -127,11 +85,12 @@ function PerformanceHighlightBar({
                 <div className="grid gap-1">
                   <p>{student.name}</p>
                   <p>
-                    {student.achievement} · {student.score}%
+                    {format(text.performance.studentLine, locale, {
+                      achievement: text.performance.achievements[student.achievement],
+                      score: formatPercent(student.score / 100, locale),
+                    })}
                   </p>
-                  <p>
-                    {payload.className} · {payload.subject}
-                  </p>
+                  <p>{format(text.performance.classLine, locale, { class: payload.className, subject })}</p>
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -145,7 +104,7 @@ function PerformanceHighlightBar({
         y={barY + barHeight / 2 + 0.5}
         className="fill-primary-foreground text-xs font-medium"
       >
-        {payload.subject}
+        {subject}
       </text>
 
       <text
@@ -157,42 +116,59 @@ function PerformanceHighlightBar({
         y={barY + barHeight / 2 + 0.5}
         className="font-medium tabular-nums"
       >
-        {payload.score}%
+        {formatPercent(payload.score / 100, locale)}
       </text>
     </g>
   );
 }
 
 export function PerformanceHighlights() {
+  const text = useMessages(academyMessageKey);
+  const locale = useLocale();
+
+  const chartConfig = useMemo(
+    () => ({ duration: { label: text.performance.score, color: "var(--chart-3)" } }) satisfies ChartConfig,
+    [text],
+  );
+  const rows: HighlightRow[] = useMemo(
+    () =>
+      performanceHighlights.map((row) => ({
+        ...row,
+        className: format(text.classCode, locale, { section: `11${row.section}` }),
+      })),
+    [text, locale],
+  );
+  // The timeline runs Monday to Friday; `weekdayNames` is indexed like Date#getDay(), so Monday is 1.
+  const weekdays = useMemo(() => weekdayNames(locale, "short").slice(1, 6), [locale]);
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-sm">Performance Highlights</CardTitle>
+        <CardTitle className="text-sm">{text.performance.title}</CardTitle>
         <CardAction className="text-muted-foreground flex items-center gap-1 text-xs">
-          View Insights <ArrowRight className="size-4" />
+          {text.performance.viewInsights} <ArrowRight className="size-4" aria-hidden="true" />
         </CardAction>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-70 w-full">
-          <BarChart
-            accessibilityLayer
-            data={performanceHighlights}
-            layout="vertical"
-            margin={{ bottom: 0, left: 0, right: 8, top: 0 }}
-          >
+          <BarChart accessibilityLayer data={rows} layout="vertical" margin={{ bottom: 0, left: 0, right: 8, top: 0 }}>
             <CartesianGrid horizontal={false} strokeDasharray="4 4" />
             <XAxis
               axisLine={false}
               domain={[0, 4]}
-              tickFormatter={(value) => ["Mon", "Tue", "Wed", "Thu", "Fri"][Number(value)] ?? ""}
+              tickFormatter={(value) => weekdays[Number(value)] ?? ""}
               tickLine={false}
               tickMargin={10}
               ticks={[0, 1, 2, 3, 4]}
               type="number"
             />
-            <YAxis axisLine={false} dataKey="className" tickLine={false} tickMargin={10} type="category" width={45} />
+            <YAxis axisLine={false} dataKey="className" tickLine={false} tickMargin={10} type="category" width={52} />
             <Bar dataKey="start" fill="transparent" stackId="timeline" />
-            <Bar dataKey="duration" shape={<PerformanceHighlightBar />} stackId="timeline" />
+            <Bar
+              dataKey="duration"
+              shape={<PerformanceHighlightBar text={text} locale={locale} />}
+              stackId="timeline"
+            />
           </BarChart>
         </ChartContainer>
       </CardContent>

@@ -14,48 +14,45 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { Segment } from "@/data/crm";
 import { SearchCapsule, SegmentedControl, type SegmentedOption } from "@/ds/components";
 
 import { CustomerCard } from "./customer-card";
 import type { CustomerRow } from "./customers-data";
 import { CustomersTable } from "./customers-table";
+import { customerDirectoryMessageKey } from "./messages";
 
 type SegmentFilter = "all" | Segment;
 type View = "grid" | "table";
 type SortKey = "lastContact" | "openPipeline" | "score" | "name";
 
-const segmentOptions: SegmentedOption<SegmentFilter>[] = [
-  { value: "all", label: "All" },
-  { value: "Enterprise", label: "Enterprise" },
-  { value: "Mid-market", label: "Mid-market" },
-  { value: "SMB", label: "SMB" },
-];
+const segmentIds: readonly Segment[] = ["Enterprise", "Mid-market", "SMB"];
 
-const viewOptions: SegmentedOption<View>[] = [
-  { value: "grid", label: "Grid" },
-  { value: "table", label: "Table" },
-];
-
-const sortLabels: Record<SortKey, string> = {
-  lastContact: "Last contacted",
-  openPipeline: "Open pipeline",
-  score: "Score",
-  name: "Name",
-};
-
-const comparators: Record<SortKey, (a: CustomerRow, b: CustomerRow) => number> = {
-  lastContact: (a, b) => b.lastContact.localeCompare(a.lastContact),
-  openPipeline: (a, b) => b.openPipeline - a.openPipeline,
-  score: (a, b) => b.score - a.score,
-  name: (a, b) => a.name.localeCompare(b.name),
-};
+const sortKeys: readonly SortKey[] = ["lastContact", "openPipeline", "score", "name"];
 
 function isSortKey(value: string): value is SortKey {
-  return value in sortLabels;
+  return sortKeys.some((key) => key === value);
 }
 
 export function CustomerDirectory({ customers }: { customers: CustomerRow[] }) {
+  const text = useMessages(customerDirectoryMessageKey);
+  const locale = useLocale();
+  const segmentOptions: SegmentedOption<SegmentFilter>[] = [
+    { value: "all", label: text.allSegments },
+    ...segmentIds.map((id) => ({ value: id, label: text.segments[id] })),
+  ];
+  const viewOptions: SegmentedOption<View>[] = [
+    { value: "grid", label: text.views.grid },
+    { value: "table", label: text.views.table },
+  ];
+  const sortLabels: Record<SortKey, string> = text.sort;
+  const comparators: Record<SortKey, (a: CustomerRow, b: CustomerRow) => number> = {
+    lastContact: (a, b) => Date.parse(b.lastContact) - Date.parse(a.lastContact),
+    openPipeline: (a, b) => b.openPipeline - a.openPipeline,
+    score: (a, b) => b.score - a.score,
+    name: (a, b) => a.name.localeCompare(b.name, locale),
+  };
   const [query, setQuery] = useState("");
   const [segment, setSegment] = useState<SegmentFilter>("all");
   const [view, setView] = useState<View>("grid");
@@ -85,13 +82,18 @@ export function CustomerDirectory({ customers }: { customers: CustomerRow[] }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <SearchCapsule
-          label="Search customers"
-          placeholder="Search name, company, role..."
+          label={text.search.label}
+          placeholder={text.search.placeholder}
           value={query}
           onValueChange={setQuery}
           className="sm:w-72"
         />
-        <SegmentedControl label="Segment" value={segment} options={segmentOptions} onValueChange={setSegment} />
+        <SegmentedControl
+          label={text.segmentLabel}
+          value={segment}
+          options={segmentOptions}
+          onValueChange={setSegment}
+        />
         <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -101,32 +103,32 @@ export function CustomerDirectory({ customers }: { customers: CustomerRow[] }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-44">
-              <DropdownMenuLabel className="text-muted-foreground text-xs">Sort by</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-muted-foreground text-xs">{text.sort.label}</DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={sortKey}
                 onValueChange={(value) => {
                   if (isSortKey(value)) setSortKey(value);
                 }}
               >
-                {Object.entries(sortLabels).map(([key, label]) => (
+                {sortKeys.map((key) => (
                   <DropdownMenuRadioItem key={key} value={key}>
-                    {label}
+                    {sortLabels[key]}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <SegmentedControl label="Directory view" value={view} options={viewOptions} onValueChange={setView} />
+          <SegmentedControl label={text.views.label} value={view} options={viewOptions} onValueChange={setView} />
           <Button variant="ghost" className="liquid-glass hover:bg-foreground/10 h-8 rounded-full px-3 text-xs">
             <Download data-icon="inline-start" />
-            Export
+            {text.export}
           </Button>
         </div>
       </div>
 
       <Button className="liquid-glass-brand h-9 w-fit rounded-full px-4">
         <Plus data-icon="inline-start" />
-        New customer
+        {text.newCustomer}
       </Button>
 
       {visible.length === 0 && (
@@ -135,11 +137,9 @@ export function CustomerDirectory({ customers }: { customers: CustomerRow[] }) {
             <EmptyMedia variant="icon">
               <SearchX />
             </EmptyMedia>
-            <EmptyTitle>No customers found</EmptyTitle>
+            <EmptyTitle>{text.empty.title}</EmptyTitle>
             <EmptyDescription>
-              {normalizedQuery
-                ? `Nothing matches “${query.trim()}” in this segment.`
-                : "There are no customers in this segment yet."}
+              {normalizedQuery ? format(text.empty.noMatch, locale, { query: query.trim() }) : text.empty.noCustomers}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

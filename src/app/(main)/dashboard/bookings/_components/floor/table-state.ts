@@ -1,4 +1,7 @@
-import { isActive, isLate, minutesLate } from "../reservation-status";
+import { format, type Locale } from "@/core/i18n/client";
+
+import type { BookingsMessages } from "../messages";
+import { formatClock, isActive, isLate, minutesLate } from "../reservation-status";
 import { LATE_AFTER_MIN, type Reservation, SERVICE_NOW_MIN } from "../reservations-data";
 import type { DiningTable } from "./floor-model";
 
@@ -68,47 +71,51 @@ export function canSeat(
   });
 }
 
-/** "45 min", "1 h 50", "2 h" */
-export function formatDuration(minutes: number) {
+/** "45 min", "1 h 50 min", "2 h": the units come from the dictionary. */
+export function formatDuration(minutes: number, text: BookingsMessages["duration"], locale: Locale) {
   const safe = Math.max(0, Math.round(minutes));
-  if (safe < 60) return `${safe} min`;
+  if (safe < 60) return format(text.minutes, locale, { minutes: safe });
   const hours = Math.floor(safe / 60);
   const rest = safe % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest}`;
+  return rest === 0
+    ? format(text.hours, locale, { hours })
+    : format(text.hoursMinutes, locale, { hours, minutes: rest });
 }
 
-const clock = (minutes: number) =>
-  `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-
-/** The short status line printed on a table's plate. */
-export function describeReading(reading: TableReading, nowMin = SERVICE_NOW_MIN) {
+/** The short status line printed on a table's plate, in the active language. */
+export function describeReading(
+  reading: TableReading,
+  text: BookingsMessages,
+  locale: Locale,
+  nowMin = SERVICE_NOW_MIN,
+) {
+  const duration = (minutes: number) => formatDuration(minutes, text.duration, locale);
   switch (reading.state) {
     case "blocked":
-      return "Blocked";
+      return text.reading.blocked;
     case "seated":
     case "leaving": {
-      if (!reading.reservation) return "Seated";
+      if (!reading.reservation) return text.reading.seated;
       const remaining = reading.reservation.endMin - nowMin;
-      return remaining < 0 ? `Over by ${formatDuration(-remaining)}` : `Leaves in ${formatDuration(remaining)}`;
+      return remaining < 0
+        ? format(text.reading.overBy, locale, { duration: duration(-remaining) })
+        : format(text.reading.leavesIn, locale, { duration: duration(remaining) });
     }
     case "late":
-      return reading.reservation ? `Late ${minutesLate(reading.reservation, nowMin)} min` : "Late";
+      return reading.reservation
+        ? format(text.reading.late, locale, { minutes: minutesLate(reading.reservation, nowMin) })
+        : text.reading.lateNoBooking;
     case "arriving":
-      return reading.reservation ? `Arrives ${clock(reading.reservation.startMin)}` : "Arriving";
+      return reading.reservation
+        ? format(text.reading.arrives, locale, { time: formatClock(reading.reservation.startMin, locale) })
+        : text.reading.arriving;
     case "free":
-      return reading.nextArrival ? `Free for ${formatDuration(reading.nextArrival.startMin - nowMin)}` : "Free tonight";
+      return reading.nextArrival
+        ? format(text.reading.freeFor, locale, { duration: duration(reading.nextArrival.startMin - nowMin) })
+        : text.reading.freeTonight;
     default: {
       const unreachable: never = reading.state;
       return unreachable;
     }
   }
 }
-
-export const tableStateLabels: Record<VisibleTableState, string> = {
-  free: "Free",
-  arriving: "Arriving",
-  seated: "Seated",
-  leaving: "Leaving soon",
-  late: "Late",
-  blocked: "Blocked",
-};

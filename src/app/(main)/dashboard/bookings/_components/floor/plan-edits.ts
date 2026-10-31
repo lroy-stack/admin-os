@@ -28,24 +28,25 @@ export type PlanEdit =
   | { type: "rotateElement"; kind: "table" | "landmark"; id: string; byDeg: number }
   | { type: "moveLandmark"; landmarkId: string; xCm: number; yCm: number }
   | { type: "updateLandmark"; landmarkId: string; change: Partial<Omit<Landmark, "id">> }
-  | { type: "addLandmark"; levelId: string; kind: LandmarkKind }
+  | { type: "addLandmark"; levelId: string; kind: LandmarkKind; label: string }
   | { type: "removeLandmark"; landmarkId: string }
-  | { type: "addZone"; levelId: string }
+  | { type: "addZone"; levelId: string; name: string }
   | { type: "updateZone"; zoneId: string; change: Partial<Omit<Zone, "id" | "tables" | "openings">> }
   | { type: "removeZone"; zoneId: string }
-  | { type: "addLevel" }
+  | { type: "addLevel"; name: string }
   | { type: "renameLevel"; levelId: string; name: string }
   | { type: "removeLevel"; levelId: string };
 
-const LANDMARK_DEFAULTS: Record<LandmarkKind, { label: string; widthCm: number; depthCm: number }> = {
-  bar: { label: "Bar", widthCm: 300, depthCm: 70 },
-  kitchen: { label: "Kitchen", widthCm: 240, depthCm: 160 },
-  restrooms: { label: "Restrooms", widthCm: 220, depthCm: 160 },
-  stairs: { label: "Stairs", widthCm: 160, depthCm: 220 },
-  entrance: { label: "Entrance", widthCm: 160, depthCm: 60 },
-  column: { label: "", widthCm: 40, depthCm: 40 },
-  plant: { label: "", widthCm: 60, depthCm: 60 },
-  label: { label: "Label", widthCm: 120, depthCm: 40 },
+/** Footprints of new elements. Their names come from the caller, in the language the user is working in. */
+const LANDMARK_DEFAULTS: Record<LandmarkKind, { widthCm: number; depthCm: number }> = {
+  bar: { widthCm: 300, depthCm: 70 },
+  kitchen: { widthCm: 240, depthCm: 160 },
+  restrooms: { widthCm: 220, depthCm: 160 },
+  stairs: { widthCm: 160, depthCm: 220 },
+  entrance: { widthCm: 160, depthCm: 60 },
+  column: { widthCm: 40, depthCm: 40 },
+  plant: { widthCm: 60, depthCm: 60 },
+  label: { widthCm: 120, depthCm: 40 },
 };
 
 const mapLevels = (plan: FloorPlan, update: (level: Level) => Level): FloorPlan => ({
@@ -71,7 +72,8 @@ export function nextTableLabel(plan: FloorPlan, prefix: string) {
 }
 
 function zonePrefix(zone: Zone) {
-  return (zone.tables[0]?.label.match(/^[A-Za-z]+/)?.[0] ?? zone.name.charAt(0)).toUpperCase();
+  // Table labels are identifiers such as S1; a zone without tables or a name falls back to "T".
+  return (zone.tables[0]?.label.match(/^[A-Za-z]+/)?.[0] ?? zone.name.charAt(0)).toUpperCase() || "T";
 }
 
 function uniqueId(prefix: string, taken: ReadonlySet<string>) {
@@ -158,6 +160,7 @@ export function applyEdit(plan: FloorPlan, edit: PlanEdit): FloorPlan {
         const landmark: Landmark = {
           id: uniqueId(edit.kind, allIds(plan)),
           kind: edit.kind,
+          label: edit.label,
           rotationDeg: 0,
           ...anchor,
           ...LANDMARK_DEFAULTS[edit.kind],
@@ -175,7 +178,7 @@ export function applyEdit(plan: FloorPlan, edit: PlanEdit): FloorPlan {
         const right = Math.max(0, ...level.zones.map((zone) => zone.outline.xCm + zone.outline.widthCm));
         const zone: Zone = {
           id: uniqueId("zone", allIds(plan)),
-          name: `Zone ${level.zones.length + 1}`,
+          name: edit.name,
           outdoor: false,
           outline: { xCm: right + 100, yCm: 0, widthCm: 600, depthCm: 500 },
           wallHeightCm: 120,
@@ -192,7 +195,7 @@ export function applyEdit(plan: FloorPlan, edit: PlanEdit): FloorPlan {
       const index = Math.max(0, ...plan.levels.map((level) => level.index)) + 1;
       const level: Level = {
         id: uniqueId("level", allIds(plan)),
-        name: `Level ${index}`,
+        name: edit.name,
         index,
         zones: [],
         landmarks: [],
@@ -216,7 +219,10 @@ export function applyEdit(plan: FloorPlan, edit: PlanEdit): FloorPlan {
   }
 }
 
-export type PlanIssue = { elementId: string; message: string };
+/** A layout problem, described by data so the screen words it in the active language. */
+export type PlanIssue =
+  | { kind: "outside"; elementId: string; tableLabel: string; zone: Zone }
+  | { kind: "overlap"; elementId: string; tableLabel: string; otherLabel: string };
 
 const footprintRadius = (table: DiningTable) => Math.max(table.widthCm, table.depthCm) / 2;
 
@@ -228,7 +234,7 @@ export function findPlanIssues(plan: FloorPlan): PlanIssue[] {
       const { xCm, yCm, widthCm, depthCm } = zone.outline;
       return table.xCm < xCm || table.xCm > xCm + widthCm || table.yCm < yCm || table.yCm > yCm + depthCm;
     })
-    .map(({ table, zone }) => ({ elementId: table.id, message: `${table.label} is outside ${zone.name}` }));
+    .map(({ table, zone }): PlanIssue => ({ kind: "outside", elementId: table.id, tableLabel: table.label, zone }));
 
   const overlapping = located.flatMap(({ table, level }, index) =>
     located
@@ -239,7 +245,14 @@ export function findPlanIssues(plan: FloorPlan): PlanIssue[] {
           Math.hypot(other.table.xCm - table.xCm, other.table.yCm - table.yCm) <
             footprintRadius(table) + footprintRadius(other.table),
       )
-      .map((other) => ({ elementId: table.id, message: `${table.label} overlaps ${other.table.label}` })),
+      .map(
+        (other): PlanIssue => ({
+          kind: "overlap",
+          elementId: table.id,
+          tableLabel: table.label,
+          otherLabel: other.table.label,
+        }),
+      ),
   );
 
   return [...outside, ...overlapping];

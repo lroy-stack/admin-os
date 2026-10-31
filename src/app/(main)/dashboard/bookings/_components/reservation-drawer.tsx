@@ -10,27 +10,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  format,
+  formatAmount,
+  formatNumber,
+  formatRelative,
+  useCurrency,
+  useLocale,
+  useMessages,
+} from "@/core/i18n/client";
 import { StatTiles, TonePill } from "@/ds/components";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatCurrency } from "@/lib/utils";
 
+import { bookingsMessageKey } from "./messages";
 import { type AdvanceReservation, ReservationActionButton } from "./reservation-action-button";
-import {
-  formatClock,
-  isActive,
-  isLate,
-  minutesLate,
-  statusLabels,
-  statusTones,
-  tableLabel,
-} from "./reservation-status";
+import { formatClock, guestName, isActive, isLate, minutesLate, statusTones, tableLabel } from "./reservation-status";
 import { ReservationTags } from "./reservation-tags";
-import type { Reservation } from "./reservations-data";
+import type { GuestProfile, Reservation } from "./reservations-data";
+
+const DAY_MS = 86_400_000;
 
 /** Fictitious contact details derived from the booking id, so the mock never shows real-looking data. */
 function contactFor(reservation: Reservation) {
   const digits = reservation.id.replace(/\D/g, "").padStart(3, "0").slice(-3);
-  const handle = reservation.guest
+  const handle = (reservation.guest || "walkin")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
@@ -40,8 +43,8 @@ function contactFor(reservation: Reservation) {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 py-1.5 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
+    <div className="grid grid-cols-[minmax(6rem,8rem)_minmax(0,1fr)] gap-3 py-1.5 text-sm">
+      <dt className="text-muted-foreground break-words hyphens-auto">{label}</dt>
       <dd className="break-words">{value}</dd>
     </div>
   );
@@ -58,6 +61,15 @@ export function ReservationDrawer({
   onAdvance: AdvanceReservation;
 }) {
   const isMobile = useIsMobile();
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
+  const currency = useCurrency();
+
+  function lastVisit(profile: GuestProfile) {
+    if (profile.lastVisitDaysAgo === null) return text.drawer.firstVisit;
+    if (profile.lastVisitDaysAgo === 0) return text.drawer.today;
+    return formatRelative(-profile.lastVisitDaysAgo * DAY_MS, 0, locale);
+  }
 
   return (
     <Drawer direction={isMobile ? "bottom" : "right"} open={reservation !== null} onOpenChange={onOpenChange}>
@@ -65,36 +77,46 @@ export function ReservationDrawer({
         {reservation && (
           <div className="flex min-h-0 flex-col overflow-y-auto">
             <DrawerHeader className="gap-1 px-6 pt-6">
-              <DrawerTitle className="text-xl font-medium">{reservation.guest}</DrawerTitle>
+              <DrawerTitle className="text-xl font-medium break-words">{guestName(reservation, text)}</DrawerTitle>
               <DrawerDescription>
-                {reservation.partySize} guests · {formatClock(reservation.startMin)}–{formatClock(reservation.endMin)} ·{" "}
-                <span className="inline-block first-letter:uppercase">{reservation.channel}</span>
+                {format(text.drawer.summary, locale, {
+                  party: format(text.party, locale, { count: reservation.partySize }),
+                  from: formatClock(reservation.startMin, locale),
+                  to: formatClock(reservation.endMin, locale),
+                  channel: text.channels[reservation.channel],
+                })}
               </DrawerDescription>
             </DrawerHeader>
 
             <div className="flex flex-col gap-6 px-6 pb-8">
               <div className="flex flex-wrap items-center gap-1.5">
                 <TonePill tone={statusTones[reservation.status]} dot>
-                  {statusLabels[reservation.status]}
+                  {text.status[reservation.status]}
                 </TonePill>
-                <TonePill tone="neutral">{formatClock(reservation.startMin)}</TonePill>
+                <TonePill tone="neutral">{formatClock(reservation.startMin, locale)}</TonePill>
                 {reservation.tableIds.length > 0 ? (
-                  <TonePill tone="neutral">Table {tableLabel(reservation)}</TonePill>
+                  <TonePill tone="neutral">
+                    {format(text.drawer.table, locale, { label: tableLabel(reservation) })}
+                  </TonePill>
                 ) : (
-                  <TonePill tone="salmon">No table yet</TonePill>
+                  <TonePill tone="salmon">{text.drawer.noTableYet}</TonePill>
                 )}
-                {isLate(reservation) && <TonePill tone="salmon">+{minutesLate(reservation)}' late</TonePill>}
+                {isLate(reservation) && (
+                  <TonePill tone="salmon">
+                    {format(text.late.long, locale, { minutes: minutesLate(reservation) })}
+                  </TonePill>
+                )}
               </div>
 
               {isActive(reservation) && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <ReservationActionButton reservation={reservation} onAdvance={onAdvance} emphasis="primary" />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="More actions"
+                        aria-label={text.drawer.moreActions}
                         className="liquid-glass hover:bg-foreground/10 size-9 rounded-full"
                       >
                         <Ellipsis />
@@ -102,10 +124,10 @@ export function ReservationDrawer({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       <DropdownMenuItem onSelect={() => onAdvance(reservation.id, "no_show")}>
-                        Mark no-show
+                        {text.drawer.markNoShow}
                       </DropdownMenuItem>
                       <DropdownMenuItem variant="destructive" onSelect={() => onAdvance(reservation.id, "cancelled")}>
-                        Cancel reservation
+                        {text.drawer.cancelReservation}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -114,32 +136,45 @@ export function ReservationDrawer({
 
               <section className="flex flex-col gap-2" aria-labelledby="reservation-guest">
                 <h3 id="reservation-guest" className="text-muted-foreground text-xs tracking-wide uppercase">
-                  Guest
+                  {text.drawer.guest}
                 </h3>
                 <StatTiles
                   items={[
-                    { label: "Visits", value: reservation.profile.visits },
+                    { label: text.drawer.visits, value: formatNumber(reservation.profile.visits, locale) },
                     {
-                      label: "Average spend",
+                      label: text.drawer.averageSpend,
                       value: reservation.profile.averageSpend
-                        ? formatCurrency(reservation.profile.averageSpend, { noDecimals: true })
+                        ? formatAmount(reservation.profile.averageSpend, currency, locale, { fractionDigits: 0 })
                         : "—",
                     },
-                    { label: "Last visit", value: reservation.profile.lastVisit },
-                    { label: "Language", value: reservation.profile.language },
+                    { label: text.drawer.lastVisit, value: lastVisit(reservation.profile) },
+                    {
+                      label: text.drawer.language,
+                      value: reservation.profile.language ? text.languages[reservation.profile.language] : "—",
+                    },
                   ]}
                 />
               </section>
 
               <section className="flex flex-col gap-1" aria-labelledby="reservation-details">
                 <h3 id="reservation-details" className="text-muted-foreground text-xs tracking-wide uppercase">
-                  Details
+                  {text.drawer.details}
                 </h3>
                 <dl className="divide-foreground/8 divide-y">
-                  <DetailRow label="Phone (mock)" value={contactFor(reservation).phone} />
-                  <DetailRow label="Email (mock)" value={contactFor(reservation).email} />
-                  <DetailRow label="Allergies" value={reservation.profile.allergies ?? "None recorded"} />
-                  <DetailRow label="Booking note" value={reservation.note ?? "—"} />
+                  <DetailRow label={text.drawer.phone} value={contactFor(reservation).phone} />
+                  <DetailRow label={text.drawer.email} value={contactFor(reservation).email} />
+                  <DetailRow
+                    label={text.drawer.allergies}
+                    value={
+                      reservation.profile.allergy
+                        ? text.allergies[reservation.profile.allergy]
+                        : text.drawer.noneRecorded
+                    }
+                  />
+                  <DetailRow
+                    label={text.drawer.bookingNote}
+                    value={reservation.note ? text.notes[reservation.note] : "—"}
+                  />
                 </dl>
                 <ReservationTags tags={reservation.tags} />
               </section>

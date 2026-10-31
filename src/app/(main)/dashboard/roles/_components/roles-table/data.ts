@@ -1,133 +1,182 @@
+export type RoleId =
+  | "owner"
+  | "admin"
+  | "manager"
+  | "support"
+  | "analyst"
+  | "guest"
+  | "service"
+  | "billing"
+  | "marketing"
+  | "developer"
+  | "projectLead"
+  | "financeViewer";
+
+export type RoleGroup = "needsReview" | "system" | "custom";
+
+export type AccessLevel = "full" | "scoped" | "readOnly" | "apiAccess";
+
+export type PermissionSetId =
+  | "users"
+  | "settings"
+  | "billing"
+  | "reports"
+  | "integrations"
+  | "auditLogs"
+  | "projects"
+  | "tasks"
+  | "tickets"
+  | "knowledgeBase"
+  | "analytics"
+  | "dashboards"
+  | "exports"
+  | "apiKeys"
+  | "webhooks"
+  | "logs"
+  | "invoices"
+  | "payments"
+  | "campaigns"
+  | "repos"
+  | "deployments";
+
+/** "system" is the built-in owner; the others are people, so their names are proper nouns. */
+export type RoleOwner = "system" | "Jane Doe" | "Alex Kim" | "Chris Lee";
+
+export type RoleStatus = "active" | "needsReview";
+
 export type Role = {
-  role: string;
-  group: string;
-  accessLevel: string;
+  id: RoleId;
+  group: RoleGroup;
+  accessLevel: AccessLevel;
   users: number;
-  permissionSets: string[];
+  permissionSets: PermissionSetId[];
+  /** ISO calendar day. */
   lastReview: string;
-  owner: string;
-  status: "Active" | "Needs review";
+  owner: RoleOwner;
+  status: RoleStatus;
 };
+
+export const roleOwners: readonly RoleOwner[] = ["system", "Jane Doe", "Alex Kim", "Chris Lee"];
 
 export const roles: Role[] = [
   {
-    role: "Owner",
-    group: "Needs review",
-    accessLevel: "Full",
+    id: "owner",
+    group: "needsReview",
+    accessLevel: "full",
     users: 2,
-    permissionSets: ["Users", "Settings", "Billing", "Reports", "Integrations", "Audit Logs"],
-    lastReview: "Apr 12, 2025",
-    owner: "System",
-    status: "Needs review",
+    permissionSets: ["users", "settings", "billing", "reports", "integrations", "auditLogs"],
+    lastReview: "2025-04-12",
+    owner: "system",
+    status: "needsReview",
   },
   {
-    role: "Admin",
-    group: "Needs review",
-    accessLevel: "Full",
+    id: "admin",
+    group: "needsReview",
+    accessLevel: "full",
     users: 5,
-    permissionSets: ["Users", "Settings", "Reports", "Billing", "Integrations"],
-    lastReview: "Apr 15, 2025",
+    permissionSets: ["users", "settings", "reports", "billing", "integrations"],
+    lastReview: "2025-04-15",
     owner: "Jane Doe",
-    status: "Needs review",
+    status: "needsReview",
   },
   {
-    role: "Manager",
-    group: "Needs review",
-    accessLevel: "Scoped",
+    id: "manager",
+    group: "needsReview",
+    accessLevel: "scoped",
     users: 12,
-    permissionSets: ["Users", "Reports", "Projects", "Tasks"],
-    lastReview: "Apr 18, 2025",
+    permissionSets: ["users", "reports", "projects", "tasks"],
+    lastReview: "2025-04-18",
     owner: "Jane Doe",
-    status: "Needs review",
+    status: "needsReview",
   },
   {
-    role: "Support",
-    group: "System roles",
-    accessLevel: "Scoped",
+    id: "support",
+    group: "system",
+    accessLevel: "scoped",
     users: 8,
-    permissionSets: ["Users", "Tickets", "Reports", "Knowledge Base"],
-    lastReview: "May 1, 2025",
-    owner: "System",
-    status: "Active",
+    permissionSets: ["users", "tickets", "reports", "knowledgeBase"],
+    lastReview: "2025-05-01",
+    owner: "system",
+    status: "active",
   },
   {
-    role: "Analyst",
-    group: "System roles",
-    accessLevel: "Scoped",
+    id: "analyst",
+    group: "system",
+    accessLevel: "scoped",
     users: 6,
-    permissionSets: ["Reports", "Analytics", "Dashboards", "Exports"],
-    lastReview: "May 5, 2025",
-    owner: "System",
-    status: "Active",
+    permissionSets: ["reports", "analytics", "dashboards", "exports"],
+    lastReview: "2025-05-05",
+    owner: "system",
+    status: "active",
   },
   {
-    role: "Guest",
-    group: "System roles",
-    accessLevel: "Read only",
+    id: "guest",
+    group: "system",
+    accessLevel: "readOnly",
     users: 14,
-    permissionSets: ["Reports", "Dashboards"],
-    lastReview: "May 6, 2025",
-    owner: "System",
-    status: "Active",
+    permissionSets: ["reports", "dashboards"],
+    lastReview: "2025-05-06",
+    owner: "system",
+    status: "active",
   },
   {
-    role: "Service",
-    group: "System roles",
-    accessLevel: "API access",
+    id: "service",
+    group: "system",
+    accessLevel: "apiAccess",
     users: 3,
-    permissionSets: ["Integrations", "API Keys", "Webhooks", "Logs"],
-    lastReview: "Apr 22, 2025",
-    owner: "System",
-    status: "Active",
+    permissionSets: ["integrations", "apiKeys", "webhooks", "logs"],
+    lastReview: "2025-04-22",
+    owner: "system",
+    status: "active",
   },
   {
-    role: "Billing",
-    group: "Custom roles",
-    accessLevel: "Scoped",
+    id: "billing",
+    group: "custom",
+    accessLevel: "scoped",
     users: 3,
-    permissionSets: ["Billing", "Invoices", "Payments", "Reports"],
-    lastReview: "Apr 28, 2025",
+    permissionSets: ["billing", "invoices", "payments", "reports"],
+    lastReview: "2025-04-28",
     owner: "Alex Kim",
-    status: "Active",
+    status: "active",
   },
   {
-    role: "Marketing",
-    group: "Custom roles",
-    accessLevel: "Scoped",
+    id: "marketing",
+    group: "custom",
+    accessLevel: "scoped",
     users: 9,
-    permissionSets: ["Users", "Reports", "Campaigns", "Analytics", "Exports"],
-    lastReview: "May 2, 2025",
+    permissionSets: ["users", "reports", "campaigns", "analytics", "exports"],
+    lastReview: "2025-05-02",
     owner: "Alex Kim",
-    status: "Active",
+    status: "active",
   },
   {
-    role: "Developer",
-    group: "Custom roles",
-    accessLevel: "Scoped",
+    id: "developer",
+    group: "custom",
+    accessLevel: "scoped",
     users: 10,
-    permissionSets: ["Repos", "Deployments", "Settings", "API Keys", "Logs"],
-    lastReview: "May 3, 2025",
+    permissionSets: ["repos", "deployments", "settings", "apiKeys", "logs"],
+    lastReview: "2025-05-03",
     owner: "Chris Lee",
-    status: "Active",
+    status: "active",
   },
   {
-    role: "Project Lead",
-    group: "Custom roles",
-    accessLevel: "Scoped",
+    id: "projectLead",
+    group: "custom",
+    accessLevel: "scoped",
     users: 7,
-    permissionSets: ["Projects", "Tasks", "Reports", "Users", "Settings"],
-    lastReview: "Apr 30, 2025",
+    permissionSets: ["projects", "tasks", "reports", "users", "settings"],
+    lastReview: "2025-04-30",
     owner: "Chris Lee",
-    status: "Active",
+    status: "active",
   },
   {
-    role: "Finance Viewer",
-    group: "Custom roles",
-    accessLevel: "Read only",
+    id: "financeViewer",
+    group: "custom",
+    accessLevel: "readOnly",
     users: 4,
-    permissionSets: ["Billing", "Reports", "Invoices", "Dashboards"],
-    lastReview: "May 7, 2025",
+    permissionSets: ["billing", "reports", "invoices", "dashboards"],
+    lastReview: "2025-05-07",
     owner: "Jane Doe",
-    status: "Active",
+    status: "active",
   },
 ];

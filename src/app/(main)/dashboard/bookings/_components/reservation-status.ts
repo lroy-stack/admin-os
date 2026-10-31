@@ -1,15 +1,8 @@
+import { format, formatTime, type Locale } from "@/core/i18n/client";
 import type { Tone } from "@/ds/components";
 
+import type { BookingsMessages } from "./messages";
 import { LATE_AFTER_MIN, type Reservation, type ReservationStatus, SERVICE_NOW_MIN } from "./reservations-data";
-
-export const statusLabels: Record<ReservationStatus, string> = {
-  pending: "To confirm",
-  confirmed: "Confirmed",
-  seated: "Seated",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  no_show: "No-show",
-};
 
 export const statusTones: Record<ReservationStatus, Tone> = {
   pending: "salmon",
@@ -26,15 +19,17 @@ export function isActive(reservation: Reservation) {
   return ACTIVE_STATUSES.includes(reservation.status);
 }
 
+export type NextAction = { kind: "confirm" | "seat" | "complete"; to: ReservationStatus };
+
 /** The one forward step offered for each status; null when the reservation is finished or needs a table first. */
-export function nextAction(reservation: Reservation): { label: string; to: ReservationStatus } | null {
+export function nextAction(reservation: Reservation): NextAction | null {
   switch (reservation.status) {
     case "pending":
-      return { label: "Confirm", to: "confirmed" };
+      return { kind: "confirm", to: "confirmed" };
     case "confirmed":
-      return reservation.tableIds.length > 0 ? { label: `Seat at ${tableLabel(reservation)}`, to: "seated" } : null;
+      return reservation.tableIds.length > 0 ? { kind: "seat", to: "seated" } : null;
     case "seated":
-      return { label: "Complete", to: "completed" };
+      return { kind: "complete", to: "completed" };
     case "completed":
     case "cancelled":
     case "no_show":
@@ -62,8 +57,19 @@ export function tableLabel(reservation: Reservation) {
   return reservation.tableIds.join("+");
 }
 
-/** "20:40" from minutes after midnight; 24:00 reads as midnight. */
-export function formatClock(minutes: number) {
-  const hours = Math.floor(minutes / 60) % 24;
-  return `${String(hours).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+/** The label of a forward step, for example "Seat at T4". */
+export function actionLabel(action: NextAction, reservation: Reservation, text: BookingsMessages, locale: Locale) {
+  return action.kind === "seat"
+    ? format(text.nextAction.seat, locale, { table: tableLabel(reservation) })
+    : text.nextAction[action.kind];
+}
+
+/** The name on a reservation: a surname is data; a walk-in has none and is named in the active language. */
+export function guestName(reservation: Reservation, text: BookingsMessages) {
+  return reservation.guest || text.walkInGuest;
+}
+
+/** A time of day from minutes after midnight, written as the locale writes it; 24:00 reads as midnight. */
+export function formatClock(minutes: number, locale: Locale) {
+  return formatTime(new Date(Date.UTC(2026, 0, 1, 0, minutes)), locale, "UTC", { hour: "numeric", minute: "2-digit" });
 }

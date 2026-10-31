@@ -153,7 +153,12 @@
         "src/app/(main)/dashboard/kanban/**",
         "src/app/(main)/dashboard/profile/**",
         "src/app/(main)/dashboard/finance/**",
-        "src/app/(main)/dashboard/(examples)/(legacy)/finance-v1/**"
+        "src/app/(main)/dashboard/(examples)/(legacy)/finance-v1/**",
+        "src/app/(main)/dashboard/bookings/**",
+        "src/app/(main)/dashboard/roles/**",
+        "src/app/(main)/dashboard/users/**",
+        "src/app/(main)/dashboard/academy/**",
+        "src/app/(main)/dashboard/infrastructure/**"
       ],
       "plugins": ["./lint/no-visible-string-props.grit"],
       "linter": {

@@ -5,11 +5,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { format, formatAmount, formatRelative, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
 import { CardIconButton, StatTiles } from "@/ds/components";
-import { formatTimeAgo } from "@/lib/crm";
-import { formatCurrency, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 
-import type { CustomerRow } from "./customers-data";
+import { CUSTOMERS_AS_OF, type CustomerRow } from "./customers-data";
+import { customerDirectoryMessageKey } from "./messages";
 
 const avatarTones = ["bg-azure", "bg-salmon", "bg-brand", "bg-foreground/85"] as const;
 
@@ -44,6 +45,10 @@ export function CustomerCard({
   starred: boolean;
   onToggleStar: () => void;
 }) {
+  const text = useMessages(customerDirectoryMessageKey);
+  const locale = useLocale();
+  const currency = useCurrency();
+
   return (
     <Card className="gap-4">
       <div className="flex items-start justify-between gap-2 px-(--card-spacing)">
@@ -52,7 +57,7 @@ export function CustomerCard({
           variant="ghost"
           size="icon"
           aria-pressed={starred}
-          aria-label={starred ? `Unstar ${customer.name}` : `Star ${customer.name}`}
+          aria-label={format(starred ? text.card.unstar : text.card.star, locale, { name: customer.name })}
           onClick={onToggleStar}
           className={cn(
             "ring-border size-7 rounded-full ring-1",
@@ -66,34 +71,50 @@ export function CustomerCard({
       </div>
 
       <div className="flex flex-col gap-0.5 px-(--card-spacing)">
-        <h3 className="text-sm font-medium">{customer.name}</h3>
-        <p className="text-muted-foreground truncate text-[11px]">
-          {customer.title} · {customer.company}
+        <h3 className="text-sm font-medium break-words">{customer.name}</h3>
+        <p className="text-muted-foreground line-clamp-2 text-[11px] break-words hyphens-auto">
+          {`${customer.title} · ${customer.company}`}
         </p>
       </div>
 
       <StatTiles
         className="mx-(--card-spacing)"
         items={[
-          { label: "Open pipeline", value: formatCurrency(customer.openPipeline, { noDecimals: true }) },
-          { label: "Last contact", value: formatTimeAgo(customer.lastContact) },
+          {
+            label: text.card.openPipeline,
+            value: formatAmount(customer.openPipeline, currency, locale, { fractionDigits: 0 }),
+          },
+          {
+            label: text.card.lastContact,
+            value: formatRelative(new Date(customer.lastContact), CUSTOMERS_AS_OF, locale),
+          },
         ]}
       />
 
       <div className="flex items-center gap-3 px-(--card-spacing)">
         <Progress
           value={customer.score}
-          aria-label={`Relationship score ${customer.score}`}
+          aria-label={format(text.card.score, locale, { score: customer.score })}
           className={cn("bg-foreground/10 h-1", scoreIndicatorClassName(customer.score))}
         />
         <span className="text-muted-foreground text-[11px] tabular-nums">{customer.score}</span>
       </div>
 
       <div className="flex items-center justify-between gap-2 px-(--card-spacing)">
-        <span className="bg-foreground/10 rounded-full px-2.5 py-1 text-[11px]">{customer.segment}</span>
-        <div className="flex items-center gap-1.5">
-          <CardIconButton icon={Mail} label={`Email ${customer.name}`} className="size-7" />
-          <CardIconButton icon={Phone} label={`Call ${customer.name}`} className="size-7" />
+        <span className="bg-foreground/10 min-w-0 rounded-full px-2.5 py-1 text-[11px] break-words">
+          {text.segments[customer.segment]}
+        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <CardIconButton
+            icon={Mail}
+            label={format(text.card.email, locale, { name: customer.name })}
+            className="size-7"
+          />
+          <CardIconButton
+            icon={Phone}
+            label={format(text.card.call, locale, { name: customer.name })}
+            className="size-7"
+          />
         </div>
       </div>
     </Card>

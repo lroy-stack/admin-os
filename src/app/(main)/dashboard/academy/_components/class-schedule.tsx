@@ -1,131 +1,92 @@
-import { format } from "date-fns";
 import { ArrowRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLocale, getMessages } from "@/config/locale.server";
+import { format, formatDate, formatTime } from "@/core/i18n/client";
 
-export function ClassSchedule() {
-  const today = format(new Date(), "EEEE, d MMMM");
+import { atMinutes, type ClassStatus, classesToday, SCHOOL_CLOCK } from "./academy-data";
+import { academyMessages } from "./messages.server";
+
+const statusStyles: Record<ClassStatus, { bar: string; badge: string }> = {
+  inProgress: {
+    bar: "bg-green-600 dark:bg-green-400",
+    badge:
+      "border-green-600/50 bg-green-50 text-green-600 dark:border-green-800/50 dark:bg-green-500/10 dark:text-green-400",
+  },
+  upcoming: {
+    bar: "bg-yellow-500 dark:bg-yellow-400",
+    badge:
+      "border-yellow-600/50 bg-yellow-50 text-yellow-700 dark:border-yellow-800/50 dark:bg-yellow-500/10 dark:text-yellow-300",
+  },
+  cancelled: {
+    bar: "bg-destructive",
+    badge: "border-destructive/50 bg-destructive/10 text-destructive dark:border-destructive/50 dark:bg-destructive/20",
+  },
+};
+
+export async function ClassSchedule() {
+  const [text, locale] = await Promise.all([getMessages(academyMessages), getLocale()]);
+  const today = formatDate(new Date(), locale, SCHOOL_CLOCK.timeZone, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const clock = (minutes: number) =>
+    formatTime(atMinutes(minutes), locale, "UTC", { hour: "numeric", minute: "2-digit" });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Class Schedule</CardTitle>
+        <CardTitle className="text-sm">{text.schedule.title}</CardTitle>
         <CardAction className="text-muted-foreground flex items-center gap-1 text-xs">
-          View Full Schedule <ArrowRight className="size-4" />
+          {text.schedule.viewFull} <ArrowRight className="size-4" aria-hidden="true" />
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-0">
         <div className="divide-border flex flex-col divide-y">
-          <div className="bg-card hover:bg-muted/30 grid grid-cols-1 gap-3 py-3 transition-colors sm:grid-cols-[10rem_1fr_auto] sm:items-center">
-            <div className="flex gap-2">
-              <div className="w-1 shrink-0 rounded-md bg-green-600 dark:bg-green-400" />
-              <div className="text-xs text-nowrap">
-                <div className="text-foreground font-medium">08:00 - 08:45</div>
-                <div className="text-muted-foreground">{today}</div>
+          {classesToday.map((item) => {
+            const style = statusStyles[item.status];
+            const subject = text.subjects[item.subject];
+            return (
+              <div
+                key={item.startMin}
+                className="bg-card hover:bg-muted/30 grid grid-cols-1 gap-3 py-3 transition-colors sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto] sm:items-center"
+              >
+                <div className="flex gap-2">
+                  <div className={`w-1 shrink-0 rounded-md ${style.bar}`} />
+                  <div className="min-w-0 text-xs">
+                    <div className="text-foreground font-medium text-nowrap tabular-nums">
+                      {format(text.timeRange, locale, { start: clock(item.startMin), end: clock(item.endMin) })}
+                    </div>
+                    <div className="text-muted-foreground break-words">{today}</div>
+                  </div>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div
+                    className="text-foreground line-clamp-2 block w-full text-sm leading-tight font-medium break-words hyphens-auto"
+                    title={subject}
+                  >
+                    {subject}
+                  </div>
+                  <div className="text-muted-foreground line-clamp-2 text-xs leading-tight break-words">
+                    {format(text.schedule.classLine, locale, {
+                      grade: format(text.grade, locale, { section: `11${item.section}` }),
+                      room: text.rooms[item.room],
+                    })}
+                  </div>
+                </div>
+
+                <Badge
+                  variant="secondary"
+                  className={`shrink-0 justify-self-start rounded-md px-2.5 py-1 text-[10px] font-medium ${style.badge}`}
+                >
+                  {text.schedule.status[item.status]}
+                </Badge>
               </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-foreground truncate text-sm leading-none font-medium">Pure Mathematics</div>
-              <div className="text-muted-foreground truncate text-xs leading-none">Grade 11A • Room 2.14</div>
-            </div>
-
-            <Badge
-              variant="secondary"
-              className="shrink-0 rounded-md border-green-600/50 bg-green-50 px-2.5 py-1 text-[10px] font-medium text-green-600 dark:border-green-800/50 dark:bg-green-500/10 dark:text-green-400"
-            >
-              In Progress
-            </Badge>
-          </div>
-
-          <div className="bg-card hover:bg-muted/30 grid grid-cols-1 gap-3 py-3 transition-colors sm:grid-cols-[10rem_1fr_auto] sm:items-center">
-            <div className="flex gap-2">
-              <div className="w-1 shrink-0 rounded-md bg-yellow-500 dark:bg-yellow-400" />
-              <div className="text-xs text-nowrap">
-                <div className="text-foreground font-medium">09:00 - 09:45</div>
-                <div className="text-muted-foreground">{today}</div>
-              </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-foreground truncate text-sm leading-none font-medium">English Literature</div>
-              <div className="text-muted-foreground truncate text-xs leading-none">Grade 11B • Seminar Room 3</div>
-            </div>
-
-            <Badge
-              variant="secondary"
-              className="shrink-0 rounded-md border-yellow-600/50 bg-yellow-50 px-2.5 py-1 text-[10px] font-medium text-yellow-700 dark:border-yellow-800/50 dark:bg-yellow-500/10 dark:text-yellow-300"
-            >
-              Upcoming
-            </Badge>
-          </div>
-
-          <div className="bg-card hover:bg-muted/30 grid grid-cols-1 gap-3 py-3 transition-colors sm:grid-cols-[10rem_1fr_auto] sm:items-center">
-            <div className="flex gap-2">
-              <div className="w-1 shrink-0 rounded-md bg-yellow-500 dark:bg-yellow-400" />
-              <div className="text-xs text-nowrap">
-                <div className="text-foreground font-medium">10:00 - 10:45</div>
-                <div className="text-muted-foreground">{today}</div>
-              </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-foreground truncate text-sm leading-none font-medium">Physics</div>
-              <div className="text-muted-foreground truncate text-xs leading-none">Grade 11C • Physics Lab</div>
-            </div>
-
-            <Badge
-              variant="secondary"
-              className="shrink-0 rounded-md border-yellow-600/50 bg-yellow-50 px-2.5 py-1 text-[10px] font-medium text-yellow-700 dark:border-yellow-800/50 dark:bg-yellow-500/10 dark:text-yellow-300"
-            >
-              Upcoming
-            </Badge>
-          </div>
-
-          <div className="bg-card hover:bg-muted/30 grid grid-cols-1 gap-3 py-3 transition-colors sm:grid-cols-[10rem_1fr_auto] sm:items-center">
-            <div className="flex gap-2">
-              <div className="bg-destructive w-1 shrink-0 rounded-md" />
-              <div className="text-xs text-nowrap">
-                <div className="text-foreground font-medium">11:00 - 11:45</div>
-                <div className="text-muted-foreground">{today}</div>
-              </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-foreground truncate text-sm leading-none font-medium">Modern European History</div>
-              <div className="text-muted-foreground truncate text-xs leading-none">Grade 11A • Room 1.08</div>
-            </div>
-
-            <Badge
-              variant="secondary"
-              className="border-destructive/50 bg-destructive/10 text-destructive dark:border-destructive/50 dark:bg-destructive/20 shrink-0 rounded-md px-2.5 py-1 text-[10px] font-medium"
-            >
-              Cancelled
-            </Badge>
-          </div>
-
-          <div className="bg-card hover:bg-muted/30 grid grid-cols-1 gap-3 py-3 transition-colors sm:grid-cols-[10rem_1fr_auto] sm:items-center">
-            <div className="flex gap-2">
-              <div className="w-1 shrink-0 rounded-md bg-yellow-500 dark:bg-yellow-400" />
-              <div className="text-xs text-nowrap">
-                <div className="text-foreground font-medium">12:00 - 12:45</div>
-                <div className="text-muted-foreground">{today}</div>
-              </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-foreground truncate text-sm leading-none font-medium">Computer Science</div>
-              <div className="text-muted-foreground truncate text-xs leading-none">Grade 11B • Computing Lab</div>
-            </div>
-
-            <Badge
-              variant="secondary"
-              className="shrink-0 rounded-md border-yellow-600/50 bg-yellow-50 px-2.5 py-1 text-[10px] font-medium text-yellow-700 dark:border-yellow-800/50 dark:bg-yellow-500/10 dark:text-yellow-300"
-            >
-              Upcoming
-            </Badge>
-          </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

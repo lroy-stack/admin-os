@@ -15,9 +15,11 @@ import {
 } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format, formatNumber, useLocale, useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
-import type { Role } from "./data";
+import { rolesMessageKey } from "../messages";
+import type { Role, RoleGroup } from "./data";
 
 type RoleTableRow = ReturnType<ReactTable<DataTableFeatures, Role>["getRowModel"]>["rows"][number];
 
@@ -35,11 +37,13 @@ function groupRowsByRoleGroup(rows: RoleTableRow[]) {
 
       return groups;
     },
-    [] as Array<{ label: string; rows: RoleTableRow[] }>,
+    [] as Array<{ label: RoleGroup; rows: RoleTableRow[] }>,
   );
 }
 
 export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Role> }) {
+  const text = useMessages(rolesMessageKey);
+  const locale = useLocale();
   const { pageIndex, pageSize } = table.state.pagination;
   const pageRows = table.getRowModel().rows;
   const filteredRows = table.getFilteredRowModel().rows;
@@ -86,26 +90,32 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
           ) : (
             <TableRow>
               <TableCell colSpan={colCount} className="text-muted-foreground h-24 text-center">
-                No results.
+                {text.table.empty}
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
 
-      <div className="border-border/70 flex items-center border-t p-4">
-        <div className="text-muted-foreground text-sm">
-          Showing {start} to {end} of {filteredRows.length} roles
+      <div className="border-border/70 flex flex-wrap items-center gap-x-4 gap-y-3 border-t p-4">
+        <div className="text-muted-foreground min-w-0 text-sm">
+          {format(text.table.showing, locale, {
+            count: filteredRows.length,
+            start,
+            end,
+            total: filteredRows.length,
+          })}
         </div>
 
         <div className="mx-auto">
-          <Pagination className="mx-0 w-auto justify-center">
+          <Pagination className="mx-0 w-auto justify-center" aria-label={text.table.paginationLabel}>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
                   size="sm"
                   href="#"
                   text=""
+                  aria-label={text.table.previousPage}
                   className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
                   onClick={(e) => {
                     e.preventDefault();
@@ -122,7 +132,7 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
                     e.preventDefault();
                   }}
                 >
-                  {pageIndex + 1}
+                  {formatNumber(pageIndex + 1, locale)}
                 </PaginationLink>
               </PaginationItem>
               <PaginationItem>
@@ -130,6 +140,7 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
                   size="sm"
                   href="#"
                   text=""
+                  aria-label={text.table.nextPage}
                   className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
                   onClick={(e) => {
                     e.preventDefault();
@@ -142,7 +153,7 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">Rows per page</span>
+          <span className="text-muted-foreground text-sm">{text.table.rowsPerPage}</span>
           <Select
             value={`${pageSize}`}
             onValueChange={(v) => {
@@ -154,9 +165,9 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
             </SelectTrigger>
             <SelectContent align="end" side="top">
               <SelectGroup>
-                <SelectItem value="12">12</SelectItem>
-                <SelectItem value="24">24</SelectItem>
-                <SelectItem value="48">48</SelectItem>
+                <SelectItem value="12">{formatNumber(12, locale)}</SelectItem>
+                <SelectItem value="24">{formatNumber(24, locale)}</SelectItem>
+                <SelectItem value="48">{formatNumber(48, locale)}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -171,17 +182,22 @@ function TableBodyGroup({
   totalCount,
   colCount,
 }: {
-  group: { label: string; rows: RoleTableRow[] };
+  group: { label: RoleGroup; rows: RoleTableRow[] };
   totalCount: number;
   colCount: number;
 }) {
+  const text = useMessages(rolesMessageKey);
+  const locale = useLocale();
   return (
     <>
       <TableRow className="bg-muted h-10">
         <TableCell className="text-foreground/60 px-4 text-sm" colSpan={colCount}>
-          {group.label}{" "}
+          {text.groups[group.label]}{" "}
           <Badge variant="outline" className="text-muted-foreground ml-2 rounded-sm bg-transparent text-xs">
-            {group.rows.length} of {totalCount}
+            {format(text.table.groupCount, locale, {
+              shown: group.rows.length,
+              total: totalCount,
+            })}
           </Badge>
         </TableCell>
       </TableRow>

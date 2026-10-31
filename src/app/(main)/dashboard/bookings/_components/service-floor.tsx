@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMessages } from "@/core/i18n/client";
+
+import { bookingsMessageKey } from "./messages";
 
 const SHEET_PEEK_PX = 148;
 /** Lowest phone sheet height: a peek with the current slot summary. */
@@ -50,6 +53,7 @@ export function ServiceFloor({
   /** Takes the rail's column instead of the rail (the room editor's panel), so nothing covers the room; never folds. */
   aside?: ReactNode;
 }) {
+  const text = useMessages(bookingsMessageKey);
   const sheetRail = isMobile && fullView;
   const folded = railCollapsed && !aside;
   const railColumn = folded ? (
@@ -58,7 +62,7 @@ export function ServiceFloor({
     <>
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex min-w-0 flex-col">
-          <span className="text-sm">{railTitle}</span>
+          <span className="text-sm break-words">{railTitle}</span>
           <span className="text-muted-foreground truncate text-[11px]">{railSummary}</span>
         </div>
         <Tooltip>
@@ -66,14 +70,14 @@ export function ServiceFloor({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Fold arrivals"
+              aria-label={text.rail.fold}
               className="text-muted-foreground hover:text-foreground size-7 rounded-full"
               onClick={() => onRailCollapsedChange(true)}
             >
               <PanelLeftClose />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Fold arrivals</TooltipContent>
+          <TooltipContent side="right">{text.rail.fold}</TooltipContent>
         </Tooltip>
       </div>
       {rail}
@@ -114,7 +118,7 @@ export function ServiceFloor({
           <DrawerContent className="h-dvh backdrop-blur-xl data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-none">
             <DrawerHeader className="py-2">
               <DrawerTitle className="text-sm">{railSummary}</DrawerTitle>
-              <DrawerDescription className="sr-only">Drag up for tonight's arrivals by slot</DrawerDescription>
+              <DrawerDescription className="sr-only">{text.rail.dragHint}</DrawerDescription>
             </DrawerHeader>
             {rail}
           </DrawerContent>

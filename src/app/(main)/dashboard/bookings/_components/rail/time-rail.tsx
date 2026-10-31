@@ -10,9 +10,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
 import { TonePill } from "@/ds/components";
 
-import { formatClock, isLate, minutesLate, statusTones, tableLabel } from "../reservation-status";
+import { bookingsMessageKey } from "../messages";
+import { formatClock, guestName, isLate, minutesLate, statusTones, tableLabel } from "../reservation-status";
 import { ReservationTags } from "../reservation-tags";
 import type { Reservation } from "../reservations-data";
 import type { RailLoad, RailPlan } from "./rail-plan";
@@ -32,12 +34,14 @@ function RailRow({
   selected: boolean;
   onSelect: (reservation: Reservation) => void;
 }) {
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
   const late = isLate(reservation);
   return (
     <Item
       asChild
       size="xs"
-      className={cn("rounded-xl text-left hover:bg-foreground/8", selected && "bg-foreground/12 ring-1 ring-brand/60")}
+      className={cn("hover:bg-foreground/8 rounded-xl text-left", selected && "bg-foreground/12 ring-brand/60 ring-1")}
     >
       <button type="button" aria-pressed={selected} onClick={() => onSelect(reservation)}>
         <ItemMedia>
@@ -46,20 +50,29 @@ function RailRow({
           </TonePill>
         </ItemMedia>
         <ItemContent className="min-w-0 gap-0.5">
-          <ItemTitle className="truncate font-normal">{reservation.guest}</ItemTitle>
+          <ItemTitle
+            className="line-clamp-2 block w-full font-normal break-words hyphens-auto"
+            title={guestName(reservation, text)}
+          >
+            {guestName(reservation, text)}
+          </ItemTitle>
           <ItemDescription className="flex items-center gap-1.5 text-[11px]">
-            <span className="tabular-nums">{formatClock(reservation.startMin)}</span>
-            {late && <span className="text-foreground">+{minutesLate(reservation)}'</span>}
+            <span className="tabular-nums">{formatClock(reservation.startMin, locale)}</span>
+            {late && (
+              <span className="text-foreground tabular-nums">
+                {format(text.late.short, locale, { minutes: minutesLate(reservation) })}
+              </span>
+            )}
           </ItemDescription>
           <ReservationTags tags={reservation.tags} />
         </ItemContent>
-        <ItemActions>
+        <ItemActions className="shrink-0 self-start">
           {reservation.tableIds.length > 0 ? (
             <Badge variant="outline" className="tabular-nums">
               {tableLabel(reservation)}
             </Badge>
           ) : (
-            <TonePill tone="salmon">Assign</TonePill>
+            <TonePill tone="salmon">{text.rail.assign}</TonePill>
           )}
         </ItemActions>
       </button>
@@ -79,6 +92,8 @@ export function TimeRail({
   onSelect: (reservation: Reservation) => void;
   className?: string;
 }) {
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
   const rootRef = useRef<HTMLDivElement>(null);
   const nowRef = useRef<HTMLDivElement>(null);
 
@@ -93,10 +108,13 @@ export function TimeRail({
     <ScrollArea ref={rootRef} className={cn("min-h-0", className)}>
       <div className="flex flex-col gap-1 p-2">
         {plan.folded && (
-          <Collapsible className="rounded-xl bg-foreground/4">
-            <CollapsibleTrigger className="group/fold flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              <span>
-                Before {formatClock(plan.folded.untilMin)} · {plan.folded.rows.length} reservations
+          <Collapsible className="bg-foreground/4 rounded-xl">
+            <CollapsibleTrigger className="group/fold text-muted-foreground hover:text-foreground focus-visible:ring-ring flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs outline-none focus-visible:ring-2">
+              <span className="min-w-0 text-left">
+                {format(text.rail.before, locale, {
+                  time: formatClock(plan.folded.untilMin, locale),
+                  count: plan.folded.rows.length,
+                })}
               </span>
               <ChevronDown className="size-3.5 transition-transform group-data-[state=open]/fold:rotate-180" />
             </CollapsibleTrigger>
@@ -119,25 +137,30 @@ export function TimeRail({
           <Collapsible key={slot.startMin} defaultOpen={slot.open} ref={slot.isNow ? nowRef : undefined}>
             <CollapsibleTrigger
               className={cn(
-                "group/slot sticky top-0 z-[1] flex w-full flex-col gap-1.5 rounded-xl bg-popover px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                slot.isNow && "ring-1 ring-brand/50",
+                "group/slot bg-popover focus-visible:ring-ring sticky top-0 z-[1] flex w-full flex-col gap-1.5 rounded-xl px-3 py-2 text-left outline-none focus-visible:ring-2",
+                slot.isNow && "ring-brand/50 ring-1",
               )}
             >
               <span className="flex w-full items-center gap-2">
-                <span className="font-medium tabular-nums">{formatClock(slot.startMin)}</span>
-                {slot.isNow && <Badge className="h-4 px-1.5 text-[10px]">Now</Badge>}
-                <span className="text-[11px] text-muted-foreground">
+                <span className="shrink-0 font-medium tabular-nums">{formatClock(slot.startMin, locale)}</span>
+                {slot.isNow && <Badge className="h-4 shrink-0 px-1.5 text-[10px]">{text.rail.now}</Badge>}
+                <span className="text-muted-foreground min-w-0 text-[11px]">
                   {slot.arrivals > 0
-                    ? `${slot.arrivals} ${slot.arrivals === 1 ? "arrival" : "arrivals"} · ${slot.guests} guests`
-                    : "No arrivals"}
+                    ? format(text.rail.slotLine, locale, {
+                        arrivals: format(text.rail.arrivals, locale, { count: slot.arrivals }),
+                        guests: format(text.party, locale, { count: slot.guests }),
+                      })
+                    : text.rail.noArrivals}
                 </span>
-                <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">{slot.freeSeats} free</span>
-                <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/slot:rotate-180" />
+                <span className="text-muted-foreground ml-auto shrink-0 text-[11px] tabular-nums">
+                  {format(text.rail.free, locale, { count: slot.freeSeats })}
+                </span>
+                <ChevronDown className="text-muted-foreground size-3.5 shrink-0 transition-transform group-data-[state=open]/slot:rotate-180" />
               </span>
               <Progress
                 value={Math.round(slot.occupancy * 100)}
-                aria-label={`${Math.round(slot.occupancy * 100)}% of seats taken`}
-                className={cn("h-1 bg-foreground/10", loadIndicator[slot.load])}
+                aria-label={format(text.rail.occupancy, locale, { percent: formatPercent(slot.occupancy, locale) })}
+                className={cn("bg-foreground/10 h-1", loadIndicator[slot.load])}
               />
             </CollapsibleTrigger>
             {slot.rows.length > 0 && (

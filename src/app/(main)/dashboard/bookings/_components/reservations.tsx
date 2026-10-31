@@ -33,6 +33,7 @@ import {
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { format, formatCalendarDate, formatNumber, type Locale, useLocale, useMessages } from "@/core/i18n/client";
 import {
   FilterChip,
   PageHeader,
@@ -47,17 +48,19 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { findTable, locateTables, type TableLocation, totalSeats } from "./floor/floor-model";
 import type { SceneMove } from "./floor/floor-scene";
 import { findPlanIssues } from "./floor/plan-edits";
+import { zoneName } from "./floor/plan-names";
 import { type EditSelection, RoomEditorPanel, RoomEditorToolbar } from "./floor/room-editor";
 import { TableCallout } from "./floor/table-callout";
 import { canSeat, describeReading, readTable } from "./floor/table-state";
 import { useFloorPlan } from "./floor/use-floor-plan";
 import { mockVenue } from "./floor/venue";
 import { FullViewFrame } from "./full-view-frame";
+import { bookingsMessageKey } from "./messages";
 import { planRail } from "./rail/rail-plan";
 import { RailStrip } from "./rail/rail-strip";
 import { TimeRail } from "./rail/time-rail";
 import { ReservationDrawer } from "./reservation-drawer";
-import { formatClock, isActive, isLate, isUnassigned } from "./reservation-status";
+import { formatClock, guestName, isActive, isLate, isUnassigned } from "./reservation-status";
 import { ReservationsAgenda } from "./reservations-agenda";
 import {
   type Reservation,
@@ -79,19 +82,11 @@ const FloorView = dynamic(() => import("./floor/floor-view").then((module) => mo
 type View = "floor" | "agenda" | "list";
 type Alert = "unassigned" | "late" | "pending";
 
-const viewOptions: SegmentedOption<View>[] = [
-  { value: "floor", label: "Floor" },
-  { value: "agenda", label: "Agenda" },
-  { value: "list", label: "List" },
-];
-
 const alertChecks: Record<Alert, (reservation: Reservation) => boolean> = {
   unassigned: isUnassigned,
   late: (reservation) => isLate(reservation),
   pending: (reservation) => reservation.status === "pending",
 };
-
-const alertLabels: Record<Alert, string> = { unassigned: "unassigned", late: "running late", pending: "to confirm" };
 
 const WALK_IN_STAY_MIN = 90;
 const NO_TABLES: ReadonlySet<string> = new Set();
@@ -102,17 +97,15 @@ function fittingTables(locations: readonly TableLocation[], party: Reservation, 
   return locations.filter(({ table }) => canSeat(table, party, reservations));
 }
 
-const dayLabel = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
-
-function serviceDay(offset: number) {
+/** The service day `offset` days from the mock service date, written for the locale ("Sat, Oct 31"). */
+function serviceDay(offset: number, locale: Locale) {
   const date = new Date(`${SERVICE_DATE}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + offset);
-  return dayLabel.format(date);
+  return formatCalendarDate(date.toISOString().slice(0, 10), locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 
 function normalize(text: string) {
@@ -123,6 +116,14 @@ function normalize(text: string) {
 }
 
 export function Reservations() {
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
+  const viewOptions: SegmentedOption<View>[] = [
+    { value: "floor", label: text.views.floor },
+    { value: "agenda", label: text.views.agenda },
+    { value: "list", label: text.views.list },
+  ];
+  const alertLabels: Record<Alert, string> = text.alerts;
   const isMobile = useIsMobile();
   const { plan: venue, edit, undo, canUndo, reset } = useFloorPlan(mockVenue);
   const [reservations, setReservations] = useState(serviceReservations);
@@ -172,7 +173,7 @@ export function Reservations() {
 
   const filtered = dayReservations
     .filter((reservation) => showClosed || isActive(reservation))
-    .filter((reservation) => !needle || normalize(`${reservation.guest} ${reservation.id}`).includes(needle))
+    .filter((reservation) => !needle || normalize(`${guestName(reservation, text)} ${reservation.id}`).includes(needle))
     .filter((reservation) => alerts.size === 0 || [...alerts].some((alert) => alertChecks[alert](reservation)))
     .sort((a, b) => a.startMin - b.startMin);
 
@@ -191,8 +192,12 @@ export function Reservations() {
   });
   const nowSlot = railPlan.slots.find((slot) => slot.isNow);
   const railSummary = nowSlot
-    ? `${formatClock(nowSlot.startMin)} · ${nowSlot.arrivals} ${nowSlot.arrivals === 1 ? "arrival" : "arrivals"} · ${nowSlot.freeSeats} free`
-    : "Service closed";
+    ? format(text.rail.summary, locale, {
+        time: formatClock(nowSlot.startMin, locale),
+        arrivals: format(text.rail.arrivals, locale, { count: nowSlot.arrivals }),
+        free: format(text.rail.free, locale, { count: nowSlot.freeSeats }),
+      })
+    : text.rail.closed;
 
   const assigning = reservations.find((reservation) => reservation.id === assigningId) ?? null;
   const candidates = useMemo(
@@ -264,7 +269,7 @@ export function Reservations() {
   function seatWalkIn(tableId: string, partySize: number) {
     const walkIn: Reservation = {
       id: `W-${Date.now()}`,
-      guest: "Walk-in",
+      guest: "",
       partySize,
       startMin: SERVICE_NOW_MIN,
       endMin: SERVICE_NOW_MIN + WALK_IN_STAY_MIN,
@@ -273,7 +278,7 @@ export function Reservations() {
       channel: "walk-in",
       tags: [],
       note: null,
-      profile: { visits: 1, averageSpend: 0, lastVisit: "First visit", language: "—", allergies: null },
+      profile: { visits: 1, averageSpend: 0, lastVisitDaysAgo: null, language: null, allergy: null },
     };
     setReservations((current) => [...current, walkIn]);
     setSelectedReservationId(walkIn.id);
@@ -319,7 +324,7 @@ export function Reservations() {
       <TableCallout
         key={selectedLocation.table.id}
         table={selectedLocation.table}
-        zoneName={selectedLocation.zone.name}
+        zoneName={zoneName(selectedLocation.zone, text.venue)}
         reading={selectedReading}
         onAdvance={advance}
         onOpenDetails={setDetailsId}
@@ -328,15 +333,24 @@ export function Reservations() {
     ) : null;
 
   const assigningBanner = assigning ? (
-    <div className="liquid-glass liquid-glass-solid text-foreground flex items-center gap-2 rounded-full py-1 pr-1 pl-4 text-sm">
-      {candidates.length > 0
-        ? `Tap a table for ${assigning.guest} · ${assigning.partySize} guests · ${candidates.length} ${candidates.length === 1 ? "table fits" : "tables fit"}`
-        : `No table is free for ${assigning.partySize} at ${formatClock(assigning.startMin)}`}
+    <div className="liquid-glass liquid-glass-solid text-foreground flex max-w-full items-center gap-2 rounded-full py-1 pr-1 pl-4 text-sm">
+      <span className="min-w-0 text-left break-words">
+        {candidates.length > 0
+          ? format(text.assign.prompt, locale, {
+              guest: guestName(assigning, text),
+              party: format(text.party, locale, { count: assigning.partySize }),
+              count: candidates.length,
+            })
+          : format(text.assign.noneFit, locale, {
+              party: format(text.party, locale, { count: assigning.partySize }),
+              time: formatClock(assigning.startMin, locale),
+            })}
+      </span>
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Stop assigning"
-        className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-7 rounded-full"
+        aria-label={text.assign.stop}
+        className="text-foreground/70 hover:bg-foreground/10 hover:text-foreground size-7 shrink-0 rounded-full"
         onClick={() => setAssigningId(null)}
       >
         <X />
@@ -348,6 +362,7 @@ export function Reservations() {
     editing && level ? (
       <RoomEditorToolbar
         level={level}
+        nextLevelNumber={Math.max(0, ...venue.levels.map((item) => item.index)) + 1}
         targetZoneId={editTargetZoneId}
         selection={editSelection}
         onEdit={edit}
@@ -386,7 +401,7 @@ export function Reservations() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Full view"
+          aria-label={text.actions.fullView}
           aria-pressed={fullView}
           className="liquid-glass hover:bg-foreground/10 size-9 rounded-full"
           onClick={() => setFullView((current) => !current)}
@@ -394,7 +409,7 @@ export function Reservations() {
           {fullView ? <Minimize2 /> : <Maximize2 />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{fullView ? "Exit full view (Esc)" : "Full view"}</TooltipContent>
+      <TooltipContent>{fullView ? text.actions.exitFullView : text.actions.fullView}</TooltipContent>
     </Tooltip>
   );
 
@@ -404,7 +419,7 @@ export function Reservations() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Service tools"
+          aria-label={text.actions.tools}
           className="liquid-glass hover:bg-foreground/10 size-9 rounded-full"
         >
           <Ellipsis />
@@ -412,12 +427,12 @@ export function Reservations() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-60">
         <DropdownMenuCheckboxItem checked={showClosed} onCheckedChange={(checked) => setShowClosed(checked === true)}>
-          Show completed and cancelled
+          {text.actions.showClosed}
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={startEditing}>
           <PencilRuler />
-          Edit room
+          {text.actions.editRoom}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -433,7 +448,7 @@ export function Reservations() {
   );
 
   const alertChips = (
-    <ul className="flex flex-wrap items-center gap-1.5" aria-label="Service alerts">
+    <ul className="flex flex-wrap items-center gap-1.5" aria-label={text.alerts.label}>
       {(Object.keys(alertChecks) as Alert[]).map((alert) => (
         <li key={alert}>
           <FilterChip pressed={alerts.has(alert)} onPressedChange={() => toggleAlert(alert)}>
@@ -441,7 +456,7 @@ export function Reservations() {
               aria-hidden="true"
               className={cn("size-1.5 rounded-full", toneSolid[alert === "pending" ? "azure" : "salmon"])}
             />
-            <span className="tabular-nums">{active.filter(alertChecks[alert]).length}</span>
+            <span className="tabular-nums">{formatNumber(active.filter(alertChecks[alert]).length, locale)}</span>
             {alertLabels[alert]}
           </FilterChip>
         </li>
@@ -452,54 +467,67 @@ export function Reservations() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Today's Reservations"
+        title={text.title}
         kpis={[
-          { icon: UsersRound, value: `${seatedGuests}/${totalSeats(venue)}`, label: "Guests seated · seats" },
+          {
+            icon: UsersRound,
+            value: `${formatNumber(seatedGuests, locale)}/${formatNumber(totalSeats(venue), locale)}`,
+            label: text.kpis.seated,
+          },
           {
             icon: Clock,
-            value: nextArrival ? formatClock(nextArrival.startMin) : "—",
-            label: nextArrival ? `Next: ${nextArrival.guest} · ${nextArrival.partySize}p` : "No more arrivals",
+            value: nextArrival ? formatClock(nextArrival.startMin, locale) : "—",
+            label: nextArrival
+              ? format(text.kpis.nextArrival, locale, {
+                  guest: guestName(nextArrival, text),
+                  party: format(text.partyShort, locale, { count: nextArrival.partySize }),
+                })
+              : text.kpis.noMoreArrivals,
           },
-          { icon: Armchair, value: String(freeTables), label: "Tables free right now" },
+          { icon: Armchair, value: formatNumber(freeTables, locale), label: text.kpis.tablesFree },
         ]}
       />
 
-      <FullViewFrame active={fullView} onExit={() => setFullView(false)} label="Reservations, full view">
+      <FullViewFrame active={fullView} onExit={() => setFullView(false)} label={text.actions.fullViewRegion}>
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <PeriodStepper
-              label="Change period"
-              previousLabel="Previous day"
-              todayLabel="Today"
-              nextLabel="Next day"
+              label={text.stepper.label}
+              previousLabel={text.stepper.previousDay}
+              todayLabel={text.stepper.today}
+              nextLabel={text.stepper.nextDay}
               onPrevious={() => setDayOffset((offset) => offset - 1)}
               onToday={() => setDayOffset(0)}
               onNext={() => setDayOffset((offset) => offset + 1)}
             />
             <h2 className={cn("ml-2 text-xl font-medium tracking-tight", compact && "text-lg")} aria-live="polite">
-              {serviceDay(dayOffset)}
+              {serviceDay(dayOffset, locale)}
               {dayOffset === 0 && (
                 <span className="text-muted-foreground ml-2 text-sm font-normal tabular-nums">
-                  · {formatClock(SERVICE_NOW_MIN)}
+                  {`· ${formatClock(SERVICE_NOW_MIN, locale)}`}
                 </span>
               )}
             </h2>
             {/* Phones keep the toggle in one place in both modes, so focus stays on it when full view opens. */}
             {isMobile && <div className="ml-auto">{fullViewToggle}</div>}
             <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-              <SegmentedControl label="Reservations view" value={view} options={viewOptions} onValueChange={setView} />
+              <SegmentedControl label={text.views.label} value={view} options={viewOptions} onValueChange={setView} />
               <Button variant="ghost" className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4">
                 <UserPlus data-icon="inline-start" />
-                Walk-in
+                {text.actions.walkIn}
               </Button>
               {compact ? (
-                <Button size="icon" aria-label="New reservation" className="liquid-glass-brand size-9 rounded-full">
+                <Button
+                  size="icon"
+                  aria-label={text.actions.newReservation}
+                  className="liquid-glass-brand size-9 rounded-full"
+                >
                   <Plus />
                 </Button>
               ) : (
                 <Button className="liquid-glass-brand h-9 rounded-full px-4">
                   <Plus data-icon="inline-start" />
-                  New reservation
+                  {text.actions.newReservation}
                 </Button>
               )}
               {compact && toolsMenu}
@@ -510,8 +538,9 @@ export function Reservations() {
             {/* Compact keeps a running search visible so an active filter never hides. */}
             {(!compact || query) && (
               <SearchCapsule
-                label="Search reservations"
-                placeholder="Search guest or booking id..."
+                label={text.search.label}
+                placeholder={text.search.placeholder}
+                className="sm:w-72"
                 value={query}
                 onValueChange={setQuery}
               />
@@ -526,7 +555,7 @@ export function Reservations() {
                     onClick={() => setRailOpen(true)}
                   >
                     <ListOrdered data-icon="inline-start" />
-                    Arrivals
+                    {text.actions.arrivals}
                   </Button>
                 )}
                 {toolsMenu}
@@ -543,12 +572,12 @@ export function Reservations() {
                 <EmptyMedia variant="icon">
                   <CalendarX2 />
                 </EmptyMedia>
-                <EmptyTitle>No reservations this day</EmptyTitle>
-                <EmptyDescription>There are no bookings for this service day yet.</EmptyDescription>
+                <EmptyTitle>{text.empty.title}</EmptyTitle>
+                <EmptyDescription>{text.empty.description}</EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
                 <Button variant="ghost" className="liquid-glass h-9 rounded-full px-4" onClick={() => setDayOffset(0)}>
-                  Back to today
+                  {text.empty.backToToday}
                 </Button>
               </EmptyContent>
             </Empty>
@@ -561,7 +590,7 @@ export function Reservations() {
                   onRailCollapsedChange={changeRailCollapsed}
                   rail={rail}
                   railStrip={<RailStrip plan={railPlan} onExpand={() => changeRailCollapsed(false)} />}
-                  railTitle="Arrivals"
+                  railTitle={text.rail.title}
                   railSummary={railSummary}
                   isMobile={isMobile}
                   sheetSnap={sheetSnap}
@@ -580,7 +609,7 @@ export function Reservations() {
                       readings={readings}
                       describe={(tableId) => {
                         const reading = readings.get(tableId);
-                        return reading ? describeReading(reading) : "";
+                        return reading ? describeReading(reading, text, locale) : "";
                       }}
                       mode={editing ? "edit" : "service"}
                       selectedTableId={editing ? editTableId : selectedTableId}
@@ -621,7 +650,7 @@ export function Reservations() {
         <Drawer open={railOpen} onOpenChange={setRailOpen}>
           <DrawerContent className="h-[80dvh]">
             <DrawerHeader className="pb-0">
-              <DrawerTitle>Arrivals</DrawerTitle>
+              <DrawerTitle>{text.rail.title}</DrawerTitle>
               <DrawerDescription>{railSummary}</DrawerDescription>
             </DrawerHeader>
             {rail}
@@ -638,8 +667,10 @@ export function Reservations() {
         >
           <DrawerContent>
             <DrawerHeader className="sr-only">
-              <DrawerTitle>Table {selectedLocation?.table.label}</DrawerTitle>
-              <DrawerDescription>Table status and actions</DrawerDescription>
+              <DrawerTitle>
+                {format(text.sheets.tableTitle, locale, { label: selectedLocation?.table.label ?? "" })}
+              </DrawerTitle>
+              <DrawerDescription>{text.sheets.tableDescription}</DrawerDescription>
             </DrawerHeader>
             <div className="p-4 pb-8">{callout}</div>
           </DrawerContent>
@@ -657,8 +688,8 @@ export function Reservations() {
         >
           <DrawerContent>
             <DrawerHeader className="sr-only">
-              <DrawerTitle>Edit element</DrawerTitle>
-              <DrawerDescription>Properties of the selected element</DrawerDescription>
+              <DrawerTitle>{text.sheets.editTitle}</DrawerTitle>
+              <DrawerDescription>{text.sheets.editDescription}</DrawerDescription>
             </DrawerHeader>
             {editorPanel}
           </DrawerContent>

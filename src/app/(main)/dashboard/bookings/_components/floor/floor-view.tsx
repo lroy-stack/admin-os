@@ -9,20 +9,18 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { SegmentedControl, type SegmentedOption } from "@/ds/components";
 
+import { bookingsMessageKey } from "../messages";
+import { guestName } from "../reservation-status";
 import { type ViewMode, ZOOM_BUTTON_STEP } from "./camera-math";
 import { type DiningTable, type FloorPlan, type Level, levelsTopDown } from "./floor-model";
 import { FloorScene, type SceneMode, type SceneMove } from "./floor-scene";
+import { landmarkLabel, levelName } from "./plan-names";
 import { readRoomPalette, watchRoomPalette } from "./room-colors";
 import { tableStateCues } from "./state-cues";
-import { type TableReading, tableStateLabels, type VisibleTableState } from "./table-state";
-
-const viewOptions: SegmentedOption<ViewMode>[] = [
-  { value: "2d", label: "2D" },
-  { value: "2.5d", label: "2.5D" },
-  { value: "3d", label: "3D" },
-];
+import type { TableReading, VisibleTableState } from "./table-state";
 
 /** Below this many pixels per metre plates show only the table number. */
 const DETAIL_SCALE_PX_PER_M = 46;
@@ -97,6 +95,13 @@ export function FloorView({
   onLandmarkSelect,
   className,
 }: FloorViewProps) {
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
+  const viewOptions: SegmentedOption<ViewMode>[] = [
+    { value: "2d", label: text.floor.views.flat },
+    { value: "2.5d", label: text.floor.views.isometric },
+    { value: "3d", label: text.floor.views.perspective },
+  ];
   const editing = mode === "edit";
   const hostRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +118,7 @@ export function FloorView({
 
   const levelOptions: SegmentedOption<string>[] = levelsTopDown(plan).map((item) => ({
     value: item.id,
-    label: `${item.name} ${levelOccupancy(item, readings)}`,
+    label: `${levelName(item, text.venue)} ${levelOccupancy(item, readings)}`,
   }));
 
   const handlePick = useEffectEvent((pick: { kind: string; id?: string }) => {
@@ -234,7 +239,7 @@ export function FloorView({
 
       <div ref={layerRef} className="group/plates pointer-events-none absolute inset-0" data-detail="false">
         {landmarks
-          .filter((landmark) => editing || landmark.label)
+          .filter((landmark) => editing || landmarkLabel(landmark, text.venue))
           .map((landmark) => (
             <div
               key={landmark.id}
@@ -260,7 +265,7 @@ export function FloorView({
                     landmark.id === selectedLandmarkId && "bg-(--room-plate) text-(--room-plate-foreground)",
                   )}
                 >
-                  {landmark.label || landmark.kind}
+                  {landmarkLabel(landmark, text.venue) || text.editor.kinds[landmark.kind]}
                 </button>
               )}
               {!editing && landmark.toLevelId && (
@@ -269,10 +274,10 @@ export function FloorView({
                   onClick={() => landmark.toLevelId && onLevelChange(landmark.toLevelId)}
                   className="rounded-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-(--room-ink)"
                 >
-                  {landmark.label} ↗
+                  {`${landmarkLabel(landmark, text.venue)} ↗`}
                 </button>
               )}
-              {!editing && !landmark.toLevelId && landmark.label}
+              {!editing && !landmark.toLevelId && landmarkLabel(landmark, text.venue)}
             </div>
           ))}
 
@@ -298,8 +303,16 @@ export function FloorView({
               data-candidate={candidateTableIds.has(table.id)}
               aria-label={
                 editing
-                  ? `${table.label}, ${table.capacity} seats`
-                  : `${table.label}, ${table.capacity} seats, ${tableStateLabels[state]}. ${describe(table.id)}`
+                  ? format(text.floor.plateEdit, locale, {
+                      label: table.label,
+                      seats: format(text.seats, locale, { count: table.capacity }),
+                    })
+                  : format(text.floor.plateService, locale, {
+                      label: table.label,
+                      seats: format(text.seats, locale, { count: table.capacity }),
+                      state: text.tableState[state],
+                      reading: describe(table.id),
+                    })
               }
               className={cn(
                 "pointer-events-auto absolute top-0 left-0 flex flex-col items-center gap-1 outline-none",
@@ -321,7 +334,7 @@ export function FloorView({
                   !editing && "group-data-[detail=true]/plates:block",
                 )}
               >
-                {reading?.reservation ? `${reading.reservation.guest} · ` : ""}
+                {reading?.reservation ? `${guestName(reading.reservation, text)} · ` : ""}
                 {describe(table.id)}
               </span>
             </button>
@@ -331,14 +344,14 @@ export function FloorView({
 
       <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-wrap items-start justify-between gap-2">
         <SegmentedControl
-          label="Level"
+          label={text.floor.level}
           value={level?.id ?? ""}
           options={levelOptions}
           onValueChange={onLevelChange}
           className="liquid-glass-solid pointer-events-auto"
         />
         <SegmentedControl
-          label="Camera angle"
+          label={text.floor.cameraAngle}
           value={view}
           options={viewOptions}
           onValueChange={changeView}
@@ -355,14 +368,14 @@ export function FloorView({
       <div className="absolute right-3 bottom-3">
         <ButtonGroup
           orientation="vertical"
-          aria-label="Camera"
+          aria-label={text.floor.camera}
           className="liquid-glass liquid-glass-solid rounded-2xl p-0.5"
         >
           {[
-            { label: "Zoom in", icon: Plus, run: () => engineRef.current?.zoomBy(ZOOM_BUTTON_STEP) },
-            { label: "Zoom out", icon: Minus, run: () => engineRef.current?.zoomBy(1 / ZOOM_BUTTON_STEP) },
-            { label: "Fit the room", icon: Maximize, run: () => engineRef.current?.fit() },
-            { label: "Rotate 90°", icon: RotateCw, run: () => engineRef.current?.rotateQuarter() },
+            { label: text.floor.zoomIn, icon: Plus, run: () => engineRef.current?.zoomBy(ZOOM_BUTTON_STEP) },
+            { label: text.floor.zoomOut, icon: Minus, run: () => engineRef.current?.zoomBy(1 / ZOOM_BUTTON_STEP) },
+            { label: text.floor.fit, icon: Maximize, run: () => engineRef.current?.fit() },
+            { label: text.floor.rotate, icon: RotateCw, run: () => engineRef.current?.rotateQuarter() },
           ].map((control) => (
             <Tooltip key={control.label}>
               <TooltipTrigger asChild>
@@ -382,7 +395,7 @@ export function FloorView({
         </ButtonGroup>
       </div>
 
-      <ul className="absolute bottom-3 left-3 flex flex-wrap gap-1.5" aria-label="Tables by state">
+      <ul className="absolute bottom-3 left-3 flex flex-wrap gap-1.5" aria-label={text.floor.tablesByState}>
         {counts.map(({ state, count }) => (
           <li
             key={state}
@@ -390,7 +403,7 @@ export function FloorView({
           >
             <span aria-hidden="true" className={cn("size-2.5 rounded-full", stateSwatch[state])} />
             <LegendIcon state={state} />
-            {tableStateLabels[state]}
+            {text.tableState[state]}
             <span className="tabular-nums">{count}</span>
           </li>
         ))}

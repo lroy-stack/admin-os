@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
+import { LocaleBundles } from "@/app/_components/locale-root";
+import { pageMetadata } from "@/config/metadata.server";
 
+import { rolesBundle, rolesMessages } from "./_components/messages.server";
 import { Roles } from "./_components/roles";
 import { roles } from "./_components/roles-table/data";
 
-export const metadata: Metadata = {
-  title: "Open Source Roles and Permissions UI with shadcn/ui",
-  description: "Explore an open source roles and permissions interface for reviewing access levels and managing roles.",
-  alternates: {
-    canonical: "/dashboard/roles",
-  },
-};
+export const generateMetadata = () => pageMetadata("/dashboard/roles", rolesMessages);
 
 export default function Page() {
-  return <Roles roles={roles} />;
+  return (
+    <LocaleBundles bundles={[rolesBundle]}>
+      <Roles roles={roles} />
+    </LocaleBundles>
+  );
 }

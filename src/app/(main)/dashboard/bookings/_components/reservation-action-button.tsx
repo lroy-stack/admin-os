@@ -1,8 +1,12 @@
+"use client";
+
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
+import { useLocale, useMessages } from "@/core/i18n/client";
 
-import { nextAction } from "./reservation-status";
+import { bookingsMessageKey } from "./messages";
+import { actionLabel, nextAction } from "./reservation-status";
 import type { Reservation, ReservationStatus } from "./reservations-data";
 
 export type AdvanceReservation = (id: string, to: ReservationStatus) => void;
@@ -17,6 +21,8 @@ export function ReservationActionButton({
   onAdvance: AdvanceReservation;
   emphasis?: "subtle" | "primary";
 }) {
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
   const action = nextAction(reservation);
   if (!action) return null;
 
@@ -34,7 +40,7 @@ export function ReservationActionButton({
         onAdvance(reservation.id, action.to);
       }}
     >
-      {action.label}
+      {actionLabel(action, reservation, text, locale)}
     </Button>
   );
 }

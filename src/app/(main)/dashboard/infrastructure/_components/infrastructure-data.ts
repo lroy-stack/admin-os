@@ -1,18 +1,26 @@
 import type { SimpleIcon } from "simple-icons";
 import { siNextdotjs, siNodedotjs, siReact, siRemix } from "simple-icons";
 
+export type EnvironmentKind = "expired" | "production" | "staging";
+
+export type HealthStatus = "online" | "unhealthy";
+
+export type ProjectId = "console" | "analytics" | "kanban" | "inbox";
+
 export interface InfrastructureEnvironment {
   domain: string;
   platform: {
     name: string;
     icon: SimpleIcon;
   };
-  environment: "Expired" | "Production" | "Staging";
-  status: "Online" | "Unhealthy";
-  latency: string;
-  uptime: string;
-  server: string;
+  environment: EnvironmentKind;
+  status: HealthStatus;
+  latencyMs: number;
+  uptime: { days: number; hours: number };
+  /** The cloud brand, or null for a bare-metal or custom server, which has no brand to keep. */
+  server: string | null;
   countryCode: string;
+  /** Plan or region and city: product and place names, not translated. */
   plan: string;
   resources: {
     cpu: number;
@@ -22,14 +30,20 @@ export interface InfrastructureEnvironment {
 }
 
 export interface InfrastructureGroup {
-  name: string;
+  id: ProjectId;
   organization: string;
   rows: InfrastructureEnvironment[];
 }
 
+/** The key combination that focuses the search field: key caps, not words. */
+export const SEARCH_SHORTCUT = "⌘ K";
+
+/** Totals across every project, as the monitoring service reports them. */
+export const infrastructureSummary = { projects: 6, environments: 16, servers: 36, globalUptime: 0.9993 } as const;
+
 export const infrastructureGroups: InfrastructureGroup[] = [
   {
-    name: "Admin Console",
+    id: "console",
     organization: "Weblabs Studio",
     rows: [
       {
@@ -38,10 +52,10 @@ export const infrastructureGroups: InfrastructureGroup[] = [
           name: "Next.js",
           icon: siNextdotjs,
         },
-        environment: "Expired",
-        status: "Unhealthy",
-        latency: "86ms",
-        uptime: "8d 23h",
+        environment: "expired",
+        status: "unhealthy",
+        latencyMs: 86,
+        uptime: { days: 8, hours: 23 },
         server: "Hetzner Cloud",
         countryCode: "DE",
         plan: "CX33, Falkenstein",
@@ -50,7 +64,7 @@ export const infrastructureGroups: InfrastructureGroup[] = [
     ],
   },
   {
-    name: "Analytics",
+    id: "analytics",
     organization: "Aiy Cap",
     rows: [
       {
@@ -59,10 +73,10 @@ export const infrastructureGroups: InfrastructureGroup[] = [
           name: "React",
           icon: siReact,
         },
-        environment: "Production",
-        status: "Online",
-        latency: "246ms",
-        uptime: "9d 23h",
+        environment: "production",
+        status: "online",
+        latencyMs: 246,
+        uptime: { days: 9, hours: 23 },
         server: "AWS",
         countryCode: "NL",
         plan: "eu-west-1, Amsterdam",
@@ -74,10 +88,10 @@ export const infrastructureGroups: InfrastructureGroup[] = [
           name: "Remix",
           icon: siRemix,
         },
-        environment: "Staging",
-        status: "Online",
-        latency: "110ms",
-        uptime: "9d 23h",
+        environment: "staging",
+        status: "online",
+        latencyMs: 110,
+        uptime: { days: 9, hours: 23 },
         server: "Azure",
         countryCode: "EE",
         plan: "North Europe, Tallinn",
@@ -86,7 +100,7 @@ export const infrastructureGroups: InfrastructureGroup[] = [
     ],
   },
   {
-    name: "Kanban",
+    id: "kanban",
     organization: "Storeframe",
     rows: [
       {
@@ -95,11 +109,11 @@ export const infrastructureGroups: InfrastructureGroup[] = [
           name: "Node.js",
           icon: siNodedotjs,
         },
-        environment: "Production",
-        status: "Online",
-        latency: "25ms",
-        uptime: "10d 23h",
-        server: "Bare Metal / Custom",
+        environment: "production",
+        status: "online",
+        latencyMs: 25,
+        uptime: { days: 10, hours: 23 },
+        server: null,
         countryCode: "DE",
         plan: "EX101, Falkenstein",
         resources: { cpu: 1, ram: 21, disk: 4 },
@@ -107,7 +121,7 @@ export const infrastructureGroups: InfrastructureGroup[] = [
     ],
   },
   {
-    name: "Inbox",
+    id: "inbox",
     organization: "Acme Corp",
     rows: [],
   },

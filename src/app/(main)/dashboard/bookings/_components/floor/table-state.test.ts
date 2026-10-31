@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { bookingsMessages } from "../messages.server";
 import type { Reservation } from "../reservations-data";
 import { canSeat, describeReading, formatDuration, readTable } from "./table-state";
 
 const NOW = 20 * 60 + 40;
+const text = bookingsMessages.en;
 
 function booking(overrides: Partial<Reservation>): Reservation {
   return {
@@ -17,7 +19,7 @@ function booking(overrides: Partial<Reservation>): Reservation {
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 1, averageSpend: 0, lastVisit: "First visit", language: "English", allergies: null },
+    profile: { visits: 1, averageSpend: 0, lastVisitDaysAgo: null, language: "en", allergy: null },
     ...overrides,
   };
 }
@@ -28,13 +30,13 @@ describe("readTable", () => {
   it("is free when nothing is due within 30 minutes, and says for how long", () => {
     const reading = readTable(table, [booking({ startMin: NOW + 110 })], NOW);
     expect(reading.state).toBe("free");
-    expect(describeReading(reading, NOW)).toBe("Free for 1 h 50");
+    expect(describeReading(reading, text, "en", NOW)).toBe("Free for 1 h 50 min");
   });
 
   it("is arriving when the next party is due within 30 minutes", () => {
     const reading = readTable(table, [booking({ startMin: NOW + 20 })], NOW);
     expect(reading.state).toBe("arriving");
-    expect(describeReading(reading, NOW)).toBe("Arrives 21:00");
+    expect(describeReading(reading, text, "en", NOW)).toBe("Arrives 9:00 PM");
   });
 
   it("is seated, then leaving in the last 15 minutes", () => {
@@ -43,19 +45,19 @@ describe("readTable", () => {
     );
     const leaving = readTable(table, [booking({ status: "seated", startMin: NOW - 80, endMin: NOW + 10 })], NOW);
     expect(leaving.state).toBe("leaving");
-    expect(describeReading(leaving, NOW)).toBe("Leaves in 10 min");
+    expect(describeReading(leaving, text, "en", NOW)).toBe("Leaves in 10 min");
   });
 
   it("says how long a seated party has overstayed its slot", () => {
     const reading = readTable(table, [booking({ status: "seated", startMin: NOW - 100, endMin: NOW - 10 })], NOW);
     expect(reading.state).toBe("leaving");
-    expect(describeReading(reading, NOW)).toBe("Over by 10 min");
+    expect(describeReading(reading, text, "en", NOW)).toBe("Over by 10 min");
   });
 
   it("is late 10 minutes after a confirmed arrival time", () => {
     const reading = readTable(table, [booking({ startMin: NOW - 25 })], NOW);
     expect(reading.state).toBe("late");
-    expect(describeReading(reading, NOW)).toBe("Late 25 min");
+    expect(describeReading(reading, text, "en", NOW)).toBe("Late 25 min");
     expect(readTable(table, [booking({ startMin: NOW - 9 })], NOW).state).not.toBe("late");
   });
 
@@ -102,8 +104,8 @@ describe("canSeat", () => {
 
 describe("formatDuration", () => {
   it("reads minutes, whole hours and hours with minutes", () => {
-    expect(formatDuration(45)).toBe("45 min");
-    expect(formatDuration(120)).toBe("2 h");
-    expect(formatDuration(65)).toBe("1 h 5");
+    expect(formatDuration(45, text.duration, "en")).toBe("45 min");
+    expect(formatDuration(120, text.duration, "en")).toBe("2 h");
+    expect(formatDuration(65, text.duration, "en")).toBe("1 h 5 min");
   });
 });

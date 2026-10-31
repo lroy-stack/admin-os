@@ -1,16 +1,15 @@
-import type { Metadata } from "next";
+import { LocaleBundles } from "@/app/_components/locale-root";
+import { pageMetadata } from "@/config/metadata.server";
 
+import { bookingsBundle, bookingsMessages } from "./_components/messages.server";
 import { Reservations } from "./_components/reservations";
 
-export const metadata: Metadata = {
-  title: "Reservations",
-  description:
-    "Tonight's service: floor occupancy, a table-by-table timeline and the reservation list with next steps.",
-  alternates: {
-    canonical: "/dashboard/bookings",
-  },
-};
+export const generateMetadata = () => pageMetadata("/dashboard/bookings", bookingsMessages);
 
 export default function Page() {
-  return <Reservations />;
+  return (
+    <LocaleBundles bundles={[bookingsBundle]}>
+      <Reservations />
+    </LocaleBundles>
+  );
 }

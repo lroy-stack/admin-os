@@ -44,7 +44,7 @@ describe("applyEdit", () => {
   });
 
   it("adds a level and only removes it while empty", () => {
-    const withLevel = applyEdit(mockVenue, { type: "addLevel" });
+    const withLevel = applyEdit(mockVenue, { type: "addLevel", name: "Level 3" });
     expect(withLevel.levels).toHaveLength(3);
     const added = withLevel.levels.at(-1);
     expect(applyEdit(withLevel, { type: "removeLevel", levelId: added?.id ?? "" }).levels).toHaveLength(2);
@@ -52,9 +52,9 @@ describe("applyEdit", () => {
   });
 
   it("adds a zone beside the existing ones and a landmark inside the level", () => {
-    const withZone = applyEdit(mockVenue, { type: "addZone", levelId: "rooftop" });
-    expect(withZone.levels[1]?.zones.at(-1)?.outline.xCm).toBe(1100);
-    const withPlant = applyEdit(mockVenue, { type: "addLandmark", levelId: "rooftop", kind: "plant" });
+    const withZone = applyEdit(mockVenue, { type: "addZone", levelId: "rooftop", name: "Zone 2" });
+    expect(withZone.levels[1]?.zones.at(-1)).toMatchObject({ name: "Zone 2", outline: { xCm: 1100 } });
+    const withPlant = applyEdit(mockVenue, { type: "addLandmark", levelId: "rooftop", kind: "plant", label: "" });
     expect(withPlant.levels[1]?.landmarks.at(-1)?.kind).toBe("plant");
   });
 });
@@ -75,8 +75,16 @@ describe("findPlanIssues", () => {
   it("reports overlapping tables and tables outside their zone", () => {
     const stacked = applyEdit(mockVenue, { type: "moveTable", tableId: "S2", xCm: 210, yCm: 170 });
     const outside = applyEdit(stacked, { type: "moveTable", tableId: "T1", xCm: 1500, yCm: 150 });
-    const messages = findPlanIssues(outside).map((issue) => issue.message);
-    expect(messages).toEqual(expect.arrayContaining(["S1 overlaps S2", "T1 is outside Terrace"]));
+    expect(findPlanIssues(outside)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "overlap", tableLabel: "S1", otherLabel: "S2" }),
+        expect.objectContaining({
+          kind: "outside",
+          tableLabel: "T1",
+          zone: expect.objectContaining({ id: "terrace" }),
+        }),
+      ]),
+    );
   });
 
   it("keeps table count stable through edits", () => {
