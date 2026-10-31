@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "media": "playwright test -c playwright.media.config.ts",
     "mcp:stdio": "tsx --import ./scripts/server-only-hook.mjs scripts/mcp-stdio.ts"
   },
   "lint-staged": {
@@ -85,6 +86,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "postcss": "^8.5.32",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.1.5",
     "ts-node": "^10.9.2",
     "tsx": "4.23.15",
