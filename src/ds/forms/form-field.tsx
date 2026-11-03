@@ -26,8 +26,13 @@ export type FormControlProps<Values extends FieldValues, Name extends FieldPath<
   readOnly: boolean;
 };
 
-export interface FormFieldProps<Values extends FieldValues, Name extends FieldPath<Values>> {
-  control: Control<Values>;
+export interface FormFieldProps<
+  Values extends FieldValues,
+  Name extends FieldPath<Values>,
+  Transformed extends FieldValues = Values,
+> {
+  /** The control of any form, also one whose schema transforms the values (`useWindowForm` gives that kind). */
+  control: Control<Values, unknown, Transformed>;
   name: Name;
   label: string;
   description?: string;
@@ -41,14 +46,11 @@ export interface FormFieldProps<Values extends FieldValues, Name extends FieldPa
  * targets the control, `aria-invalid` and `aria-describedby` point at the description and the error, and the error
  * (`role="alert"`) is announced when it appears.
  */
-export function FormField<Values extends FieldValues, Name extends FieldPath<Values>>({
-  control,
-  name,
-  label,
-  description,
-  readOnly = false,
-  children,
-}: FormFieldProps<Values, Name>) {
+export function FormField<
+  Values extends FieldValues,
+  Name extends FieldPath<Values>,
+  Transformed extends FieldValues = Values,
+>({ control, name, label, description, readOnly = false, children }: FormFieldProps<Values, Name, Transformed>) {
   const id = useId();
   const ids = fieldDomIds(id);
   return (
