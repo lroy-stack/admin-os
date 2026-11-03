@@ -53,6 +53,16 @@ const en: CustomerDirectoryMessages = {
     yes: "Yes",
     no: "No",
   },
+  newContact: {
+    verb: "Add contact",
+    description: "Add someone to your directory. A phone or an email helps you recognise them later.",
+    added: "Contact added: {name}",
+    duplicate: {
+      title: "A contact with this phone or email already exists.",
+      show: "Show {name}",
+      reason: { phone: "Same phone", email: "Same email", both: "Same phone and email" },
+    },
+  },
   pager: { label: "Pages", next: "Next page", first: "First page" },
 };
 
@@ -104,6 +114,16 @@ const es: CustomerDirectoryMessages = {
     lastVisit: "Última visita",
     yes: "Sí",
     no: "No",
+  },
+  newContact: {
+    verb: "Añadir contacto",
+    description: "Añade a alguien a tu directorio. Un teléfono o un correo te ayuda a reconocerlo después.",
+    added: "Contacto añadido: {name}",
+    duplicate: {
+      title: "Ya existe un contacto con este teléfono o correo.",
+      show: "Ver a {name}",
+      reason: { phone: "Mismo teléfono", email: "Mismo correo", both: "Mismo teléfono y correo" },
+    },
   },
   pager: { label: "Páginas", next: "Página siguiente", first: "Primera página" },
 };
@@ -158,6 +178,21 @@ const de: CustomerDirectoryMessages = {
     yes: "Ja",
     no: "Nein",
   },
+  newContact: {
+    verb: "Kontakt hinzufügen",
+    description:
+      "Füge jemanden zu deinem Verzeichnis hinzu. Mit Telefonnummer oder E-Mail erkennst du die Person später wieder.",
+    added: "Kontakt hinzugefügt: {name}",
+    duplicate: {
+      title: "Ein Kontakt mit dieser Telefonnummer oder E-Mail-Adresse existiert bereits.",
+      show: "{name} anzeigen",
+      reason: {
+        phone: "Gleiche Telefonnummer",
+        email: "Gleiche E-Mail-Adresse",
+        both: "Gleiche Telefonnummer und E-Mail-Adresse",
+      },
+    },
+  },
   pager: { label: "Seiten", next: "Nächste Seite", first: "Erste Seite" },
 };
 
@@ -210,6 +245,16 @@ const fr: CustomerDirectoryMessages = {
     lastVisit: "Dernière visite",
     yes: "Oui",
     no: "Non",
+  },
+  newContact: {
+    verb: "Ajouter un contact",
+    description: "Ajoutez quelqu’un à votre répertoire. Un téléphone ou un e-mail vous aide à le reconnaître ensuite.",
+    added: "Contact ajouté : {name}",
+    duplicate: {
+      title: "Un contact avec ce téléphone ou cet e-mail existe déjà.",
+      show: "Afficher {name}",
+      reason: { phone: "Même téléphone", email: "Même e-mail", both: "Même téléphone et même e-mail" },
+    },
   },
   pager: { label: "Pages", next: "Page suivante", first: "Première page" },
 };

@@ -20,6 +20,7 @@ import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { ReadStatus } from "@/core/result";
 import { SearchCapsule, SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { ReadState } from "@/ds/feedback";
+import type { CapabilityActionOptions } from "@/ds/forms";
 import { downloadCsv, toCsv } from "@/lib/csv";
 
 import { CustomerCard } from "./customer-card";
@@ -35,6 +36,7 @@ import {
   visibleRows,
 } from "./directory-model";
 import { customerDirectoryMessageKey } from "./messages";
+import { NewContactDialog } from "./new-contact-dialog";
 
 type View = "grid" | "table";
 
@@ -52,17 +54,23 @@ export function CustomerDirectory({
   reason,
   customers,
   pager,
+  errors,
+  initialQuery,
 }: {
   state: ReadStatus;
   /** The translated reason of a failed read. */
   reason?: string;
   customers: readonly CustomerRow[];
   pager: DirectoryPager;
+  /** The customers module's error texts, for the New contact window. */
+  errors: CapabilityActionOptions["errors"];
+  /** The search the page was opened with (`?q=`), e.g. from the duplicate notice. */
+  initialQuery: string;
 }) {
   const text = useMessages(customerDirectoryMessageKey);
   const locale = useLocale();
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [view, setView] = useState<View>("grid");
   const [sort, setSort] = useState<SortKey>("name");
@@ -125,7 +133,7 @@ export function CustomerDirectory({
               </DropdownMenuContent>
             </DropdownMenu>
             <SegmentedControl label={text.views.label} value={view} options={viewOptions} onValueChange={setView} />
-            {/* New customer joins this row with the new-contact form (plan 003, C3). */}
+            <NewContactDialog errors={errors} />
             <Button
               variant="ghost"
               className="liquid-glass hover:bg-foreground/10 h-8 rounded-full px-3 text-xs"

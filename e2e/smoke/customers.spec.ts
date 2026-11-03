@@ -78,7 +78,9 @@ test.describe("customers directory", () => {
     await expect(emailLink(page, "Ortega")).toHaveAttribute("href", "mailto:ortega@example.com");
   });
 
-  test("has no control that does nothing: the only buttons filter, sort, switch view or export", async ({ page }) => {
+  test("has no control that does nothing: the only buttons filter, sort, switch view, add a contact or export", async ({
+    page,
+  }) => {
     const names = await page
       .getByRole("main")
       .getByRole("button")
@@ -86,7 +88,7 @@ test.describe("customers directory", () => {
         buttons.map((button) => button.getAttribute("aria-label") ?? button.textContent?.trim() ?? ""),
       );
 
-    expect(names).toEqual(["Name (A–Z)", "Export"]);
+    expect(names).toEqual(["Name (A–Z)", "Add contact", "Export"]);
   });
 
   test("a later page starts where its cursor says and links back to the first", async ({ page }) => {
@@ -102,6 +104,105 @@ test.describe("customers directory", () => {
     await page.goto("/dashboard/customers?cursor=nope");
 
     await expect(page.locator('[data-state="error"]')).toContainText("Could not load this");
+  });
+});
+
+test.describe("new contact window", () => {
+  let problems: string[] = [];
+
+  test.beforeEach(async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+    problems = watch(page);
+    await page.goto("/dashboard/customers");
+    await expect(page.getByRole("heading", { level: 1, name: "Guests" })).toBeVisible();
+    await page.getByRole("main").getByRole("button", { name: "Add contact" }).click();
+    await expect(windowOf(page)).toBeVisible();
+  });
+
+  test.afterEach(() => {
+    expect(problems).toEqual([]);
+  });
+
+  const windowOf = (page: Page) => page.getByRole("dialog", { name: "Add contact" });
+
+  test("Enter on an empty form puts focus on the first invalid field", async ({ page }) => {
+    await page.keyboard.press("Enter");
+
+    await expect(windowOf(page).getByRole("textbox", { name: "Name" })).toBeFocused();
+    await expect(windowOf(page).getByText("Enter a name.")).toBeVisible();
+  });
+
+  test("a valid contact is created, announced and listed", async ({ page }) => {
+    await windowOf(page).getByRole("textbox", { name: "Name" }).fill("Zoe Quintana");
+    await windowOf(page).getByRole("textbox", { name: "Phone" }).fill("+34 611 222 333");
+    await windowOf(page).getByRole("textbox", { name: "Email" }).fill("zoe@example.com");
+    await windowOf(page).getByRole("button", { name: "Add contact" }).click();
+
+    await expect(windowOf(page)).toBeHidden();
+    await expect(page.locator("[data-sonner-toast]").first()).toContainText("Contact added: Zoe Quintana");
+    await expect(page.getByRole("heading", { level: 3 })).toHaveText([
+      "Bravo",
+      "Calvo",
+      "Iglesias",
+      "Ortega",
+      "Zoe Quintana",
+    ]);
+    await expect(page.getByRole("main").getByRole("button", { name: "Add contact" })).toBeFocused();
+  });
+
+  test("a duplicate phone shows the notice with its link and creates nothing", async ({ page }) => {
+    await windowOf(page).getByRole("textbox", { name: "Name" }).fill("Someone Else");
+    await windowOf(page).getByRole("textbox", { name: "Phone" }).fill("+34 600 000 102");
+
+    const link = windowOf(page).getByRole("link", { name: "Show Ortega" });
+    await expect(link).toHaveAttribute("href", "/dashboard/customers?q=%2B34600000102");
+    await expect(windowOf(page).getByText("Same phone")).toBeVisible();
+
+    await windowOf(page).getByRole("button", { name: "Add contact" }).click();
+    await expect(
+      windowOf(page)
+        .getByText(/already exists/)
+        .first(),
+    ).toBeVisible();
+
+    await link.click();
+    await expect(page).toHaveURL(/q=%2B34600000102$/);
+    await expect(page.getByRole("heading", { level: 3 })).toHaveText(["Ortega"]);
+
+    await page.goto("/dashboard/customers");
+    await expect(page.getByRole("heading", { level: 3 })).toHaveCount(4);
+  });
+
+  test("a dirty window asks before it closes", async ({ page }) => {
+    await windowOf(page).getByRole("textbox", { name: "Name" }).fill("Half typed");
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("alertdialog", { name: "Discard changes?" })).toBeVisible();
+    await page.getByRole("button", { name: "Keep editing" }).click();
+    await expect(windowOf(page).getByRole("textbox", { name: "Name" })).toHaveValue("Half typed");
+
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Discard" }).click();
+
+    await expect(windowOf(page)).toBeHidden();
+    await expect(page.getByRole("heading", { level: 3 })).toHaveCount(4);
+  });
+
+  test("an untouched window closes without asking", async ({ page }) => {
+    await page.keyboard.press("Escape");
+
+    await expect(windowOf(page)).toBeHidden();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  });
+
+  test("the first write of a visitor with no session cookie starts the demo session", async ({ page, context }) => {
+    expect((await context.cookies()).map((cookie) => cookie.name)).not.toContain("demo_session");
+
+    await windowOf(page).getByRole("textbox", { name: "Name" }).fill("First Writer");
+    await windowOf(page).getByRole("button", { name: "Add contact" }).click();
+
+    await expect(page.getByRole("heading", { level: 3, name: "First Writer" })).toBeVisible();
+    expect((await context.cookies()).map((cookie) => cookie.name)).toContain("demo_session");
   });
 });
 

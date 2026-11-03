@@ -59,6 +59,19 @@ export interface CustomerDirectoryMessages {
     readonly yes: string;
     readonly no: string;
   };
+  readonly newContact: {
+    /** The verb: names the opener, the window and its primary button (ADR 0015). */
+    readonly verb: string;
+    readonly description: string;
+    /** Placeholders: `{name}`. */
+    readonly added: string;
+    readonly duplicate: {
+      readonly title: string;
+      /** Placeholders: `{name}`. */
+      readonly show: string;
+      readonly reason: { readonly phone: string; readonly email: string; readonly both: string };
+    };
+  };
   readonly pager: { readonly label: string; readonly next: string; readonly first: string };
 }
 
