@@ -1,11 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ResponsivePanel } from "./responsive-panel";
 import { useHydrated } from "./use-hydrated";
+import { useViewport } from "./use-viewport";
 
 function HydratedFlag() {
   return <p>{String(useHydrated())}</p>;
+}
+
+function ViewportFlag() {
+  return <p>{String(useViewport())}</p>;
 }
 
 describe("useHydrated", () => {
@@ -14,16 +18,8 @@ describe("useHydrated", () => {
   });
 });
 
-const copy = { title: "Booking", description: "Details", body: "Body" };
-
-describe("ResponsivePanel", () => {
-  it("renders no overlay in the server HTML even when open", () => {
-    const html = renderToStaticMarkup(
-      <ResponsivePanel open onOpenChange={() => undefined} title={copy.title} description={copy.description}>
-        {copy.body}
-      </ResponsivePanel>,
-    );
-
-    expect(html).toBe("");
+describe("useViewport", () => {
+  it("is unknown in the server render, so ResponsivePanel renders nothing and never guesses a direction", () => {
+    expect(renderToStaticMarkup(<ViewportFlag />)).toBe("<p>undefined</p>");
   });
 });

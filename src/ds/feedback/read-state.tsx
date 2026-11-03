@@ -40,7 +40,7 @@ export function ReadState({
   switch (state.status) {
     case "loading":
       return (
-        <div role="status" aria-busy="true" className="flex w-full flex-col gap-3">
+        <div role="status" className="flex w-full flex-col gap-3">
           <span className="sr-only">{text.loading}</span>
           <Skeleton className="h-6 w-1/3" />
           <Skeleton className="h-24 w-full" />

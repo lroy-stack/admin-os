@@ -26,12 +26,13 @@ export function toCsv<Row>(rows: readonly Row[], columns: readonly CsvColumn<Row
 
 /** Saves CSV text as a file in the browser. The BOM makes spreadsheet apps read accents as UTF-8. */
 export function downloadCsv(filename: string, csv: string): void {
-  const url = URL.createObjectURL(new Blob(["﻿", csv], { type: "text/csv;charset=utf-8" }));
+  const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Revoked after the browser has started the download; doing it in the same tick can cancel it.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

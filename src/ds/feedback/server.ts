@@ -5,7 +5,7 @@ import { defineMessages, type MessageBundle } from "@/core/i18n";
 import { type FeedbackMessages, feedbackMessageKey } from "./messages";
 
 const en: FeedbackMessages = {
-  copy: { copied: "Copied", copiedLabel: "{label} copied", failed: "Could not copy. Copy it by hand." },
+  copy: { copied: "Copied", copiedLabel: "Copied: {label}", failed: "Could not copy. Copy it by hand." },
   undo: {
     action: "Undo",
     undone: "Undone",
@@ -26,7 +26,7 @@ const en: FeedbackMessages = {
 };
 
 const es: FeedbackMessages = {
-  copy: { copied: "Copiado", copiedLabel: "{label} copiado", failed: "No se pudo copiar. Cópialo a mano." },
+  copy: { copied: "Copiado", copiedLabel: "Copiado: {label}", failed: "No se pudo copiar. Cópialo a mano." },
   undo: {
     action: "Deshacer",
     undone: "Deshecho",
@@ -49,7 +49,7 @@ const es: FeedbackMessages = {
 const de: FeedbackMessages = {
   copy: {
     copied: "Kopiert",
-    copiedLabel: "{label} kopiert",
+    copiedLabel: "Kopiert: {label}",
     failed: "Kopieren nicht möglich. Kopiere es von Hand.",
   },
   undo: {
@@ -75,7 +75,7 @@ const de: FeedbackMessages = {
 };
 
 const fr: FeedbackMessages = {
-  copy: { copied: "Copié", copiedLabel: "{label} copié", failed: "Impossible de copier. Copiez à la main." },
+  copy: { copied: "Copié", copiedLabel: "Copié\u00A0: {label}", failed: "Impossible de copier. Copiez à la main." },
   undo: {
     action: "Annuler",
     undone: "Annulé",

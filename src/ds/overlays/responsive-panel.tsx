@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 
 import { cn } from "cn";
 
@@ -13,9 +13,14 @@ export interface ResponsivePanelProps {
   onOpenChange: (open: boolean) => void;
   /** Announced when the panel opens. */
   title: ReactNode;
-  /** Required for assistive technology; `hideDescription` keeps it out of the layout. */
+  /** Required for assistive technology. */
   description: ReactNode;
-  hideDescription?: boolean;
+  /**
+   * Where focus goes on close: an element, or a ref the consumer sets from `event.currentTarget` in its open handler.
+   * Without it the panel falls back to the element that was focused when it opened, which WebKit does not set on a
+   * button click.
+   */
+  returnFocus?: Element | RefObject<Element | null> | null;
   /** Classes of the panel itself (size, surface). */
   className?: string;
   headerClassName?: string;
@@ -33,7 +38,7 @@ export function ResponsivePanel({
   onOpenChange,
   title,
   description,
-  hideDescription = false,
+  returnFocus,
   className,
   headerClassName,
   titleClassName,
@@ -52,14 +57,16 @@ export function ResponsivePanel({
         onCloseAutoFocus={(event) => {
           // Radix only returns focus to its own Trigger; this panel is opened by app state, so it restores it.
           event.preventDefault();
-          if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus();
+          const target =
+            (returnFocus && "current" in returnFocus ? returnFocus.current : returnFocus) ?? opener.current;
+          if (target instanceof HTMLElement && target.isConnected) target.focus();
         }}
         className={cn(
           "data-[vaul-drawer-direction=right]:w-full data-[vaul-drawer-direction=right]:sm:max-w-md",
           className,
         )}
       >
-        <DrawerHeader className={cn(hideDescription && "sr-only", headerClassName)}>
+        <DrawerHeader className={headerClassName}>
           <DrawerTitle className={titleClassName}>{title}</DrawerTitle>
           <DrawerDescription>{description}</DrawerDescription>
         </DrawerHeader>

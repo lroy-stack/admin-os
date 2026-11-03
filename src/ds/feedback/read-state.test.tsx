@@ -27,7 +27,6 @@ describe("ReadState", () => {
   it("renders a labelled skeleton while loading", () => {
     const html = render({ status: "loading" });
 
-    expect(html).toContain('aria-busy="true"');
     expect(html).toContain('<span class="sr-only">Loading</span>');
     expect(html).toContain('data-slot="skeleton"');
     expect(html).not.toContain(readyText);

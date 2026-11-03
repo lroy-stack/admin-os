@@ -13,22 +13,30 @@ interface CopyEnvironment {
   readonly legacyCopy: (text: string) => boolean;
 }
 
-/** `execCommand("copy")` through a hidden textarea: the path for browsers or contexts without the Clipboard API. */
+/**
+ * `execCommand("copy")` through a hidden textarea: the path for browsers or contexts without the Clipboard API.
+ * The field goes inside the open dialog when there is one (a dialog's focus trap would pull focus out of a field in
+ * `body`), and focus returns to the element that had it. True only when the field really took focus and the copy ran.
+ */
 function legacyCopy(text: string): boolean {
   if (typeof document === "undefined") return false;
+  const previous = document.activeElement;
+  const host = previous?.closest("[role=dialog],[role=alertdialog]") ?? document.body;
   const field = document.createElement("textarea");
   field.value = text;
   field.setAttribute("readonly", "");
   field.style.position = "fixed";
   field.style.opacity = "0";
-  document.body.append(field);
-  field.select();
+  host.append(field);
   try {
-    return document.execCommand("copy");
+    field.focus({ preventScroll: true });
+    field.setSelectionRange(0, text.length);
+    return document.activeElement === field && document.execCommand("copy");
   } catch {
     return false;
   } finally {
     field.remove();
+    if (previous instanceof HTMLElement) previous.focus({ preventScroll: true });
   }
 }
 
