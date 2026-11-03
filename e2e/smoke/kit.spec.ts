@@ -71,11 +71,11 @@ test("the form dialog is centered at most 640 px wide, or a full-screen sheet on
   page,
 }, testInfo) => {
   const expected = SCREEN[testInfo.project.name as keyof typeof SCREEN];
-  const opener = page.getByRole("button", { name: "New guest" });
+  const opener = page.getByRole("button", { name: "Add guest" });
 
   await opener.click();
 
-  const dialog = page.getByRole("dialog", { name: "New guest" });
+  const dialog = page.getByRole("dialog", { name: "Add guest" });
   await expect(dialog).toBeVisible();
   await expect(page.locator("[data-window=form][data-vaul-drawer-direction=bottom]")).toHaveCount(expected.sheets);
   await expect.poll(async () => (await dialog.boundingBox())?.width).toBeLessThanOrEqual(expected.formMaxWidth);
@@ -88,9 +88,9 @@ test("the form dialog is centered at most 640 px wide, or a full-screen sheet on
 });
 
 test("a window has one scroll container, its body", async ({ page }) => {
-  await page.getByRole("button", { name: "New guest" }).click();
+  await page.getByRole("button", { name: "Add guest" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "New guest" });
+  const dialog = page.getByRole("dialog", { name: "Add guest" });
   const scrollers = await dialog.evaluate(
     (root) =>
       [root, ...root.querySelectorAll("*:not(textarea)")].filter((element) => {
@@ -167,8 +167,8 @@ test.describe("ConfirmAction", () => {
 
 test.describe("unsaved changes", () => {
   test("a dirty form asks before closing and keeps the data on Keep editing", async ({ page }) => {
-    await page.getByRole("button", { name: "New guest" }).click();
-    const dialog = page.getByRole("dialog", { name: "New guest" });
+    await page.getByRole("button", { name: "Add guest" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
     await dialog.getByLabel("Name").fill("Ana Ruiz");
 
     await page.keyboard.press("Escape");
@@ -182,9 +182,9 @@ test.describe("unsaved changes", () => {
   });
 
   test("Discard closes the window and returns focus to its opener", async ({ page }) => {
-    const opener = page.getByRole("button", { name: "New guest" });
+    const opener = page.getByRole("button", { name: "Add guest" });
     await opener.click();
-    const dialog = page.getByRole("dialog", { name: "New guest" });
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
     await dialog.getByLabel("Name").fill("Ana Ruiz");
 
     await dialog.getByRole("button", { name: "Cancel" }).click();
