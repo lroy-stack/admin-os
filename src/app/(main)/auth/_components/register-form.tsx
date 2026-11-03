@@ -17,16 +17,6 @@ import { authMessageKey } from "./messages";
 
 type RegisterValues = z.infer<ReturnType<typeof createRegisterSchema>>;
 
-function showSubmitted(title: string, data: RegisterValues) {
-  toast(title, {
-    description: (
-      <pre className="mt-2 w-[320px] rounded-md bg-neutral-950 p-4">
-        <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-      </pre>
-    ),
-  });
-}
-
 export function RegisterForm() {
   const text = useMessages(authMessageKey);
   const locale = useLocale();
@@ -50,7 +40,7 @@ export function RegisterForm() {
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((data) => showSubmitted(text.submitted, data))}
+      onSubmit={form.handleSubmit(() => toast(text.notConnected.register))}
       className="flex flex-col gap-4"
     >
       <FieldGroup className="gap-4">

@@ -47,7 +47,10 @@ const en: AuthMessages = {
     confirmTooShort: "The password confirmation must be at least {min} characters long.",
     passwordsMismatch: "The passwords do not match.",
   },
-  submitted: "You submitted the following values",
+  notConnected: {
+    login: "Sign-in is not connected in the demo.",
+    register: "Registration is not connected in the demo.",
+  },
   loginV1: {
     panelTitle: "Hello again",
     panelSubtitle: "Log in to continue",
@@ -124,7 +127,10 @@ const es: AuthMessages = {
     confirmTooShort: "La confirmación de la contraseña debe tener al menos {min} caracteres.",
     passwordsMismatch: "Las contraseñas no coinciden.",
   },
-  submitted: "Has enviado estos valores",
+  notConnected: {
+    login: "El inicio de sesión no está conectado en la demo.",
+    register: "El registro no está conectado en la demo.",
+  },
   loginV1: {
     panelTitle: "Hola de nuevo",
     panelSubtitle: "Inicia sesión para continuar",
@@ -202,7 +208,10 @@ const de: AuthMessages = {
     confirmTooShort: "Die Passwortbestätigung muss mindestens {min} Zeichen lang sein.",
     passwordsMismatch: "Die Passwörter stimmen nicht überein.",
   },
-  submitted: "Du hast diese Werte gesendet",
+  notConnected: {
+    login: "Die Anmeldung ist in der Demo nicht angebunden.",
+    register: "Die Registrierung ist in der Demo nicht angebunden.",
+  },
   loginV1: {
     panelTitle: "Schön, dich wiederzusehen",
     panelSubtitle: "Melde dich an, um fortzufahren",
@@ -281,7 +290,10 @@ const fr: AuthMessages = {
     confirmTooShort: "La confirmation du mot de passe doit contenir au moins {min} caractères.",
     passwordsMismatch: "Les mots de passe ne correspondent pas.",
   },
-  submitted: "Vous avez envoyé les valeurs suivantes",
+  notConnected: {
+    login: "La connexion n’est pas activée dans la démo.",
+    register: "L’inscription n’est pas activée dans la démo.",
+  },
   loginV1: {
     panelTitle: "Content de vous revoir",
     panelSubtitle: "Connectez-vous pour continuer",

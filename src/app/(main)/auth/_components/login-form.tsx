@@ -18,16 +18,6 @@ import { authMessageKey } from "./messages";
 
 type LoginValues = z.infer<ReturnType<typeof createLoginSchema>>;
 
-function showSubmitted(title: string, data: LoginValues) {
-  toast(title, {
-    description: (
-      <pre className="mt-2 w-[320px] rounded-md bg-neutral-950 p-4">
-        <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-      </pre>
-    ),
-  });
-}
-
 export function LoginForm() {
   const text = useMessages(authMessageKey);
   const locale = useLocale();
@@ -49,11 +39,7 @@ export function LoginForm() {
   });
 
   return (
-    <form
-      noValidate
-      onSubmit={form.handleSubmit((data) => showSubmitted(text.submitted, data))}
-      className="flex flex-col gap-4"
-    >
+    <form noValidate onSubmit={form.handleSubmit(() => toast(text.notConnected.login))} className="flex flex-col gap-4">
       <FieldGroup className="gap-4">
         <Controller
           control={form.control}

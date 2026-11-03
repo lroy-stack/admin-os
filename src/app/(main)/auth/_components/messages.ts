@@ -27,8 +27,11 @@ export interface AuthMessages {
     readonly confirmTooShort: string;
     readonly passwordsMismatch: string;
   };
-  /** The toast shown after the demo form is submitted. */
-  readonly submitted: string;
+  /** The toast shown after a demo form is submitted: no provider is connected, and the values are never echoed. */
+  readonly notConnected: {
+    readonly login: string;
+    readonly register: string;
+  };
   readonly loginV1: {
     readonly panelTitle: string;
     readonly panelSubtitle: string;
