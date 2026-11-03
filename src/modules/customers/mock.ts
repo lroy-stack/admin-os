@@ -30,6 +30,11 @@ const duplicatesOf = (customers: readonly Customer[], query: ContactQuery, excep
     .map((customer) => ({ customer, matchedOn: matchedFields(customer, query) }))
     .filter(({ matchedOn }) => matchedOn.length > 0);
 
+/**
+ * The details name the matching customers for callers that may read them (the typed client, MCP). They never reach a
+ * window: `serializeCallResult` drops every detail but `paths` (privacy), so a window that must open the existing
+ * record calls `customers.duplicates.check`, which `read:customers` gates.
+ */
 const duplicateError = (matches: ReturnType<typeof duplicatesOf>) =>
   err("customers.duplicate", "A customer with this phone or email already exists", {
     customerIds: matches.map(({ customer }) => customer.id),
@@ -37,10 +42,13 @@ const duplicateError = (matches: ReturnType<typeof duplicatesOf>) =>
   });
 
 const applyPatch = (customer: Customer, patch: CustomerPatch): Customer => {
-  const { marketingConsent, ...fields } = patch;
+  const { marketingConsent, phone, email, ...fields } = patch;
   const defined = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
+  const { phone: _phone, email: _email, ...kept } = customer;
   return {
-    ...customer,
+    ...kept,
+    ...(phone === null ? {} : { phone: phone ?? customer.phone }),
+    ...(email === null ? {} : { email: email ?? customer.email }),
     ...defined,
     ...(marketingConsent === undefined ? {} : { consent: { marketing: marketingConsent } }),
   };
@@ -88,7 +96,14 @@ export const customersMockHandlers = {
   ...mockHandler(customersUpdate, ({ id, patch }, { data }: Context) => {
     const customer = data.customers.find((candidate) => candidate.id === id);
     if (customer === undefined) return notFound(id);
-    const matches = duplicatesOf(data.customers, patch, id);
+    const matches = duplicatesOf(
+      data.customers,
+      {
+        ...(patch.phone ? { phone: patch.phone } : {}),
+        ...(patch.email ? { email: patch.email } : {}),
+      },
+      id,
+    );
     if (matches.length > 0) return duplicateError(matches);
     return ok(replace(data, applyPatch(customer, patch)));
   }),

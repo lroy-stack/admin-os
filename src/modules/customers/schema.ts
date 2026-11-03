@@ -74,10 +74,11 @@ export const customerCreateInput = z.strictObject({
   tags: contactFields.tags.default([]),
 });
 
+/** In a patch an omitted field stays as it is and `null` clears the phone or the email. */
 export const customerPatchSchema = z.strictObject({
   name: contactFields.name.optional(),
-  phone: contactFields.phone.optional(),
-  email: contactFields.email.optional(),
+  phone: contactFields.phone.nullable().optional(),
+  email: contactFields.email.nullable().optional(),
   locale: contactFields.locale.optional(),
   marketingConsent: contactFields.marketingConsent.optional(),
   tags: contactFields.tags.optional(),

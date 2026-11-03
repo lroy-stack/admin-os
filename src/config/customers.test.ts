@@ -109,6 +109,35 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
     expect(customerOf(updated)).toMatchObject({ name: "Renamed", vip: true, phone: existingPhone });
   });
 
+  it("clears the phone and the email when the patch says null", async () => {
+    const client = session(vertical);
+    const created = await client.call(
+      "customers.create",
+      { name: "Both", phone: "+34655555555", email: "both@example.com" },
+      key(),
+    );
+    const { id } = customerOf(created);
+
+    const cleared = customerOf(await client.call("customers.update", { id, patch: { phone: null, email: null } }));
+
+    expect(cleared).not.toHaveProperty("phone");
+    expect(cleared).not.toHaveProperty("email");
+  });
+
+  it("keeps the phone and the email when the patch omits them", async () => {
+    const client = session(vertical);
+    const created = await client.call(
+      "customers.create",
+      { name: "Both", phone: "+34655555556", email: "both2@example.com" },
+      key(),
+    );
+    const { id } = customerOf(created);
+
+    const renamed = customerOf(await client.call("customers.update", { id, patch: { name: "Renamed" } }));
+
+    expect(renamed).toMatchObject({ phone: "+34655555556", email: "both2@example.com" });
+  });
+
   it("refuses to update a phone onto another customer's phone", async () => {
     const client = session(vertical);
     const created = await client.call("customers.create", { name: "Other", phone: "+34644444444" }, key());

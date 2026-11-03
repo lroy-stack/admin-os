@@ -36,7 +36,7 @@ export const duplicateMatchSchema = z.object({
 export const customersDuplicatesCheck = defineCapability({
   id: "customers.duplicates.check",
   summary:
-    "Find existing customers with the same phone (compared as E.164, ignoring spaces and dashes) or the same email (case-insensitive). Use it before customers.create.",
+    "Find existing customers with the same phone or the same email. Phones are compared after dropping spaces, dashes, dots and parentheses and reading a leading 00 as +; national formats are not guessed, so send E.164 (+34600000101). Emails are compared case-insensitively. Use it before customers.create.",
   input: z.strictObject({ phone: z.string().min(1).optional(), email: z.string().min(1).optional() }),
   output: z.strictObject({ matches: z.array(duplicateMatchSchema) }),
   permission: "read:customers",
@@ -59,7 +59,7 @@ export const customersCreate = defineCapability({
 export const customersUpdate = defineCapability({
   id: "customers.update",
   summary:
-    "Change some fields of a customer; omitted fields stay as they are. Fails with customers.duplicate when the new phone or email belongs to another customer.",
+    "Change some fields of a customer; omitted fields stay as they are and a null phone or email clears it. Fails with customers.duplicate when the new phone or email belongs to another customer.",
   input: z.strictObject({ id: z.string().min(1), patch: customerPatchSchema }),
   output: customerSchema,
   permission: "update:customers",

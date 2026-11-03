@@ -5,7 +5,7 @@ import { assertDictionaryParity, errorText } from "@/core/i18n";
 import { customersCapabilities } from "./capabilities";
 import { matchedFields, normalisePhone } from "./contact";
 import { customersErrors } from "./messages";
-import { customerCreateInput, customerSchema } from "./schema";
+import { customerCreateInput, customerPatchSchema, customerSchema } from "./schema";
 
 const customer = customerSchema.parse({
   id: "c1",
@@ -32,6 +32,14 @@ describe("customer write schemas", () => {
     });
   });
 
+  it("accepts null in a patch to clear the phone or the email", () => {
+    expect(customerPatchSchema.parse({ phone: null, email: null })).toEqual({ phone: null, email: null });
+  });
+
+  it.each([{ phone: "600000101" }, { email: "ada" }, { name: null }])("rejects the patch %j", (patch) => {
+    expect(customerPatchSchema.safeParse(patch).success).toBe(false);
+  });
+
   it("rejects a blank name", () => {
     expect(customerCreateInput.safeParse({ name: "   " }).success).toBe(false);
   });
@@ -44,6 +52,18 @@ describe("customer write schemas", () => {
 describe("contact matching", () => {
   it("normalises the separators people type in a phone", () => {
     expect(normalisePhone("+34 (600) 000-101")).toBe("+34600000101");
+  });
+
+  it("reads a leading 00 as the + of an international number", () => {
+    expect(normalisePhone("0034 600 000 101")).toBe("+34600000101");
+  });
+
+  it("matches a phone typed with the 00 international prefix", () => {
+    expect(matchedFields(customer, { phone: "0034600000101" })).toEqual(["phone"]);
+  });
+
+  it("does not guess a national format: a bare number stays as typed", () => {
+    expect(matchedFields(customer, { phone: "600000101" })).toEqual([]);
   });
 
   it("matches a phone typed with spaces", () => {
