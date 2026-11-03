@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Its own port, so the smoke never collides with a developer's `next dev`. */
-const PORT = 3400;
+/**
+ * Its own port, so the smoke never collides with a developer's `next dev`. `E2E_PORT` gives each parallel checkout
+ * (a worktree) its own server; otherwise `reuseExistingServer` would test another checkout's build.
+ */
+const PORT = Number(process.env.E2E_PORT ?? 3400);
 
 /**
  * Smoke, not features (ADR 0008): Chromium only, against a production build with the mock adapter and the seeded
