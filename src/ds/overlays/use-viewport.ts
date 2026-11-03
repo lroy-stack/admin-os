@@ -1,3 +1,5 @@
+"use client";
+
 import { useSyncExternalStore } from "react";
 
 /** `phone` below 768 px, `tablet` from 768 px, `desktop` from 1024 px (Tailwind `md` and `lg`). */

@@ -1,3 +1,5 @@
+"use client";
+
 import { type RefObject, useRef } from "react";
 
 /** Where focus goes on close: an element, or a ref or getter read at close time (so an opener's handler can set it). */
