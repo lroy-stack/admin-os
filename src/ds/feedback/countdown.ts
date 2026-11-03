@@ -23,5 +23,9 @@ export const resumeCountdown = (countdown: Countdown, now: number): Countdown =>
 
 export const isExpired = (countdown: Countdown, now: number): boolean => remainingAt(countdown, now) <= 0;
 
+/** A usable duration: finite and above zero, else the fallback (zero would expire at once, NaN would draw `NaN%`). */
+export const usableDuration = (durationMs: number | undefined, fallback: number): number =>
+  durationMs !== undefined && Number.isFinite(durationMs) && durationMs > 0 ? durationMs : fallback;
+
 /** Whole seconds to show: rounds up so "0" appears only at expiry. */
 export const secondsLeft = (remainingMs: number): number => Math.ceil(remainingMs / 1000);

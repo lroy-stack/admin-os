@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { isExpired, pauseCountdown, remainingAt, resumeCountdown, secondsLeft, startCountdown } from "./countdown";
+import {
+  isExpired,
+  pauseCountdown,
+  remainingAt,
+  resumeCountdown,
+  secondsLeft,
+  startCountdown,
+  usableDuration,
+} from "./countdown";
 
 describe("countdown", () => {
   it("counts down from the start", () => {
@@ -51,5 +59,16 @@ describe("countdown", () => {
     [0, 0],
   ])("shows %i ms as %i seconds", (ms, seconds) => {
     expect(secondsLeft(ms)).toBe(seconds);
+  });
+
+  it.each([
+    [5_000, 5_000],
+    [undefined, 10_000],
+    [0, 10_000],
+    [-1, 10_000],
+    [Number.NaN, 10_000],
+    [Number.POSITIVE_INFINITY, 10_000],
+  ])("turns a duration of %s into %i ms", (duration, expected) => {
+    expect(usableDuration(duration, 10_000)).toBe(expected);
   });
 });

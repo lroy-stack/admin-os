@@ -1,21 +1,24 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useCallback } from "react";
 
 import { ClockIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { format, useLocale, useMessages } from "@/core/i18n/client";
+import { format, type Locale, useLocale, useMessages } from "@/core/i18n/client";
 
-import { feedbackMessageKey } from "./messages";
+import { type FeedbackMessages, feedbackMessageKey } from "./messages";
+
+export type ApprovalLabels = FeedbackMessages["approval"];
 
 /**
  * A write held for approval, as a pending state and not a failure. It names the action and the role that decides and
  * takes no approval id: there is nothing to leak into the DOM.
  * - `inline`: a notice next to the control that was used.
- * - `record`: the record itself is read-only until decided; `children` (the record) are inert.
- * - `toast`: a transient confirmation right after the request; renders nothing.
+ * - `record`: a notice above the record. The record stays readable (selectable, in the accessibility tree); the
+ *   consumer renders `children` read-only.
+ * The transient confirmation is an event, not a state: see `notifyAwaitingApproval`.
  */
 export function AwaitingApprovalNotice({
   variant,
@@ -23,23 +26,17 @@ export function AwaitingApprovalNotice({
   role,
   children,
 }: {
-  variant: "inline" | "record" | "toast";
+  variant: "inline" | "record";
   /** What is held, translated and capitalised as the start of a sentence ("Cancel reservation"). */
   action: string;
   /** The role that decides, translated ("manager"). */
   role: string;
-  /** The record to show read-only (`record` variant only). */
+  /** The record, already read-only (`record` variant only). */
   children?: ReactNode;
 }) {
   const locale = useLocale();
   const text = useMessages(feedbackMessageKey).approval;
   const waiting = format(text.waiting, locale, { action, role });
-
-  useEffect(() => {
-    if (variant === "toast") toast.info(waiting, { id: `awaiting-approval:${action}:${role}` });
-  }, [variant, waiting, action, role]);
-
-  if (variant === "toast") return null;
 
   if (variant === "inline") {
     return (
@@ -59,11 +56,29 @@ export function AwaitingApprovalNotice({
           {waiting} {text.readOnly}
         </AlertDescription>
       </Alert>
-      {children ? (
-        <div inert aria-disabled="true" className="opacity-70">
-          {children}
-        </div>
-      ) : null}
+      {children}
     </div>
   );
+}
+
+export interface NotifyAwaitingApprovalOptions {
+  action: string;
+  role: string;
+  labels: ApprovalLabels;
+  locale: Locale;
+}
+
+/**
+ * The transient "waiting for approval" toast. Call it from the handler once the response says `awaiting_approval`,
+ * so it fires once per request and never on a remount. The same action and role replace each other.
+ */
+export function notifyAwaitingApproval({ action, role, labels, locale }: NotifyAwaitingApprovalOptions): void {
+  toast.info(format(labels.waiting, locale, { action, role }), { id: `awaiting-approval:${action}:${role}` });
+}
+
+/** `notifyAwaitingApproval` with the texts and locale of the active language filled in. */
+export function useNotifyAwaitingApproval(): (options: Pick<NotifyAwaitingApprovalOptions, "action" | "role">) => void {
+  const locale = useLocale();
+  const labels = useMessages(feedbackMessageKey).approval;
+  return useCallback((options) => notifyAwaitingApproval({ ...options, labels, locale }), [labels, locale]);
 }

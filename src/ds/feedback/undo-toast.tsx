@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { toast } from "sonner";
 
@@ -15,8 +15,10 @@ import {
   resumeCountdown,
   secondsLeft,
   startCountdown,
+  usableDuration,
 } from "./countdown";
 import { type FeedbackMessages, feedbackMessageKey } from "./messages";
+import { createUndoGate } from "./undo-gate";
 
 export const UNDO_WINDOW_MS = 10_000;
 const TICK_MS = 250;
@@ -28,16 +30,33 @@ export interface UndoToastOptions {
   message: string;
   /** The inverse of the action. A rejection shows the failure toast. */
   undo: () => void | Promise<void>;
+  /** Must be above zero; anything else falls back to `UNDO_WINDOW_MS`. */
   durationMs?: number;
+  /** Called with the rejection when `undo` fails, besides the failure toast and the console report. */
+  onUndoError?: (error: unknown) => void;
   /** Texts of the toast: `useToastWithUndo()` fills them in a component. */
   labels: UndoLabels;
   locale: Locale;
 }
 
-/** The toast body: message, countdown text and bar, and the Undo button. Pauses while hovered or focused. */
+interface Holds {
+  readonly hover: boolean;
+  readonly focus: boolean;
+}
+
+interface CountdownState {
+  readonly countdown: Countdown;
+  readonly holds: Holds;
+}
+
+/**
+ * The toast body: message, countdown text and bar, and the Undo button. Pauses while hovered or focused. Undo and
+ * expiry go through one gate, so only the first of them acts, and the button is disabled once either has happened.
+ * Sonner announces the arrival of the toast; the changing countdown text is hidden from assistive technology.
+ */
 export function UndoToastContent({
   message,
-  durationMs = UNDO_WINDOW_MS,
+  durationMs,
   labels,
   locale,
   onUndo,
@@ -50,52 +69,73 @@ export function UndoToastContent({
   onUndo: () => void;
   onExpire: () => void;
 }) {
-  const [countdown, setCountdown] = useState<Countdown>(() => startCountdown(durationMs, Date.now()));
-  const [now, setNow] = useState(() => Date.now());
-  const [holds, setHolds] = useState({ hover: false, focus: false });
+  const duration = usableDuration(durationMs, UNDO_WINDOW_MS);
+  const [gate] = useState(createUndoGate);
+  const [settled, setSettled] = useState(false);
+  const [{ countdown }, setState] = useState<CountdownState>(() => ({
+    countdown: startCountdown(duration, performance.now()),
+    holds: { hover: false, focus: false },
+  }));
+  const [now, setNow] = useState(() => performance.now());
   const paused = countdown.resumedAt === null;
+  const expired = isExpired(countdown, now);
 
   useEffect(() => {
     if (paused) return;
-    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
+    const timer = setInterval(() => setNow(performance.now()), TICK_MS);
     return () => clearInterval(timer);
   }, [paused]);
 
   useEffect(() => {
-    if (isExpired(countdown, now)) onExpire();
-  }, [countdown, now, onExpire]);
+    if (expired && gate.settle("expired")) onExpire();
+  }, [expired, gate, onExpire]);
 
-  const hold = (next: typeof holds) => {
-    const at = Date.now();
-    setHolds(next);
+  const hold = (change: Partial<Holds>) => {
+    const at = performance.now();
     setNow(at);
-    setCountdown(next.hover || next.focus ? pauseCountdown(countdown, at) : resumeCountdown(countdown, at));
+    setState((state) => {
+      const holds = { ...state.holds, ...change };
+      const held = holds.hover || holds.focus;
+      return { holds, countdown: held ? pauseCountdown(state.countdown, at) : resumeCountdown(state.countdown, at) };
+    });
+  };
+
+  const undo = () => {
+    // The clock decides, not the next tick: a click after the deadline is an expiry.
+    if (isExpired(countdown, performance.now())) {
+      if (gate.settle("expired")) onExpire();
+      return;
+    }
+    if (!gate.settle("undone")) return;
+    setSettled(true);
+    onUndo();
   };
 
   const remaining = remainingAt(countdown, now);
   const text = format(labels.countdown, locale, { count: secondsLeft(remaining) });
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: hover and focus only pause the countdown; Undo is the control
     <div
-      role="status"
-      aria-live="polite"
       className="flex w-(--width) flex-col gap-2 overflow-hidden rounded-(--border-radius) border border-(--normal-border) bg-(--normal-bg) p-3 text-(--normal-text) shadow-lg"
-      onPointerEnter={() => hold({ ...holds, hover: true })}
-      onPointerLeave={() => hold({ ...holds, hover: false })}
-      onFocus={() => hold({ ...holds, focus: true })}
-      onBlur={() => hold({ ...holds, focus: false })}
+      onPointerEnter={() => hold({ hover: true })}
+      onPointerLeave={() => hold({ hover: false })}
+      onFocus={() => hold({ focus: true })}
+      onBlur={() => hold({ focus: false })}
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm">{message}</p>
-        <Button type="button" size="sm" variant="outline" onClick={onUndo}>
+        <Button type="button" size="sm" variant="outline" disabled={settled || expired} onClick={undo}>
           {labels.action}
         </Button>
       </div>
-      <p className="text-muted-foreground text-xs tabular-nums">{text}</p>
+      <p aria-hidden="true" className="text-muted-foreground text-xs tabular-nums">
+        {text}
+      </p>
       <div className="bg-muted h-1 w-full rounded-full" aria-hidden="true">
         <div
           className="bg-primary h-full rounded-full motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-linear"
-          style={{ width: `${(remaining / durationMs) * 100}%` }}
+          style={{ width: `${(remaining / duration) * 100}%` }}
         />
       </div>
     </div>
@@ -103,7 +143,27 @@ export function UndoToastContent({
 }
 
 /** Shows the undo toast: the caller already did the action; Undo runs the inverse and confirms. Returns the toast id. */
-export function toastWithUndo({ message, undo, durationMs, labels, locale }: UndoToastOptions): string | number {
+export function toastWithUndo({
+  message,
+  undo,
+  durationMs,
+  onUndoError,
+  labels,
+  locale,
+}: UndoToastOptions): string | number {
+  const run = async (): Promise<void> => {
+    try {
+      await undo();
+    } catch (error) {
+      // `console.error` survives the production build (next.config removeConsole keeps error and warn).
+      console.error("[undo-toast] undo failed", { message }, error);
+      onUndoError?.(error);
+      toast.error(labels.failed);
+      return;
+    }
+    toast.success(labels.undone);
+  };
+
   return toast.custom(
     (id) => (
       <UndoToastContent
@@ -114,12 +174,7 @@ export function toastWithUndo({ message, undo, durationMs, labels, locale }: Und
         onExpire={() => toast.dismiss(id)}
         onUndo={() => {
           toast.dismiss(id);
-          void Promise.resolve()
-            .then(undo)
-            .then(
-              () => toast.success(labels.undone),
-              () => toast.error(labels.failed),
-            );
+          void run();
         }}
       />
     ),
@@ -131,5 +186,5 @@ export function toastWithUndo({ message, undo, durationMs, labels, locale }: Und
 export function useToastWithUndo(): (options: Omit<UndoToastOptions, "labels" | "locale">) => string | number {
   const locale = useLocale();
   const { undo: labels } = useMessages(feedbackMessageKey);
-  return (options) => toastWithUndo({ ...options, labels, locale });
+  return useCallback((options) => toastWithUndo({ ...options, labels, locale }), [labels, locale]);
 }

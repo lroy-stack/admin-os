@@ -18,8 +18,18 @@ const render = (locale: "en" | "fr") =>
   );
 
 describe("UndoToastContent", () => {
-  it("is a polite live region", () => {
-    expect(render("en")).toContain('role="status" aria-live="polite"');
+  it("adds no live region of its own inside sonner's", () => {
+    expect(render("en")).not.toMatch(/role="status"|aria-live/);
+  });
+
+  it("hides the changing countdown text from assistive technology", () => {
+    expect(render("en")).toContain(
+      '<p aria-hidden="true" class="text-muted-foreground text-xs tabular-nums">10 seconds left to undo</p>',
+    );
+  });
+
+  it("starts with the Undo button enabled", () => {
+    expect(render("en")).not.toContain('disabled=""');
   });
 
   it("shows the message, an Undo button and the seconds left", () => {
@@ -42,6 +52,22 @@ describe("UndoToastContent", () => {
   });
 
   it("hides the decorative bar from assistive technology", () => {
-    expect(render("en")).toContain('aria-hidden="true"');
+    expect(render("en")).toContain('<div class="bg-muted h-1 w-full rounded-full" aria-hidden="true">');
+  });
+
+  it.each([0, -5, Number.NaN])("falls back to the default window for a duration of %s", (durationMs) => {
+    const html = renderToStaticMarkup(
+      <UndoToastContent
+        message={message}
+        durationMs={durationMs}
+        labels={feedbackMessages.en.undo}
+        locale="en"
+        onUndo={() => undefined}
+        onExpire={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("10 seconds left to undo");
+    expect(html).not.toContain("NaN");
   });
 });
