@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { serviceReservations } from "../reservations-data";
+import { serviceReservations } from "../service-fixture";
 import { findTable, locateTables, totalSeats } from "./floor-model";
 import { mockVenue } from "./venue";
 

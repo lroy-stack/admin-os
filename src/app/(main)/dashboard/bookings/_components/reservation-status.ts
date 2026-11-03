@@ -2,7 +2,8 @@ import { format, formatTime, type Locale } from "@/core/i18n/client";
 import type { Tone } from "@/ds/components";
 
 import type { BookingsMessages } from "./messages";
-import { LATE_AFTER_MIN, type Reservation, type ReservationStatus, SERVICE_NOW_MIN } from "./reservations-data";
+import { LATE_AFTER_MIN, SERVICE_NOW_MIN } from "./reservations-data";
+import type { Reservation, ReservationStatus } from "./view-model";
 
 export const statusTones: Record<ReservationStatus, Tone> = {
   pending: "salmon",
@@ -45,8 +46,8 @@ export function minutesLate(reservation: Reservation, nowMin = SERVICE_NOW_MIN) 
   return reservation.status === "confirmed" ? Math.max(0, nowMin - reservation.startMin) : 0;
 }
 
-export function isLate(reservation: Reservation, nowMin = SERVICE_NOW_MIN) {
-  return minutesLate(reservation, nowMin) >= LATE_AFTER_MIN;
+export function isLate(reservation: Reservation, nowMin = SERVICE_NOW_MIN, lateAfterMin = LATE_AFTER_MIN) {
+  return minutesLate(reservation, nowMin) >= lateAfterMin;
 }
 
 export function isUnassigned(reservation: Reservation) {
@@ -54,7 +55,7 @@ export function isUnassigned(reservation: Reservation) {
 }
 
 export function tableLabel(reservation: Reservation) {
-  return reservation.tableIds.join("+");
+  return reservation.tableLabels.join("+");
 }
 
 /** The label of a forward step, for example "Seat at T4". */

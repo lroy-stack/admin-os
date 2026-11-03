@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingsMessages } from "../messages.server";
-import type { Reservation } from "../reservations-data";
+import type { Reservation } from "../view-model";
 import { canSeat, describeReading, formatDuration, readTable } from "./table-state";
 
 const NOW = 20 * 60 + 40;
@@ -16,10 +16,14 @@ function booking(overrides: Partial<Reservation>): Reservation {
     endMin: NOW + 150,
     status: "confirmed",
     tableIds: ["S1"],
+    tableLabels: ["S1"],
     channel: "web",
     tags: [],
     note: null,
-    profile: { visits: 1, averageSpend: 0, lastVisitDaysAgo: null, language: "en", allergy: null },
+    staffNote: null,
+    phone: null,
+    email: null,
+    profile: null,
     ...overrides,
   };
 }

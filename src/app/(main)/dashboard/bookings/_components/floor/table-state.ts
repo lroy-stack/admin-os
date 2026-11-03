@@ -2,7 +2,8 @@ import { format, type Locale } from "@/core/i18n/client";
 
 import type { BookingsMessages } from "../messages";
 import { formatClock, isActive, isLate, minutesLate } from "../reservation-status";
-import { LATE_AFTER_MIN, type Reservation, SERVICE_NOW_MIN } from "../reservations-data";
+import { LATE_AFTER_MIN, SERVICE_NOW_MIN } from "../reservations-data";
+import type { Reservation } from "../view-model";
 import type { DiningTable } from "./floor-model";
 
 /** Thresholds in minutes, the usual service-floor defaults. */

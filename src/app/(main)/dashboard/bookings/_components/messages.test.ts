@@ -31,7 +31,12 @@ const SAME_EVERYWHERE = [
   "drawer.summary",
   "agenda.laneSubtitle",
   "channels.web",
-  "allergies.glutenAllergy",
+  "channels.whatsapp",
+  "channels.instagram",
+  "channels.facebook",
+  "channels.sms",
+  "channels.google",
+  "allergens.gluten",
 ];
 
 describe("bookings dictionary", () => {

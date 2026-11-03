@@ -1,5 +1,5 @@
 import { isActive, isLate, isUnassigned } from "../reservation-status";
-import type { Reservation } from "../reservations-data";
+import type { Reservation } from "../view-model";
 
 export const SLOT_MINUTES = 15;
 /** Slots from now to this many minutes ahead open by default. */

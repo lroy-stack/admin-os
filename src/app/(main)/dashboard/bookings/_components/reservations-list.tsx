@@ -9,16 +9,18 @@ import { bookingsMessageKey } from "./messages";
 import { type AdvanceReservation, ReservationActionButton } from "./reservation-action-button";
 import { formatClock, guestName, isLate, minutesLate, statusTones, tableLabel } from "./reservation-status";
 import { ReservationTags } from "./reservation-tags";
-import type { Reservation } from "./reservations-data";
+import type { Reservation, ServiceDay } from "./view-model";
 
 const headClassName = "text-muted-foreground text-[11px] font-normal tracking-wide uppercase";
 
 export function ReservationsList({
   reservations,
+  service,
   onOpen,
   onAdvance,
 }: {
   reservations: Reservation[];
+  service: ServiceDay;
   onOpen: (id: string) => void;
   onAdvance: AdvanceReservation;
 }) {
@@ -49,9 +51,9 @@ export function ReservationsList({
                   </span>
                   <span className="text-muted-foreground text-xs tabular-nums">
                     {`→ ${formatClock(reservation.endMin, locale)}`}
-                    {isLate(reservation) && (
+                    {isLate(reservation, service.nowMin, service.lateAfterMin) && (
                       <span className="text-salmon">
-                        {` · ${format(text.late.short, locale, { minutes: minutesLate(reservation) })}`}
+                        {` · ${format(text.late.short, locale, { minutes: minutesLate(reservation, service.nowMin) })}`}
                       </span>
                     )}
                   </span>

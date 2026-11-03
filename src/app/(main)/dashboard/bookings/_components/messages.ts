@@ -2,7 +2,7 @@ import { type MessageKey, messageKey, type PageMeta, type Plural } from "@/core/
 
 import type { LandmarkKind, TableShape } from "./floor/floor-model";
 import type { VisibleTableState } from "./floor/table-state";
-import type { AllergyId, Channel, GuestLanguage, NoteId, ReservationStatus, TagId } from "./reservations-data";
+import type { Channel, ReservationStatus } from "./view-model";
 
 /**
  * Text of /dashboard/bookings (Today's Reservations): the service screen, the floor plan with its legend and
@@ -109,10 +109,8 @@ export interface BookingsMessages {
   /** Name of a walk-in party, which has no surname. */
   readonly walkInGuest: string;
   readonly tagsLabel: string;
-  readonly tags: Readonly<Record<TagId, string>>;
-  readonly notes: Readonly<Record<NoteId, string>>;
-  readonly allergies: Readonly<Record<AllergyId, string>>;
-  readonly languages: Readonly<Record<GuestLanguage, string>>;
+  /** The EU-14 allergens by id; an id the list does not know is shown as written. */
+  readonly allergens: Readonly<Record<string, string>>;
   readonly list: {
     readonly arrival: string;
     readonly guest: string;
@@ -153,6 +151,7 @@ export interface BookingsMessages {
     readonly allergies: string;
     readonly noneRecorded: string;
     readonly bookingNote: string;
+    readonly staffNote: string;
   };
   readonly tableState: Readonly<Record<VisibleTableState, string>>;
   readonly reading: {

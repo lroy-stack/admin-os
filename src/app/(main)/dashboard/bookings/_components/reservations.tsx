@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 
 import { cn } from "cn";
 import {
   Armchair,
-  CalendarX2,
   Clock,
   Ellipsis,
   ListOrdered,
@@ -30,10 +30,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { format, formatCalendarDate, formatNumber, type Locale, useLocale, useMessages } from "@/core/i18n/client";
+import { format, formatCalendarDate, formatNumber, useLocale, useMessages } from "@/core/i18n/client";
+import type { ReadStatus } from "@/core/result";
 import {
   FilterChip,
   PageHeader,
@@ -43,6 +43,7 @@ import {
   type SegmentedOption,
   toneSolid,
 } from "@/ds/components";
+import { ReadState } from "@/ds/feedback";
 import { ResponsivePanel, useViewport } from "@/ds/overlays";
 
 import { findTable, locateTables, type TableLocation, totalSeats } from "./floor/floor-model";
@@ -62,16 +63,18 @@ import { TimeRail } from "./rail/time-rail";
 import { ReservationDrawer } from "./reservation-drawer";
 import { formatClock, guestName, isActive, isLate, isUnassigned } from "./reservation-status";
 import { ReservationsAgenda } from "./reservations-agenda";
-import {
-  type Reservation,
-  type ReservationStatus,
-  SERVICE_DATE,
-  SERVICE_NOW_MIN,
-  SERVICE_WINDOW,
-  serviceReservations,
-} from "./reservations-data";
 import { ReservationsList } from "./reservations-list";
 import { ServiceFloor, SHEET_PEEK, type SheetSnap } from "./service-floor";
+import {
+  addLocalWalkIn,
+  noLocalChanges,
+  patchLocal,
+  type Reservation,
+  type ReservationStatus,
+  type ServiceDay,
+  shiftDay,
+  withLocalChanges,
+} from "./view-model";
 
 // The room engine (three.js) only loads when the Floor view is shown.
 const FloorView = dynamic(() => import("./floor/floor-view").then((module) => module.FloorView), {
@@ -82,30 +85,35 @@ const FloorView = dynamic(() => import("./floor/floor-view").then((module) => mo
 type View = "floor" | "agenda" | "list";
 type Alert = "unassigned" | "late" | "pending";
 
-const alertChecks: Record<Alert, (reservation: Reservation) => boolean> = {
-  unassigned: isUnassigned,
-  late: (reservation) => isLate(reservation),
-  pending: (reservation) => reservation.status === "pending",
-};
+const ALERTS: readonly Alert[] = ["unassigned", "late", "pending"];
 
-const WALK_IN_STAY_MIN = 90;
+function matchesAlert(alert: Alert, reservation: Reservation, service: ServiceDay) {
+  switch (alert) {
+    case "unassigned":
+      return isUnassigned(reservation);
+    case "late":
+      return isLate(reservation, service.nowMin, service.lateAfterMin);
+    case "pending":
+      return reservation.status === "pending";
+    default: {
+      const unreachable: never = alert;
+      return unreachable;
+    }
+  }
+}
+
+const ROUTE = "/dashboard/bookings";
 const NO_TABLES: ReadonlySet<string> = new Set();
 const RAIL_COLLAPSED_KEY = "bookings.rail-collapsed";
 
 /** Tables that can take `party` for its whole booking. */
-function fittingTables(locations: readonly TableLocation[], party: Reservation, reservations: readonly Reservation[]) {
-  return locations.filter(({ table }) => canSeat(table, party, reservations));
-}
-
-/** The service day `offset` days from the mock service date, written for the locale ("Sat, Oct 31"). */
-function serviceDay(offset: number, locale: Locale) {
-  const date = new Date(`${SERVICE_DATE}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + offset);
-  return formatCalendarDate(date.toISOString().slice(0, 10), locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+function fittingTables(
+  locations: readonly TableLocation[],
+  party: Reservation,
+  reservations: readonly Reservation[],
+  nowMin: number,
+) {
+  return locations.filter(({ table }) => canSeat(table, party, reservations, nowMin));
 }
 
 function normalize(text: string) {
@@ -115,9 +123,53 @@ function normalize(text: string) {
     .toLowerCase();
 }
 
-export function Reservations() {
+export interface ReservationsProps {
+  /** The state of the day's read; `empty` is a day without bookings. */
+  state: ReadStatus;
+  /** The translated reason of a failed or refused read. */
+  reason?: string;
+  /** Null when the clock or the settings could not be read: there is no day to show. */
+  service: ServiceDay | null;
+  reservations: Reservation[];
+}
+
+/** The service screen for the business day it is given, or the reason there is none. */
+export function Reservations({ state, reason, service, reservations }: ReservationsProps) {
+  return service === null ? (
+    <BookingsUnavailable state={state} reason={reason} />
+  ) : (
+    <ServiceScreen state={state} reason={reason} service={service} dayReservations={reservations} />
+  );
+}
+
+function BookingsUnavailable({ state, reason }: { state: ReadStatus; reason?: string }) {
+  const text = useMessages(bookingsMessageKey);
+  const router = useRouter();
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader title={text.title} kpis={[]} />
+      <ReadState state={state} reason={reason} onRetry={() => router.refresh()} emptyTitle={text.empty.title}>
+        {null}
+      </ReadState>
+    </div>
+  );
+}
+
+function ServiceScreen({
+  state,
+  reason,
+  service,
+  dayReservations: loaded,
+}: {
+  state: ReadStatus;
+  reason?: string;
+  service: ServiceDay;
+  dayReservations: Reservation[];
+}) {
   const text = useMessages(bookingsMessageKey);
   const locale = useLocale();
+  const router = useRouter();
+  const [changingDay, startDayChange] = useTransition();
   const viewOptions: SegmentedOption<View>[] = [
     { value: "floor", label: text.views.floor },
     { value: "agenda", label: text.views.agenda },
@@ -126,8 +178,7 @@ export function Reservations() {
   const alertLabels: Record<Alert, string> = text.alerts;
   const isMobile = useViewport() === "phone";
   const { plan: venue, edit, undo, canUndo, reset } = useFloorPlan(mockVenue);
-  const [reservations, setReservations] = useState(serviceReservations);
-  const [dayOffset, setDayOffset] = useState(0);
+  const [changes, setChanges] = useState(() => noLocalChanges(service.businessDay));
   const [view, setView] = useState<View>("floor");
   const [query, setQuery] = useState("");
   const [alerts, setAlerts] = useState<ReadonlySet<Alert>>(new Set());
@@ -166,28 +217,37 @@ export function Reservations() {
   const locations = useMemo(() => locateTables(venue), [venue]);
   const level = venue.levels.find((item) => item.id === levelId) ?? venue.levels[0];
 
-  // Only the mock service day has bookings; other days show the empty state.
-  const dayReservations = dayOffset === 0 ? reservations : [];
+  // What staff changed here sits over the day's bookings until writes reach the data seam (plan 003, B3).
+  const dayReservations = withLocalChanges(loaded, changes, service.businessDay);
   const active = dayReservations.filter(isActive);
+  const shown = state.status === "ready" || state.status === "empty";
+
+  function goToDay(day: string | null) {
+    startDayChange(() => {
+      router.push(day === null ? ROUTE : `${ROUTE}?day=${day}`, { scroll: false });
+    });
+  }
   const needle = normalize(query.trim());
 
   const filtered = dayReservations
     .filter((reservation) => showClosed || isActive(reservation))
     .filter((reservation) => !needle || normalize(`${guestName(reservation, text)} ${reservation.id}`).includes(needle))
-    .filter((reservation) => alerts.size === 0 || [...alerts].some((alert) => alertChecks[alert](reservation)))
+    .filter(
+      (reservation) => alerts.size === 0 || [...alerts].some((alert) => matchesAlert(alert, reservation, service)),
+    )
     .sort((a, b) => a.startMin - b.startMin);
 
   const readings = useMemo(
-    () => new Map(locations.map(({ table }) => [table.id, readTable(table, dayReservations)])),
-    [locations, dayReservations],
+    () => new Map(locations.map(({ table }) => [table.id, readTable(table, dayReservations, service.nowMin)])),
+    [locations, dayReservations, service.nowMin],
   );
 
   const railPlan = planRail({
     reservations: filtered,
     seatHolders: dayReservations,
-    nowMin: SERVICE_NOW_MIN,
-    windowStartMin: SERVICE_WINDOW.startMin,
-    windowEndMin: SERVICE_WINDOW.endMin,
+    nowMin: service.nowMin,
+    windowStartMin: service.window.startMin,
+    windowEndMin: service.window.endMin,
     totalSeats: totalSeats(venue),
   });
   const nowSlot = railPlan.slots.find((slot) => slot.isNow);
@@ -199,10 +259,10 @@ export function Reservations() {
       })
     : text.rail.closed;
 
-  const assigning = reservations.find((reservation) => reservation.id === assigningId) ?? null;
+  const assigning = dayReservations.find((reservation) => reservation.id === assigningId) ?? null;
   const candidates = useMemo(
-    () => (assigning ? fittingTables(locations, assigning, dayReservations) : []),
-    [assigning, locations, dayReservations],
+    () => (assigning ? fittingTables(locations, assigning, dayReservations, service.nowMin) : []),
+    [assigning, locations, dayReservations, service.nowMin],
   );
   const candidateTableIds = useMemo(
     () => (candidates.length > 0 ? new Set(candidates.map(({ table }) => table.id)) : NO_TABLES),
@@ -213,18 +273,16 @@ export function Reservations() {
     .filter((reservation) => reservation.status === "seated")
     .reduce((total, reservation) => total + reservation.partySize, 0);
   const nextArrival = active
-    .filter((reservation) => reservation.status !== "seated" && reservation.startMin >= SERVICE_NOW_MIN)
+    .filter((reservation) => reservation.status !== "seated" && reservation.startMin >= service.nowMin)
     .sort((a, b) => a.startMin - b.startMin)[0];
   const freeTables = [...readings.values()].filter((reading) => reading.state === "free").length;
-  const details = reservations.find((reservation) => reservation.id === detailsId) ?? null;
+  const details = dayReservations.find((reservation) => reservation.id === detailsId) ?? null;
   const selectedLocation = selectedTableId ? findTable(venue, selectedTableId) : undefined;
   const selectedReading = selectedTableId ? readings.get(selectedTableId) : undefined;
   const issues = useMemo(() => (editing ? findPlanIssues(venue) : []), [editing, venue]);
 
   function updateReservation(id: string, change: Partial<Reservation>) {
-    setReservations((current) =>
-      current.map((reservation) => (reservation.id === id ? { ...reservation, ...change } : reservation)),
-    );
+    setChanges((current) => patchLocal(current, service.businessDay, id, change));
   }
 
   function advance(id: string, to: ReservationStatus) {
@@ -233,7 +291,10 @@ export function Reservations() {
 
   function selectTable(tableId: string | null) {
     if (tableId && assigning && candidateTableIds.has(tableId)) {
-      updateReservation(assigning.id, { tableIds: [tableId] });
+      updateReservation(assigning.id, {
+        tableIds: [tableId],
+        tableLabels: [findTable(venue, tableId)?.table.label ?? tableId],
+      });
       setAssigningId(null);
       setSelectedReservationId(assigning.id);
       setSelectedTableId(tableId);
@@ -254,7 +315,7 @@ export function Reservations() {
       setSelectedTableId(null);
       setAssigningId(isActive(reservation) && !editing ? reservation.id : null);
       // Show a level that has a table the party fits on.
-      const fitting = fittingTables(locations, reservation, dayReservations);
+      const fitting = fittingTables(locations, reservation, dayReservations, service.nowMin);
       const onThisLevel = fitting.some((location) => location.level.id === levelId);
       const firstLevel = fitting[0]?.level.id;
       if (!onThisLevel && firstLevel) setLevelId(firstLevel);
@@ -271,16 +332,20 @@ export function Reservations() {
       id: `W-${Date.now()}`,
       guest: "",
       partySize,
-      startMin: SERVICE_NOW_MIN,
-      endMin: SERVICE_NOW_MIN + WALK_IN_STAY_MIN,
+      startMin: service.nowMin,
+      endMin: service.nowMin + service.walkInStayMin,
       status: "seated",
       tableIds: [tableId],
+      tableLabels: [findTable(venue, tableId)?.table.label ?? tableId],
       channel: "walk-in",
       tags: [],
       note: null,
-      profile: { visits: 1, averageSpend: 0, lastVisitDaysAgo: null, language: null, allergy: null },
+      staffNote: null,
+      phone: null,
+      email: null,
+      profile: null,
     };
-    setReservations((current) => [...current, walkIn]);
+    setChanges((current) => addLocalWalkIn(current, service.businessDay, walkIn));
     setSelectedReservationId(walkIn.id);
   }
 
@@ -449,14 +514,16 @@ export function Reservations() {
 
   const alertChips = (
     <ul className="flex flex-wrap items-center gap-1.5" aria-label={text.alerts.label}>
-      {(Object.keys(alertChecks) as Alert[]).map((alert) => (
+      {ALERTS.map((alert) => (
         <li key={alert}>
           <FilterChip pressed={alerts.has(alert)} onPressedChange={() => toggleAlert(alert)}>
             <span
               aria-hidden="true"
               className={cn("size-1.5 rounded-full", toneSolid[alert === "pending" ? "azure" : "salmon"])}
             />
-            <span className="tabular-nums">{formatNumber(active.filter(alertChecks[alert]).length, locale)}</span>
+            <span className="tabular-nums">
+              {formatNumber(active.filter((reservation) => matchesAlert(alert, reservation, service)).length, locale)}
+            </span>
             {alertLabels[alert]}
           </FilterChip>
         </li>
@@ -468,24 +535,28 @@ export function Reservations() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={text.title}
-        kpis={[
-          {
-            icon: UsersRound,
-            value: `${formatNumber(seatedGuests, locale)}/${formatNumber(totalSeats(venue), locale)}`,
-            label: text.kpis.seated,
-          },
-          {
-            icon: Clock,
-            value: nextArrival ? formatClock(nextArrival.startMin, locale) : "—",
-            label: nextArrival
-              ? format(text.kpis.nextArrival, locale, {
-                  guest: guestName(nextArrival, text),
-                  party: format(text.partyShort, locale, { count: nextArrival.partySize }),
-                })
-              : text.kpis.noMoreArrivals,
-          },
-          { icon: Armchair, value: formatNumber(freeTables, locale), label: text.kpis.tablesFree },
-        ]}
+        kpis={
+          !shown
+            ? []
+            : [
+                {
+                  icon: UsersRound,
+                  value: `${formatNumber(seatedGuests, locale)}/${formatNumber(totalSeats(venue), locale)}`,
+                  label: text.kpis.seated,
+                },
+                {
+                  icon: Clock,
+                  value: nextArrival ? formatClock(nextArrival.startMin, locale) : "—",
+                  label: nextArrival
+                    ? format(text.kpis.nextArrival, locale, {
+                        guest: guestName(nextArrival, text),
+                        party: format(text.partyShort, locale, { count: nextArrival.partySize }),
+                      })
+                    : text.kpis.noMoreArrivals,
+                },
+                { icon: Armchair, value: formatNumber(freeTables, locale), label: text.kpis.tablesFree },
+              ]
+        }
       />
 
       <FullViewFrame active={fullView} onExit={() => setFullView(false)} label={text.actions.fullViewRegion}>
@@ -496,15 +567,15 @@ export function Reservations() {
               previousLabel={text.stepper.previousDay}
               todayLabel={text.stepper.today}
               nextLabel={text.stepper.nextDay}
-              onPrevious={() => setDayOffset((offset) => offset - 1)}
-              onToday={() => setDayOffset(0)}
-              onNext={() => setDayOffset((offset) => offset + 1)}
+              onPrevious={() => goToDay(shiftDay(service.businessDay, -1))}
+              onToday={() => goToDay(null)}
+              onNext={() => goToDay(shiftDay(service.businessDay, 1))}
             />
             <h2 className={cn("ml-2 text-xl font-medium tracking-tight", compact && "text-lg")} aria-live="polite">
-              {serviceDay(dayOffset, locale)}
-              {dayOffset === 0 && (
+              {formatCalendarDate(service.businessDay, locale, { weekday: "short", day: "numeric", month: "short" })}
+              {service.isToday && (
                 <span className="text-muted-foreground ml-2 text-sm font-normal tabular-nums">
-                  {`· ${formatClock(SERVICE_NOW_MIN, locale)}`}
+                  {`· ${formatClock(service.nowMin, locale)}`}
                 </span>
               )}
             </h2>
@@ -565,84 +636,88 @@ export function Reservations() {
           </div>
         </div>
 
-        <div className={cn(fullView && "min-h-0 flex-1", fullView && view !== "floor" && "overflow-y-auto")}>
-          {dayReservations.length === 0 ? (
-            <Empty className="glass-surface bg-card ring-border py-16 ring-1">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <CalendarX2 />
-                </EmptyMedia>
-                <EmptyTitle>{text.empty.title}</EmptyTitle>
-                <EmptyDescription>{text.empty.description}</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button variant="ghost" className="liquid-glass h-9 rounded-full px-4" onClick={() => setDayOffset(0)}>
+        <div
+          aria-busy={changingDay}
+          className={cn(
+            "transition-opacity",
+            changingDay && "opacity-60",
+            fullView && "min-h-0 flex-1",
+            fullView && view !== "floor" && "overflow-y-auto",
+          )}
+        >
+          <ReadState
+            state={state}
+            reason={reason}
+            onRetry={() => router.refresh()}
+            emptyTitle={text.empty.title}
+            emptyDescription={text.empty.description}
+            emptyAction={
+              service.isToday ? undefined : (
+                <Button variant="ghost" className="liquid-glass h-9 rounded-full px-4" onClick={() => goToDay(null)}>
                   {text.empty.backToToday}
                 </Button>
-              </EmptyContent>
-            </Empty>
-          ) : (
-            <>
-              {view === "floor" && (
-                <ServiceFloor
-                  fullView={fullView}
-                  railCollapsed={railCollapsed}
-                  onRailCollapsedChange={changeRailCollapsed}
-                  rail={rail}
-                  railStrip={<RailStrip plan={railPlan} onExpand={() => changeRailCollapsed(false)} />}
-                  railTitle={text.rail.title}
-                  railSummary={railSummary}
-                  isMobile={isMobile}
-                  sheetSnap={sheetSnap}
-                  onSheetSnapChange={setSheetSnap}
-                  aside={editing && !isMobile ? editorPanel : undefined}
-                  room={
-                    <FloorView
-                      plan={venue}
-                      levelId={level?.id ?? ""}
-                      onLevelChange={(next) => {
-                        setLevelId(next);
-                        // The callout and focus belong to a table on the level being left.
-                        setSelectedTableId(null);
-                        setEditSelection(null);
-                      }}
-                      readings={readings}
-                      describe={(tableId) => {
-                        const reading = readings.get(tableId);
-                        return reading ? describeReading(reading, text, locale) : "";
-                      }}
-                      mode={editing ? "edit" : "service"}
-                      selectedTableId={editing ? editTableId : selectedTableId}
-                      selectedLandmarkId={editSelection?.kind === "landmark" ? editSelection.id : null}
-                      candidateTableIds={candidateTableIds}
-                      onTableSelect={(tableId) => {
-                        if (!editing) {
-                          selectTable(tableId);
-                          return;
-                        }
-                        if (tableId) setEditSelection({ kind: "table", id: tableId });
-                        else setEditSelection((current) => (current?.kind === "table" ? null : current));
-                      }}
-                      onLandmarkSelect={(landmarkId) => {
-                        if (landmarkId) setEditSelection({ kind: "landmark", id: landmarkId });
-                        else setEditSelection((current) => (current?.kind === "landmark" ? null : current));
-                      }}
-                      onMove={moveElement}
-                      callout={isMobile ? null : callout}
-                      banner={editing ? editorToolbar : assigningBanner}
-                      className="size-full"
-                    />
-                  }
-                />
-              )}
-              {view === "agenda" && (
-                <ReservationsAgenda reservations={filtered} tables={locations} onOpen={setDetailsId} />
-              )}
-              {view === "list" && (
-                <ReservationsList reservations={filtered} onOpen={setDetailsId} onAdvance={advance} />
-              )}
-            </>
-          )}
+              )
+            }
+          >
+            {view === "floor" && (
+              <ServiceFloor
+                fullView={fullView}
+                railCollapsed={railCollapsed}
+                onRailCollapsedChange={changeRailCollapsed}
+                rail={rail}
+                railStrip={<RailStrip plan={railPlan} onExpand={() => changeRailCollapsed(false)} />}
+                railTitle={text.rail.title}
+                railSummary={railSummary}
+                isMobile={isMobile}
+                sheetSnap={sheetSnap}
+                onSheetSnapChange={setSheetSnap}
+                aside={editing && !isMobile ? editorPanel : undefined}
+                room={
+                  <FloorView
+                    plan={venue}
+                    levelId={level?.id ?? ""}
+                    onLevelChange={(next) => {
+                      setLevelId(next);
+                      // The callout and focus belong to a table on the level being left.
+                      setSelectedTableId(null);
+                      setEditSelection(null);
+                    }}
+                    readings={readings}
+                    describe={(tableId) => {
+                      const reading = readings.get(tableId);
+                      return reading ? describeReading(reading, text, locale, service.nowMin) : "";
+                    }}
+                    mode={editing ? "edit" : "service"}
+                    selectedTableId={editing ? editTableId : selectedTableId}
+                    selectedLandmarkId={editSelection?.kind === "landmark" ? editSelection.id : null}
+                    candidateTableIds={candidateTableIds}
+                    onTableSelect={(tableId) => {
+                      if (!editing) {
+                        selectTable(tableId);
+                        return;
+                      }
+                      if (tableId) setEditSelection({ kind: "table", id: tableId });
+                      else setEditSelection((current) => (current?.kind === "table" ? null : current));
+                    }}
+                    onLandmarkSelect={(landmarkId) => {
+                      if (landmarkId) setEditSelection({ kind: "landmark", id: landmarkId });
+                      else setEditSelection((current) => (current?.kind === "landmark" ? null : current));
+                    }}
+                    onMove={moveElement}
+                    callout={isMobile ? null : callout}
+                    banner={editing ? editorToolbar : assigningBanner}
+                    className="size-full"
+                  />
+                }
+              />
+            )}
+            {view === "agenda" && (
+              <ReservationsAgenda reservations={filtered} tables={locations} service={service} onOpen={setDetailsId} />
+            )}
+            {view === "list" && (
+              <ReservationsList reservations={filtered} service={service} onOpen={setDetailsId} onAdvance={advance} />
+            )}
+          </ReadState>
         </div>
       </FullViewFrame>
 
@@ -699,6 +774,7 @@ export function Reservations() {
 
       <ReservationDrawer
         reservation={details}
+        service={service}
         onOpenChange={(open) => {
           if (!open) setDetailsId(null);
         }}

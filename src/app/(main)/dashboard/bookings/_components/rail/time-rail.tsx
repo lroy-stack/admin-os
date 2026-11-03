@@ -16,7 +16,7 @@ import { TonePill } from "@/ds/components";
 import { bookingsMessageKey } from "../messages";
 import { formatClock, guestName, isLate, minutesLate, statusTones, tableLabel } from "../reservation-status";
 import { ReservationTags } from "../reservation-tags";
-import type { Reservation } from "../reservations-data";
+import type { Reservation } from "../view-model";
 import type { RailLoad, RailPlan } from "./rail-plan";
 
 const loadIndicator: Record<RailLoad, string> = {

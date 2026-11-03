@@ -12,8 +12,10 @@ import {
 import {
   format,
   formatAmount,
+  formatList,
   formatNumber,
   formatRelative,
+  type Locale,
   useCurrency,
   useLocale,
   useMessages,
@@ -25,19 +27,17 @@ import { bookingsMessageKey } from "./messages";
 import { type AdvanceReservation, ReservationActionButton } from "./reservation-action-button";
 import { formatClock, guestName, isActive, isLate, minutesLate, statusTones, tableLabel } from "./reservation-status";
 import { ReservationTags } from "./reservation-tags";
-import type { GuestProfile, Reservation } from "./reservations-data";
+import type { GuestProfile, Reservation, ServiceDay } from "./view-model";
 
 const DAY_MS = 86_400_000;
 
-/** Fictitious contact details derived from the booking id, so the mock never shows real-looking data. */
-function contactFor(reservation: Reservation) {
-  const digits = reservation.id.replace(/\D/g, "").padStart(3, "0").slice(-3);
-  const handle = (reservation.guest || "walkin")
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z]+/g, "");
-  return { phone: `+34 600 000 ${digits}`, email: `${handle}@example.invalid` };
+/** The language a customer record names by its code ("es"), written in the active language; the code if unknown. */
+function languageName(code: string, locale: Locale) {
+  try {
+    return new Intl.DisplayNames(locale, { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -52,16 +52,19 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 /** Reservation details: a right drawer on desktop and tablet, a bottom drawer on phones (repo pattern). */
 export function ReservationDrawer({
   reservation,
+  service,
   onOpenChange,
   onAdvance,
 }: {
   reservation: Reservation | null;
+  service: ServiceDay;
   onOpenChange: (open: boolean) => void;
   onAdvance: AdvanceReservation;
 }) {
   const text = useMessages(bookingsMessageKey);
   const locale = useLocale();
   const currency = useCurrency();
+  const profile = reservation?.profile ?? null;
 
   function lastVisit(profile: GuestProfile) {
     if (profile.lastVisitDaysAgo === null) return text.drawer.firstVisit;
@@ -102,8 +105,10 @@ export function ReservationDrawer({
             ) : (
               <TonePill tone="salmon">{text.drawer.noTableYet}</TonePill>
             )}
-            {isLate(reservation) && (
-              <TonePill tone="salmon">{format(text.late.long, locale, { minutes: minutesLate(reservation) })}</TonePill>
+            {isLate(reservation, service.nowMin, service.lateAfterMin) && (
+              <TonePill tone="salmon">
+                {format(text.late.long, locale, { minutes: minutesLate(reservation, service.nowMin) })}
+              </TonePill>
             )}
           </div>
 
@@ -139,17 +144,17 @@ export function ReservationDrawer({
             </h3>
             <StatTiles
               items={[
-                { label: text.drawer.visits, value: formatNumber(reservation.profile.visits, locale) },
+                { label: text.drawer.visits, value: profile ? formatNumber(profile.visits, locale) : "—" },
                 {
                   label: text.drawer.averageSpend,
-                  value: reservation.profile.averageSpend
-                    ? formatAmount(reservation.profile.averageSpend, currency, locale, { fractionDigits: 0 })
+                  value: profile?.averageSpend
+                    ? formatAmount(profile.averageSpend, currency, locale, { fractionDigits: 0 })
                     : "—",
                 },
-                { label: text.drawer.lastVisit, value: lastVisit(reservation.profile) },
+                { label: text.drawer.lastVisit, value: profile ? lastVisit(profile) : "—" },
                 {
                   label: text.drawer.language,
-                  value: reservation.profile.language ? text.languages[reservation.profile.language] : "—",
+                  value: profile?.language ? languageName(profile.language, locale) : "—",
                 },
               ]}
             />
@@ -160,18 +165,21 @@ export function ReservationDrawer({
               {text.drawer.details}
             </h3>
             <dl className="divide-foreground/8 divide-y">
-              <DetailRow label={text.drawer.phone} value={contactFor(reservation).phone} />
-              <DetailRow label={text.drawer.email} value={contactFor(reservation).email} />
+              <DetailRow label={text.drawer.phone} value={reservation.phone ?? "—"} />
+              <DetailRow label={text.drawer.email} value={reservation.email ?? "—"} />
               <DetailRow
                 label={text.drawer.allergies}
                 value={
-                  reservation.profile.allergy ? text.allergies[reservation.profile.allergy] : text.drawer.noneRecorded
+                  profile && profile.allergens.length > 0
+                    ? formatList(
+                        profile.allergens.map((id) => text.allergens[id] ?? id),
+                        locale,
+                      )
+                    : text.drawer.noneRecorded
                 }
               />
-              <DetailRow
-                label={text.drawer.bookingNote}
-                value={reservation.note ? text.notes[reservation.note] : "—"}
-              />
+              <DetailRow label={text.drawer.bookingNote} value={reservation.note ?? "—"} />
+              {reservation.staffNote && <DetailRow label={text.drawer.staffNote} value={reservation.staffNote} />}
             </dl>
             <ReservationTags tags={reservation.tags} />
           </section>

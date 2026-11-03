@@ -10,28 +10,27 @@ import type { TableLocation } from "./floor/floor-model";
 import { zoneName } from "./floor/plan-names";
 import { type BookingsMessages, bookingsMessageKey } from "./messages";
 import { formatClock, guestName, isLate, statusTones } from "./reservation-status";
-import { type Reservation, SERVICE_NOW_MIN, SERVICE_WINDOW } from "./reservations-data";
-
-const span = SERVICE_WINDOW.endMin - SERVICE_WINDOW.startMin;
-const hourMarks = Array.from({ length: span / 60 + 1 }, (_, index) => SERVICE_WINDOW.startMin + index * 60);
-const percentOf = (minutes: number) => `${((minutes - SERVICE_WINDOW.startMin) / span) * 100}%`;
+import { hourMarks, percentInWindow, type Reservation, type ServiceDay } from "./view-model";
 
 type Lane = { key: string; title: string; subtitle: string; reservations: Reservation[] };
 
 function Track({
   lane,
+  service,
   text,
   locale,
   onOpen,
 }: {
   lane: Lane;
+  service: ServiceDay;
   text: BookingsMessages;
   locale: Locale;
   onOpen: (id: string) => void;
 }) {
+  const percentOf = (minutes: number) => percentInWindow(service.window, minutes);
   return (
     <div className="border-foreground/8 relative h-12 border-b">
-      {hourMarks.map((mark) => (
+      {hourMarks(service.window).map((mark) => (
         <span
           key={mark}
           aria-hidden="true"
@@ -52,7 +51,7 @@ function Track({
               "focus-visible:ring-ring absolute inset-y-1.5 flex items-center truncate rounded-lg border-l-2 px-2 text-left text-xs outline-none focus-visible:ring-2",
               toneTint[tone],
               toneEdge[tone],
-              isLate(reservation) && "ring-salmon ring-1",
+              isLate(reservation, service.nowMin, service.lateAfterMin) && "ring-salmon ring-1",
             )}
             style={{
               left: percentOf(reservation.startMin),
@@ -63,11 +62,13 @@ function Track({
           </button>
         );
       })}
-      <span
-        aria-hidden="true"
-        className="bg-brand pointer-events-none absolute inset-y-0 w-0.5"
-        style={{ left: percentOf(SERVICE_NOW_MIN) }}
-      />
+      {service.isToday && (
+        <span
+          aria-hidden="true"
+          className="bg-brand pointer-events-none absolute inset-y-0 w-0.5"
+          style={{ left: percentOf(service.nowMin) }}
+        />
+      )}
     </div>
   );
 }
@@ -76,9 +77,11 @@ function Track({
 export function ReservationsAgenda({
   reservations,
   tables,
+  service,
   onOpen,
 }: {
   reservations: Reservation[];
+  service: ServiceDay;
   tables: readonly TableLocation[];
   onOpen: (id: string) => void;
 }) {
@@ -114,11 +117,11 @@ export function ReservationsAgenda({
             {text.agenda.table}
           </div>
           <div className="border-foreground/8 relative h-10 border-b">
-            {hourMarks.map((mark) => (
+            {hourMarks(service.window).map((mark) => (
               <span
                 key={mark}
                 className="text-muted-foreground absolute top-3 -translate-x-1/2 text-[11px] tabular-nums first:translate-x-0 last:-translate-x-full"
-                style={{ left: percentOf(mark) }}
+                style={{ left: percentInWindow(service.window, mark) }}
               >
                 {formatClock(mark, locale)}
               </span>
@@ -132,7 +135,7 @@ export function ReservationsAgenda({
                   {lane.subtitle}
                 </span>
               </div>
-              <Track lane={lane} text={text} locale={locale} onOpen={onOpen} />
+              <Track lane={lane} service={service} text={text} locale={locale} onOpen={onOpen} />
             </div>
           ))}
         </div>

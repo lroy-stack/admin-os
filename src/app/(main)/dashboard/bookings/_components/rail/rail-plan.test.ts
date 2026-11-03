@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { SERVICE_NOW_MIN, SERVICE_WINDOW, serviceReservations } from "../reservations-data";
+import { serviceWindow } from "@/modules/bookings";
+
+import { SERVICE_NOW_MIN } from "../reservations-data";
+import { serviceReservations } from "../service-fixture";
 import { loadOf, planRail, slotOf } from "./rail-plan";
 
 const plan = planRail({
   reservations: serviceReservations,
   nowMin: SERVICE_NOW_MIN,
-  windowStartMin: SERVICE_WINDOW.startMin,
-  windowEndMin: SERVICE_WINDOW.endMin,
+  windowStartMin: serviceWindow.defaultValue.startMin,
+  windowEndMin: serviceWindow.defaultValue.endMin,
   totalSeats: 59,
 });
 
@@ -39,8 +42,8 @@ describe("planRail", () => {
       reservations: serviceReservations.filter((reservation) => reservation.guest === "Bravo"),
       seatHolders: serviceReservations,
       nowMin: SERVICE_NOW_MIN,
-      windowStartMin: SERVICE_WINDOW.startMin,
-      windowEndMin: SERVICE_WINDOW.endMin,
+      windowStartMin: serviceWindow.defaultValue.startMin,
+      windowEndMin: serviceWindow.defaultValue.endMin,
       totalSeats: 59,
     });
     const searchedNow = searched.slots.find((slot) => slot.isNow);
