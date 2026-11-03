@@ -10,7 +10,14 @@ import { join, relative } from "node:path";
  */
 const REVIEWED_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   "src/app/(main)/dashboard/_components/demo-actions.ts": ["resetDemoData", "setDemoPreset", "setDemoRole"],
-  "src/app/(main)/dashboard/bookings/actions.ts": ["advanceStatus", "cancelBooking", "markNoShow", "undoStatus"],
+  "src/app/(main)/dashboard/bookings/actions.ts": [
+    "advanceStatus",
+    "cancelBooking",
+    "markNoShow",
+    "seatWalkIn",
+    "undoStatus",
+    "undoWalkIn",
+  ],
   "src/app/(main)/dashboard/customers/actions.ts": ["createContact", "findDuplicateContacts"],
   "src/ds/preferences/actions.ts": ["setCurrency", "setLocale", "setPreference"],
 };

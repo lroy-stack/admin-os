@@ -3,13 +3,12 @@
 import { useState } from "react";
 
 import { cn } from "cn";
-import { Minus, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
-import { format, formatNumber, useLocale, useMessages } from "@/core/i18n/client";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 
+import { CoversStepper } from "../covers-stepper";
 import { bookingsMessageKey } from "../messages";
 import { type AdvanceReservation, ReservationActionButton } from "../reservation-action-button";
 import { formatClock, guestName } from "../reservation-status";
@@ -88,29 +87,12 @@ export function TableCallout({
 
       {!reservation && reading.state === "free" && (
         <div className="flex items-center gap-2">
-          <ButtonGroup aria-label={text.callout.guestsToSeat}>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label={text.callout.fewer}
-              disabled={covers <= 1}
-              onClick={() => setCovers((value) => value - 1)}
-            >
-              <Minus />
-            </Button>
-            <ButtonGroupText className="min-w-9 justify-center tabular-nums">
-              {formatNumber(covers, locale)}
-            </ButtonGroupText>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label={text.callout.more}
-              disabled={covers >= table.capacity + 2}
-              onClick={() => setCovers((value) => value + 1)}
-            >
-              <Plus />
-            </Button>
-          </ButtonGroup>
+          <CoversStepper
+            value={covers}
+            onChange={setCovers}
+            max={table.capacity + 2}
+            label={text.callout.guestsToSeat}
+          />
           <Button
             className="liquid-glass-brand h-auto min-h-9 min-w-0 flex-1 rounded-full px-3 py-1.5 whitespace-normal"
             onClick={() => onSeatWalkIn(table.id, covers)}

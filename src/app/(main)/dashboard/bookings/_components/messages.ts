@@ -219,6 +219,31 @@ export interface BookingsMessages {
       readonly done: string;
     };
   };
+  readonly walkIn: {
+    readonly title: string;
+    readonly description: string;
+    readonly covers: string;
+    readonly tables: string;
+    readonly name: string;
+    readonly nameTooLong: string;
+    readonly coversInvalid: string;
+    /** Placeholders: `{table}`. */
+    readonly seated: string;
+    /** Placeholders: `{party}`. */
+    readonly noneTitle: string;
+    /** Placeholders: `{party}`, `{time}`. */
+    readonly takenUntil: string;
+    /** Placeholders: `{party}`. */
+    readonly takenAllNight: string;
+    /** Placeholders: `{table}`: the table a callout preset, when it cannot take the party. */
+    readonly presetBusy: string;
+    /** Placeholders: `{table}`, `{wait}` (a duration, already worded). */
+    readonly frees: string;
+    /** Placeholders: `{party}`, `{seats}`. */
+    readonly tooBig: string;
+    readonly noTables: string;
+    readonly close: string;
+  };
   readonly floor: {
     readonly level: string;
     readonly cameraAngle: string;

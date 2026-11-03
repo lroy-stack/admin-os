@@ -213,16 +213,14 @@ export function withStatus(
 
 /**
  * What staff changed on the screen before the write that replaces it reaches the data seam: the tables they assigned
- * (plan 003, B7), by reservation id, and the walk-ins seated since (B4). They belong to one business day and are
- * ignored on any other.
+ * (plan 003, B7), by reservation id. They belong to one business day and are ignored on any other.
  */
 export type LocalChanges = {
   readonly businessDay: string;
   readonly patches: Readonly<Record<string, Partial<Reservation>>>;
-  readonly walkIns: readonly Reservation[];
 };
 
-export const noLocalChanges = (businessDay: string): LocalChanges => ({ businessDay, patches: {}, walkIns: [] });
+export const noLocalChanges = (businessDay: string): LocalChanges => ({ businessDay, patches: {} });
 
 /** `change` applied to the reservation `id` of `businessDay`, on top of what was already changed there. */
 export function patchLocal(
@@ -235,22 +233,13 @@ export function patchLocal(
   return { ...current, patches: { ...current.patches, [id]: { ...current.patches[id], ...change } } };
 }
 
-/** A walk-in seated on `businessDay`. */
-export function addLocalWalkIn(changes: LocalChanges, businessDay: string, walkIn: Reservation): LocalChanges {
-  const current = changes.businessDay === businessDay ? changes : noLocalChanges(businessDay);
-  return { ...current, walkIns: [...current.walkIns, walkIn] };
-}
-
 export function withLocalChanges(
   reservations: readonly Reservation[],
   changes: LocalChanges,
   businessDay: string,
 ): Reservation[] {
   if (changes.businessDay !== businessDay) return [...reservations];
-  return [
-    ...reservations.map((reservation) => ({ ...reservation, ...changes.patches[reservation.id] })),
-    ...changes.walkIns,
-  ];
+  return reservations.map((reservation) => ({ ...reservation, ...changes.patches[reservation.id] }));
 }
 
 /** The hour marks of the agenda's time axis, from the window's start. */

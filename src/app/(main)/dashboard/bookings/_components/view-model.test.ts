@@ -4,7 +4,6 @@ import { type Booking, bookingSchema } from "@/modules/bookings";
 import type { Customer } from "@/modules/customers";
 
 import {
-  addLocalWalkIn,
   bookingStatusFor,
   businessDayFrom,
   customerIdsOf,
@@ -298,7 +297,6 @@ describe("withLocalChanges", () => {
     toReservation(booking({ id: "a", contactName: "A" }), context()),
     toReservation(booking({ id: "b", contactName: "B" }), context()),
   ];
-  const walkIn = toReservation(booking({ id: "W-1", origin: "walk_in" }), context());
 
   it("returns the day's reservations untouched when nothing changed", () => {
     expect(withLocalChanges(base, noLocalChanges(TODAY), TODAY)).toEqual(base);
@@ -313,12 +311,6 @@ describe("withLocalChanges", () => {
     ]);
   });
 
-  it("adds the walk-ins seated on the day", () => {
-    const changes = { ...noLocalChanges(TODAY), walkIns: [walkIn] };
-
-    expect(withLocalChanges(base, changes, TODAY).map((reservation) => reservation.id)).toEqual(["a", "b", "W-1"]);
-  });
-
   it("patches on top of earlier patches of the same reservation", () => {
     const once = patchLocal(noLocalChanges(TODAY), TODAY, "a", { status: "seated" });
     const twice = patchLocal(once, TODAY, "a", { tableIds: ["S9"] });
@@ -327,13 +319,16 @@ describe("withLocalChanges", () => {
   });
 
   it("starts afresh when a change is made on another day than the last one", () => {
-    const earlier = patchLocal(noLocalChanges("2026-11-01"), "2026-11-01", "a", { status: "seated" });
+    const earlier = patchLocal(noLocalChanges("2026-11-01"), "2026-11-01", "a", { tableIds: ["S9"] });
 
-    expect(addLocalWalkIn(earlier, TODAY, walkIn)).toEqual({ businessDay: TODAY, patches: {}, walkIns: [walkIn] });
+    expect(patchLocal(earlier, TODAY, "b", { tableIds: ["S1"] })).toEqual({
+      businessDay: TODAY,
+      patches: { b: { tableIds: ["S1"] } },
+    });
   });
 
   it("ignores changes made on another day", () => {
-    const changes = { businessDay: "2026-11-01", patches: { a: { status: "seated" as const } }, walkIns: [walkIn] };
+    const changes = { businessDay: "2026-11-01", patches: { a: { status: "seated" as const } } };
 
     expect(withLocalChanges(base, changes, TODAY)).toEqual(base);
   });

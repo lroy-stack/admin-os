@@ -60,7 +60,7 @@ export function readTable(
  */
 export function canSeat(
   table: Pick<DiningTable, "id" | "inService" | "capacity">,
-  party: Reservation,
+  party: Pick<Reservation, "id" | "partySize" | "startMin" | "endMin">,
   reservations: readonly Reservation[],
   nowMin = SERVICE_NOW_MIN,
 ) {

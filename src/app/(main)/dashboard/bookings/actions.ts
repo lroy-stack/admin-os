@@ -17,6 +17,16 @@ export async function cancelBooking(input: unknown, attemptKey: unknown) {
   return runWrite("bookings.cancel", input, attemptKey);
 }
 
+/** Seats a party that arrived without a booking, now: `{ partySize, resourceIds, contactName? }`. */
+export async function seatWalkIn(input: unknown, attemptKey: unknown) {
+  return runWrite("bookings.walk_in.seat", input, attemptKey);
+}
+
+/** Takes back a walk-in that was just seated: `{ id }` (`bookings.walk_in.undo`). */
+export async function undoWalkIn(input: unknown, attemptKey: unknown) {
+  return runWrite("bookings.walk_in.undo", input, attemptKey);
+}
+
 /** Marks a late confirmed booking as a no-show: `{ id, reason? }` (`bookings.no_show.mark`, destructive). */
 export async function markNoShow(input: unknown, attemptKey: unknown) {
   return runWrite("bookings.no_show.mark", input, attemptKey);

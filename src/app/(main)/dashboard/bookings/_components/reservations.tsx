@@ -69,7 +69,6 @@ import { ReservationsAgenda } from "./reservations-agenda";
 import { ReservationsList } from "./reservations-list";
 import { ServiceFloor, SHEET_PEEK, type SheetSnap } from "./service-floor";
 import {
-  addLocalWalkIn,
   noLocalChanges,
   patchLocal,
   type Reservation,
@@ -78,6 +77,7 @@ import {
   shiftDay,
   withLocalChanges,
 } from "./view-model";
+import { WalkInDialog, type WalkInRequest } from "./walk-in-dialog";
 
 // The room engine (three.js) only loads when the Floor view is shown.
 const FloorView = dynamic(() => import("./floor/floor-view").then((module) => module.FloorView), {
@@ -213,6 +213,7 @@ function ServiceScreen({
   const [editSelection, setEditSelection] = useState<EditSelection>(null);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>(SHEET_PEEK);
+  const [walkIn, setWalkIn] = useState<WalkInRequest | null>(null);
 
   // Folding the rail is a per-browser preference.
   useEffect(() => {
@@ -347,26 +348,11 @@ function ServiceScreen({
     setSelectedTableId(tableId);
   }
 
-  function seatWalkIn(tableId: string, partySize: number) {
-    const walkIn: Reservation = {
-      id: `W-${Date.now()}`,
-      guest: "",
-      partySize,
-      startMin: service.nowMin,
-      endMin: service.nowMin + service.walkInStayMin,
-      status: "seated",
-      tableIds: [tableId],
-      tableLabels: [findTable(venue, tableId)?.table.label ?? tableId],
-      channel: "walk-in",
-      tags: [],
-      note: null,
-      staffNote: null,
-      phone: null,
-      email: null,
-      profile: null,
-    };
-    setChanges((current) => addLocalWalkIn(current, service.businessDay, walkIn));
-    setSelectedReservationId(walkIn.id);
+  /** The one Walk-in window: from the header with a count, or from a free table's callout with the table preset. */
+  function openWalkIn(covers: number, tableId: string | null) {
+    // On a phone the callout is a sheet of its own; the window replaces it rather than stacking on top of it.
+    if (tableId !== null && isMobile) selectTable(null);
+    setWalkIn((current) => ({ covers, tableId, opening: (current?.opening ?? 0) + 1, open: true }));
   }
 
   function toggleAlert(alert: Alert) {
@@ -413,7 +399,7 @@ function ServiceScreen({
         reading={selectedReading}
         onAdvance={advance}
         onOpenDetails={setDetailsId}
-        onSeatWalkIn={seatWalkIn}
+        onSeatWalkIn={(tableId, covers) => openWalkIn(covers, tableId)}
       />
     ) : null;
 
@@ -604,10 +590,16 @@ function ServiceScreen({
               {isMobile && <div className="ml-auto">{fullViewToggle}</div>}
               <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
                 <SegmentedControl label={text.views.label} value={view} options={viewOptions} onValueChange={setView} />
-                <Button variant="ghost" className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4">
-                  <UserPlus data-icon="inline-start" />
-                  {text.actions.walkIn}
-                </Button>
+                {can.seat && service.isToday ? (
+                  <Button
+                    variant="ghost"
+                    className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4"
+                    onClick={() => openWalkIn(2, null)}
+                  >
+                    <UserPlus data-icon="inline-start" />
+                    {text.actions.walkIn}
+                  </Button>
+                ) : null}
                 {compact ? (
                   <Button
                     size="icon"
@@ -797,6 +789,15 @@ function ServiceScreen({
             </DrawerContent>
           </Drawer>
         )}
+
+        <WalkInDialog
+          request={walkIn}
+          onOpenChange={(open) => setWalkIn((current) => (current === null ? null : { ...current, open }))}
+          locations={locations}
+          reservations={dayReservations}
+          service={service}
+          errors={errors}
+        />
 
         <ReservationDrawer
           reservation={details}
