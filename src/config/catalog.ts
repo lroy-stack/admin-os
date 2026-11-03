@@ -5,6 +5,7 @@ import { settingsCapabilities } from "@/core/settings";
 import { bookingsCapabilities } from "@/modules/bookings";
 import { catalogCapabilities } from "@/modules/catalog";
 import { customersCapabilities } from "@/modules/customers";
+import { notificationsCapabilities } from "@/modules/notifications";
 import { resourcesCapabilities } from "@/modules/resources";
 import { staffCapabilities } from "@/modules/staff";
 
@@ -16,6 +17,7 @@ export const SOURCE_CATALOGS = [
   bookingsCapabilities,
   catalogCapabilities,
   customersCapabilities,
+  notificationsCapabilities,
   resourcesCapabilities,
   staffCapabilities,
 ] as const;

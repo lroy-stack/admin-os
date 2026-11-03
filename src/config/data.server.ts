@@ -16,6 +16,7 @@ import { createSettingsReader, type SettingsReader } from "@/core/settings";
 import { bookingsMockHandlers } from "@/modules/bookings/server";
 import { catalogMockHandlers } from "@/modules/catalog/server";
 import { customersMockHandlers } from "@/modules/customers/server";
+import { notificationsMockHandlers } from "@/modules/notifications/server";
 import { resourcesMockHandlers } from "@/modules/resources/server";
 import { staffMockHandlers } from "@/modules/staff/server";
 import { hospitalityClock, hospitalitySeed } from "@/verticals/hospitality/server";
@@ -44,6 +45,7 @@ export const MOCK_HANDLERS: Readonly<Record<string, MockHandler<DemoSeed>>> = {
   ...bookingsMockHandlers,
   ...catalogMockHandlers,
   ...customersMockHandlers,
+  ...notificationsMockHandlers,
   ...resourcesMockHandlers,
   ...staffMockHandlers,
 };

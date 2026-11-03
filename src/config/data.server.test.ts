@@ -53,6 +53,7 @@ const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => 
     "customers.notes.add": { ...customer, text: "Called back" },
     "customers.block": { ...customer, reason: "No-show twice" },
     "customers.unblock": customer,
+    "notifications.read": { ids: [`booking.late:${booking}`] },
     "bookings.availability.get": { businessDay: "2026-10-31", partySize: 2 },
     "bookings.create": {
       businessDay: "2026-10-31",

@@ -7,6 +7,7 @@ import type { Actor, CallLogLine } from "@/core/client";
 import { toolNameOf, toolOf } from "@/core/mcp/server";
 import { bookingSchema, bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
+import { notificationsList, notificationsRead } from "@/modules/notifications";
 
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
@@ -81,6 +82,10 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       "customers_notes_add",
       "customers_block",
       "customers_unblock",
+      "notifications_list",
+      "notifications_unread_count",
+      "notifications_read",
+      "notifications_read_all",
       "resources_list",
       "staff_list",
     ]);
@@ -102,6 +107,9 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     ["customers.notes.add", 2],
     ["customers.block", 2],
     ["customers.unblock", 2],
+    ["notifications.list", 1],
+    ["notifications.read", 1],
+    ["notifications.read_all", 1],
   ] as const)("lists %s as a tool with risk tier %s", async (id, riskTier) => {
     const { tools } = await connect(owner);
     expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toMatchObject({ "admin-os/riskTier": riskTier });
@@ -163,6 +171,25 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
     const ids = bookingsList.output.parse(listed.structuredContent).items.map((booking) => booking.id);
     expect(ids).toContain(bookingSchema.parse(seated.structuredContent).id);
+  });
+
+  it("marks a notification read through notifications_read and lowers the unread count", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const before = notificationsList.output.parse(
+      (await client.callTool({ name: "notifications_list", arguments: { limit: 50 } })).structuredContent,
+    );
+    const marked = await client.callTool({
+      name: "notifications_read",
+      arguments: { ids: before.items.map((item) => item.id).slice(0, 1) },
+      _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
+    });
+    const after = notificationsList.output.parse(
+      (await client.callTool({ name: "notifications_list", arguments: { limit: 50 } })).structuredContent,
+    );
+    expect([notificationsRead.output.parse(marked.structuredContent).marked, after.unreadCount]).toEqual([
+      1,
+      before.unreadCount - 1,
+    ]);
   });
 
   it("refuses bookings_walk_in_seat without an idempotency key", async () => {

@@ -6,6 +6,7 @@ import { navigationMessages } from "@/core/nav/server";
 import { bookingsMessages } from "@/modules/bookings/server";
 import { catalogMessages } from "@/modules/catalog/server";
 import { customersMessages } from "@/modules/customers/server";
+import { notificationsMessages } from "@/modules/notifications/server";
 import { resourcesMessages } from "@/modules/resources/server";
 import { staffMessages } from "@/modules/staff/server";
 import { hospitalityVocabulary } from "@/verticals/hospitality/server";
@@ -21,6 +22,7 @@ export const MODULE_MESSAGES: Readonly<Record<string, Readonly<Record<Locale, un
   bookings: bookingsMessages,
   catalog: catalogMessages,
   customers: customersMessages,
+  notifications: notificationsMessages,
   resources: resourcesMessages,
   staff: staffMessages,
 };
