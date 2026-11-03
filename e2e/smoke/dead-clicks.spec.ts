@@ -1,0 +1,716 @@
+import { expect, type Page, test } from "@playwright/test";
+
+import { PAGE_ROUTES } from "./routes";
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+/**
+ * Dead-click detector (plan 003, T0.2). For every page route of the demo at 1440 and 375 px it activates each visible,
+ * enabled control of the page and records whether anything observable followed within a short window: a URL change,
+ * a newly opened dialog, menu, listbox, popover or drawer, a change of `aria-pressed` / `aria-expanded` /
+ * `aria-checked` / `aria-selected` on the control, a toast, a network request, a DOM change in the page content
+ * (tooltips aside), a scroll, a focus move, a popup, an alert, a copy or a download. A link with a real `href`
+ * to an existing route counts as working without being clicked. Controls under `data-inert-reason` are skipped.
+ *
+ * Report mode (default): the test passes and writes `test-results/dead-clicks.json`, one entry per dead control, plus
+ * a per-route count on stdout. `DEAD_CLICKS=enforce` makes each route fail while it has a dead control.
+ *
+ * Scope notes: the shell (header, sidebar, quick access) is the same on every dashboard page, so it is scanned once,
+ * on `/dashboard/default`; the other dashboard routes scan what is outside it. Controls that are already selected
+ * (a checked radio, the current tab) do nothing by design and are not activated. Items inside closed menus are not
+ * first-level and are not reached.
+ */
+
+const ENFORCE = process.env.DEAD_CLICKS === "enforce";
+const SHELL_ROUTE = "/dashboard/default";
+/** How long a click has to show a reaction; dead controls are retried once with the longer window. */
+const OBSERVE_MS = 450;
+const RECHECK_MS = 1500;
+/** The settle wait ends after this long even if the page never goes quiet (a ticking clock, an animation). */
+const SETTLE_MAX_MS = 6000;
+const SETTLE_QUIET_MS = 500;
+const RESULTS_DIR = path.join(process.cwd(), "test-results");
+const PARTS_DIR = path.join(RESULTS_DIR, "dead-clicks");
+
+type Reason =
+  | "url"
+  | "overlay"
+  | "aria"
+  | "toast"
+  | "network"
+  | "dom"
+  | "scroll"
+  | "focus"
+  | "popup"
+  | "alert"
+  | "clipboard"
+  | "download";
+
+type Control = { id: number; key: string; role: string; name: string; locator: string };
+type LinkRef = { href: string; role: "link"; name: string; locator: string };
+type Collected = { controls: Control[]; links: LinkRef[] };
+type Prepared = { status: "ok"; x: number; y: number } | { status: "gone" | "hidden" | "covered" | "offscreen" };
+
+/** What the page-side probe offers. It is serialised into the page, so it must not use anything from this file. */
+type Probe = {
+  collect(scanShell: boolean, idByKey: Record<string, number> | null): Collected;
+  prepare(id: number): Prepared;
+  arm(id: number): void;
+  reacted(): boolean;
+  reasons(): Reason[];
+  samples(): string[];
+  modalCount(): number;
+  settle(quietMs?: number, maxMs?: number): Promise<void>;
+};
+
+/**
+ * The page-side probe, installed before any script of the page runs. It watches mutations, requests, alerts, copies
+ * and window.open, and answers the questions the Node side asks. Noise (a ticking clock, an entrance animation) is
+ * learned during the settle wait and ignored afterwards.
+ */
+function createProbe(quietMs: number, maxMs: number): Probe {
+  const TOOLTIP = "[role=tooltip],[data-slot=tooltip-content]";
+  const MODAL = "[role=dialog],[role=alertdialog],[role=menu],[role=listbox]";
+  const OVERLAY = `${MODAL},[data-state=open]`;
+  const CONTROLS =
+    "button,[role=button],[role=tab],[role=radio],[role=checkbox],[role=switch],a,input[type=submit],input[type=button],input[type=checkbox],input[type=radio],summary";
+  const TOOLTIP_STATES = ["delayed-open", "instant-open"];
+  const IGNORED_ATTRIBUTES = [
+    "data-dc-id",
+    "data-moving",
+    "aria-describedby",
+    "data-highlighted",
+    "data-focus",
+    "data-focus-visible",
+    "data-hover",
+    "data-aria-hidden",
+    "data-scroll-locked",
+    "tabindex",
+  ];
+
+  const ids = new WeakMap<Node, number>();
+  let nextNodeId = 1;
+  const nodeId = (node: Node) => {
+    let id = ids.get(node);
+    if (id === undefined) {
+      id = nextNodeId++;
+      ids.set(node, id);
+    }
+    return id;
+  };
+
+  type Snapshot = {
+    url: string;
+    overlays: number;
+    toasts: number;
+    scroll: string;
+    aria: string;
+    active: Element | null;
+    id: number;
+  };
+  const state = {
+    net: 0,
+    popups: 0,
+    alerts: 0,
+    clipboard: 0,
+    downloads: 0,
+    dom: 0,
+    samples: [] as string[],
+    mode: "off" as "off" | "noise" | "count",
+    noise: new Set<number>(),
+    recent: [] as { at: number; key: number }[],
+    lastChange: 0,
+    snapshot: null as Snapshot | null,
+    armed: { net: 0, popups: 0, alerts: 0, clipboard: 0, downloads: 0 },
+  };
+
+  const patch = (target: object, name: string, wrapper: (original: (...args: unknown[]) => unknown) => unknown) => {
+    const holder = target as Record<string, unknown>;
+    const original = holder[name];
+    if (typeof original === "function")
+      holder[name] = wrapper(original.bind(target) as (...args: unknown[]) => unknown);
+  };
+
+  // Requests: Next's link prefetches fire when a link scrolls into view; they are not a reaction to a click.
+  patch(window, "fetch", (original) => (input: unknown, init?: { headers?: HeadersInit }) => {
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (!headers.has("next-router-prefetch")) state.net++;
+    return original(input, init);
+  });
+  patch(XMLHttpRequest.prototype, "send", (original) => (...args: unknown[]) => {
+    state.net++;
+    return original(...args);
+  });
+  patch(window, "open", () => () => {
+    state.popups++;
+    return null;
+  });
+  for (const name of ["alert", "confirm", "prompt"]) {
+    patch(window, name, () => () => {
+      state.alerts++;
+      return name === "confirm";
+    });
+  }
+  if (navigator.clipboard) {
+    patch(navigator.clipboard, "writeText", () => () => {
+      state.clipboard++;
+      return Promise.resolve();
+    });
+  }
+  patch(URL, "createObjectURL", (original) => (...args: unknown[]) => {
+    state.downloads++;
+    return original(...args);
+  });
+
+  const stripCustomProperties = (style: string | null) =>
+    (style ?? "")
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration && !declaration.startsWith("--"))
+      .join(";");
+
+  const elementOf = (node: Node | null) => (node instanceof Element ? node : (node?.parentElement ?? null));
+
+  const isNoiseNode = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE && !node.textContent?.trim()) return true;
+    const element = elementOf(node);
+    if (!element) return true;
+    if (element.closest("head,script,style,link,template,next-route-announcer")) return true;
+    if (element.closest(TOOLTIP)) return true;
+    // A portal wrapper that only carries a tooltip.
+    return (
+      node instanceof Element &&
+      Boolean(node.querySelector(TOOLTIP)) &&
+      !node.querySelector(`${MODAL},[data-slot=popover-content]`)
+    );
+  };
+
+  // Live charts and waveforms redraw on their own; only an SVG inside the clicked control (an icon swap) counts.
+  const isChartNoise = (record: MutationRecord) => {
+    const target = elementOf(record.target);
+    const clicked = state.snapshot ? document.querySelector(`[data-dc-id="${state.snapshot.id}"]`) : null;
+    return Boolean(target?.closest("svg")) && !clicked?.contains(target);
+  };
+
+  const matters = (record: MutationRecord) => {
+    if (isChartNoise(record)) return false;
+    if (record.type === "characterData")
+      return !record.target.parentElement?.closest(`${TOOLTIP},next-route-announcer`);
+    if (record.type === "childList") {
+      const changed = [...record.addedNodes, ...record.removedNodes];
+      return changed.some((node) => !isNoiseNode(node)) && !elementOf(record.target)?.closest(`${TOOLTIP},head`);
+    }
+    const target = record.target as Element;
+    const name = record.attributeName ?? "";
+    if (
+      IGNORED_ATTRIBUTES.includes(name) ||
+      name.startsWith("data-radix-popper-") ||
+      target.closest(TOOLTIP) ||
+      target.closest("head")
+    )
+      return false;
+    if (name === "data-state") {
+      return !(
+        TOOLTIP_STATES.includes(target.getAttribute(name) ?? "") || TOOLTIP_STATES.includes(record.oldValue ?? "")
+      );
+    }
+    // Pointer-following effects write CSS custom properties; only a real style change counts.
+    if (name === "style")
+      return stripCustomProperties(record.oldValue) !== stripCustomProperties(target.getAttribute(name));
+    return true;
+  };
+
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (state.mode === "off" || !matters(record)) continue;
+      const key = nodeId(record.target);
+      const now = performance.now();
+      state.lastChange = now;
+      if (state.mode === "noise") state.recent.push({ at: now, key });
+      else if (!state.noise.has(key)) {
+        state.dom++;
+        if (state.samples.length < 4) {
+          const target = elementOf(record.target);
+          state.samples.push(
+            `${record.type}:${record.attributeName ?? ""} <${target?.tagName.toLowerCase()} ${target?.getAttribute("data-slot") ?? target?.className?.toString().slice(0, 40)}>`,
+          );
+        }
+      }
+    }
+  });
+  const start = () => {
+    observer.observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeOldValue: true,
+      characterData: true,
+    });
+  };
+  start();
+
+  const overlayCount = () =>
+    [...document.querySelectorAll(OVERLAY)].filter((element) => !element.matches(TOOLTIP)).length;
+  const toastCount = () => document.querySelectorAll("[data-sonner-toast]").length;
+  const scrollSignature = () => `${window.scrollX},${window.scrollY}`;
+  const find = (id: number) => document.querySelector<HTMLElement>(`[data-dc-id="${id}"]`);
+  const ariaSignature = (element: HTMLElement | null) =>
+    element
+      ? [
+          element.getAttribute("aria-pressed"),
+          element.getAttribute("aria-expanded"),
+          element.getAttribute("aria-checked"),
+          element.getAttribute("aria-selected"),
+          TOOLTIP_STATES.includes(element.getAttribute("data-state") ?? "")
+            ? "closed"
+            : element.getAttribute("data-state"),
+          element instanceof HTMLInputElement ? String(element.checked) : "",
+        ].join("|")
+      : "removed";
+
+  const visible = (element: HTMLElement) => {
+    if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
+    const box = element.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && box.right > 0 && box.left < window.innerWidth;
+  };
+
+  const roleOf = (element: HTMLElement) => {
+    const explicit = element.getAttribute("role");
+    if (explicit) return explicit;
+    if (element instanceof HTMLAnchorElement) return "link";
+    if (element instanceof HTMLInputElement) {
+      return element.type === "checkbox" || element.type === "radio" ? element.type : "button";
+    }
+    return element.tagName === "SUMMARY" ? "button" : "button";
+  };
+
+  const nameOf = (element: HTMLElement) => {
+    const clean = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+    const label = clean(element.getAttribute("aria-label"));
+    if (label) return label;
+    const labelledBy = element.getAttribute("aria-labelledby");
+    if (labelledBy) {
+      const text = clean(
+        labelledBy
+          .split(/\s+/)
+          .map((id) => document.getElementById(id)?.textContent)
+          .join(" "),
+      );
+      if (text) return text;
+    }
+    if (
+      element instanceof HTMLInputElement &&
+      element.type !== "checkbox" &&
+      element.type !== "radio" &&
+      element.value
+    ) {
+      return clean(element.value);
+    }
+    // innerText keeps the spaces between blocks that textContent runs together ("2unassigned").
+    // biome-ignore lint/performance/useDomNodeTextContent: the layout-aware text is what a person reads on the control
+    const text = clean(element.innerText || element.textContent);
+    if (text) return text;
+    const image = element.querySelector("img[alt],svg title");
+    return clean(element.getAttribute("title") ?? image?.getAttribute("alt") ?? image?.textContent);
+  };
+
+  const chromeOf = (element: HTMLElement) => {
+    const chrome = element.closest("header,aside,nav[aria-label=Sections]");
+    return chrome && !chrome.closest("main") ? chrome : null;
+  };
+
+  return {
+    collect(scanShell, idByKey) {
+      for (const stale of document.querySelectorAll("[data-dc-id]")) stale.removeAttribute("data-dc-id");
+      const hasShell = Boolean(document.querySelector("nav[aria-label=Sections]"));
+      const seen = new Map<string, number>();
+      const controls: Control[] = [];
+      const links: LinkRef[] = [];
+      let next = 1;
+      for (const element of document.querySelectorAll<HTMLElement>(CONTROLS)) {
+        if (element.closest("[data-inert-reason],[inert]") || !visible(element)) continue;
+        if (hasShell && !scanShell && chromeOf(element)) continue;
+        const role = roleOf(element);
+        const disabled =
+          element.matches(":disabled") ||
+          element.getAttribute("aria-disabled") === "true" ||
+          element.hasAttribute("data-disabled") ||
+          getComputedStyle(element).pointerEvents === "none";
+        const selected =
+          (role === "radio" &&
+            (element.getAttribute("aria-checked") === "true" || (element as HTMLInputElement).checked)) ||
+          (role === "tab" && element.getAttribute("aria-selected") === "true") ||
+          // The current page or step of a pagination or a stepper is already where it points.
+          !["false", null].includes(element.getAttribute("aria-current"));
+        if (disabled || selected) continue;
+
+        const name = nameOf(element);
+        const slot = element.getAttribute("data-slot");
+        const count = seen.get(`${role}|${name}`) ?? 0;
+        seen.set(`${role}|${name}`, count + 1);
+        const target = name
+          ? `getByRole("${role}", { name: ${JSON.stringify(name)} })${count > 0 ? `.nth(${count})` : ""}`
+          : `${element.tagName.toLowerCase()}${slot ? `[data-slot="${slot}"]` : ""}${element.id ? `#${element.id}` : ""} (unnamed #${count})`;
+
+        const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") : null;
+        const isRealHref =
+          href !== null && href !== "" && href !== "#" && !href.toLowerCase().startsWith("javascript:");
+        if (isRealHref && element instanceof HTMLAnchorElement) {
+          links.push({ href: element.href, role: "link", name, locator: target });
+          continue;
+        }
+
+        const key = `${role}|${name}|${count}`;
+        const id = idByKey ? idByKey[key] : next++;
+        if (id === undefined) continue;
+        element.setAttribute("data-dc-id", String(id));
+        controls.push({ id, key, role, name, locator: target });
+      }
+      return { controls, links };
+    },
+
+    prepare(id) {
+      const element = find(id);
+      if (!element?.isConnected) return { status: "gone" };
+      if (!visible(element)) return { status: "hidden" };
+      element.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+      const box = element.getBoundingClientRect();
+      const x = Math.min(Math.max(box.left + box.width / 2, 1), window.innerWidth - 1);
+      const y = Math.min(Math.max(box.top + box.height / 2, 1), window.innerHeight - 1);
+      if (box.bottom < 0 || box.top > window.innerHeight) return { status: "offscreen" };
+      const hit = document.elementFromPoint(x, y);
+      if (!hit || !(hit === element || element.contains(hit))) return { status: "covered" };
+      return { status: "ok", x, y };
+    },
+
+    arm(id) {
+      state.snapshot = {
+        url: location.href,
+        overlays: overlayCount(),
+        toasts: toastCount(),
+        scroll: scrollSignature(),
+        aria: ariaSignature(find(id)),
+        active: document.activeElement,
+        id,
+      };
+      state.armed = {
+        net: state.net,
+        popups: state.popups,
+        alerts: state.alerts,
+        clipboard: state.clipboard,
+        downloads: state.downloads,
+      };
+      state.dom = 0;
+      state.samples.length = 0;
+      state.mode = "count";
+    },
+
+    samples() {
+      return [...state.samples];
+    },
+
+    reasons() {
+      const before = state.snapshot;
+      if (!before) return [];
+      const element = find(before.id);
+      const found: Reason[] = [];
+      if (location.href !== before.url) found.push("url");
+      if (overlayCount() !== before.overlays) found.push("overlay");
+      if (ariaSignature(element) !== before.aria) found.push("aria");
+      if (toastCount() !== before.toasts) found.push("toast");
+      if (state.net !== state.armed.net) found.push("network");
+      if (state.dom > 0) found.push("dom");
+      if (scrollSignature() !== before.scroll) found.push("scroll");
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== before.active && active !== element) found.push("focus");
+      if (state.popups !== state.armed.popups) found.push("popup");
+      if (state.alerts !== state.armed.alerts) found.push("alert");
+      if (state.clipboard !== state.armed.clipboard) found.push("clipboard");
+      if (state.downloads !== state.armed.downloads) found.push("download");
+      return found;
+    },
+
+    reacted() {
+      return this.reasons().length > 0;
+    },
+
+    modalCount() {
+      return [...document.querySelectorAll(MODAL)].filter((element) => !element.matches(TOOLTIP)).length;
+    },
+
+    /** Resolves once the page has been quiet for a moment; learns what keeps changing on its own. */
+    settle(quietFor = quietMs, giveUpAfter = maxMs) {
+      state.mode = "noise";
+      state.recent.length = 0;
+      state.noise.clear();
+      state.lastChange = performance.now();
+      const began = performance.now();
+      return new Promise<void>((resolve) => {
+        const tick = () => {
+          const now = performance.now();
+          const quiet = now - state.lastChange >= quietFor;
+          if (quiet || now - began >= giveUpAfter) {
+            // A page that never went quiet has tickers: remember the elements that changed in the last second.
+            if (!quiet) for (const { at, key } of state.recent) if (now - at < 1500) state.noise.add(key);
+            state.mode = "count";
+            resolve();
+            return;
+          }
+          setTimeout(tick, 50);
+        };
+        tick();
+      });
+    },
+  };
+}
+
+const probeSource = `window.__dc = (${createProbe})(${SETTLE_QUIET_MS}, ${SETTLE_MAX_MS});`;
+
+declare global {
+  interface Window {
+    __dc: Probe;
+  }
+}
+
+type Finding = {
+  route: string;
+  viewport: string;
+  name: string;
+  role: string;
+  locator: string;
+  reason: "no-reaction" | "broken-link";
+};
+
+type RouteReport = {
+  route: string;
+  viewport: string;
+  scanned: number;
+  linksChecked: number;
+  skipped: Record<string, number>;
+  reactions: Partial<Record<Reason, number>>;
+  dead: Finding[];
+  note?: string;
+};
+
+const linkStatus = new Map<string, boolean>();
+
+async function linkWorks(page: Page, href: string) {
+  const url = new URL(href);
+  if (url.origin !== new URL(page.url()).origin) return true;
+  if (PAGE_ROUTES.includes(url.pathname.replace(/\/$/, "") || "/")) return true;
+  const known = linkStatus.get(url.pathname);
+  if (known !== undefined) return known;
+  const works = await page.request
+    .get(url.href, { failOnStatusCode: false })
+    .then((response) => response.status() < 400)
+    .catch(() => false);
+  linkStatus.set(url.pathname, works);
+  return works;
+}
+
+async function scanRoute(page: Page, route: string, viewport: string): Promise<RouteReport> {
+  const scanShell = route === SHELL_ROUTE;
+  const report: RouteReport = { route, viewport, scanned: 0, linksChecked: 0, skipped: {}, reactions: {}, dead: [] };
+  let nodeEvents = 0;
+  page.on("popup", (popup) => {
+    nodeEvents++;
+    void popup.close();
+  });
+  page.on("download", () => nodeEvents++);
+  page.on("filechooser", () => nodeEvents++);
+  page.on("dialog", (dialog) => void dialog.dismiss());
+  if (process.env.DEAD_CLICKS_DEBUG)
+    page.on("pageerror", (error) => console.log(`pageerror on ${route}: ${error.message}`));
+
+  const open = async () => {
+    await page.goto(route);
+    await page.waitForLoadState("load");
+    await page.evaluate(() => window.__dc.settle());
+  };
+  const collect = (idByKey: Record<string, number> | null) =>
+    page.evaluate(([shell, ids]) => window.__dc.collect(shell, ids), [scanShell, idByKey] as const);
+  const modals = () => page.evaluate(() => window.__dc.modalCount());
+
+  await open();
+  if (new URL(page.url()).pathname !== route) {
+    report.note = `redirects to ${new URL(page.url()).pathname}`;
+    return report;
+  }
+  const first = await collect(null);
+  const controls = first.controls;
+  const idByKey = Object.fromEntries(controls.map((control) => [control.key, control.id]));
+  let baselineModals = await modals();
+
+  for (const link of first.links) {
+    report.linksChecked++;
+    if (!(await linkWorks(page, link.href))) {
+      report.dead.push({
+        route,
+        viewport,
+        name: link.name,
+        role: link.role,
+        locator: link.locator,
+        reason: "broken-link",
+      });
+    }
+  }
+
+  /** Back to a clean copy of the page; every control keeps the id it had. */
+  const reload = async () => {
+    // A click may have saved a preference (a folded rail): the fresh copy starts from the defaults again.
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await open();
+    await collect(idByKey);
+    baselineModals = await modals();
+  };
+
+  /** Undoes what a click left behind: a navigation, an open dialog or menu. Other changes stay (see `drifted`). */
+  const restore = async (navigated: boolean) => {
+    if (navigated || new URL(page.url()).pathname !== route) return reload();
+    for (let attempt = 0; attempt < 2 && (await modals()) > baselineModals; attempt++) {
+      await page.keyboard.press("Escape");
+      await page
+        .waitForFunction((limit) => window.__dc.modalCount() <= limit, baselineModals, { timeout: 700 })
+        .catch(() => undefined);
+    }
+    if ((await modals()) > baselineModals) await reload();
+  };
+
+  type Outcome = { kind: "skipped"; why: string } | { kind: "done"; reasons: Reason[] };
+
+  /** Activates one control the way a pointer does, and reports what followed within the window. */
+  const activate = async (control: Control, windowMs: number): Promise<Outcome> => {
+    const prepared = await page.evaluate((id) => window.__dc.prepare(id), control.id);
+    if (prepared.status !== "ok") return { kind: "skipped", why: prepared.status };
+    await page.mouse.move(prepared.x, prepared.y);
+    await page.evaluate((id) => window.__dc.arm(id), control.id);
+    const eventsBefore = nodeEvents;
+    const urlBefore = page.url();
+    await page.mouse.down();
+    await page.mouse.up();
+    await page
+      .waitForFunction(() => window.__dc.reacted(), undefined, { timeout: windowMs, polling: 40 })
+      .catch(() => undefined); // No reaction in the window, or the page navigated under us: both are read below.
+    if (page.url() !== urlBefore) return { kind: "done", reasons: ["url"] };
+    const reasons = await page.evaluate(() => window.__dc.reasons()).catch((): Reason[] => ["url"]);
+    if (nodeEvents !== eventsBefore) reasons.push("popup");
+    return { kind: "done", reasons };
+  };
+
+  const dead: Control[] = [];
+  let drifted = false;
+  for (const control of controls) {
+    let outcome = await activate(control, OBSERVE_MS);
+    if (outcome.kind === "skipped" && drifted) {
+      // Earlier clicks changed the page and may have hidden or moved this control: look again on a fresh copy.
+      await reload();
+      drifted = false;
+      outcome = await activate(control, OBSERVE_MS);
+    }
+    if (outcome.kind === "skipped") {
+      report.skipped[outcome.why] = (report.skipped[outcome.why] ?? 0) + 1;
+      continue;
+    }
+    report.scanned++;
+    if (process.env.DEAD_CLICKS_DEBUG) {
+      console.log(
+        `${viewport} ${route} ${control.role} "${control.name}": ${outcome.reasons.join(",") || "DEAD"} ${outcome.reasons.includes("dom") ? await page.evaluate(() => window.__dc.samples().join(" | ")) : ""}`,
+      );
+    }
+    if (outcome.reasons.length === 0) dead.push(control);
+    else drifted = true;
+    for (const reason of outcome.reasons) report.reactions[reason] = (report.reactions[reason] ?? 0) + 1;
+    await restore(outcome.reasons.includes("url"));
+    // What a reaction set going (a sliding thumb, a fade) must end before the next control is measured.
+    if (outcome.reasons.length > 0) await page.evaluate(() => window.__dc.settle(200, 1000));
+  }
+
+  // A slow machine can miss a reaction inside the short window: each dead control gets one longer try on a fresh page.
+  if (dead.length > 0) await reload();
+  for (const control of dead) {
+    const outcome = await activate(control, RECHECK_MS);
+    const confirmed = outcome.kind === "done" && outcome.reasons.length === 0;
+    if (confirmed) {
+      report.dead.push({
+        route,
+        viewport,
+        name: control.name,
+        role: control.role,
+        locator: control.locator,
+        reason: "no-reaction",
+      });
+    }
+    await restore(outcome.kind === "done" && outcome.reasons.includes("url"));
+  }
+  return report;
+}
+
+/** Waits for the lock directory; the merge of per-route files must not interleave between workers. */
+function withLock(run: () => void) {
+  const lock = path.join(RESULTS_DIR, "dead-clicks.lock");
+  const wait = new Int32Array(new SharedArrayBuffer(4));
+  for (let attempt = 0; ; attempt++) {
+    try {
+      mkdirSync(lock);
+      break;
+    } catch (error) {
+      if (attempt > 500) throw error;
+      Atomics.wait(wait, 0, 0, 20);
+    }
+  }
+  try {
+    run();
+  } finally {
+    rmdirSync(lock);
+  }
+}
+
+/** Writes this route's report, rebuilds `test-results/dead-clicks.json` from all of them and prints the table. */
+function publish(report: RouteReport, expected: number) {
+  mkdirSync(PARTS_DIR, { recursive: true });
+  const file = path.join(PARTS_DIR, `${report.viewport}${report.route.replaceAll("/", "_") || "_"}.json`);
+  writeFileSync(file, JSON.stringify(report));
+  withLock(() => {
+    const parts = readdirSync(PARTS_DIR)
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => JSON.parse(readFileSync(path.join(PARTS_DIR, name), "utf8")) as RouteReport)
+      .sort((a, b) => a.route.localeCompare(b.route) || Number(b.viewport) - Number(a.viewport));
+    const findings = parts.flatMap((part) => part.dead);
+    const temporary = path.join(RESULTS_DIR, "dead-clicks.json.tmp");
+    writeFileSync(temporary, `${JSON.stringify(findings, null, 2)}\n`);
+    renameSync(temporary, path.join(RESULTS_DIR, "dead-clicks.json"));
+    if (parts.length >= expected) {
+      const lines = parts.map(
+        (part) =>
+          `${part.viewport.padStart(5)}  ${part.route.padEnd(48)} dead ${String(part.dead.length).padStart(2)} of ${String(part.scanned).padStart(3)} controls` +
+          `, ${part.linksChecked} links${part.note ? ` (${part.note})` : ""}`,
+      );
+      console.log(
+        `\nDead clicks per route (${findings.length} in total), details in test-results/dead-clicks.json\n${lines.join("\n")}\n`,
+      );
+    }
+  });
+}
+
+test.describe.configure({ mode: "parallel" });
+
+const total = PAGE_ROUTES.length * 2;
+
+for (const route of PAGE_ROUTES) {
+  test(`dead clicks on ${route}`, async ({ page, context, baseURL }, testInfo) => {
+    test.setTimeout(300_000);
+    await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+    await context.addInitScript({ content: probeSource });
+
+    const report = await scanRoute(page, route, testInfo.project.name);
+    publish(report, total);
+    await testInfo.attach("dead-clicks", { body: JSON.stringify(report, null, 2), contentType: "application/json" });
+
+    // Report mode only measures; enforce mode (a later task) turns every dead control into a failure.
+    const fails = ENFORCE ? report.dead : [];
+    expect(fails.map((finding) => `${finding.role} "${finding.name}" (${finding.locator})`)).toEqual([]);
+  });
+}
