@@ -10,7 +10,7 @@ vi.mock("next/cache", () => ({ refresh: mocks.refresh }));
 vi.mock("./demo-session.server", () => ({ ensureDemoSession: async () => "session-1" }));
 vi.mock("./runtime", () => ({ getRuntime: async () => ({ client: { call: mocks.call } }) }));
 
-const ID = "access.me.get";
+const ID = "customers.create";
 
 beforeEach(() => {
   mocks.call.mockReset();
@@ -59,5 +59,23 @@ describe("runWrite", () => {
     expect(result).toEqual({ status: "error", code: "schema.invalid_input" });
     expect(mocks.call).not.toHaveBeenCalled();
     expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("refuses a read capability at runtime without calling or refreshing", async () => {
+    // @ts-expect-error a read id is not a write capability id
+    const result = await runWrite("customers.list", {}, "attempt-1");
+
+    expect(result).toEqual({ status: "error", code: "schema.invalid_input" });
+    expect(mocks.call).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("does not compile for a mistyped capability id", async () => {
+    mocks.call.mockResolvedValue(ok({}));
+
+    // @ts-expect-error a typo is not a capability id
+    await runWrite("customers.creat", {}, "attempt-1");
+
+    expect(mocks.call).toHaveBeenCalledTimes(1);
   });
 });

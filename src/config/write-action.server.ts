@@ -6,11 +6,16 @@ import { idempotencyKeySchema, type SerializedCallResult, serializeCallResult } 
 import { ErrorCodes } from "@/core/errors";
 import { err } from "@/core/result";
 
-import type { CATALOG } from "./catalog";
+import { CATALOG, type SOURCE_CATALOGS } from "./catalog";
 import { ensureDemoSession } from "./demo-session.server";
 import { getRuntime } from "./runtime";
 
-type CapabilityId = keyof typeof CATALOG & string;
+/** The ids of the capabilities whose effect is not `read`, from the literal source catalogues (not the wide merge). */
+type WriteIdsOf<C> = C extends unknown
+  ? { [K in keyof C & string]: C[K] extends { readonly effect: "read" } ? never : K }[keyof C & string]
+  : never;
+
+export type WriteCapabilityId = WriteIdsOf<(typeof SOURCE_CATALOGS)[number]>;
 
 /**
  * The one way a route writes through the data seam (ADR 0005, ADR 0015). A route's `actions.ts` is a `"use server"`
@@ -34,7 +39,15 @@ type CapabilityId = keyof typeof CATALOG & string;
  * not write twice), `refresh()` re-reads the Server Components after a write that went through, and the result is
  * serialized so neither the server message nor an approval id reaches the browser.
  */
-export async function runWrite(id: CapabilityId, input: unknown, attemptKey: unknown): Promise<SerializedCallResult> {
+export async function runWrite(
+  id: WriteCapabilityId,
+  input: unknown,
+  attemptKey: unknown,
+): Promise<SerializedCallResult> {
+  // A Server Action argument is untrusted whatever its type says: a read is not a write and must not `refresh()`.
+  if (CATALOG[id]?.effect === "read") {
+    return serializeCallResult(err(ErrorCodes.invalidInput, `${id} is a read, not a write`));
+  }
   const key = idempotencyKeySchema.safeParse(attemptKey);
   if (!key.success) {
     // No paths: the attempt key is not a field of the window's form, so it must not surface as a field issue.

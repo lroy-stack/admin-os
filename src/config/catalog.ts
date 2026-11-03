@@ -8,8 +8,8 @@ import { customersCapabilities } from "@/modules/customers";
 import { resourcesCapabilities } from "@/modules/resources";
 import { staffCapabilities } from "@/modules/staff";
 
-/** Every capability the kit ships. A preset enables a subset of its modules; kernel modules are always on (ADR 0004). */
-export const CATALOG = mergeCatalogs(
+/** The catalogues the kit merges, kept with their literal ids and effects (`mergeCatalogs` returns a wide `Catalog`). */
+export const SOURCE_CATALOGS = [
   accessCapabilities,
   clockCapabilities,
   settingsCapabilities,
@@ -18,4 +18,7 @@ export const CATALOG = mergeCatalogs(
   customersCapabilities,
   resourcesCapabilities,
   staffCapabilities,
-);
+] as const;
+
+/** Every capability the kit ships. A preset enables a subset of its modules; kernel modules are always on (ADR 0004). */
+export const CATALOG = mergeCatalogs(...SOURCE_CATALOGS);
