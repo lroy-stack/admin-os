@@ -16,6 +16,11 @@ describe("errorClassOf", () => {
     ["customers.invalid", "invalid"],
     ["bookings.conflict", "conflict"],
     ["transport.reset", "unavailable"],
+    ["bookings.resource_busy", "conflict"],
+    ["bookings.invalid_transition", "conflict"],
+    ["bookings.undo_expired", "conflict"],
+    ["bookings.not_enough_seats", "invalid"],
+    ["bookings.off_grid", "invalid"],
     ["bookings.something_else", "unknown"],
     ["nodot", "unknown"],
   ])("maps %s to %s", (code, expected) => {
