@@ -237,6 +237,13 @@ New packages are covered without editing the config.
 
 Decide between them when there are two external users.
 
+## Amendment 2026-11-03: common pieces start in `src/ds`
+
+Pieces every module needs are built in a `src/ds` package from the start, not in a route first: `overlays` (windows and
+viewport hooks), `feedback`, `patterns` and `fields`. Waiting for a second consumer would make each module copy the
+same dialog, toast and form wiring before the first extraction. Existing route code keeps the original rule: it moves
+into `ds` when a second consumer appears.
+
 ## Consequences
 
 - **F0 is a pure move.** ds leaves `src/app`, the shell becomes props-driven, the boundary rules land and the

@@ -43,7 +43,7 @@ import {
   type SegmentedOption,
   toneSolid,
 } from "@/ds/components";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { ResponsivePanel, useViewport } from "@/ds/overlays";
 
 import { findTable, locateTables, type TableLocation, totalSeats } from "./floor/floor-model";
 import type { SceneMove } from "./floor/floor-scene";
@@ -124,7 +124,7 @@ export function Reservations() {
     { value: "list", label: text.views.list },
   ];
   const alertLabels: Record<Alert, string> = text.alerts;
-  const isMobile = useIsMobile();
+  const isMobile = useViewport() === "phone";
   const { plan: venue, edit, undo, canUndo, reset } = useFloorPlan(mockVenue);
   const [reservations, setReservations] = useState(serviceReservations);
   const [dayOffset, setDayOffset] = useState(0);
@@ -647,15 +647,16 @@ export function Reservations() {
       </FullViewFrame>
 
       {isMobile && !fullView && (
-        <Drawer open={railOpen} onOpenChange={setRailOpen}>
-          <DrawerContent className="h-[80dvh]">
-            <DrawerHeader className="pb-0">
-              <DrawerTitle>{text.rail.title}</DrawerTitle>
-              <DrawerDescription>{railSummary}</DrawerDescription>
-            </DrawerHeader>
-            {rail}
-          </DrawerContent>
-        </Drawer>
+        <ResponsivePanel
+          open={railOpen}
+          onOpenChange={setRailOpen}
+          title={text.rail.title}
+          description={railSummary}
+          className="h-[80dvh]"
+          headerClassName="pb-0"
+        >
+          {rail}
+        </ResponsivePanel>
       )}
 
       {isMobile && (
