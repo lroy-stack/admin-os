@@ -26,3 +26,5 @@ export const err = (code: string, message: string, details?: Readonly<Record<str
 
 export const isAwaitingApproval = <T>(result: CallResult<T>): result is AwaitingApproval =>
   "status" in result && result.status === "awaiting_approval";
+
+export { type ReadStatus, readStateOf } from "./read-state";

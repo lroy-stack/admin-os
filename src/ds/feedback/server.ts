@@ -12,6 +12,17 @@ const en: FeedbackMessages = {
     failed: "Could not undo. Try again.",
     countdown: { one: "{count} second left to undo", other: "{count} seconds left to undo" },
   },
+  readState: {
+    loading: "Loading",
+    retry: "Retry",
+    errorTitle: "Could not load this",
+    forbiddenTitle: "You do not have access",
+  },
+  approval: {
+    title: "Waiting for approval",
+    waiting: "{action} is waiting for approval from the {role} role.",
+    readOnly: "It cannot be changed until it is decided.",
+  },
 };
 
 const es: FeedbackMessages = {
@@ -21,6 +32,17 @@ const es: FeedbackMessages = {
     undone: "Deshecho",
     failed: "No se pudo deshacer. Inténtalo de nuevo.",
     countdown: { one: "Queda {count} segundo para deshacer", other: "Quedan {count} segundos para deshacer" },
+  },
+  readState: {
+    loading: "Cargando",
+    retry: "Reintentar",
+    errorTitle: "No se pudo cargar",
+    forbiddenTitle: "No tienes acceso",
+  },
+  approval: {
+    title: "Pendiente de aprobación",
+    waiting: "{action} está pendiente de aprobación del rol {role}.",
+    readOnly: "No se puede modificar hasta que se decida.",
   },
 };
 
@@ -39,6 +61,17 @@ const de: FeedbackMessages = {
       other: "Noch {count} Sekunden zum Rückgängigmachen",
     },
   },
+  readState: {
+    loading: "Wird geladen",
+    retry: "Erneut versuchen",
+    errorTitle: "Konnte nicht geladen werden",
+    forbiddenTitle: "Kein Zugriff",
+  },
+  approval: {
+    title: "Wartet auf Freigabe",
+    waiting: "{action} wartet auf die Freigabe durch die Rolle {role}.",
+    readOnly: "Bis zur Entscheidung kann es nicht geändert werden.",
+  },
 };
 
 const fr: FeedbackMessages = {
@@ -48,6 +81,17 @@ const fr: FeedbackMessages = {
     undone: "Annulé",
     failed: "Impossible d’annuler. Veuillez réessayer.",
     countdown: { one: "Encore {count} seconde pour annuler", other: "Encore {count} secondes pour annuler" },
+  },
+  readState: {
+    loading: "Chargement",
+    retry: "Réessayer",
+    errorTitle: "Impossible de charger",
+    forbiddenTitle: "Accès refusé",
+  },
+  approval: {
+    title: "En attente d’approbation",
+    waiting: "{action} attend l’approbation du rôle {role}.",
+    readOnly: "Il ne peut pas être modifié avant la décision.",
   },
 };
 
