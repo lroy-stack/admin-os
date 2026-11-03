@@ -19,6 +19,8 @@ export interface McpServerOptions {
   readonly sessionId?: string;
   /** Where the client's call lines go; stdio passes a stderr logger, since stdout carries the protocol. */
   readonly logger?: (line: CallLogLine) => void;
+  /** Read tools only (`MCP_READ_ONLY`, see `mcp-env.ts`). */
+  readonly readOnly?: boolean;
 }
 
 /** The MCP server for one actor: the merged catalogue through the same client and adapter as the UI (spec D4). */
@@ -31,6 +33,7 @@ export function createMcpServer(options: McpServerOptions): Server {
   return projectCatalog({
     catalog: CATALOG,
     actor: options.actor,
+    readOnly: options.readOnly === true,
     createClient: (actor, correlationId) =>
       createClient(CATALOG, adapter, {
         actor,

@@ -89,7 +89,7 @@ afterEach(async () => {
  * A real MCP client talking to the projection over the SDK's in-memory transport pair. It lists first, as real
  * clients do, so every later `callTool` validates `structuredContent` against the advertised output schema.
  */
-const connect = async (actor: Actor) => {
+const connect = async (actor: Actor, readOnly = false) => {
   const adapter = createMockAdapter({
     handlers,
     store: createSessionStore<Notes>({ notes: ["seeded"] }),
@@ -99,6 +99,7 @@ const connect = async (actor: Actor) => {
   const server = projectCatalog({
     catalog,
     actor,
+    readOnly,
     createClient: (callingActor, correlationId) =>
       createClient(catalog, adapter, {
         actor: callingActor,
@@ -135,6 +136,11 @@ describe("listing", () => {
     ["an actor without permissions", nobody, []],
   ] as const)("%s lists exactly the tools its permissions reach", async (_label, actor, expected) => {
     expect(await toolNames(actor)).toEqual(expected);
+  });
+
+  it("lists only read tools on a read-only server, even for the owner", async () => {
+    const { tools } = await (await connect(owner, true)).listTools();
+    expect(tools.map((tool) => tool.name)).toEqual(["notes_list"]);
   });
 
   it.each(Object.values(catalog) as AnyCapability[])("$id is described by its summary", async (capability) => {
@@ -203,6 +209,19 @@ describe("calls", () => {
     const result = await (await connect(reader)).callTool({ name, arguments: { text: "x" } });
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "access.forbidden" } });
   });
+
+  it.each(["notes_add", "notes_clear"])(
+    "answers %s on a read-only server with access.forbidden that says the server is read-only",
+    async (name) => {
+      const client = await connect(owner, true);
+      const result = await client.callTool({ name, arguments: { text: "x" } });
+      const read = await client.callTool({ name: "notes_list", arguments: {} });
+      expect([result, notesOutput.parse(read.structuredContent)]).toMatchObject([
+        { isError: true, structuredContent: { code: "access.forbidden", message: expect.stringMatching(/read-only/) } },
+        { items: ["seeded"] },
+      ]);
+    },
+  );
 
   it("answers invalid input with schema.invalid_input and the failing paths", async () => {
     const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "" } });

@@ -17,7 +17,7 @@ import { ROLE_IDS } from "@/core/access";
 
 import { demoActor } from "./actor";
 import { createMcpServer } from "./mcp.server";
-import { mcpTokensFrom } from "./mcp-env";
+import { mcpReadOnlyFrom, mcpTokensFrom } from "./mcp-env";
 import { resolveVertical } from "./vertical";
 
 /**
@@ -70,7 +70,12 @@ const handler = createMcpHandler(
     const { roleId, sessionId } = verifiedSchema.parse(authInfo?.extra);
     // MCP clients carry no demo cookies, so the preset is the deployment's (VERTICAL), as over stdio.
     const vertical = resolveVertical(process.env.VERTICAL);
-    return createMcpServer({ actor: demoActor(roleId, vertical), vertical: vertical.id, sessionId });
+    return createMcpServer({
+      actor: demoActor(roleId, vertical),
+      vertical: vertical.id,
+      sessionId,
+      readOnly: mcpReadOnlyFrom(process.env),
+    });
   },
   { onerror: (error) => console.error(JSON.stringify({ event: "mcp.http.error", message: error.message })) },
 );

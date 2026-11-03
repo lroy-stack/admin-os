@@ -228,3 +228,15 @@ or process's demo session, and the projection's generic tests already cover appr
 - **Logs.** The client's call line is now `{capability, effect, riskTier, via, status, code, durationMs, correlationId,
   actorRole}`. `createMcpServer` creates every client with `via: "mcp"`, so an approval rule keyed on the surface
   always sees an assistant.
+
+## Amendment 2026-11-04: the public demo tokens are read-only
+
+- **Why.** The demo tokens are public and every holder of one shares its demo session. A write one visitor's agent
+  makes (a guest note, a customer note) reaches the next visitor's agent as data, and `customers_update`,
+  `customers_block` and `customers_unblock` ran with no key and no approval. Spec 004 replaces the access model; until
+  its phase 4 lands, the public tokens read only.
+- **Rule.** `projectCatalog` takes `readOnly`: it lists `effect: read` tools only, and a write the actor could
+  otherwise call answers `access.forbidden` saying the server is read-only. Over HTTP, `MCP_READ_ONLY` decides when
+  set; unset, the server is read-only exactly while the public demo tokens are in force (no `MCP_TOKENS`, mock
+  adapter). stdio is the developer's own session and writes unless `MCP_READ_ONLY=true`.
+

@@ -10,7 +10,7 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { demoActor } from "@/config/actor";
 import { createMcpServer } from "@/config/mcp.server";
-import { mcpRoleFrom } from "@/config/mcp-env";
+import { mcpRoleFrom, parseReadOnly } from "@/config/mcp-env";
 import { resolveVertical } from "@/config/vertical";
 
 const toStderr = (...values: unknown[]) => console.error(...values);
@@ -25,9 +25,11 @@ const vertical = resolveVertical(process.env.VERTICAL);
 const roleId = mcpRoleFrom(process.env.MCP_ROLE);
 const actor = demoActor(roleId, vertical);
 const sessionId = `stdio-${crypto.randomUUID()}`;
+// A stdio process is the developer's own session, so it writes unless MCP_READ_ONLY=true.
+const readOnly = parseReadOnly(process.env.MCP_READ_ONLY) ?? false;
 
-serveStdio(() => createMcpServer({ actor, vertical: vertical.id, sessionId, logger: log }), {
+serveStdio(() => createMcpServer({ actor, vertical: vertical.id, sessionId, logger: log, readOnly }), {
   onerror: (error) => log({ event: "mcp.stdio.error", message: error.message }),
 });
 
-log({ event: "mcp.stdio.ready", vertical: vertical.id, actorRole: roleId });
+log({ event: "mcp.stdio.ready", vertical: vertical.id, actorRole: roleId, readOnly });

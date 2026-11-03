@@ -47,13 +47,37 @@ export function parseMcpTokens(raw: string): ReadonlyMap<string, RoleId> {
   return tokens;
 }
 
+type Env = Readonly<Record<string, string | undefined>>;
+
+/** The public demo tokens are in force: no `MCP_TOKENS`, and the mock adapter (an empty value is unset, as in getAdapter). */
+const usesPublicDemoTokens = (env: Env): boolean =>
+  !env.MCP_TOKENS?.trim() && [undefined, "", "mock"].includes(env.DATA_ADAPTER);
+
 /** The token map in force: `MCP_TOKENS` when set, the demo tokens on the mock adapter, otherwise none. */
-export function mcpTokensFrom(env: Readonly<Record<string, string | undefined>>): ReadonlyMap<string, RoleId> {
+export function mcpTokensFrom(env: Env): ReadonlyMap<string, RoleId> {
   const raw = env.MCP_TOKENS?.trim();
   if (raw) return parseMcpTokens(raw);
-  // An empty DATA_ADAPTER is unset, as in getAdapter: the mock adapter.
-  const onMock = [undefined, "", "mock"].includes(env.DATA_ADAPTER);
-  return onMock ? parseMcpTokens(DEMO_MCP_TOKENS) : new Map();
+  return usesPublicDemoTokens(env) ? parseMcpTokens(DEMO_MCP_TOKENS) : new Map();
+}
+
+const readOnlySchema = z.enum(["true", "false"]);
+
+/** `MCP_READ_ONLY` as written: `true`, `false`, or unset (`undefined`). A malformed value fails loudly. */
+export function parseReadOnly(raw: string | undefined): boolean | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  const parsed = readOnlySchema.safeParse(value);
+  if (!parsed.success) throw new Error(`MCP_READ_ONLY must be "true" or "false"; got "${value}".`);
+  return parsed.data === "true";
+}
+
+/**
+ * Whether the HTTP server offers read tools only: `MCP_READ_ONLY` when set, otherwise read-only exactly while the
+ * public demo tokens are in force. Anyone holds those tokens and every holder shares one demo session, so a write
+ * one visitor makes would reach the next visitor's agent (spec 004).
+ */
+export function mcpReadOnlyFrom(env: Env): boolean {
+  return parseReadOnly(env.MCP_READ_ONLY) ?? usesPublicDemoTokens(env);
 }
 
 const stdioRoleSchema = z.enum(ROLE_IDS).default("staff");

@@ -34,6 +34,8 @@ export interface ProjectionOptions {
   readonly actor: Actor;
   readonly createClient: ClientFactory;
   readonly serverInfo?: { readonly name: string; readonly version: string };
+  /** Lists and runs read tools only; a write the actor could otherwise call answers `access.forbidden`. */
+  readonly readOnly?: boolean;
 }
 
 const DEFAULT_SERVER_INFO = { name: "admin-os", version: "0.1.0" } as const;
@@ -90,9 +92,10 @@ export const toolOf = (capability: AnyCapability): Tool => ({
 });
 
 /** Tool name → capability for the actor; two ids that project to the same name are a catalogue bug and throw. */
-const toolIndex = (catalog: Catalog, actor: Actor): ReadonlyMap<string, AnyCapability> => {
+const toolIndex = (catalog: Catalog, actor: Actor, readOnly: boolean): ReadonlyMap<string, AnyCapability> => {
   const index = new Map<string, AnyCapability>();
-  for (const capability of visibleCapabilities(catalog, actor)) {
+  const listed = visibleCapabilities(catalog, actor).filter((capability) => !readOnly || capability.effect === "read");
+  for (const capability of listed) {
     const name = toolNameOf(capability.id);
     const clash = index.get(name);
     if (clash) throw new Error(`Capabilities "${clash.id}" and "${capability.id}" both project to tool "${name}"`);
@@ -131,6 +134,12 @@ const forbidden = (name: string) =>
     `Tool "${name}" is not available to this actor. Call tools/list for the tools you may use.`,
   );
 
+const readOnlyRefusal = (name: string) =>
+  toolError(
+    ErrorCodes.forbidden,
+    `Tool "${name}" changes data, and this server is read-only: it lists and runs read tools only.`,
+  );
+
 /** Reads need no key; a write carries the client's key when `_meta` offers a valid one (ADR 0009). */
 const idempotencyKeyOf = (
   capability: AnyCapability,
@@ -147,8 +156,15 @@ const idempotencyKeyOf = (
  * connect it. It lists only the actor's tools and answers unlisted names with `access.forbidden`, like the UI.
  */
 export function projectCatalog(options: ProjectionOptions): Server {
-  const { catalog, actor, createClient, serverInfo = DEFAULT_SERVER_INFO } = options;
-  const index = toolIndex(catalog, actor);
+  const { catalog, actor, createClient, serverInfo = DEFAULT_SERVER_INFO, readOnly = false } = options;
+  const index = toolIndex(catalog, actor, readOnly);
+  const withheldWrites = new Set(
+    readOnly
+      ? visibleCapabilities(catalog, actor)
+          .filter((capability) => capability.effect !== "read")
+          .map((capability) => toolNameOf(capability.id))
+      : [],
+  );
   const tools = [...index.values()].map(toolOf);
   const outputSchemas = new Map(tools.map((tool) => [tool.name, tool.outputSchema]));
 
@@ -160,7 +176,7 @@ export function projectCatalog(options: ProjectionOptions): Server {
   server.setRequestHandler("tools/call", async (request, ctx) => {
     const { name } = request.params;
     const capability = index.get(name);
-    if (capability === undefined) return forbidden(name);
+    if (capability === undefined) return withheldWrites.has(name) ? readOnlyRefusal(name) : forbidden(name);
     const idempotency = idempotencyKeyOf(capability, ctx.mcpReq._meta);
     if (idempotency.invalid) {
       return toolError(ErrorCodes.invalidInput, `${IDEMPOTENCY_META_KEY} must be a string of 1 to 128 characters`, {

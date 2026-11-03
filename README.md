@@ -186,7 +186,9 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
 - **Streamable HTTP** at `/api/mcp`, with a bearer token. `MCP_TOKENS` maps tokens to roles (see
   [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`,
   `demo-manager-token` and `demo-staff-token` work. Each token has its own demo data. The live demo serves it at
-  `https://admin-os.lr0y.dev/api/mcp` with the same demo tokens.
+  `https://admin-os.lr0y.dev/api/mcp` with the same demo tokens, **read-only**: anyone holds those tokens, so they
+  list and run read tools only. Your own `MCP_TOKENS` keep the writes; `MCP_READ_ONLY=true` or `false` overrides
+  either default.
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
 
 Claude Code, from the repository root:

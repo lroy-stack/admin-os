@@ -137,6 +137,27 @@ describe("MCP over the route (AC5)", () => {
     },
   );
 
+  it("offers the public demo tokens read tools only (spec 004 hotfix)", async () => {
+    vi.stubEnv("MCP_TOKENS", "");
+    const client = await connect("demo-owner-token");
+    const { tools } = await client.listTools();
+    const reads = Object.values(CATALOG)
+      .filter((capability) => capability.effect === "read")
+      .map((capability) => toolNameOf(capability.id));
+    expect(tools.map((tool) => tool.name)).toEqual(toolsOf("owner").filter((name) => reads.includes(name)));
+  });
+
+  it("refuses a write with the public demo tokens and says the server is read-only", async () => {
+    vi.stubEnv("MCP_TOKENS", "");
+    const client = await connect("demo-owner-token");
+    await client.listTools();
+    const result = await client.callTool({ name: "customers_update", arguments: { id: "C-1", patch: {} } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: { code: "access.forbidden", message: expect.stringMatching(/read-only/) },
+    });
+  });
+
   it("applies MOCK_FAULTS as the UI does", async () => {
     vi.stubEnv("MOCK_FAULTS", "bookings.list=bookings.not_found");
     const client = await connect("token-owner");

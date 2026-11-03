@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEMO_MCP_TOKENS, mcpRoleFrom, mcpTokensFrom, parseMcpTokens } from "./mcp-env";
+import { DEMO_MCP_TOKENS, mcpReadOnlyFrom, mcpRoleFrom, mcpTokensFrom, parseMcpTokens, parseReadOnly } from "./mcp-env";
 
 describe("MCP_TOKENS (ADR 0009)", () => {
   it("maps each token to its role", () => {
@@ -57,5 +57,31 @@ describe("MCP_ROLE (ADR 0009)", () => {
 
   it("fails loudly on an unknown role", () => {
     expect(() => mcpRoleFrom("superuser")).toThrow(/MCP_ROLE must be one of owner, manager, staff/);
+  });
+});
+
+describe("MCP_READ_ONLY (spec 004, hotfix)", () => {
+  it.each([
+    ["the public demo tokens", {}, true],
+    ["the public demo tokens with an explicit mock adapter", { DATA_ADAPTER: "mock" }, true],
+    ["private tokens", { MCP_TOKENS: "token-owner:owner" }, false],
+    ["another adapter", { DATA_ADAPTER: "supabase" }, false],
+    ["private tokens with MCP_READ_ONLY=true", { MCP_TOKENS: "token-owner:owner", MCP_READ_ONLY: "true" }, true],
+    ["the demo tokens with MCP_READ_ONLY=false", { MCP_READ_ONLY: "false" }, false],
+  ])("is read-only for %s → %s", (_case, env, readOnly) => {
+    expect(mcpReadOnlyFrom(env)).toBe(readOnly);
+  });
+
+  it.each([
+    [undefined, undefined],
+    ["", undefined],
+    [" true ", true],
+    ["false", false],
+  ])("parses %j as %j", (raw, parsed) => {
+    expect(parseReadOnly(raw)).toBe(parsed);
+  });
+
+  it("fails loudly on a malformed value", () => {
+    expect(() => parseReadOnly("yes")).toThrow(/MCP_READ_ONLY must be "true" or "false"; got "yes"/);
   });
 });
