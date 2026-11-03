@@ -7,6 +7,7 @@ import { ErrorCodes } from "@/core/errors";
 import { err } from "@/core/result";
 
 import type { CATALOG } from "./catalog";
+import { ensureDemoSession } from "./demo-session.server";
 import { getRuntime } from "./runtime";
 
 type CapabilityId = keyof typeof CATALOG & string;
@@ -40,6 +41,11 @@ export async function runWrite(id: CapabilityId, input: unknown, attemptKey: unk
       err(ErrorCodes.invalidInput, `${id} rejected its attempt key`, { paths: ["idempotencyKey"] }),
     );
   }
+  // The first write of a visitor starts the demo session (ADR 0005). In the action phase `cookies()` is the mutable
+  // jar and a `set` lands on the same store a later `get` reads (next/dist/server/web/spec-extension/adapters/
+  // request-cookies.js, `MutableRequestCookiesAdapter.wrap`), so `getRuntime` must only run after this line: it is
+  // cached per request and would otherwise freeze a session-less adapter.
+  await ensureDemoSession();
   const { client } = await getRuntime();
   const serialized = serializeCallResult(await client.call(id, input as never, { idempotencyKey: key.data }));
   if (serialized.status === "ok") refresh();

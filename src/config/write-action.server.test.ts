@@ -7,6 +7,7 @@ import { runWrite } from "./write-action.server";
 const mocks = vi.hoisted(() => ({ call: vi.fn(), refresh: vi.fn() }));
 
 vi.mock("next/cache", () => ({ refresh: mocks.refresh }));
+vi.mock("./demo-session.server", () => ({ ensureDemoSession: async () => "session-1" }));
 vi.mock("./runtime", () => ({ getRuntime: async () => ({ client: { call: mocks.call } }) }));
 
 const ID = "access.me.get";
