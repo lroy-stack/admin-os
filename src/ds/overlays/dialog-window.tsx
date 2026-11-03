@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { useMessages } from "@/core/i18n/client";
 
-import { ConfirmAction } from "./confirm-action";
+import { DiscardChanges } from "./discard-changes";
 import { overlaysMessageKey } from "./messages";
 import { type ReturnFocus, useRestoreFocus } from "./use-restore-focus";
 import { useViewport, type Viewport } from "./use-viewport";
@@ -158,19 +158,7 @@ export function DialogWindow({
           </DialogContent>
         </Dialog>
       )}
-      <ConfirmAction
-        destructive
-        open={asking}
-        onOpenChange={setAsking}
-        verb={text.discard.discard}
-        title={text.discard.title}
-        consequence={text.discard.consequence}
-        cancelLabel={text.discard.keep}
-        onConfirm={async () => {
-          onOpenChange(false);
-          return { status: "ok" };
-        }}
-      />
+      <DiscardChanges open={asking} onOpenChange={setAsking} onDiscard={() => onOpenChange(false)} />
     </>
   );
 }

@@ -24,6 +24,13 @@ export interface OverlaysMessages {
     /** Footer note of showcase windows whose data is local to the screen. */
     readonly demoNote: string;
   };
+  /** The docked panel's pick mode: what it tells the person while the page waits for an answer. */
+  readonly dock: {
+    /** Announced when the panel starts waiting for a click on the page. */
+    readonly pickHint: string;
+    /** The button that leaves pick mode, for people who do not use Escape. */
+    readonly stopPicking: string;
+  };
 }
 
 export const overlaysMessageKey: MessageKey<OverlaysMessages> = messageKey<OverlaysMessages>("overlays");
