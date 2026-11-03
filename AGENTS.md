@@ -84,7 +84,8 @@ Keep a component inside its route until it is reused by another feature. Do not 
 10. Match nearby screens in card density, borders, radius, spacing, content width, and responsive behavior.
 11. Use semantic theme tokens so new screens work with light mode, dark mode, and the existing theme presets.
 12. Handle relevant loading, empty, error, disabled, and overflow states.
-13. Keep screens accessible with semantic HTML, keyboard support, visible focus states, labels, and appropriate ARIA attributes.
+13. Open every dialog, sheet, panel and confirmation from the shared kit, choosing it by the job as `docs/adr/0015-window-rules.md` says; never leave a control without a destination.
+14. Keep screens accessible with semantic HTML, keyboard support, visible focus states, labels, and appropriate ARIA attributes.
 
 ## Code conventions
 
