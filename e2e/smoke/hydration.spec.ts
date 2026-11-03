@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
 
 test.use({ javaScriptEnabled: false });
 
-for (const route of ["/", "/dashboard/default", "/dashboard/bookings"]) {
+for (const route of ["/", "/dashboard/default", "/dashboard/bookings", "/dashboard/kit"]) {
   test(`the server HTML of ${route} holds no open overlay`, async ({ page }) => {
     await page.goto(route);
 

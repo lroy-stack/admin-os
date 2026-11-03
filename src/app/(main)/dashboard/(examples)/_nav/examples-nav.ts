@@ -15,6 +15,7 @@ import {
   Mail,
   MessageSquare,
   Package,
+  PanelTop,
   ReceiptText,
   Server,
   ShoppingBag,
@@ -79,6 +80,7 @@ export const examplesNav: readonly ExampleGroup[] = [
       { id: "profile", title: "Profile", url: "/dashboard/profile", icon: UserRound },
       { id: "users", title: "Customers", url: "/dashboard/users", icon: Users, placement: "area" },
       { id: "roles", title: "Roles", url: "/dashboard/roles", icon: Lock },
+      { id: "kit", title: "Window kit", url: "/dashboard/kit", icon: PanelTop },
     ],
   },
   {

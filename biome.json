@@ -145,6 +145,7 @@
         "src/app/(main)/dashboard/invoice/**",
         "src/app/(main)/dashboard/calendar/**",
         "src/app/(main)/dashboard/(examples)/tasks/**",
+        "src/app/(main)/dashboard/(examples)/kit/**",
         "src/app/(main)/dashboard/(examples)/productivity/**",
         "src/app/(main)/dashboard/(examples)/(legacy)/default-v1/**",
         "src/app/(main)/dashboard/ecommerce/**",

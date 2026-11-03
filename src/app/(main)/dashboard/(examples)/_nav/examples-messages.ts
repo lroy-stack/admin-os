@@ -25,6 +25,7 @@ export type ExampleLabelId =
   | "profile"
   | "users"
   | "roles"
+  | "kit"
   | "authentication"
   | "auth-login-v1"
   | "auth-login-v2"
