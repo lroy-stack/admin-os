@@ -11,6 +11,7 @@ const capability = (id: string) =>
     output: z.object({}),
     permission: "read:test",
     effect: "read",
+    riskTier: 0,
   });
 
 describe("mergeCatalogs", () => {
@@ -35,6 +36,7 @@ describe("defineCapability", () => {
       output: z.object({}),
       permission: "read:a",
       effect: "read",
+      riskTier: 0,
     } as const;
     expect(defineCapability(definition)).toBe(definition);
   });

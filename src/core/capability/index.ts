@@ -5,6 +5,14 @@ export type Permission = `${string}:${string}`;
 
 export type Effect = "read" | "write" | "destructive";
 
+/** 0 non-personal read · 1 personal read or self-scoped write · 2 business write · 3 irreversible, money or legal. */
+export type RiskTier = 0 | 1 | 2 | 3;
+
+/** Who is calling, for the approval rule: the same capability may be held for a person only when an assistant asks. */
+export interface ApprovalContext {
+  readonly via: "ui" | "mcp" | "system";
+}
+
 export interface Capability<Id extends string, I extends z.ZodType, O extends z.ZodType> {
   /** `<module>.<entity>.<verb>`, for example `customers.profile.get`. */
   readonly id: Id;
@@ -16,8 +24,13 @@ export interface Capability<Id extends string, I extends z.ZodType, O extends z.
   readonly effect: Effect;
   /** Reserved for owners: roles other than `owner` never hold the permission (ADR 0006). Absent means not elevated. */
   readonly elevated?: boolean;
+  readonly riskTier: RiskTier;
+  /** The UI offers "Request approval" and MCP advertises `awaiting_approval`; true exactly when `approval` is defined. */
+  readonly mayRequireApproval?: boolean;
+  /** The client refuses the call without a key (payments, sends). */
+  readonly requiresIdempotencyKey?: boolean;
   /** Mock HITL rule; absent means never. Method syntax keeps concrete capabilities assignable to `AnyCapability`. */
-  approval?(input: z.output<I>): boolean;
+  approval?(input: z.output<I>, context: ApprovalContext): boolean;
 }
 
 export type AnyCapability = Capability<string, z.ZodType, z.ZodType>;

@@ -10,6 +10,7 @@ export const staffList = defineCapability({
   output: pageOutput(staffMemberSchema),
   permission: "read:staff",
   effect: "read",
+  riskTier: 1,
 });
 
 export const staffCapabilities = { "staff.list": staffList } as const;

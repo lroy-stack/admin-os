@@ -35,6 +35,7 @@ export function createMcpServer(options: McpServerOptions): Server {
       createClient(CATALOG, adapter, {
         actor,
         correlationId,
+        via: "mcp",
         ...(options.logger === undefined ? {} : { logger: options.logger }),
       }),
   });

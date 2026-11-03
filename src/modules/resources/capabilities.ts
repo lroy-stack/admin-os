@@ -10,6 +10,7 @@ export const resourcesList = defineCapability({
   output: pageOutput(resourceSchema),
   permission: "read:resources",
   effect: "read",
+  riskTier: 0,
 });
 
 export const resourcesCapabilities = { "resources.list": resourcesList } as const;

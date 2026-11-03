@@ -9,7 +9,17 @@ const capability = <const Id extends string>(
   permission: `${string}:${string}`,
   effect: "read" | "write" | "destructive",
   elevated?: boolean,
-) => defineCapability({ id, summary: id, input: z.object({}), output: z.object({}), permission, effect, elevated });
+) =>
+  defineCapability({
+    id,
+    summary: id,
+    input: z.object({}),
+    output: z.object({}),
+    permission,
+    effect,
+    riskTier: effect === "read" ? 0 : 2,
+    elevated,
+  });
 
 const catalog: Catalog = {
   "notes.list": capability("notes.list", "read:notes", "read"),

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { AnyCapability, Catalog } from "@/core/capability";
+import type { AnyCapability, ApprovalContext, Catalog } from "@/core/capability";
 import { ErrorCodes } from "@/core/errors";
 import { type CallResult, err, isAwaitingApproval, type Result } from "@/core/result";
 
@@ -18,6 +18,8 @@ export interface CallContext {
   readonly correlationId: string;
   readonly idempotencyKey?: string;
   readonly signal: AbortSignal;
+  /** The surface the call came from; the approval rule may depend on it. */
+  readonly via: ApprovalContext["via"];
 }
 
 export interface Adapter {
@@ -49,11 +51,15 @@ export interface CallLogLine {
   readonly durationMs: number;
   readonly correlationId: string;
   readonly actorRole: string;
+  readonly riskTier: AnyCapability["riskTier"] | "unknown";
+  readonly via: ApprovalContext["via"];
 }
 
 export interface ClientOptions {
   readonly actor?: Actor;
   readonly correlationId?: string;
+  /** The surface making the calls; the MCP projection passes `"mcp"`. Defaults to `"ui"`. */
+  readonly via?: ApprovalContext["via"];
   readonly timeoutMs?: number;
   /** Development throws on contract drift so the overlay names the capability; production returns the code. */
   readonly mode?: "development" | "production";
@@ -92,6 +98,7 @@ export const createClient = <C extends Catalog>(
   const {
     actor = ANONYMOUS,
     correlationId = crypto.randomUUID(),
+    via = "ui",
     timeoutMs = DEFAULT_TIMEOUT_MS,
     mode = process.env.NODE_ENV === "development" ? "development" : "production",
     retryDelayMs = DEFAULT_RETRY_DELAY_MS,
@@ -109,6 +116,7 @@ export const createClient = <C extends Catalog>(
       actor,
       correlationId,
       signal,
+      via,
       ...(callOptions.idempotencyKey === undefined ? {} : { idempotencyKey: callOptions.idempotencyKey }),
     };
     try {
@@ -149,13 +157,18 @@ export const createClient = <C extends Catalog>(
     if (!parsedInput.success) {
       return err(ErrorCodes.invalidInput, `${id} rejected its input`, { paths: issuePaths(parsedInput.error) });
     }
+    if (capability.requiresIdempotencyKey && callOptions.idempotencyKey === undefined) {
+      return err(ErrorCodes.idempotencyRequired, `${id} needs an idempotency key`);
+    }
     return validateOutput(capability, await run(capability, parsedInput.data, callOptions));
   };
 
   return {
     async call(id, input, callOptions = {}) {
       const started = performance.now();
-      const effect = Object.hasOwn(catalog, id) ? (catalog[id] as AnyCapability).effect : "unknown";
+      const known = Object.hasOwn(catalog, id) ? (catalog[id] as AnyCapability) : undefined;
+      const effect = known?.effect ?? "unknown";
+      const riskTier = known?.riskTier ?? "unknown";
       let result: CallResult<unknown> | undefined;
       try {
         result = await execute(id, input, callOptions);
@@ -165,6 +178,8 @@ export const createClient = <C extends Catalog>(
         const base = {
           capability: id,
           effect,
+          riskTier,
+          via,
           durationMs: Math.round(performance.now() - started),
           correlationId,
           actorRole: actor.roleId,

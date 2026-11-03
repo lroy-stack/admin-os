@@ -10,6 +10,7 @@ export const customersList = defineCapability({
   output: pageOutput(customerSchema),
   permission: "read:customers",
   effect: "read",
+  riskTier: 1,
 });
 
 export const customersCapabilities = { "customers.list": customersList } as const;

@@ -13,6 +13,7 @@ const getThing = defineCapability({
   output: z.object({ name: z.string() }),
   permission: "read:things",
   effect: "read",
+  riskTier: 0,
 });
 
 const saveThing = defineCapability({
@@ -22,14 +23,36 @@ const saveThing = defineCapability({
   output: z.object({ name: z.string() }),
   permission: "write:things",
   effect: "write",
+  riskTier: 2,
+  mayRequireApproval: true,
   approval: (input) => input.name === "big",
 });
 
-const catalog = { [getThing.id]: getThing, [saveThing.id]: saveThing } satisfies Catalog;
+const payThing = defineCapability({
+  id: "things.thing.pay",
+  summary: "Pay for a thing",
+  input: z.object({ id: z.string().min(1) }),
+  output: z.object({ name: z.string() }),
+  permission: "write:things",
+  effect: "write",
+  riskTier: 3,
+  requiresIdempotencyKey: true,
+});
+
+const catalog = {
+  [getThing.id]: getThing,
+  [saveThing.id]: saveThing,
+  [payThing.id]: payThing,
+} satisfies Catalog;
 
 const actor = { actorId: "u1", roleId: "manager", permissions: ["read:things"] };
 
-const setup = (dispatch: Adapter["dispatch"], mode: "development" | "production" = "production", timeoutMs = 5) => {
+const setup = (
+  dispatch: Adapter["dispatch"],
+  mode: "development" | "production" = "production",
+  timeoutMs = 5,
+  via?: "ui" | "mcp" | "system",
+) => {
   const logs: CallLogLine[] = [];
   const adapter = { dispatch: vi.fn(dispatch) };
   const client = createClient(catalog, adapter, {
@@ -39,12 +62,29 @@ const setup = (dispatch: Adapter["dispatch"], mode: "development" | "production"
     mode,
     retryDelayMs: 0,
     logger: (line) => logs.push(line),
+    ...(via === undefined ? {} : { via }),
   });
   return { client, adapter, logs };
 };
 
 const unavailable = async () => err("transport.unavailable", "down");
 const never = () => new Promise<never>(() => undefined);
+
+describe("createClient idempotency", () => {
+  it("refuses a keyless call to a capability that requires a key, before dispatch", async () => {
+    const { client, adapter } = setup(async () => ok({ name: "x" }));
+    const result = await client.call("things.thing.pay", { id: "a" });
+    expect(result).toMatchObject({ ok: false, error: { code: "client.idempotency_required" } });
+    expect(adapter.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("dispatches the same call when a key is given", async () => {
+    const { client, adapter } = setup(async () => ok({ name: "x" }));
+    const result = await client.call("things.thing.pay", { id: "a" }, { idempotencyKey: "k1" });
+    expect(result).toEqual({ ok: true, value: { name: "x" } });
+    expect(adapter.dispatch).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("createClient validation", () => {
   it("rejects invalid input with schema.invalid_input and the issue paths", async () => {
@@ -168,6 +208,24 @@ describe("createClient logging", () => {
       correlationId: "corr-1",
       actorRole: "manager",
     });
+  });
+
+  it("logs the risk tier and the surface, defaulting to the UI", async () => {
+    const { client, logs } = setup(async () => ok({ name: "a" }));
+    await client.call("things.thing.get", { id: "a" });
+    expect(logs[0]).toMatchObject({ riskTier: 0, via: "ui" });
+  });
+
+  it("logs the surface the client was created for", async () => {
+    const { client, logs } = setup(async () => ok({ name: "a" }), "production", 5, "mcp");
+    await client.call("things.thing.get", { id: "a" });
+    expect(logs[0]).toMatchObject({ via: "mcp" });
+  });
+
+  it("logs an unknown risk tier for an id outside the catalog", async () => {
+    const { client, logs } = setup(async () => ok({}));
+    await (client as unknown as { call: (id: string, input: unknown) => Promise<unknown> }).call("nope.nope.nope", {});
+    expect(logs[0]).toMatchObject({ effect: "unknown", riskTier: "unknown" });
   });
 
   it("logs the error code on failure", async () => {

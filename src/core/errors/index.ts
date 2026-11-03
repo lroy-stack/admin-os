@@ -7,6 +7,7 @@ export const ErrorCodes = {
   timeout: "transport.timeout",
   unavailable: "transport.unavailable",
   unknownCapability: "client.unknown_capability",
+  idempotencyRequired: "client.idempotency_required",
 } as const;
 
 export type ErrorClass =

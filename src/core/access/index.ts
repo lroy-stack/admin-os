@@ -97,6 +97,7 @@ export const accessMeGet = defineCapability({
   output: actorSchema,
   permission: "read:access",
   effect: "read",
+  riskTier: 1,
 });
 
 export const accessCapabilities = { "access.me.get": accessMeGet } as const;

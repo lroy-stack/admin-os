@@ -24,6 +24,7 @@ const notesList = defineCapability({
   output: notesOutput,
   permission: "read:notes",
   effect: "read",
+  riskTier: 0,
 });
 
 const notesAdd = defineCapability({
@@ -33,6 +34,8 @@ const notesAdd = defineCapability({
   output: notesOutput,
   permission: "create:notes",
   effect: "write",
+  riskTier: 2,
+  mayRequireApproval: true,
   approval: (input) => input.text.startsWith("!"),
 });
 
@@ -43,6 +46,7 @@ const notesClear = defineCapability({
   output: notesOutput,
   permission: "delete:notes",
   effect: "destructive",
+  riskTier: 3,
 });
 
 const catalog = { "notes.list": notesList, "notes.add": notesAdd, "notes.clear": notesClear };
@@ -145,6 +149,15 @@ describe("listing", () => {
   ] as const)("%s is annotated from its effect", async (id, expected) => {
     const { tools } = await (await connect(owner)).listTools();
     expect(tools.find((tool) => tool.name === toolNameOf(id))?.annotations).toEqual(expected);
+  });
+
+  it.each([
+    ["notes.list", 0],
+    ["notes.add", 2],
+    ["notes.clear", 3],
+  ] as const)("%s carries its risk tier in _meta", async (id, riskTier) => {
+    const { tools } = await (await connect(owner)).listTools();
+    expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toEqual({ riskTier });
   });
 
   it("throws when two capabilities project to the same tool name", () => {

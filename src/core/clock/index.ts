@@ -36,6 +36,7 @@ export const clockGet = defineCapability({
   output: businessClockSchema,
   permission: "read:clock",
   effect: "read",
+  riskTier: 0,
 });
 
 export const clockCapabilities = { "clock.get": clockGet } as const;

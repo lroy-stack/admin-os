@@ -28,6 +28,7 @@ const notesList = defineCapability({
   output: z.array(z.string()),
   permission: "read:notes",
   effect: "read",
+  riskTier: 0,
 });
 
 const notesAdd = defineCapability({
@@ -37,10 +38,30 @@ const notesAdd = defineCapability({
   output: z.array(z.string()),
   permission: "create:notes",
   effect: "write",
+  riskTier: 2,
+  mayRequireApproval: true,
   approval: (input) => input.text.startsWith("!"),
 });
 
-const catalog = { "notes.list": notesList, "notes.add": notesAdd, ...clockCapabilities, ...accessCapabilities };
+const notesShare = defineCapability({
+  id: "notes.share",
+  summary: "Share the notes; an assistant needs approval.",
+  input: z.strictObject({}),
+  output: z.array(z.string()),
+  permission: "create:notes",
+  effect: "write",
+  riskTier: 2,
+  mayRequireApproval: true,
+  approval: (_input, { via }) => via === "mcp",
+});
+
+const catalog = {
+  "notes.list": notesList,
+  "notes.add": notesAdd,
+  "notes.share": notesShare,
+  ...clockCapabilities,
+  ...accessCapabilities,
+};
 
 const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
   ...mockHandler(notesList, (_input, { data }: { data: Notes }) => ok([...data.notes])),
@@ -48,6 +69,7 @@ const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
     data.notes.push(input.text);
     return ok([...data.notes]);
   }),
+  ...mockHandler(notesShare, (_input, { data }: { data: Notes }) => ok([...data.notes])),
   ...kernelMockHandlers,
 };
 
@@ -70,11 +92,11 @@ const reader: Actor = { actorId: "demo-staff", roleId: "staff", permissions: ["r
 
 const setup = (options: { sessionId?: string; faults?: string; actor?: Actor } = {}) => {
   const store = createSessionStore<Notes>({ notes: ["seeded"] });
-  const clientFor = (sessionId: string | undefined, actor: Actor = options.actor ?? owner) =>
+  const clientFor = (sessionId: string | undefined, actor: Actor = options.actor ?? owner, via: "ui" | "mcp" = "ui") =>
     createClient(
       catalog,
       createMockAdapter({ handlers, store, sessionId, clock, faults: parseFaults(options.faults) }),
-      { actor, retryDelayMs: 0, logger: () => undefined, mode: "production" },
+      { actor, via, retryDelayMs: 0, logger: () => undefined, mode: "production" },
     );
   return { store, client: clientFor(options.sessionId), clientFor };
 };
@@ -198,6 +220,16 @@ describe("createMockAdapter", () => {
       data: { notes: ["seeded"] },
       approvals: [{ capabilityId: "notes.add", actorId: "demo-owner", input: { text: "!delete all" } }],
     });
+  });
+
+  it("lets the approval rule depend on the surface of the call", async () => {
+    const { clientFor } = setup();
+    const fromUi = await clientFor("visitor-a").call("notes.share", {});
+    const fromMcp = await clientFor("visitor-b", owner, "mcp").call("notes.share", {});
+    expect([fromUi, fromMcp]).toEqual([
+      { ok: true, value: ["seeded"] },
+      { status: "awaiting_approval", approvalId: expect.any(String) },
+    ]);
   });
 
   it("forces a code from MOCK_FAULTS", async () => {

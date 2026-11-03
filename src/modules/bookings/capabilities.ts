@@ -10,6 +10,7 @@ export const bookingsList = defineCapability({
   output: pageOutput(bookingSchema),
   permission: "read:bookings",
   effect: "read",
+  riskTier: 1,
 });
 
 export const bookingsCapabilities = { "bookings.list": bookingsList } as const;

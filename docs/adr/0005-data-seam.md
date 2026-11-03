@@ -262,3 +262,15 @@ Every list capability paginates.
 - **Lists** page with `paginate(items, page)` from `src/core/pagination` (the base64url `{o}` cursor). A cursor that
   does not decode is `schema.invalid_input`.
 
+## Update 2026-11-03: capability descriptor v2
+
+- **Descriptor.** `Capability` gains `riskTier` (required), `mayRequireApproval?` and `requiresIdempotencyKey?`, and
+  `approval(input, context)` now receives an `ApprovalContext` (`{ via: "ui" | "mcp" | "system" }`). Tiers: 0 non-personal
+  read · 1 personal read or self-scoped write · 2 business write · 3 irreversible, money or legal.
+- **Client.** `createClient` takes `via` (default `"ui"`; the MCP wiring passes `"mcp"`) and forwards it to the adapter in
+  `CallContext`. A call to a capability with `requiresIdempotencyKey` and no key is refused before dispatch with
+  `client.idempotency_required` (class `invalid`). Call log lines carry `riskTier` and `via`.
+- **MCP.** Each tool's `_meta` carries `riskTier`.
+- **Invariants** (contract test over `CATALOG`, `src/config/contracts.test.ts`): a read has tier 0 or 1 and no approval
+  rule · tier 3 implies destructive · destructive implies tier 2 or 3 · `approval` is defined exactly when
+  `mayRequireApproval` is true · `requiresIdempotencyKey` implies not a read.

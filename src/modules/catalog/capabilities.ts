@@ -10,6 +10,7 @@ export const catalogList = defineCapability({
   output: pageOutput(catalogItemSchema),
   permission: "read:catalog",
   effect: "read",
+  riskTier: 0,
 });
 
 export const catalogCapabilities = { "catalog.list": catalogList } as const;

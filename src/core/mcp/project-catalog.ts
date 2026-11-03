@@ -78,6 +78,7 @@ export const toolOf = (capability: AnyCapability): Tool => ({
   inputSchema: jsonSchemaOf(capability.input, "input"),
   outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
   annotations: annotationsOf(capability),
+  _meta: { riskTier: capability.riskTier },
 });
 
 /** Tool name → capability for the actor; two ids that project to the same name are a catalogue bug and throw. */

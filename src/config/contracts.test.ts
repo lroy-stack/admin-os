@@ -257,3 +257,28 @@ describe("catalogue", () => {
     ]).toEqual([1, 1]);
   });
 });
+
+describe("capability descriptor invariants", () => {
+  const capabilities = catalogEntries.map(([id, capability]) => [id, capability] as const);
+
+  it.each(capabilities)("%s: a read is tier 0 or 1 and never needs approval", (_id, capability) => {
+    const violates = capability.effect === "read" && (capability.riskTier > 1 || capability.approval !== undefined);
+    expect(violates).toBe(false);
+  });
+
+  it.each(capabilities)("%s: tier 3 is destructive", (_id, capability) => {
+    expect(capability.riskTier === 3 && capability.effect !== "destructive").toBe(false);
+  });
+
+  it.each(capabilities)("%s: destructive is tier 2 or 3", (_id, capability) => {
+    expect(capability.effect === "destructive" && capability.riskTier < 2).toBe(false);
+  });
+
+  it.each(capabilities)("%s: an approval rule exists exactly when mayRequireApproval is set", (_id, capability) => {
+    expect(capability.approval !== undefined).toBe(capability.mayRequireApproval === true);
+  });
+
+  it.each(capabilities)("%s: a required idempotency key implies a write", (_id, capability) => {
+    expect(capability.requiresIdempotencyKey === true && capability.effect === "read").toBe(false);
+  });
+});

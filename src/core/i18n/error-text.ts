@@ -18,6 +18,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "The service is not available right now. Try again in a moment.",
     timeout: "The request took too long. Try again.",
     invalid_output: "The service returned an unexpected response. Error code: {code}.",
+    "client.idempotency_required": "This action needs a unique request key. Reload and try again.",
     generic: "Something went wrong. Error code: {code}.",
   },
   es: {
@@ -28,6 +29,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "El servicio no está disponible ahora. Inténtalo de nuevo en un momento.",
     timeout: "La solicitud ha tardado demasiado. Inténtalo de nuevo.",
     invalid_output: "El servicio ha devuelto una respuesta inesperada. Código de error: {code}.",
+    "client.idempotency_required": "Esta acción necesita una clave de solicitud única. Recarga e inténtalo de nuevo.",
     generic: "Algo ha salido mal. Código de error: {code}.",
   },
   de: {
@@ -38,6 +40,8 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "Der Dienst ist gerade nicht verfügbar. Versuche es gleich noch einmal.",
     timeout: "Die Anfrage hat zu lange gedauert. Versuche es erneut.",
     invalid_output: "Der Dienst hat eine unerwartete Antwort geliefert. Fehlercode: {code}.",
+    "client.idempotency_required":
+      "Diese Aktion braucht einen eindeutigen Anfrageschlüssel. Lade neu und versuche es erneut.",
     generic: "Etwas ist schiefgelaufen. Fehlercode: {code}.",
   },
   fr: {
@@ -48,6 +52,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "Le service est indisponible pour le moment. Réessayez dans un instant.",
     timeout: "La requête a pris trop de temps. Réessayez.",
     invalid_output: "Le service a renvoyé une réponse inattendue. Code d’erreur : {code}.",
+    "client.idempotency_required": "Cette action nécessite une clé de requête unique. Rechargez et réessayez.",
     generic: "Une erreur s’est produite. Code d’erreur : {code}.",
   },
 });

@@ -87,7 +87,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
       const replayed = replayKey === undefined ? undefined : session.replays.get(replayKey);
       if (replayed) return replayed;
 
-      const result: CallResult<unknown> = capability.approval?.(input)
+      const result: CallResult<unknown> = capability.approval?.(input, { via: context.via })
         ? approve(session.approvals, capability.id, context.actor.actorId, input)
         : await handler(input, { actor: context.actor, clock, data: session.data });
       if (replayKey !== undefined) session.replays.set(replayKey, result);
