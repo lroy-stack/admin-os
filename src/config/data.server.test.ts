@@ -37,7 +37,7 @@ const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", worksho
 
 /** Per preset: a confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, a bookable slot. */
 const bookable = {
-  hospitality: { booking: "R-1046", resource: "S6", startMin: 22 * 60 },
+  hospitality: { booking: "R-1046", resource: "S8", startMin: 22 * 60 },
   salon: { booking: "A-201", resource: "chair-3", startMin: 15 * 60 },
   workshop: { booking: "W-301", resource: "bay-1", startMin: 15 * 60 },
 } as const;

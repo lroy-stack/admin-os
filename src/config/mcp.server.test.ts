@@ -157,7 +157,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const { client } = await connect(owner, undefined, crypto.randomUUID());
     const seated = await client.callTool({
       name: "bookings_walk_in_seat",
-      arguments: { partySize: 2, resourceIds: ["S6"] },
+      arguments: { partySize: 2, resourceIds: ["S8"] },
       _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
     });
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
@@ -169,7 +169,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const { client } = await connect(owner, undefined, crypto.randomUUID());
     const result = await client.callTool({
       name: "bookings_walk_in_seat",
-      arguments: { partySize: 2, resourceIds: ["S6"] },
+      arguments: { partySize: 2, resourceIds: ["S8"] },
     });
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "client.idempotency_required" } });
   });

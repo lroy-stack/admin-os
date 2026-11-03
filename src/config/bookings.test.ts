@@ -25,7 +25,7 @@ const presets = [
   {
     vertical: "hospitality",
     stay: 90,
-    free: "S6",
+    free: "S8",
     freeAt: 22 * 60,
     tooSmall: { resourceId: "S2", partySize: 3 },
     busy: { resourceId: "S2", at: 19 * 60 + 30 },
