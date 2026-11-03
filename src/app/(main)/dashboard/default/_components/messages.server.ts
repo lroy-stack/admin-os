@@ -20,7 +20,6 @@ const en: OverviewMessages = {
     title: "Revenue",
     rangeLabel: "Revenue range",
     ranges: { sixMonths: "6M", twelveMonths: "12M" },
-    options: "Revenue options",
     openReports: "Open growth reports",
     summary: {
       one: "won in {count} month · {atTarget} at target",
@@ -31,7 +30,6 @@ const en: OverviewMessages = {
   },
   quota: {
     title: "Team quota",
-    options: "Quota options",
     attainment: "Team quota attainment",
     summary: "{won} of {target} · 12-month quota",
   },
@@ -45,6 +43,7 @@ const en: OverviewMessages = {
     title: "Hot deals",
     byWeightedValue: "by weighted value",
     addDeal: "Add a deal in the pipeline",
+    empty: "No hot deals left",
     openPipeline: "Open pipeline",
   },
 };
@@ -66,7 +65,6 @@ const es: OverviewMessages = {
     title: "Ingresos",
     rangeLabel: "Periodo de ingresos",
     ranges: { sixMonths: "6 meses", twelveMonths: "12 meses" },
-    options: "Opciones de ingresos",
     openReports: "Abrir informes de crecimiento",
     summary: {
       one: "ganado en {count} mes · objetivo cumplido en {atTarget} de {count}",
@@ -77,7 +75,6 @@ const es: OverviewMessages = {
   },
   quota: {
     title: "Cuota del equipo",
-    options: "Opciones de cuota",
     attainment: "Cumplimiento de la cuota del equipo",
     summary: "{won} de {target} · cuota de 12 meses",
   },
@@ -91,6 +88,7 @@ const es: OverviewMessages = {
     title: "Oportunidades calientes",
     byWeightedValue: "por valor ponderado",
     addDeal: "Añadir una oportunidad al embudo",
+    empty: "No quedan oportunidades calientes",
     openPipeline: "Abrir embudo",
   },
 };
@@ -112,7 +110,6 @@ const de: OverviewMessages = {
     title: "Umsatz",
     rangeLabel: "Umsatzzeitraum",
     ranges: { sixMonths: "6 Mon.", twelveMonths: "12 Mon." },
-    options: "Umsatzoptionen",
     openReports: "Wachstumsberichte öffnen",
     summary: {
       one: "gewonnen in {count} Monat · Ziel in {atTarget} von {count} erreicht",
@@ -123,7 +120,6 @@ const de: OverviewMessages = {
   },
   quota: {
     title: "Teamquote",
-    options: "Quotenoptionen",
     attainment: "Erfüllung der Teamquote",
     summary: "{won} von {target} · 12-Monats-Quote",
   },
@@ -137,6 +133,7 @@ const de: OverviewMessages = {
     title: "Heiße Deals",
     byWeightedValue: "nach gewichtetem Wert",
     addDeal: "Deal zur Pipeline hinzufügen",
+    empty: "Keine heißen Deals mehr",
     openPipeline: "Pipeline öffnen",
   },
 };
@@ -158,7 +155,6 @@ const fr: OverviewMessages = {
     title: "Chiffre d’affaires",
     rangeLabel: "Période du chiffre d’affaires",
     ranges: { sixMonths: "6 mois", twelveMonths: "12 mois" },
-    options: "Options du chiffre d’affaires",
     openReports: "Ouvrir les rapports de croissance",
     summary: {
       one: "gagné en {count} mois · objectif atteint {atTarget} sur {count}",
@@ -169,7 +165,6 @@ const fr: OverviewMessages = {
   },
   quota: {
     title: "Quota de l’équipe",
-    options: "Options du quota",
     attainment: "Atteinte du quota de l’équipe",
     summary: "{won} sur {target} · quota sur 12 mois",
   },
@@ -183,6 +178,7 @@ const fr: OverviewMessages = {
     title: "Affaires chaudes",
     byWeightedValue: "par valeur pondérée",
     addDeal: "Ajouter une affaire au pipeline",
+    empty: "Plus aucune affaire chaude",
     openPipeline: "Ouvrir le pipeline",
   },
 };

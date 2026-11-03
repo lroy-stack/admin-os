@@ -15,7 +15,6 @@ export interface OverviewMessages {
     readonly title: string;
     readonly rangeLabel: string;
     readonly ranges: { readonly sixMonths: string; readonly twelveMonths: string };
-    readonly options: string;
     readonly openReports: string;
     /** Placeholders: `{count}` (months shown), `{atTarget}`. */
     readonly summary: Plural;
@@ -26,7 +25,6 @@ export interface OverviewMessages {
   };
   readonly quota: {
     readonly title: string;
-    readonly options: string;
     readonly attainment: string;
     /** Placeholders: `{won}`, `{target}`. */
     readonly summary: string;
@@ -42,6 +40,8 @@ export interface OverviewMessages {
     readonly title: string;
     readonly byWeightedValue: string;
     readonly addDeal: string;
+    /** Shown when every hot deal was deleted or closed in the session. */
+    readonly empty: string;
     readonly openPipeline: string;
   };
 }

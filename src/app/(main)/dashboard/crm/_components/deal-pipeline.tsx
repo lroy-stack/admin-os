@@ -5,12 +5,18 @@ import { useState } from "react";
 import { Download, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useMessages } from "@/core/i18n/client";
+import { useCurrency, useMessages } from "@/core/i18n/client";
 import { type TeamMemberId, team } from "@/data/crm";
 import { CardIconButton, FilterChip, SearchCapsule, SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { getCustomer, type OpenDeal, openStages } from "@/lib/crm";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
+import { addOutcome, resolveDeals } from "../../_components/deal-state";
+import { DealWindowsProvider, useDealWindows } from "../../_components/deal-windows";
+import { useDealsState } from "../../_components/deals-session";
 import { MemberAvatar } from "../../_components/member-avatars";
+import { dashboardMessageKey } from "../../_components/messages";
+import { DEALS_EXPORT_FILE, dealCsvColumns } from "./deal-export";
 import { DealsTable } from "./deals-table";
 import { crmMessageKey } from "./messages";
 import { OutcomeColumn } from "./outcome-column";
@@ -20,8 +26,29 @@ type View = "board" | "list";
 
 type Outcome = { count: number; value: number };
 
-export function DealPipeline({ deals, outcomes }: { deals: OpenDeal[]; outcomes: { won: Outcome; lost: Outcome } }) {
+type PipelineProps = { deals: OpenDeal[]; outcomes: { won: Outcome; lost: Outcome } };
+
+/** The Pipeline on the session's deals (demo-local), with the windows every deal opens. */
+export function DealPipeline(props: PipelineProps) {
+  return (
+    <DealWindowsProvider>
+      <PipelineBoard {...props} />
+    </DealWindowsProvider>
+  );
+}
+
+function PipelineBoard({ deals: given, outcomes: givenOutcomes }: PipelineProps) {
   const text = useMessages(crmMessageKey);
+  const stageNames = useMessages(dashboardMessageKey).stages;
+  const currency = useCurrency();
+  const windows = useDealWindows();
+  const session = useDealsState();
+  const resolved = resolveDeals(given, session, true);
+  const deals = resolved.open;
+  const outcomes = {
+    won: addOutcome(givenOutcomes.won, resolved.won),
+    lost: addOutcome(givenOutcomes.lost, resolved.lost),
+  };
   const viewOptions: SegmentedOption<View>[] = [
     { value: "board", label: text.view.board },
     { value: "list", label: text.view.list },
@@ -70,8 +97,18 @@ export function DealPipeline({ deals, outcomes }: { deals: OpenDeal[]; outcomes:
         </ul>
         <div className="flex items-center gap-2 lg:ml-auto">
           <SegmentedControl label={text.view.label} value={view} options={viewOptions} onValueChange={setView} />
-          <CardIconButton icon={Download} label={text.exportDeals} className="liquid-glass size-9 ring-0" />
-          <Button className="liquid-glass-brand h-9 rounded-full px-4">
+          <CardIconButton
+            icon={Download}
+            label={text.exportDeals}
+            className="liquid-glass size-9 ring-0"
+            onClick={() =>
+              downloadCsv(DEALS_EXPORT_FILE, toCsv(visibleDeals, dealCsvColumns(text.csv, stageNames, currency)))
+            }
+          />
+          <Button
+            className="liquid-glass-brand h-9 rounded-full px-4"
+            onClick={(event) => windows.openCreate(undefined, event.currentTarget)}
+          >
             <Plus data-icon="inline-start" />
             {text.newDeal}
           </Button>

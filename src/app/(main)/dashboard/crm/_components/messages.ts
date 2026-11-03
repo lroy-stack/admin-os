@@ -19,6 +19,16 @@ export interface CrmMessages {
   };
   readonly exportDeals: string;
   readonly newDeal: string;
+  /** Headers of the exported file. */
+  readonly csv: {
+    readonly deal: string;
+    readonly customer: string;
+    readonly stage: string;
+    readonly closes: string;
+    readonly owners: string;
+    readonly value: string;
+    readonly currency: string;
+  };
   readonly noMatches: string;
   readonly table: {
     readonly deal: string;

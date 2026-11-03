@@ -12,6 +12,7 @@ import { stageProbability } from "@/data/crm";
 import { TonePill } from "@/ds/components";
 import { getCustomer, type OpenDeal } from "@/lib/crm";
 
+import { useDealWindows } from "../../_components/deal-windows";
 import { MemberAvatars } from "../../_components/member-avatars";
 import { dashboardMessageKey } from "../../_components/messages";
 import { stageTones } from "../../_components/stage-tones";
@@ -22,6 +23,7 @@ export function DealsTable({ deals }: { deals: OpenDeal[] }) {
   const shared = useMessages(dashboardMessageKey);
   const locale = useLocale();
   const currency = useCurrency();
+  const windows = useDealWindows();
   return (
     <div className="bg-card ring-border glass-surface px-3 py-2 ring-1">
       <Table>
@@ -36,10 +38,16 @@ export function DealsTable({ deals }: { deals: OpenDeal[] }) {
         </TableHeader>
         <TableBody>
           {deals.map((deal) => (
-            <TableRow key={deal.id} className="hover:bg-foreground/5">
+            <TableRow key={deal.id} className="hover:bg-foreground/5 relative">
               <TableCell>
                 <div className="flex flex-col">
-                  <span className="font-medium">{deal.title}</span>
+                  <button
+                    type="button"
+                    className="focus-visible:ring-ring/60 rounded-sm text-left font-medium outline-none after:absolute after:inset-0 after:content-[''] focus-visible:ring-2"
+                    onClick={(event) => windows.openPanel(deal, event.currentTarget)}
+                  >
+                    {deal.title}
+                  </button>
                   <span className="text-muted-foreground text-xs">{getCustomer(deal.customerId).company}</span>
                 </div>
               </TableCell>

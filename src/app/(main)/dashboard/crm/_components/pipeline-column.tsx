@@ -7,6 +7,7 @@ import { CardIconButton, toneSolid, toneWash } from "@/ds/components";
 import { type OpenDeal, sumValue } from "@/lib/crm";
 
 import { DealCard } from "../../_components/deal-card";
+import { useDealWindows } from "../../_components/deal-windows";
 import { dashboardMessageKey } from "../../_components/messages";
 import { stageTones } from "../../_components/stage-tones";
 import { crmMessageKey } from "./messages";
@@ -17,13 +18,16 @@ export function PipelineColumn({ stage, deals }: { stage: OpenStage; deals: Open
   const locale = useLocale();
   const currency = useCurrency();
   const tone = stageTones[stage];
+  const windows = useDealWindows();
   const headingId = `stage-${stage}`;
 
   return (
     <section
       aria-labelledby={headingId}
+      data-deal-region
+      tabIndex={-1}
       className={cn(
-        "ring-border glass-surface flex w-72 shrink-0 snap-start flex-col gap-3 p-2.5 ring-1 lg:w-auto lg:min-w-0",
+        "ring-border glass-surface flex outline-none w-72 shrink-0 snap-start flex-col gap-3 p-2.5 ring-1 lg:w-auto lg:min-w-0",
         toneWash[tone],
       )}
     >
@@ -42,7 +46,11 @@ export function PipelineColumn({ stage, deals }: { stage: OpenStage; deals: Open
             {formatAmount(sumValue(deals), currency, locale, { compact: true })}
           </span>
         </div>
-        <CardIconButton icon={Plus} label={format(text.addToStage, locale, { stage: stageName })} />
+        <CardIconButton
+          icon={Plus}
+          label={format(text.addToStage, locale, { stage: stageName })}
+          onClick={(event) => windows.openCreate(stage, event.currentTarget)}
+        />
       </header>
       <ul className="flex flex-col gap-2.5">
         {deals.map((deal) => (

@@ -5,7 +5,7 @@ import { getMessages } from "@/config/locale.server";
 import { CardIconButton } from "@/ds/components";
 import type { OpenDeal } from "@/lib/crm";
 
-import { DealCard } from "../../_components/deal-card";
+import { HotDealsGrid } from "./hot-deals-grid";
 import { overviewMessages } from "./messages.server";
 
 /** `deals` arrive with their titles already in the request's locale (`localizeDeals`). */
@@ -22,10 +22,8 @@ export async function HotDeals({ deals }: { deals: OpenDeal[] }) {
           <CardIconButton icon={ArrowUpRight} label={text.openPipeline} href="/dashboard/crm" />
         </CardAction>
       </CardHeader>
-      <CardContent className="grid flex-1 auto-rows-fr grid-cols-1 gap-2.5 sm:grid-cols-2">
-        {deals.map((deal) => (
-          <DealCard key={deal.id} deal={deal} tone="neutral" showProbability className="min-h-36" />
-        ))}
+      <CardContent className="flex flex-1 flex-col">
+        <HotDealsGrid deals={deals} />
       </CardContent>
     </Card>
   );
