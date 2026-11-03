@@ -33,6 +33,9 @@ export const depositSchema = z.object({
   status: z.enum(depositStatuses),
 });
 
+/** A moment on the business clock: the business day and the minute counted from its midnight. */
+export const clockReadingSchema = z.object({ day: businessDaySchema, minute: z.number().int().min(0) });
+
 /**
  * The booking without its cross-field check, so callers can `.omit`, `.pick` and `.partial` it (zod 4 refuses on a
  * refined schema). `contactName` labels a booking without a customer record. Times are minutes from midnight of
@@ -55,6 +58,12 @@ export const bookingObject = z.object({
   channel: channelSchema.optional(),
   guestNote: z.string().optional(),
   staffNote: z.string().optional(),
+  /** Why staff cancelled it; present only on a cancelled booking. */
+  cancelReason: z.string().min(1).optional(),
+  /** Why staff marked it a no-show, when they said. */
+  noShowReason: z.string().min(1).optional(),
+  /** When a write created it; seed bookings have none. A walk-in is undone against this moment. */
+  createdAt: clockReadingSchema.optional(),
   tags: z.array(z.string()),
   ext: z.record(z.string(), z.unknown()).optional(),
 });
@@ -69,3 +78,84 @@ export type Deposit = z.infer<typeof depositSchema>;
 export type Booking = z.infer<typeof bookingSchema>;
 /** The shape a producer writes: `partySize` may be left out and defaults to 1. */
 export type BookingInput = z.input<typeof bookingSchema>;
+
+/** Most guests one booking can hold; a bound for input, not a business rule. */
+const MAX_PARTY_SIZE = 200;
+
+const partySizeInput = z.number().int().min(1).max(MAX_PARTY_SIZE);
+const noteInput = z.string().trim().max(500);
+const tagsInput = z.array(z.string().trim().min(1).max(40)).max(20);
+const idInput = z.string().min(1).max(128);
+
+/** Resources a booking occupies; a repeated id would count its seats twice, so it is refused. */
+export const resourceIdsInput = z
+  .array(idInput)
+  .max(10)
+  .refine((ids) => new Set(ids).size === ids.length, { message: "resourceIds must not repeat an id" });
+
+export const bookingIdInput = z.strictObject({ id: idInput });
+
+/** Exactly one of `customerId` (a guest on record) or `contactName` (a one-off caller) names who booked. */
+export const bookingCreateInput = z
+  .strictObject({
+    businessDay: businessDaySchema,
+    startMin: minuteOfDaySchema,
+    partySize: partySizeInput,
+    resourceIds: resourceIdsInput.default([]),
+    customerId: idInput.optional(),
+    contactName: z.string().trim().min(1).max(120).optional(),
+    channel: channelSchema,
+    guestNote: noteInput.optional(),
+    tags: tagsInput.default([]),
+  })
+  .refine((input) => (input.customerId === undefined) !== (input.contactName === undefined), {
+    message: "send exactly one of customerId or contactName",
+    path: ["customerId"],
+  });
+
+/** An omitted field stays as it is. Moving the start keeps the length of the stay. */
+export const bookingPatchSchema = z.strictObject({
+  startMin: minuteOfDaySchema.optional(),
+  partySize: partySizeInput.optional(),
+  resourceIds: resourceIdsInput.optional(),
+  guestNote: noteInput.optional(),
+  staffNote: noteInput.optional(),
+  tags: tagsInput.optional(),
+});
+
+export const bookingUpdateInput = z.strictObject({ id: idInput, patch: bookingPatchSchema });
+
+/** `cancelled` and `no_show` are listed so they fail with a domain error that names the right capability. */
+export const bookingStatusAdvanceInput = z.strictObject({ id: idInput, to: z.enum(bookingStatuses) });
+
+export const bookingCancelInput = z.strictObject({ id: idInput, reason: z.string().trim().min(1).max(500) });
+
+export const bookingNoShowInput = z.strictObject({ id: idInput, reason: z.string().trim().min(1).max(500).optional() });
+
+export const walkInSeatInput = z.strictObject({
+  partySize: partySizeInput,
+  resourceIds: resourceIdsInput.min(1),
+  contactName: z.string().trim().min(1).max(120).optional(),
+});
+
+export const availabilityInput = z.strictObject({ businessDay: businessDaySchema, partySize: partySizeInput });
+
+/** One start time of the day and the active resources free for a stay beginning there; empty means full. */
+export const availabilitySlotSchema = z.object({
+  startMin: minuteOfDaySchema,
+  endMin: minuteOfDaySchema,
+  resourceIds: z.array(z.string().min(1)),
+});
+
+export const availabilitySchema = z.object({
+  businessDay: businessDaySchema,
+  partySize: z.number().int().min(1),
+  slots: z.array(availabilitySlotSchema),
+});
+
+export const walkInUndoOutput = z.object({ id: z.string().min(1) });
+
+export type Availability = z.infer<typeof availabilitySchema>;
+export type ClockReading = z.infer<typeof clockReadingSchema>;
+export type BookingCreateInput = z.input<typeof bookingCreateInput>;
+export type BookingPatch = z.infer<typeof bookingPatchSchema>;

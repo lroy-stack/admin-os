@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { minuteOfDaySchema } from "@/core/clock";
 import { defineSetting } from "@/core/settings";
 
 /** How long a walk-in party is expected to stay. */
@@ -35,4 +36,38 @@ export const slotMinutes = defineSetting({
   descriptionKey: "bookings.settings.slot.description",
 });
 
-export const bookingsSettings = [walkInStayMinutes, lateAfterMinutes, slotMinutes] as const;
+/** The hours of the day when bookings can start, as minutes from the midnight of the business day. */
+export const serviceWindow = defineSetting({
+  key: "bookings.service_window",
+  schema: z
+    .strictObject({ startMin: minuteOfDaySchema, endMin: minuteOfDaySchema })
+    .refine((window) => window.endMin > window.startMin, { message: "endMin must be after startMin" }),
+  defaultValue: { startMin: 19 * 60, endMin: 24 * 60 },
+  section: "bookings",
+  permission: "update:settings",
+  labelKey: "bookings.settings.serviceWindow.label",
+  descriptionKey: "bookings.settings.serviceWindow.description",
+});
+
+/**
+ * How long, in seconds, the server still lets staff undo a walk-in they just seated. The client's undo toast offers
+ * 10 s; the server window outlasts it so a tap at the last second, plus network latency, still lands. The business
+ * clock counts whole minutes, so the check is by minute and never refuses an undo inside the window.
+ */
+export const walkInUndoSeconds = defineSetting({
+  key: "bookings.walk_in.undo_seconds",
+  schema: z.number().int().min(5).max(300),
+  defaultValue: 30,
+  section: "bookings",
+  permission: "update:settings",
+  labelKey: "bookings.settings.walkInUndo.label",
+  descriptionKey: "bookings.settings.walkInUndo.description",
+});
+
+export const bookingsSettings = [
+  walkInStayMinutes,
+  lateAfterMinutes,
+  slotMinutes,
+  serviceWindow,
+  walkInUndoSeconds,
+] as const;

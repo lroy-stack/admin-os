@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AnyCapability } from "@/core/capability";
 import type { Actor, CallLogLine } from "@/core/client";
 import { toolNameOf, toolOf } from "@/core/mcp/server";
-import { bookingsList } from "@/modules/bookings";
+import { bookingSchema, bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
 
 import { demoActor } from "./actor";
@@ -34,12 +34,15 @@ afterEach(async () => {
 });
 
 /** An MCP client on the hospitality preset, listing first as real clients do (so calls validate their output). */
-const connect = async (actor: Actor, logger?: (line: CallLogLine) => void) => {
+const connect = async (actor: Actor, logger?: (line: CallLogLine) => void, sessionId?: string) => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "admin-os-test", version: "0.0.0" });
-  await createMcpServer({ actor, vertical: "hospitality", ...(logger === undefined ? {} : { logger }) }).connect(
-    serverSide,
-  );
+  await createMcpServer({
+    actor,
+    vertical: "hospitality",
+    ...(sessionId === undefined ? {} : { sessionId }),
+    ...(logger === undefined ? {} : { logger }),
+  }).connect(serverSide);
   await client.connect(clientSide);
   open.push(client);
   return { client, tools: (await client.listTools()).tools };
@@ -61,6 +64,14 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       "clock_get",
       "settings_values_get",
       "bookings_list",
+      "bookings_availability_get",
+      "bookings_create",
+      "bookings_update",
+      "bookings_status_advance",
+      "bookings_cancel",
+      "bookings_no_show_mark",
+      "bookings_walk_in_seat",
+      "bookings_walk_in_undo",
       "catalog_list",
       "customers_list",
       "customers_get",
@@ -76,6 +87,14 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
   });
 
   it.each([
+    ["bookings.availability.get", 0],
+    ["bookings.create", 2],
+    ["bookings.update", 2],
+    ["bookings.status.advance", 2],
+    ["bookings.cancel", 2],
+    ["bookings.no_show.mark", 2],
+    ["bookings.walk_in.seat", 2],
+    ["bookings.walk_in.undo", 2],
     ["customers.get", 1],
     ["customers.duplicates.check", 1],
     ["customers.create", 2],
@@ -122,6 +141,37 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const { client } = await connect(staff, (line) => lines.push(line));
     await client.callTool({ name: "bookings_list", arguments: {} });
     expect(lines).toMatchObject([{ capability: "bookings.list", riskTier: 1, via: "mcp" }]);
+  });
+
+  it.each(capabilities.filter((capability) => capability.requiresIdempotencyKey === true))(
+    "marks the write tool $id as needing an idempotency key",
+    async (capability) => {
+      const { tools } = await connect(owner);
+      expect(tools.find((tool) => tool.name === toolNameOf(capability.id))?._meta).toMatchObject({
+        "admin-os/requiresIdempotencyKey": true,
+      });
+    },
+  );
+
+  it("seats a walk-in through bookings_walk_in_seat and shows it in bookings_list", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const seated = await client.callTool({
+      name: "bookings_walk_in_seat",
+      arguments: { partySize: 2, resourceIds: ["S6"] },
+      _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
+    });
+    const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
+    const ids = bookingsList.output.parse(listed.structuredContent).items.map((booking) => booking.id);
+    expect(ids).toContain(bookingSchema.parse(seated.structuredContent).id);
+  });
+
+  it("refuses bookings_walk_in_seat without an idempotency key", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const result = await client.callTool({
+      name: "bookings_walk_in_seat",
+      arguments: { partySize: 2, resourceIds: ["S6"] },
+    });
+    expect(result).toMatchObject({ isError: true, structuredContent: { code: "client.idempotency_required" } });
   });
 
   it("answers a tool the actor was not offered with access.forbidden, as the UI does", async () => {

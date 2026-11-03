@@ -127,7 +127,7 @@ describe("MCP over the route (AC5)", () => {
     expect(result).toMatchObject({ structuredContent: { items: expect.any(Array) } });
   });
 
-  it.each(["bookings_create", "no_such_tool"])(
+  it.each(["bookings_cancel", "no_such_tool"])(
     "answers %s, which staff was not offered, with access.forbidden",
     async (name) => {
       const client = await connect("token-staff");

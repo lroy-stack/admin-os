@@ -35,9 +35,17 @@ const quiet = { retryDelayMs: 0, logger: () => undefined } as const;
 
 const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", workshop: "cust-carmen" } as const;
 
+/** Per preset: a confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, a bookable slot. */
+const bookable = {
+  hospitality: { booking: "R-1046", resource: "S6", startMin: 22 * 60 },
+  salon: { booking: "A-201", resource: "chair-3", startMin: 15 * 60 },
+  workshop: { booking: "W-301", resource: "bay-1", startMin: 15 * 60 },
+} as const;
+
 /** The smallest valid input of each capability that needs one; the rest accept `{}`. */
 const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
   const customer = { id: firstCustomer[vertical] };
+  const { booking, resource, startMin } = bookable[vertical];
   const inputs: Record<string, Record<string, unknown>> = {
     "customers.get": customer,
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
@@ -45,8 +53,31 @@ const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => 
     "customers.notes.add": { ...customer, text: "Called back" },
     "customers.block": { ...customer, reason: "No-show twice" },
     "customers.unblock": customer,
+    "bookings.availability.get": { businessDay: "2026-10-31", partySize: 2 },
+    "bookings.create": {
+      businessDay: "2026-10-31",
+      startMin,
+      partySize: 1,
+      resourceIds: [resource],
+      contactName: "Contract Test",
+      channel: "phone",
+    },
+    "bookings.update": { id: booking, patch: { staffNote: "Checked" } },
+    "bookings.status.advance": { id: booking, to: "in_progress" },
+    "bookings.cancel": { id: booking, reason: "Guest called" },
+    "bookings.no_show.mark": { id: booking },
+    "bookings.walk_in.seat": { partySize: 1, resourceIds: [resource] },
+    "bookings.walk_in.undo": { id: "bk-undo" },
   };
   return inputs[id] ?? {};
+};
+
+/** Undo needs a walk-in seated a moment ago, so the contract test seats one in the same session first. */
+const seatedWalkIn = async (client: ReturnType<typeof createClient>, vertical: VerticalId) => {
+  const seated = await client.call("bookings.walk_in.seat", inputFor("bookings.walk_in.seat", vertical), {
+    idempotencyKey: crypto.randomUUID(),
+  });
+  return { id: "ok" in seated && seated.ok ? (seated.value as { id: string }).id : "seat-failed" };
 };
 
 const ownerOf = (vertical: VerticalId): Actor => ({
@@ -71,9 +102,8 @@ describe("the mock adapter contract (ADR 0008)", () => {
         actor: ownerOf(vertical),
         mode: "development",
       });
-      expect(await client.call(id, inputFor(id, vertical), { idempotencyKey: crypto.randomUUID() })).toMatchObject({
-        ok: true,
-      });
+      const input = id === "bookings.walk_in.undo" ? await seatedWalkIn(client, vertical) : inputFor(id, vertical);
+      expect(await client.call(id, input, { idempotencyKey: crypto.randomUUID() })).toMatchObject({ ok: true });
     });
 
     it.each(capabilityIds)("answers %s with access.forbidden for an actor without permissions", async (id) => {

@@ -42,7 +42,10 @@ export const workshop = {
     staff: staffExtSchema,
   },
   /** Workshop jobs are booked in half-hour slots. */
-  settingsDefaults: { "bookings.slot_minutes": 30 },
+  settingsDefaults: {
+    "bookings.slot_minutes": 30,
+    "bookings.service_window": { startMin: 8 * 60, endMin: 18 * 60 },
+  },
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["vehicle", "mechanic"],
 } as const;
