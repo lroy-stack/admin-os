@@ -115,6 +115,12 @@ is one, serialised into the boot script (`src/scripts/theme-boot.tsx`).
 > **Amended 2026-10-31 (T4):** `labelKey` points at a text message of a module (`bookings.title`), not at a separate
 > `nav` dictionary. The contract test requires it to resolve to a string in all four locales.
 
+> **Amended 2026-11-03 (S2):** business settings are a registry too. A module declares them with `defineSetting` (key
+> `<module>.<path>`, zod schema, typed default, section, write permission, label and description keys) and
+> `src/config/settings.ts` merges them. They are read through the kernel capability `settings.values.get`
+> (`read:settings`, tier 0, held by every role; `settings` joins the kernel modules) and, in handlers, through the
+> `settings` reader of the mock context. An unknown key is the error `settings.unknown_key`.
+
 ```ts
 export interface NavEntry {
   readonly id: string;                        // stable: "bookings"

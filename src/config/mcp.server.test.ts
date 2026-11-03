@@ -59,6 +59,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     expect(tools.map((tool) => tool.name)).toEqual([
       "access_me_get",
       "clock_get",
+      "settings_values_get",
       "bookings_list",
       "catalog_list",
       "customers_list",

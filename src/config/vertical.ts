@@ -16,6 +16,8 @@ export interface VerticalPreset {
   readonly nav: NavManifest;
   readonly roles: readonly RolePreset[];
   readonly extensions: Readonly<Partial<Record<ExtensionEntity, z.ZodType>>>;
+  /** Overrides of the setting defaults where this business really differs; keys and values are checked by the contract test. */
+  readonly settingsDefaults: Readonly<Record<string, unknown>>;
   /** Words that must never appear in the generic layers (ADR 0008). */
   readonly leakTerms: readonly string[];
 }

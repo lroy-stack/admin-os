@@ -51,5 +51,6 @@ export const hospitality = {
     staff: staffExtSchema,
   },
   /** Words that must never appear in the generic layers (ADR 0008). */
+  settingsDefaults: {},
   leakTerms: ["diner", "dining", "covers", "waiter", "allergen", "dish", "restaurant", "mesa", "comensal", "carta"],
 } as const;

@@ -10,7 +10,7 @@ import { type FaultMap, parseFaults } from "@/core/mock";
 
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
-import { getAdapter } from "./data.server";
+import { getAdapter, settingsFor } from "./data.server";
 import { DEMO_SESSION_COOKIE } from "./demo-session.server";
 import { getLocale } from "./locale.server";
 import { getVertical } from "./vertical.server";
@@ -53,6 +53,7 @@ export const getRuntime = cache(async () => {
   return {
     client: createClient(CATALOG, adapter, { actor, correlationId }),
     actor,
+    settings: settingsFor(vertical.id),
     vertical,
     locale,
     correlationId,

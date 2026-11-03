@@ -1,6 +1,7 @@
 import { accessCapabilities } from "@/core/access";
 import { mergeCatalogs } from "@/core/capability";
 import { clockCapabilities } from "@/core/clock";
+import { settingsCapabilities } from "@/core/settings";
 import { bookingsCapabilities } from "@/modules/bookings";
 import { catalogCapabilities } from "@/modules/catalog";
 import { customersCapabilities } from "@/modules/customers";
@@ -11,6 +12,7 @@ import { staffCapabilities } from "@/modules/staff";
 export const CATALOG = mergeCatalogs(
   accessCapabilities,
   clockCapabilities,
+  settingsCapabilities,
   bookingsCapabilities,
   catalogCapabilities,
   customersCapabilities,

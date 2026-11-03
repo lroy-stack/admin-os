@@ -12,6 +12,7 @@ import {
   type MockHandler,
   type SessionStore,
 } from "@/core/mock";
+import { createSettingsReader, type SettingsReader } from "@/core/settings";
 import { bookingsMockHandlers } from "@/modules/bookings/server";
 import { catalogMockHandlers } from "@/modules/catalog/server";
 import { customersMockHandlers } from "@/modules/customers/server";
@@ -21,7 +22,12 @@ import { hospitalityClock, hospitalitySeed } from "@/verticals/hospitality/serve
 import { salonClock, salonSeed } from "@/verticals/salon/server";
 import { workshopClock, workshopSeed } from "@/verticals/workshop/server";
 
-import type { VerticalId } from "./vertical";
+import { SETTINGS } from "./settings";
+import { VERTICALS, type VerticalId } from "./vertical";
+
+/** The settings in effect for a preset: registry defaults with the preset's overrides (ADR 0004). */
+export const settingsFor = (vertical: VerticalId): SettingsReader<typeof SETTINGS> =>
+  createSettingsReader(SETTINGS, VERTICALS[vertical].settingsDefaults);
 
 /** The demo data of each preset: its seed collections and its seeded business clock (ADR 0004, 0005). */
 const DEMO = {
@@ -79,6 +85,7 @@ export function getAdapter(options: {
     store: storeFor(options.vertical),
     sessionId: options.sessionId,
     clock: process.env.MOCK_CLOCK === "live" ? liveClock(clock, new Date()) : fixedClock(clock),
+    settings: settingsFor(options.vertical),
     faults: options.faults,
   });
 }

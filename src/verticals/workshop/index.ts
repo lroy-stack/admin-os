@@ -41,6 +41,8 @@ export const workshop = {
     catalogItem: catalogItemExtSchema,
     staff: staffExtSchema,
   },
+  /** Workshop jobs are booked in half-hour slots. */
+  settingsDefaults: { "bookings.slot_minutes": 30 },
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["vehicle", "mechanic"],
 } as const;

@@ -36,10 +36,10 @@ export function moduleOf(capabilityId: string): ModuleId {
 }
 
 /**
- * Modules every preset has, whatever it enables: the actor reads itself (`access.me.get`) and the business clock
- * (`clock.get`). They grant no business data.
+ * Modules every preset has, whatever it enables: the actor reads itself (`access.me.get`), the business clock
+ * (`clock.get`) and the business settings (`settings.values.get`). They grant no business records.
  */
-export const KERNEL_MODULES = ["access", "clock"] as const satisfies readonly ModuleId[];
+export const KERNEL_MODULES = ["access", "clock", "settings"] as const satisfies readonly ModuleId[];
 
 const inScopeModules = (enabledModules: readonly ModuleId[]) =>
   new Set<ModuleId>([...KERNEL_MODULES, ...enabledModules]);

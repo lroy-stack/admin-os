@@ -68,6 +68,10 @@ Option 3.
 > `Record<Locale, string>`, so a preset can rename counts such as "{count} tables". The type is `Vocabulary` in
 > `src/core/i18n`.
 
+> **Amended 2026-11-03 (S2):** a preset may carry `settingsDefaults`, a map of setting keys to values that replaces the
+> default of a business setting (`bookings.walk_in.stay_minutes`, ...) where the business really differs. Keys and
+> values are checked against the settings registry (`src/config/settings.ts`) by the contract tests.
+
 - **Business data lives only in `src/verticals/*/server.ts` seeds.** Generic layers contain none (see the leak
   check in ADR 0008).
 - **Modules never read the preset.** They receive registrations and settings through the composition root

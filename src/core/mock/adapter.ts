@@ -5,6 +5,7 @@ import type { Actor, Adapter, CallContext } from "@/core/client";
 import type { BusinessClock } from "@/core/clock";
 import { ErrorCodes } from "@/core/errors";
 import { type CallResult, err, ok, type Result } from "@/core/result";
+import { createSettingsReader, type SettingsReader } from "@/core/settings";
 
 import type { FaultMap } from "./faults";
 import type { SessionStore } from "./session-store";
@@ -12,6 +13,8 @@ import type { SessionStore } from "./session-store";
 export interface MockContext<Data> {
   readonly actor: Actor;
   readonly clock: BusinessClock;
+  /** The business settings in effect for the session's preset (defaults plus the preset's overrides). */
+  readonly settings: SettingsReader;
   /** A read sees the seed or the session copy; a write gets the session copy and may change it. */
   readonly data: Data;
 }
@@ -40,6 +43,8 @@ export interface MockAdapterOptions<Data> {
   /** The visitor's demo session; writes need one (the runtime creates it in a Server Action). */
   readonly sessionId?: string;
   readonly clock: BusinessClock;
+  /** The effective business settings; absent means an empty registry. */
+  readonly settings?: SettingsReader;
   readonly faults?: FaultMap;
 }
 
@@ -61,7 +66,7 @@ const delay = (ms: number, signal: AbortSignal) =>
  * rule, replay keyed writes, then run the handler on the right data.
  */
 export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adapter {
-  const { handlers, store, sessionId, clock, faults = new Map() } = options;
+  const { handlers, store, sessionId, clock, faults = new Map(), settings = createSettingsReader({}) } = options;
 
   return {
     async dispatch(capability: AnyCapability, input: unknown, context: CallContext): Promise<CallResult<unknown>> {
@@ -76,7 +81,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
       if (fault?.code) return err(fault.code, `${capability.id} forced to ${fault.code} by MOCK_FAULTS`);
 
       if (capability.effect === "read") {
-        return handler(input, { actor: context.actor, clock, data: store.read(sessionId) });
+        return handler(input, { actor: context.actor, clock, settings, data: store.read(sessionId) });
       }
 
       if (sessionId === undefined) {
@@ -89,7 +94,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
 
       const result: CallResult<unknown> = capability.approval?.(input, { via: context.via })
         ? approve(session.approvals, capability.id, context.actor.actorId, input)
-        : await handler(input, { actor: context.actor, clock, data: session.data });
+        : await handler(input, { actor: context.actor, clock, settings, data: session.data });
       if (replayKey !== undefined) session.replays.set(replayKey, result);
       return result;
     },
@@ -110,6 +115,10 @@ function approve(
 /** Handlers for the kernel capabilities every adapter must answer (`clock.get`, `access.me.get`). */
 export const kernelMockHandlers: Readonly<Record<string, MockHandler<unknown>>> = {
   "clock.get": (_input, { clock }) => ok(clock),
+  "settings.values.get": (input, { settings }) => {
+    const result = settings.values((input as { keys?: readonly string[] }).keys);
+    return result.ok ? ok({ values: result.value }) : result;
+  },
   "access.me.get": (_input, { actor }) =>
     ok({
       actorId: actor.actorId,

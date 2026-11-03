@@ -40,6 +40,8 @@ export const salon = {
     catalogItem: catalogItemExtSchema,
     staff: staffExtSchema,
   },
+  /** A haircut is 45 minutes, so a walk-in is expected to stay that long. */
+  settingsDefaults: { "bookings.walk_in.stay_minutes": 45 },
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["stylist", "haircut"],
 } as const;
