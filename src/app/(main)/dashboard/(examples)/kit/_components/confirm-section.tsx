@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { MoreHorizontal } from "lucide-react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { ConfirmAction } from "@/ds/overlays";
 
@@ -18,6 +25,8 @@ export function ConfirmSection() {
   const text = useMessages(kitMessageKey).confirm;
   const locale = useLocale();
   const [confirmed, setConfirmed] = useState(0);
+  const [menuConfirm, setMenuConfirm] = useState(false);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   const reasonSchema = z.string().trim().min(3, text.withReason.reasonTooShort);
 
   return (
@@ -57,6 +66,30 @@ export function ConfirmSection() {
           onConfirm={async () => {
             await wait(DEMO_LATENCY_MS);
             return { status: "error", text: text.failing.refusal, code: "demo.refused" };
+          }}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button ref={menuTrigger} variant="outline" size="icon" aria-label={text.menu.trigger}>
+              <MoreHorizontal aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => setMenuConfirm(true)}>{text.menu.item}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <ConfirmAction
+          destructive
+          open={menuConfirm}
+          onOpenChange={setMenuConfirm}
+          returnFocus={menuTrigger}
+          verb={text.plain.open}
+          title={text.plain.title}
+          consequence={text.plain.consequence}
+          onConfirm={async () => {
+            await wait(DEMO_LATENCY_MS);
+            setConfirmed((count) => count + 1);
+            return { status: "ok" };
           }}
         />
       </div>

@@ -205,3 +205,69 @@ test.describe("unsaved changes", () => {
     await expect(page.getByRole("alertdialog")).toBeHidden();
   });
 });
+
+test.describe("window rules", () => {
+  test("the close button of a dirty form asks before discarding", async ({ page }) => {
+    await page.getByRole("button", { name: "Add guest" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await dialog.getByRole("button", { name: "Close" }).click();
+
+    await expect(page.getByRole("alertdialog", { name: "Discard changes?" })).toBeVisible();
+    await expect(page.locator("[data-window=form]")).toHaveCount(1);
+  });
+
+  test("Keep editing returns focus to the field that was being edited", async ({ page }) => {
+    await page.getByRole("button", { name: "Add guest" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
+    await dialog.getByLabel("Email").fill("ana@example.com");
+
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("alertdialog", { name: "Discard changes?" })
+      .getByRole("button", { name: "Keep editing" })
+      .click();
+
+    await expect(dialog.getByLabel("Email")).toBeFocused();
+  });
+
+  test("at exactly 768 px the dialog is centered, not a sheet", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+
+    await page.getByRole("button", { name: "Add guest" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
+    await expect(dialog).toBeVisible();
+    await expect(page.locator("[data-window=form][data-vaul-drawer-direction=bottom]")).toHaveCount(0);
+    await expect.poll(async () => (await dialog.boundingBox())?.width).toBeLessThanOrEqual(640);
+    await expect.poll(async () => (await dialog.boundingBox())?.height).toBeLessThan(900);
+  });
+
+  test("an open window survives crossing 768 px and still asks before closing", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.getByRole("button", { name: "Add guest" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await expect(dialog.getByLabel("Name")).toHaveValue("Ana Ruiz");
+    await expect(dialog.getByLabel("Name")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog", { name: "Discard changes?" })).toBeVisible();
+  });
+
+  test("a confirmation opened from a menu item returns focus to the menu trigger", async ({ page }) => {
+    const trigger = page.getByRole("button", { name: "Actions for table 12" });
+    await trigger.click();
+    await page.getByRole("menuitem", { name: "Release table 12" }).click();
+
+    const dialog = page.getByRole("alertdialog", { name: "Release table 12?" });
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+});

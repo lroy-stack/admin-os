@@ -40,6 +40,7 @@ const en: KitMessages = {
       consequence: "The zone and its tables are removed.",
       refusal: "The zone still has open orders.",
     },
+    menu: { trigger: "Actions for table 12", item: "Release table 12" },
     confirmed: { one: "Confirmed {count} time", other: "Confirmed {count} times" },
   },
   quick: {
@@ -106,6 +107,7 @@ const es: KitMessages = {
       consequence: "Se eliminan la zona y sus mesas.",
       refusal: "La zona todavía tiene comandas abiertas.",
     },
+    menu: { trigger: "Acciones de la mesa 12", item: "Liberar mesa 12" },
     confirmed: { one: "Confirmado {count} vez", other: "Confirmado {count} veces" },
   },
   quick: {
@@ -172,6 +174,7 @@ const de: KitMessages = {
       consequence: "Der Bereich und seine Tische werden entfernt.",
       refusal: "Der Bereich hat noch offene Bestellungen.",
     },
+    menu: { trigger: "Aktionen für Tisch 12", item: "Tisch 12 freigeben" },
     confirmed: { one: "{count} Mal bestätigt", other: "{count} Mal bestätigt" },
   },
   quick: {
@@ -238,6 +241,7 @@ const fr: KitMessages = {
       consequence: "La zone et ses tables sont supprimées.",
       refusal: "La zone a encore des commandes ouvertes.",
     },
+    menu: { trigger: "Actions pour la table 12", item: "Libérer la table 12" },
     confirmed: { one: "Confirmé {count} fois", other: "Confirmé {count} fois" },
   },
   quick: {

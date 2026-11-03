@@ -48,6 +48,11 @@ export interface KitMessages {
       /** What the demo action answers when it refuses. */
       readonly refusal: string;
     };
+    /** A row menu whose item opens the plain confirmation: the opener is gone when the window closes. */
+    readonly menu: {
+      readonly trigger: string;
+      readonly item: string;
+    };
     /** Placeholders: `{count}`, how many times an action ran. */
     readonly confirmed: Plural;
   };
