@@ -19,6 +19,12 @@ describe("serializeCallResult", () => {
     });
   });
 
+  it("drops the paths of an invalid output: they describe the output, not a field of the input", () => {
+    const result = err("schema.invalid_output", "things.save returned invalid output", { paths: ["booking.id"] });
+
+    expect(serializeCallResult(result)).toEqual({ status: "error", code: "schema.invalid_output" });
+  });
+
   it("drops details that are not field paths", () => {
     const result = err("bookings.table_taken", "table 4 is taken", { violations: [{ ruleId: "x" }], email: "a@b.c" });
 

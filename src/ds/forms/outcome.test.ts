@@ -26,10 +26,16 @@ describe("toOutcome", () => {
     });
   });
 
-  it("maps any other error that carries paths to issues", () => {
+  it("maps an invalid output to a plain error: its paths are the output's, not a field of the form", () => {
+    const outcome = toOutcome({ status: "error", code: "schema.invalid_output", paths: ["booking.id"] }, "en");
+
+    expect(outcome).toMatchObject({ status: "error", code: "schema.invalid_output" });
+  });
+
+  it("maps any other error that carries paths to a plain error", () => {
     const outcome = toOutcome({ status: "error", code: "bookings.party_invalid", paths: ["party"] }, "en");
 
-    expect(outcome).toMatchObject({ status: "invalid", issues: [{ path: ["party"] }] });
+    expect(outcome).toMatchObject({ status: "error", code: "bookings.party_invalid" });
   });
 
   it("maps a rejected input without paths to an error with the invalid text", () => {

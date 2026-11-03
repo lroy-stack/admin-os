@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ErrorCodes } from "@/core/errors";
 import { type CallResult, isAwaitingApproval } from "@/core/result";
 
 /**
@@ -18,7 +19,9 @@ const pathsDetailsSchema = z.object({ paths: z.array(z.string()) });
 export function serializeCallResult<O>(result: CallResult<O>): SerializedCallResult<O> {
   if (isAwaitingApproval(result)) return { status: "awaiting_approval" };
   if (result.ok) return { status: "ok", value: result.value };
-  // Only field paths are kept: any other detail may carry values the actor is not meant to read.
+  // Only the field paths of a rejected input are kept (an invalid output's paths point into the output, not at a
+  // field the window has); any other detail may carry values the actor is not meant to read.
+  if (result.error.code !== ErrorCodes.invalidInput) return { status: "error", code: result.error.code };
   const details = pathsDetailsSchema.safeParse(result.error.details);
   return details.success
     ? { status: "error", code: result.error.code, paths: details.data.paths }

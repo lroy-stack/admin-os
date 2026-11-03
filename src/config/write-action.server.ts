@@ -37,9 +37,8 @@ type CapabilityId = keyof typeof CATALOG & string;
 export async function runWrite(id: CapabilityId, input: unknown, attemptKey: unknown): Promise<SerializedCallResult> {
   const key = idempotencyKeySchema.safeParse(attemptKey);
   if (!key.success) {
-    return serializeCallResult(
-      err(ErrorCodes.invalidInput, `${id} rejected its attempt key`, { paths: ["idempotencyKey"] }),
-    );
+    // No paths: the attempt key is not a field of the window's form, so it must not surface as a field issue.
+    return serializeCallResult(err(ErrorCodes.invalidInput, `${id} rejected its attempt key`));
   }
   // The first write of a visitor starts the demo session (ADR 0005). In the action phase `cookies()` is the mutable
   // jar and a `set` lands on the same store a later `get` reads (next/dist/server/web/spec-extension/adapters/

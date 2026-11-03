@@ -38,7 +38,8 @@ export function toOutcome<O>(
       return { status: "awaiting_approval" };
     case "error": {
       const paths = result.paths ?? [];
-      if (paths.length > 0) {
+      // Only a rejected input has fields to point at; other codes (an invalid output) carry paths of something else.
+      if (result.code === ErrorCodes.invalidInput && paths.length > 0) {
         const message = errorText({ code: ErrorCodes.invalidInput }, dictionary, locale);
         return { status: "invalid", issues: paths.map((path) => ({ path: toPath(path), message })) };
       }

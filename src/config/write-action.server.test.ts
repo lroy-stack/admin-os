@@ -56,7 +56,7 @@ describe("runWrite", () => {
   it.each([[undefined], [""], [42], ["k".repeat(129)]])("refuses the attempt key %j without calling", async (key) => {
     const result = await runWrite(ID, {}, key);
 
-    expect(result).toEqual({ status: "error", code: "schema.invalid_input", paths: ["idempotencyKey"] });
+    expect(result).toEqual({ status: "error", code: "schema.invalid_input" });
     expect(mocks.call).not.toHaveBeenCalled();
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
