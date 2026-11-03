@@ -11,6 +11,12 @@ const nextConfig = {
         destination: "/dashboard/default",
         permanent: false,
       },
+      // The template's customers screen became the product's customers directory.
+      {
+        source: "/dashboard/users",
+        destination: "/dashboard/customers",
+        permanent: true,
+      },
     ];
   },
 };

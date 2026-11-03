@@ -23,7 +23,7 @@ export function NewCustomersChart({ report }: { report: GrowthReport }) {
       <CardHeader>
         <CardTitle className="text-sm font-normal">{text.newCustomers.title}</CardTitle>
         <CardAction>
-          <CardIconButton icon={ArrowUpRight} label={text.openCustomers} href="/dashboard/users" />
+          <CardIconButton icon={ArrowUpRight} label={text.openCustomers} href="/dashboard/customers" />
         </CardAction>
       </CardHeader>
       <CardContent>

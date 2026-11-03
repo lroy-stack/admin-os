@@ -23,7 +23,6 @@ export type ExampleLabelId =
   | "tasks"
   | "invoice"
   | "profile"
-  | "users"
   | "roles"
   | "kit"
   | "authentication"

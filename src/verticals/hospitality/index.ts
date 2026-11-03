@@ -1,4 +1,4 @@
-import { CalendarDays, House } from "lucide-react";
+import { CalendarDays, House, UsersRound } from "lucide-react";
 
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
@@ -35,6 +35,15 @@ const nav = [
     group: "operations",
     requiredPermission: "read:bookings",
   },
+  {
+    id: "customers",
+    href: "/dashboard/customers",
+    labelKey: "customers.title",
+    icon: UsersRound,
+    placement: "area",
+    group: "operations",
+    requiredPermission: "read:customers",
+  },
 ] as const satisfies NavManifest;
 
 export const hospitality = {
@@ -50,7 +59,7 @@ export const hospitality = {
     area: areaExtSchema,
     staff: staffExtSchema,
   },
-  /** Words that must never appear in the generic layers (ADR 0008). */
   settingsDefaults: {},
+  /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["diner", "dining", "covers", "waiter", "allergen", "dish", "restaurant", "mesa", "comensal", "carta"],
 } as const;

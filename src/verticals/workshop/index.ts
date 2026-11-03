@@ -1,4 +1,4 @@
-import { CalendarClock, House } from "lucide-react";
+import { CalendarClock, House, UsersRound } from "lucide-react";
 
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
@@ -27,6 +27,15 @@ const nav = [
     placement: "area",
     group: "operations",
     requiredPermission: "read:bookings",
+  },
+  {
+    id: "customers",
+    href: "/dashboard/customers",
+    labelKey: "customers.title",
+    icon: UsersRound,
+    placement: "area",
+    group: "operations",
+    requiredPermission: "read:customers",
   },
 ] as const satisfies NavManifest;
 

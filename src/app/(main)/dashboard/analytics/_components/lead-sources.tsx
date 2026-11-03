@@ -39,7 +39,7 @@ export function LeadSources({ report }: { report: GrowthReport }) {
       <CardHeader>
         <CardTitle className="text-sm font-normal">{text.leadSources.title}</CardTitle>
         <CardAction>
-          <CardIconButton icon={ArrowUpRight} label={text.openCustomers} href="/dashboard/users" />
+          <CardIconButton icon={ArrowUpRight} label={text.openCustomers} href="/dashboard/customers" />
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">

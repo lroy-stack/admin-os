@@ -63,15 +63,25 @@ for (const locale of LOCALES) {
  * The permission-gated hiding itself is unit-tested (`visibleNavIds`); a real difference joins with the next gated area.
  */
 const PRESETS = [
-  { preset: "hospitality", bookings: "Reservations", absent: ["Appointments", "Team", "Menu", "Guests", "Tables"] },
-  { preset: "salon", bookings: "Appointments", absent: ["Reservations", "Team", "Menu", "Guests", "Tables"] },
+  {
+    preset: "hospitality",
+    bookings: "Reservations",
+    customers: "Guests",
+    absent: ["Appointments", "Team", "Menu", "Clients", "Tables"],
+  },
+  {
+    preset: "salon",
+    bookings: "Appointments",
+    customers: "Clients",
+    absent: ["Reservations", "Team", "Menu", "Guests", "Tables"],
+  },
 ] as const;
 
 /** Words of the hospitality preset that must not show up in a salon shell (its `leakTerms`, plus its area names). */
 const HOSPITALITY_WORDS =
   /\b(reservations?|diner|dining|covers|waiter|allergen|dish(es)?|restaurant|mesa|comensal|carta|guests?|tables?)\b/i;
 
-for (const { preset, bookings, absent } of PRESETS) {
+for (const { preset, bookings, customers, absent } of PRESETS) {
   for (const role of ROLES) {
     test(`${preset} nav as ${role}: same entries, none hidden left in the DOM`, async ({ page, context, baseURL }) => {
       await context.addCookies([
@@ -84,6 +94,7 @@ for (const { preset, bookings, absent } of PRESETS) {
       const sections = page.getByRole("navigation", { name: "Sections" });
       await expect(sections.getByRole("link", { name: "Home", exact: true })).toBeVisible();
       await expect(sections.getByRole("link", { name: bookings, exact: true })).toBeVisible();
+      await expect(sections.getByRole("link", { name: customers, exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: new RegExp(`^(${absent.join("|")})$`) })).toHaveCount(0);
     });
   }

@@ -158,7 +158,7 @@
         "src/app/(main)/dashboard/(examples)/(legacy)/finance-v1/**",
         "src/app/(main)/dashboard/bookings/**",
         "src/app/(main)/dashboard/roles/**",
-        "src/app/(main)/dashboard/users/**",
+        "src/app/(main)/dashboard/customers/**",
         "src/app/(main)/dashboard/academy/**",
         "src/app/(main)/dashboard/infrastructure/**",
         "src/app/(main)/dashboard/mail/**",

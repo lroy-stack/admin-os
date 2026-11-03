@@ -20,7 +20,6 @@ import {
   Server,
   ShoppingBag,
   UserRound,
-  Users,
 } from "lucide-react";
 
 import type { ExampleLabelId } from "./examples-messages";
@@ -78,7 +77,6 @@ export const examplesNav: readonly ExampleGroup[] = [
       { id: "tasks", title: "Tasks", url: "/dashboard/tasks", icon: CheckSquare, placement: "tool" },
       { id: "invoice", title: "Invoice", url: "/dashboard/invoice", icon: ReceiptText, placement: "tool" },
       { id: "profile", title: "Profile", url: "/dashboard/profile", icon: UserRound },
-      { id: "users", title: "Customers", url: "/dashboard/users", icon: Users, placement: "area" },
       { id: "roles", title: "Roles", url: "/dashboard/roles", icon: Lock },
       { id: "kit", title: "Window kit", url: "/dashboard/kit", icon: PanelTop },
     ],
