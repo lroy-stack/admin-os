@@ -60,10 +60,51 @@ export interface KitMessages {
     readonly nameLabel: string;
     readonly partyLabel: string;
   };
-  readonly form: DialogDemoMessages & {
+  readonly form: Omit<DialogDemoMessages, "cancel"> & {
     readonly nameLabel: string;
     readonly emailLabel: string;
     readonly notesLabel: string;
+    /** The small control that picks what the demo submit answers. */
+    readonly outcomeLabel: string;
+    readonly outcome: {
+      readonly ok: string;
+      readonly invalid: string;
+      readonly error: string;
+      readonly awaiting: string;
+    };
+    readonly nameRequired: string;
+    readonly emailInvalid: string;
+    /** The server issue the `invalid` outcome puts on the email field. */
+    readonly emailTaken: string;
+    /** The form-level text of the `error` outcome. */
+    readonly failed: string;
+    /** Who decides in the `awaiting_approval` outcome. */
+    readonly approvalRole: string;
+    /** Placeholders: `{count}`. How many submits reached the demo server, so a refused second submit is visible. */
+    readonly attempts: string;
+  };
+  readonly dock: {
+    readonly title: string;
+    readonly description: string;
+    readonly open: string;
+    readonly windowTitle: string;
+    readonly windowDescription: string;
+    readonly floorLabel: string;
+    /** Placeholders: `{number}`. */
+    readonly tableName: string;
+    /** Placeholders: `{table}`. */
+    readonly floorSelected: string;
+    readonly floorNone: string;
+    readonly guestLabel: string;
+    readonly tableLabel: string;
+    readonly tableAuto: string;
+    readonly pick: string;
+    /** Shown instead of the pick button when the panel is a full-screen sheet. */
+    readonly sheetNote: string;
+    readonly save: string;
+    readonly cancel: string;
+    /** Placeholders: `{guest}`, `{table}`. */
+    readonly saved: string;
   };
 }
 

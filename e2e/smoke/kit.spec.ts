@@ -271,3 +271,205 @@ test.describe("window rules", () => {
     await expect(trigger).toBeFocused();
   });
 });
+
+test.describe("docked panel", () => {
+  const floorTable = (page: Page, number: number) => page.getByRole("button", { name: `Table ${number}`, exact: true });
+  const region = (page: Page) => page.getByRole("region", { name: "New reservation" });
+
+  test.describe("beside the page", () => {
+    test.skip(({ viewport }) => (viewport?.width ?? 0) < 1024, "The column needs 1024 px; below it is a sheet");
+
+    test("is a region, not a dialog, and the page behind it stays clickable in its focus order", async ({ page }) => {
+      const pageArea = page.locator("[data-slot=docked-panel-slot]").locator("xpath=preceding-sibling::div[1]");
+      const widthBefore = (await pageArea.boundingBox())?.width ?? 0;
+
+      await page.getByRole("button", { name: "New reservation" }).click();
+
+      await expect(region(page)).toBeVisible();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await floorTable(page, 3).click();
+      await expect(page.getByText("On the floor: Table 3")).toBeVisible();
+      await floorTable(page, 6).focus();
+      await page.keyboard.press("Tab");
+      await expect(region(page).getByLabel("Guest")).toBeFocused();
+      const regionBox = await region(page).boundingBox();
+      const areaBox = await pageArea.boundingBox();
+      expect((areaBox?.x ?? 0) + (areaBox?.width ?? 0)).toBeLessThanOrEqual(regionBox?.x ?? 0);
+      expect(areaBox?.width ?? 0).toBeLessThan(widthBefore);
+    });
+
+    test("a keyboard-only walk: open, focus inside, Tab through, Escape, focus back on the trigger", async ({
+      page,
+    }) => {
+      const opener = page.getByRole("button", { name: "New reservation" });
+      await opener.focus();
+
+      await page.keyboard.press("Enter");
+
+      await expect(region(page)).toBeVisible();
+      await expect(region(page).getByLabel("Guest")).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(region(page).getByRole("button", { name: "Pick on the floor" })).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(region(page).getByRole("button", { name: "Cancel" })).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(region(page).getByRole("button", { name: "Save reservation" })).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(region(page).getByRole("button", { name: "Close" })).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(region(page)).toBeHidden();
+      await expect(opener).toBeFocused();
+    });
+
+    test("a dirty panel asks before Escape closes it", async ({ page }) => {
+      await page.getByRole("button", { name: "New reservation" }).click();
+      await region(page).getByLabel("Guest").fill("Ana Ruiz");
+
+      await page.keyboard.press("Escape");
+
+      await expect(page.getByRole("alertdialog", { name: "Discard changes?" })).toBeVisible();
+      // The question is modal, so the region is hidden from the accessibility tree but must still be in the page.
+      await expect(page.locator("[data-window=docked]")).toHaveCount(1);
+    });
+
+    test("a pick fills the field from the floor and Escape leaves pick mode without closing the panel", async ({
+      page,
+    }) => {
+      const hint = region(page).getByText("Choose on the page. Press Escape to cancel.");
+      await page.getByRole("button", { name: "New reservation" }).click();
+
+      await region(page).getByRole("button", { name: "Pick on the floor" }).click();
+      await expect(hint).toBeVisible();
+      await floorTable(page, 4).click();
+
+      await expect(page.getByTestId("dock-table")).toHaveText("Table 4");
+      await expect(hint).toBeHidden();
+      await expect(region(page).getByRole("button", { name: "Pick on the floor" })).toBeFocused();
+
+      await region(page).getByRole("button", { name: "Pick on the floor" }).click();
+      await expect(hint).toBeVisible();
+      await page.keyboard.press("Escape");
+
+      await expect(hint).toBeHidden();
+      await expect(region(page)).toBeVisible();
+      await expect(page.getByTestId("dock-table")).toHaveText("Table 4");
+    });
+
+    test("Escape from the floor while picking also leaves pick mode", async ({ page }) => {
+      await page.getByRole("button", { name: "New reservation" }).click();
+      await region(page).getByRole("button", { name: "Pick on the floor" }).click();
+      await floorTable(page, 2).focus();
+
+      await page.keyboard.press("Escape");
+
+      await expect(region(page).getByText("Choose on the page. Press Escape to cancel.")).toBeHidden();
+      await expect(region(page)).toBeVisible();
+    });
+  });
+
+  test.describe("on a phone", () => {
+    test.skip(({ viewport }) => (viewport?.width ?? 0) >= 1024, "Below 1024 px the panel is a modal sheet");
+
+    test("is a full-screen modal sheet that cannot pick on the page", async ({ page }) => {
+      const opener = page.getByRole("button", { name: "New reservation" });
+
+      await opener.click();
+
+      const sheet = page.getByRole("dialog", { name: "New reservation" });
+      await expect(sheet).toBeVisible();
+      await expect(page.getByRole("region", { name: "New reservation" })).toHaveCount(0);
+      await expect.poll(async () => (await sheet.boundingBox())?.height).toBeGreaterThanOrEqual(812);
+      await expect(sheet.getByRole("button", { name: "Pick on the floor" })).toHaveCount(0);
+      await expect(sheet.getByText("Picking on the floor works when the panel sits beside the page.")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(sheet).toBeHidden();
+      await expect(opener).toBeFocused();
+    });
+  });
+});
+
+test.describe("form stack", () => {
+  const open = async (page: Page) => {
+    await page.getByRole("button", { name: "Add guest" }).click();
+    return page.getByRole("dialog", { name: "Add guest" });
+  };
+  const outcome = (dialog: ReturnType<Page["getByRole"]>, label: string) =>
+    dialog.getByLabel("Server answer (demo)").selectOption({ label });
+
+  test("a server invalid lands on its field and focuses it", async ({ page }) => {
+    const dialog = await open(page);
+    await outcome(dialog, "Email already taken");
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+    await dialog.getByLabel("Email").fill("ana@example.com");
+
+    await dialog.getByLabel("Name").press("Enter");
+
+    await expect(dialog.getByText("This email is already in the guest book.")).toBeVisible();
+    await expect(dialog.getByLabel("Email")).toBeFocused();
+    await expect(dialog.getByLabel("Email")).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog).toBeVisible();
+  });
+
+  test("the schema refuses an empty name before anything is sent", async ({ page }) => {
+    const dialog = await open(page);
+
+    await dialog.getByLabel("Email").press("Enter");
+
+    await expect(dialog.getByText("Enter the guest’s name.")).toBeVisible();
+    await expect(dialog.getByLabel("Name")).toBeFocused();
+    await expect(page.getByTestId("kit-attempts")).toHaveCount(0);
+  });
+
+  test("a second submit while the first is pending does nothing", async ({ page }) => {
+    const dialog = await open(page);
+    await outcome(dialog, "Server error");
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await dialog.getByLabel("Name").press("Enter");
+    await expect(dialog.getByRole("button", { name: "Add guest" })).toHaveAttribute("data-pending", "true");
+    await dialog.getByLabel("Name").press("Enter");
+    await dialog.getByLabel("Name").press("Enter");
+
+    await expect(dialog.getByText("The guest book could not be reached. Try again.")).toBeVisible();
+    await expect(page.getByTestId("kit-attempts")).toHaveText("Submits received: 1");
+  });
+
+  test("a server error shows its text above the footer buttons and keeps the window open", async ({ page }) => {
+    const dialog = await open(page);
+    await outcome(dialog, "Server error");
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await dialog.getByRole("button", { name: "Add guest" }).click();
+
+    const message = dialog.getByText("The guest book could not be reached. Try again.");
+    await expect(message).toBeVisible();
+    const messageBox = await message.boundingBox();
+    const buttonBox = await dialog.getByRole("button", { name: "Add guest" }).boundingBox();
+    expect(messageBox?.y ?? 0).toBeLessThan(buttonBox?.y ?? 0);
+    await expect(dialog).toBeVisible();
+  });
+
+  test("awaiting approval shows the notice and holds the form read-only", async ({ page }) => {
+    const dialog = await open(page);
+    await outcome(dialog, "Needs approval");
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await dialog.getByLabel("Name").press("Enter");
+
+    await expect(dialog.getByText("Add guest is waiting for approval from the manager role.")).toBeVisible();
+    await expect(dialog.getByLabel("Name")).toHaveAttribute("readonly", "");
+    await expect(dialog.getByRole("button", { name: "Add guest" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  test("ok closes the window, reports the guest and returns focus to the opener", async ({ page }) => {
+    const opener = page.getByRole("button", { name: "Add guest" });
+    const dialog = await open(page);
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await dialog.getByLabel("Name").press("Enter");
+
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Submitted: Ana Ruiz")).toBeVisible();
+    await expect(opener).toBeFocused();
+  });
+});
