@@ -9,7 +9,7 @@ import type { BusinessClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type MockHandler, mockHandler } from "@/core/mock";
 import { ok } from "@/core/result";
 
-import { IDEMPOTENCY_META_KEY, projectCatalog, toolNameOf } from "./server";
+import { IDEMPOTENCY_META_KEY, projectCatalog, toolNameOf, toolOf } from "./server";
 
 interface Notes {
   readonly notes: string[];
@@ -157,7 +157,12 @@ describe("listing", () => {
     ["notes.clear", 3],
   ] as const)("%s carries its risk tier in _meta", async (id, riskTier) => {
     const { tools } = await (await connect(owner)).listTools();
-    expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toEqual({ riskTier });
+    expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toEqual({ "admin-os/riskTier": riskTier });
+  });
+
+  it("advertises in _meta that a capability needs an idempotency key", () => {
+    const pay = defineCapability({ ...notesAdd, id: "notes.pay", requiresIdempotencyKey: true });
+    expect(toolOf(pay)._meta).toEqual({ "admin-os/riskTier": 2, "admin-os/requiresIdempotencyKey": true });
   });
 
   it("throws when two capabilities project to the same tool name", () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { accessCapabilities } from "@/core/access";
-import { defineCapability } from "@/core/capability";
+import { type ApprovalContext, defineCapability } from "@/core/capability";
 import { type Actor, createClient } from "@/core/client";
 import { type BusinessClock, clockCapabilities } from "@/core/clock";
 import { ok } from "@/core/result";
@@ -92,7 +92,11 @@ const reader: Actor = { actorId: "demo-staff", roleId: "staff", permissions: ["r
 
 const setup = (options: { sessionId?: string; faults?: string; actor?: Actor } = {}) => {
   const store = createSessionStore<Notes>({ notes: ["seeded"] });
-  const clientFor = (sessionId: string | undefined, actor: Actor = options.actor ?? owner, via: "ui" | "mcp" = "ui") =>
+  const clientFor = (
+    sessionId: string | undefined,
+    actor: Actor = options.actor ?? owner,
+    via: ApprovalContext["via"] = "ui",
+  ) =>
     createClient(
       catalog,
       createMockAdapter({ handlers, store, sessionId, clock, faults: parseFaults(options.faults) }),

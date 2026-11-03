@@ -18,7 +18,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "The service is not available right now. Try again in a moment.",
     timeout: "The request took too long. Try again.",
     invalid_output: "The service returned an unexpected response. Error code: {code}.",
-    "client.idempotency_required": "This action needs a unique request key. Reload and try again.",
+    "client.idempotency_required": "This action could not be sent safely. Error code: {code}.",
     generic: "Something went wrong. Error code: {code}.",
   },
   es: {
@@ -29,7 +29,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "El servicio no está disponible ahora. Inténtalo de nuevo en un momento.",
     timeout: "La solicitud ha tardado demasiado. Inténtalo de nuevo.",
     invalid_output: "El servicio ha devuelto una respuesta inesperada. Código de error: {code}.",
-    "client.idempotency_required": "Esta acción necesita una clave de solicitud única. Recarga e inténtalo de nuevo.",
+    "client.idempotency_required": "Esta acción no se ha podido enviar de forma segura. Código de error: {code}.",
     generic: "Algo ha salido mal. Código de error: {code}.",
   },
   de: {
@@ -40,8 +40,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "Der Dienst ist gerade nicht verfügbar. Versuche es gleich noch einmal.",
     timeout: "Die Anfrage hat zu lange gedauert. Versuche es erneut.",
     invalid_output: "Der Dienst hat eine unerwartete Antwort geliefert. Fehlercode: {code}.",
-    "client.idempotency_required":
-      "Diese Aktion braucht einen eindeutigen Anfrageschlüssel. Lade neu und versuche es erneut.",
+    "client.idempotency_required": "Diese Aktion konnte nicht sicher gesendet werden. Fehlercode: {code}.",
     generic: "Etwas ist schiefgelaufen. Fehlercode: {code}.",
   },
   fr: {
@@ -52,14 +51,14 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     unavailable: "Le service est indisponible pour le moment. Réessayez dans un instant.",
     timeout: "La requête a pris trop de temps. Réessayez.",
     invalid_output: "Le service a renvoyé une réponse inattendue. Code d’erreur : {code}.",
-    "client.idempotency_required": "Cette action nécessite une clé de requête unique. Rechargez et réessayez.",
+    "client.idempotency_required": "Cette action n’a pas pu être envoyée en toute sécurité. Code d’erreur : {code}.",
     generic: "Une erreur s’est produite. Code d’erreur : {code}.",
   },
 });
 
 /**
  * Renders from the error code, never from `message` (server text is for logs). Order: exact code in `dictionary`,
- * the code's class (`dictionary`, then the defaults), then the generic sentence that shows the code.
+ * then in the defaults, the code's class (`dictionary`, then the defaults), then the generic sentence that shows the code.
  */
 export function errorText(
   error: { readonly code: string },
@@ -69,6 +68,12 @@ export function errorText(
   const own = dictionary[locale];
   const defaults = defaultErrorMessages[locale];
   const errorClass = errorClassOf(error.code);
-  const message = own[error.code] ?? own[errorClass] ?? defaults[errorClass] ?? own.generic ?? defaults.generic;
+  const message =
+    own[error.code] ??
+    defaults[error.code] ??
+    own[errorClass] ??
+    defaults[errorClass] ??
+    own.generic ??
+    defaults.generic;
   return format(message as Message, locale, { code: error.code });
 }

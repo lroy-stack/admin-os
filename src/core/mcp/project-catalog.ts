@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 
 import type { AnyCapability, Catalog } from "@/core/capability";
-import type { Actor, DataClient } from "@/core/client";
+import { type Actor, type DataClient, idempotencyKeySchema } from "@/core/client";
 import { ErrorCodes } from "@/core/errors";
 import { type CallResult, isAwaitingApproval } from "@/core/result";
 
@@ -19,6 +19,12 @@ import { type CallResult, isAwaitingApproval } from "@/core/result";
 
 /** `_meta` key a client may set on `tools/call` to make a write safe to retry (ADR 0005 idempotency). */
 export const IDEMPOTENCY_META_KEY = "admin-os/idempotencyKey";
+
+/** Tool `_meta` key with the capability's risk tier (0 to 3). */
+export const RISK_TIER_META_KEY = "admin-os/riskTier";
+
+/** Tool `_meta` key, present and true when a call must carry `IDEMPOTENCY_META_KEY` in its own `_meta`. */
+export const REQUIRES_KEY_META_KEY = "admin-os/requiresIdempotencyKey";
 
 /** The client the projection dispatches through, bound to the calling actor and one correlation id per call. */
 export type ClientFactory = (actor: Actor, correlationId: string) => DataClient<Catalog>;
@@ -32,7 +38,6 @@ export interface ProjectionOptions {
 
 const DEFAULT_SERVER_INFO = { name: "admin-os", version: "0.1.0" } as const;
 const JSON_SCHEMA_TARGET = "draft-2020-12";
-const idempotencyKeySchema = z.string().min(1).max(128);
 
 /** What a write held for a human returns: a pending state, not an error (ADR 0005). */
 export const awaitingApprovalSchema = z.strictObject({
@@ -78,7 +83,10 @@ export const toolOf = (capability: AnyCapability): Tool => ({
   inputSchema: jsonSchemaOf(capability.input, "input"),
   outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
   annotations: annotationsOf(capability),
-  _meta: { riskTier: capability.riskTier },
+  _meta: {
+    [RISK_TIER_META_KEY]: capability.riskTier,
+    ...(capability.requiresIdempotencyKey === true ? { [REQUIRES_KEY_META_KEY]: true } : {}),
+  },
 });
 
 /** Tool name → capability for the actor; two ids that project to the same name are a catalogue bug and throw. */

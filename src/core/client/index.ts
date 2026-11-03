@@ -1,8 +1,11 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 import type { AnyCapability, ApprovalContext, Catalog } from "@/core/capability";
 import { ErrorCodes } from "@/core/errors";
 import { type CallResult, err, isAwaitingApproval, type Result } from "@/core/result";
+
+/** What a client may send as an idempotency key (ADR 0005); the MCP projection validates `_meta` with the same schema. */
+export const idempotencyKeySchema = z.string().min(1).max(128);
 
 /** Opaque here: ADR 0006 owns how an actor is resolved. The client only forwards it and logs the role. */
 export interface Actor {
@@ -157,8 +160,12 @@ export const createClient = <C extends Catalog>(
     if (!parsedInput.success) {
       return err(ErrorCodes.invalidInput, `${id} rejected its input`, { paths: issuePaths(parsedInput.error) });
     }
-    if (capability.requiresIdempotencyKey && callOptions.idempotencyKey === undefined) {
+    const key = callOptions.idempotencyKey;
+    if (capability.requiresIdempotencyKey && (key === undefined || key === "")) {
       return err(ErrorCodes.idempotencyRequired, `${id} needs an idempotency key`);
+    }
+    if (key !== undefined && !idempotencyKeySchema.safeParse(key).success) {
+      return err(ErrorCodes.invalidInput, `${id} rejected its idempotency key`, { paths: ["idempotencyKey"] });
     }
     return validateOutput(capability, await run(capability, parsedInput.data, callOptions));
   };

@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AnyCapability } from "@/core/capability";
-import type { Actor } from "@/core/client";
+import type { Actor, CallLogLine } from "@/core/client";
 import { toolNameOf, toolOf } from "@/core/mcp/server";
 import { bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
@@ -34,10 +34,12 @@ afterEach(async () => {
 });
 
 /** An MCP client on the hospitality preset, listing first as real clients do (so calls validate their output). */
-const connect = async (actor: Actor) => {
+const connect = async (actor: Actor, logger?: (line: CallLogLine) => void) => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "admin-os-test", version: "0.0.0" });
-  await createMcpServer({ actor, vertical: "hospitality" }).connect(serverSide);
+  await createMcpServer({ actor, vertical: "hospitality", ...(logger === undefined ? {} : { logger }) }).connect(
+    serverSide,
+  );
   await client.connect(clientSide);
   open.push(client);
   return { client, tools: (await client.listTools()).tools };
@@ -92,6 +94,13 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const { client } = await connect(staff);
     const result = await client.callTool({ name, arguments: { limit: 5 } });
     expect(output.safeParse(result.structuredContent)).toMatchObject({ success: true });
+  });
+
+  it("creates its clients for the MCP surface, so the call line says via mcp", async () => {
+    const lines: CallLogLine[] = [];
+    const { client } = await connect(staff, (line) => lines.push(line));
+    await client.callTool({ name: "bookings_list", arguments: {} });
+    expect(lines).toMatchObject([{ capability: "bookings.list", riskTier: 1, via: "mcp" }]);
   });
 
   it("answers a tool the actor was not offered with access.forbidden, as the UI does", async () => {

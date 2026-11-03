@@ -25,7 +25,7 @@ export interface Capability<Id extends string, I extends z.ZodType, O extends z.
   /** Reserved for owners: roles other than `owner` never hold the permission (ADR 0006). Absent means not elevated. */
   readonly elevated?: boolean;
   readonly riskTier: RiskTier;
-  /** The UI offers "Request approval" and MCP advertises `awaiting_approval`; true exactly when `approval` is defined. */
+  /** Declares that `approval` is defined; the descriptor invariants check the two agree (`descriptorViolations`). */
   readonly mayRequireApproval?: boolean;
   /** The client refuses the call without a key (payments, sends). */
   readonly requiresIdempotencyKey?: boolean;
@@ -56,4 +56,31 @@ export const mergeCatalogs = (...catalogs: readonly Catalog[]): Catalog => {
     }
   }
   return merged;
+};
+
+export type DescriptorRule =
+  | "read-tier"
+  | "read-approval"
+  | "tier3-destructive"
+  | "destructive-tier"
+  | "approval-flag"
+  | "key-on-read";
+
+type DescribedCapability = Pick<
+  AnyCapability,
+  "effect" | "riskTier" | "approval" | "mayRequireApproval" | "requiresIdempotencyKey"
+>;
+
+/** The descriptor rules a capability breaks (ADR 0005, descriptor v2); the catalogue contract test expects `[]`. */
+export const descriptorViolations = (capability: DescribedCapability): readonly DescriptorRule[] => {
+  const isRead = capability.effect === "read";
+  const rules: readonly (readonly [DescriptorRule, boolean])[] = [
+    ["read-tier", isRead && capability.riskTier > 1],
+    ["read-approval", isRead && capability.approval !== undefined],
+    ["tier3-destructive", capability.riskTier === 3 && capability.effect !== "destructive"],
+    ["destructive-tier", capability.effect === "destructive" && capability.riskTier < 2],
+    ["approval-flag", (capability.approval !== undefined) !== (capability.mayRequireApproval === true)],
+    ["key-on-read", isRead && capability.requiresIdempotencyKey === true],
+  ];
+  return rules.filter(([, broken]) => broken).map(([rule]) => rule);
 };

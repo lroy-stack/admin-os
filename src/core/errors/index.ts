@@ -25,6 +25,7 @@ const CLASS_BY_SUFFIX: Readonly<Record<string, ErrorClass>> = {
   not_found: "not_found",
   invalid: "invalid",
   required: "invalid",
+  idempotency_required: "invalid",
   conflict: "conflict",
   unavailable: "unavailable",
   timeout: "timeout",

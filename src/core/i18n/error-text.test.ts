@@ -15,6 +15,14 @@ describe("errorText", () => {
   });
 
   it.each([
+    ["en", "This action could not be sent safely. Error code: client.idempotency_required."],
+    ["fr", "Cette action n’a pas pu être envoyée en toute sécurité. Code d’erreur : client.idempotency_required."],
+  ] as const)("renders the default text of a kernel code with an empty module dictionary in %s", (locale, expected) => {
+    const empty = defineMessages({ en: {}, es: {}, de: {}, fr: {} });
+    expect(errorText({ code: "client.idempotency_required" }, empty, locale)).toBe(expected);
+  });
+
+  it.each([
     ["en", "You do not have permission to do this."],
     ["fr", "Vous n’avez pas l’autorisation de faire cela."],
   ] as const)("falls back to the class text in %s", (locale, expected) => {

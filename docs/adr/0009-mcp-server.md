@@ -216,3 +216,15 @@ The catalogue has no write capability yet, and every hospitality role gets the s
 booking, `awaiting_approval`, and a forbidden call on a *known* tool that one role is offered and another is not
 wait for T13 (the first write, `bookings.create`). The transports need no change for them: writes reach the token's
 or process's demo session, and the projection's generic tests already cover approval and idempotent replay.
+
+## Amendment 2026-11-03: descriptor v2 on the MCP surface (S1)
+
+- **Tool `_meta`.** Each tool carries `admin-os/riskTier` (0 to 3, ADR 0005 descriptor v2) and, when the capability
+  sets `requiresIdempotencyKey`, `admin-os/requiresIdempotencyKey: true`. A model that sees the second key sends
+  `_meta["admin-os/idempotencyKey"]` on `tools/call`; without it the call answers `client.idempotency_required`.
+- **Idempotency.** The earlier rule that a keyless write "is never retried" still holds for ordinary writes. A write that
+  sets `requiresIdempotencyKey` is refused without a key (missing or empty) before dispatch. A malformed key is
+  `schema.invalid_input`. The client and the projection share one key schema (1 to 128 characters).
+- **Logs.** The client's call line is now `{capability, effect, riskTier, via, status, code, durationMs, correlationId,
+  actorRole}`. `createMcpServer` creates every client with `via: "mcp"`, so an approval rule keyed on the surface
+  always sees an assistant.

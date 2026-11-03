@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { type Catalog, defineCapability } from "@/core/capability";
+import { type ApprovalContext, type Catalog, defineCapability } from "@/core/capability";
 import { err, ok } from "@/core/result";
 
 import { type Adapter, type CallLogLine, createClient } from "./index";
@@ -34,7 +34,7 @@ const payThing = defineCapability({
   input: z.object({ id: z.string().min(1) }),
   output: z.object({ name: z.string() }),
   permission: "write:things",
-  effect: "write",
+  effect: "destructive",
   riskTier: 3,
   requiresIdempotencyKey: true,
 });
@@ -51,7 +51,7 @@ const setup = (
   dispatch: Adapter["dispatch"],
   mode: "development" | "production" = "production",
   timeoutMs = 5,
-  via?: "ui" | "mcp" | "system",
+  via?: ApprovalContext["via"],
 ) => {
   const logs: CallLogLine[] = [];
   const adapter = { dispatch: vi.fn(dispatch) };
@@ -76,6 +76,37 @@ describe("createClient idempotency", () => {
     const result = await client.call("things.thing.pay", { id: "a" });
     expect(result).toMatchObject({ ok: false, error: { code: "client.idempotency_required" } });
     expect(adapter.dispatch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an empty key", ""],
+    ["a missing key", undefined],
+  ] as const)("refuses %s as client.idempotency_required", async (_label, key) => {
+    const { client, adapter } = setup(async () => ok({ name: "x" }));
+    const result = await client.call("things.thing.pay", { id: "a" }, key === undefined ? {} : { idempotencyKey: key });
+    expect(result).toMatchObject({ ok: false, error: { code: "client.idempotency_required" } });
+    expect(adapter.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("rejects an over-long key as schema.invalid_input with the key path", async () => {
+    const { client, adapter } = setup(async () => ok({ name: "x" }));
+    const result = await client.call("things.thing.pay", { id: "a" }, { idempotencyKey: "k".repeat(129) });
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "schema.invalid_input", details: { paths: ["idempotencyKey"] } },
+    });
+    expect(adapter.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("logs a call refused for a missing key with its code, tier and surface", async () => {
+    const { client, logs } = setup(async () => ok({ name: "x" }), "production", 5, "mcp");
+    await client.call("things.thing.pay", { id: "a" });
+    expect(logs[0]).toMatchObject({
+      status: "error",
+      code: "client.idempotency_required",
+      riskTier: 3,
+      via: "mcp",
+    });
   });
 
   it("dispatches the same call when a key is given", async () => {
