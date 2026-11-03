@@ -12,8 +12,8 @@ import { useMessages } from "@/core/i18n/client";
 
 import { ConfirmAction } from "./confirm-action";
 import { overlaysMessageKey } from "./messages";
-import { useRestoreFocus } from "./use-restore-focus";
-import { useViewport } from "./use-viewport";
+import { type ReturnFocus, useRestoreFocus } from "./use-restore-focus";
+import { useViewport, type Viewport } from "./use-viewport";
 
 export interface DialogWindowProps {
   open: boolean;
@@ -31,6 +31,8 @@ export interface DialogWindowProps {
   dirty?: boolean;
   /** Adds the footer note "Demo data, not saved" for showcase screens whose data is local. */
   demo?: boolean;
+  /** Where focus goes on close when the opener was not focused or is gone by then (a menu item). Defaults to the opener. */
+  returnFocus?: ReturnFocus;
 }
 
 type DialogWindowKind = "quick" | "form";
@@ -64,11 +66,21 @@ export function DialogWindow({
   footer,
   dirty = false,
   demo = false,
+  returnFocus,
 }: DialogWindowProps & { kind: DialogWindowKind }) {
   const text = useMessages(overlaysMessageKey);
-  const viewport = useViewport();
-  const focus = useRestoreFocus();
+  const current = useViewport();
+  const focus = useRestoreFocus(returnFocus);
   const [asking, setAsking] = useState(false);
+  const [locked, setLocked] = useState<Viewport | null>(null);
+  // The container is chosen when the window opens and kept until it closes: swapping Drawer for Dialog on a resize
+  // (a phone turned to landscape) would remount the body and lose the form state and the focus return.
+  if (open && locked === null && current !== undefined) setLocked(current);
+  if (!open && locked !== null) setLocked(null);
+  // A close from outside (the parent sets `open` to false) must not leave the question orphaned over the page.
+  // Known limit: a route change or Back unmounts a dirty window without asking; useGuardedExit (task K8) covers it.
+  if (!open && asking) setAsking(false);
+  const viewport = locked ?? current;
   if (viewport === undefined) return null;
 
   // Without a description Radix would warn; with one it links it by itself, so the prop must be absent then.

@@ -1,11 +1,12 @@
 "use client";
 
-import { type ReactNode, type RefObject, useRef } from "react";
+import type { ReactNode } from "react";
 
 import { cn } from "cn";
 
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
+import { type ReturnFocus, useRestoreFocus } from "./use-restore-focus";
 import { useViewport } from "./use-viewport";
 
 export interface ResponsivePanelProps {
@@ -20,7 +21,7 @@ export interface ResponsivePanelProps {
    * Without it the panel falls back to the element that was focused when it opened, which WebKit does not set on a
    * button click.
    */
-  returnFocus?: Element | RefObject<Element | null> | null;
+  returnFocus?: ReturnFocus;
   /** Classes of the panel itself (size, surface). */
   className?: string;
   headerClassName?: string;
@@ -45,22 +46,13 @@ export function ResponsivePanel({
   children,
 }: ResponsivePanelProps) {
   const viewport = useViewport();
-  const opener = useRef<Element | null>(null);
+  const focus = useRestoreFocus(returnFocus);
   if (viewport === undefined) return null;
 
   return (
     <Drawer direction={viewport === "phone" ? "bottom" : "right"} open={open} onOpenChange={onOpenChange} autoFocus>
       <DrawerContent
-        onOpenAutoFocus={() => {
-          opener.current = document.activeElement;
-        }}
-        onCloseAutoFocus={(event) => {
-          // Radix only returns focus to its own Trigger; this panel is opened by app state, so it restores it.
-          event.preventDefault();
-          const target =
-            (returnFocus && "current" in returnFocus ? returnFocus.current : returnFocus) ?? opener.current;
-          if (target instanceof HTMLElement && target.isConnected) target.focus();
-        }}
+        {...focus}
         className={cn(
           "data-[vaul-drawer-direction=right]:w-full data-[vaul-drawer-direction=right]:sm:max-w-md",
           className,

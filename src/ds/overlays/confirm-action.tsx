@@ -22,7 +22,7 @@ import { useMessages } from "@/core/i18n/client";
 
 import type { ActionOutcome } from "../forms";
 import { type OverlaysMessages, overlaysMessageKey } from "./messages";
-import { useRestoreFocus } from "./use-restore-focus";
+import { type ReturnFocus, useRestoreFocus } from "./use-restore-focus";
 
 /** What a confirmed action reports back: a write's outcome, with or without the value the write returned. */
 export type ConfirmOutcome = Exclude<ActionOutcome, { readonly status: "ok" }> | { readonly status: "ok" };
@@ -52,6 +52,8 @@ export interface ConfirmActionProps {
   onOpenChange?: (open: boolean) => void;
   /** The control that opens it; focus returns to it on close. */
   trigger?: ReactElement;
+  /** Where focus goes on close when the opener is gone by then, as a DropdownMenu item is. Defaults to the opener. */
+  returnFocus?: ReturnFocus;
 }
 
 export type ConfirmState = { status: "idle" } | { status: "pending" } | { status: "failed"; text: string };
@@ -84,6 +86,16 @@ export function checkReason(
   return { valid: false, message: parsed.error.issues[0]?.message ?? "" };
 }
 
+/** The hint under the reason field: only while the reason is invalid, and the schema's message once touched. */
+export function reasonHint(
+  checked: ReturnType<typeof checkReason>,
+  touched: boolean,
+  required: string,
+): string | undefined {
+  if (checked.valid) return undefined;
+  return touched && checked.message !== "" ? checked.message : required;
+}
+
 /**
  * The confirmation of an irreversible or destructive action (ADR 0015). Cancel has the initial focus, so Enter on
  * open never confirms. The confirm button repeats the verb, shows a pending state and cannot run twice. A declared
@@ -100,12 +112,13 @@ export function ConfirmAction({
   open: openProp,
   onOpenChange,
   trigger,
+  returnFocus,
 }: ConfirmActionProps) {
   const text = useMessages(overlaysMessageKey);
   const [innerOpen, setInnerOpen] = useState(false);
   const [state, setState] = useState<ConfirmState>({ status: "idle" });
   const running = useRef<boolean>(false);
-  const focus = useRestoreFocus();
+  const focus = useRestoreFocus(returnFocus);
   const open = openProp ?? innerOpen;
 
   const setOpen = (next: boolean) => {
@@ -140,7 +153,12 @@ export function ConfirmAction({
       }}
     >
       {trigger ? <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger> : null}
-      <AlertDialogContent {...focus}>
+      <AlertDialogContent
+        {...focus}
+        onEscapeKeyDown={(event) => {
+          if (state.status === "pending") event.preventDefault();
+        }}
+      >
         <ConfirmBody
           verb={verb}
           title={title}
@@ -186,7 +204,7 @@ function ConfirmBody({
   const ids = { field: useId(), hint: useId(), error: useId() };
   const checked = checkReason(reason, value);
   const pending = state.status === "pending";
-  const hint = touched && !checked.valid && checked.message !== "" ? checked.message : requiredText;
+  const hint = reasonHint(checked, touched, requiredText);
 
   return (
     <>
@@ -201,7 +219,7 @@ function ConfirmBody({
             id={ids.field}
             value={value}
             aria-invalid={touched && !checked.valid}
-            aria-describedby={ids.hint}
+            aria-describedby={hint === undefined ? undefined : ids.hint}
             readOnly={pending}
             onChange={(event) => {
               setValue(event.target.value);
@@ -209,9 +227,11 @@ function ConfirmBody({
             }}
             onBlur={() => setTouched(true)}
           />
-          <p id={ids.hint} className={checked.valid ? "sr-only" : "text-muted-foreground text-xs"}>
-            {hint}
-          </p>
+          {hint === undefined ? null : (
+            <p id={ids.hint} className="text-muted-foreground text-xs">
+              {hint}
+            </p>
+          )}
         </div>
       ) : null}
       {state.status === "failed" ? (
@@ -220,7 +240,7 @@ function ConfirmBody({
         </p>
       ) : null}
       <AlertDialogFooter>
-        <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+        <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
         <AlertDialogAction
           variant={destructive ? "destructive" : "default"}
           disabled={!checked.valid}

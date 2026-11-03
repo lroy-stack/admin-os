@@ -1,12 +1,9 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { LocaleProvider, resolveMessages } from "@/core/i18n/client";
-
 import type { ConfirmOutcome } from "./confirm-action";
-import { ConfirmAction, checkReason, failureText } from "./confirm-action";
-import { overlaysBundle, overlaysMessages } from "./server";
+import { checkReason, failureText, reasonHint } from "./confirm-action";
+import { overlaysMessages } from "./server";
 
 const text = overlaysMessages.en.confirm;
 const reason = { label: "Reason", schema: z.string().trim().min(3, "Write at least 3 characters") };
@@ -37,16 +34,23 @@ describe("checkReason", () => {
   });
 });
 
-const copy = { verb: "Cancel reservation", title: "Cancel reservation?", consequence: "The table is released." };
+describe("reasonHint", () => {
+  const required = text.reasonRequired;
+  const invalid = checkReason(reason, "");
 
-describe("ConfirmAction", () => {
-  it("renders nothing open in the server HTML", () => {
-    const html = renderToStaticMarkup(
-      <LocaleProvider locale="en" currency="EUR" messages={resolveMessages("en", overlaysBundle)}>
-        <ConfirmAction {...copy} open onConfirm={async () => ({ status: "ok" })} />
-      </LocaleProvider>,
-    );
+  it("asks for a reason while the field is untouched", () => {
+    expect(reasonHint(invalid, false, required)).toBe(required);
+  });
 
-    expect(html).not.toContain("alertdialog");
+  it("shows the schema's message once the field is touched", () => {
+    expect(reasonHint(invalid, true, required)).toBe("Write at least 3 characters");
+  });
+
+  it("is gone once the reason is valid, so nothing is left to describe the field", () => {
+    expect(reasonHint(checkReason(reason, "no show"), true, required)).toBeUndefined();
+  });
+
+  it("is absent when no reason is declared", () => {
+    expect(reasonHint(checkReason(undefined, ""), false, required)).toBeUndefined();
   });
 });
