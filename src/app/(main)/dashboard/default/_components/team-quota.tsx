@@ -1,9 +1,6 @@
-import { Ellipsis } from "lucide-react";
-
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
 import { format, formatAmount, formatPercent } from "@/core/i18n/client";
-import { CardIconButton } from "@/ds/components";
 
 import { overviewMessages } from "./messages.server";
 
@@ -21,9 +18,7 @@ export async function TeamQuota({ won, target, attainment }: { won: number; targ
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="text-sm font-normal">{text.title}</CardTitle>
-        <CardAction>
-          <CardIconButton icon={Ellipsis} label={text.options} />
-        </CardAction>
+        {/* No "Quota options" control: it had no destination and Home is replaced (002 P6.2b), ADR 0015. */}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col items-center justify-end gap-2">
         <div className="relative w-full max-w-48">

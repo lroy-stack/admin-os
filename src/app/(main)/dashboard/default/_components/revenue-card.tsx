@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { ArrowUpRight, Ellipsis } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,7 @@ export function RevenueCard({ series, target }: { series: RevenuePoint[]; target
         <CardTitle className="text-sm font-normal">{text.title}</CardTitle>
         <CardAction className="flex items-center gap-1.5">
           <SegmentedControl label={text.rangeLabel} value={range} options={rangeOptions} onValueChange={setRange} />
-          <CardIconButton icon={Ellipsis} label={text.options} />
+          {/* No "Revenue options" control: it had no destination and Home is replaced (002 P6.2b), ADR 0015. */}
           <CardIconButton icon={ArrowUpRight} label={text.openReports} href="/dashboard/analytics" />
         </CardAction>
       </CardHeader>
