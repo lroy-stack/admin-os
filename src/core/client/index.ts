@@ -199,3 +199,5 @@ export const createClient = <C extends Catalog>(
     },
   };
 };
+
+export { type SerializedCallResult, serializeCallResult } from "./serialize";
