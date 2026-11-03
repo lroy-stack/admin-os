@@ -6,8 +6,10 @@ import { DockedPanelLayout } from "@/ds/overlays";
 import { ConfirmSection } from "./_components/confirm-section";
 import { DockSection } from "./_components/dock-section";
 import { FormSection } from "./_components/form-section";
+import { GuardSection } from "./_components/guard-section";
 import { kitBundle, kitMessages } from "./_components/messages.server";
 import { PanelSection } from "./_components/panel-section";
+import { PopoverSection } from "./_components/popover-section";
 import { QuickSection } from "./_components/quick-section";
 
 export const generateMetadata = () => pageMetadata("/dashboard/kit", kitMessages);
@@ -28,6 +30,8 @@ export default async function Page() {
             <ConfirmSection />
             <QuickSection />
             <FormSection />
+            <PopoverSection />
+            <GuardSection />
             <DockSection />
           </div>
         </DockedPanelLayout>

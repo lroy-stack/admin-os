@@ -94,6 +94,25 @@ const en: KitMessages = {
     cancel: "Cancel",
     saved: "Saved: {guest}, {table}",
   },
+  popover: {
+    title: "Popover or sheet",
+    description: "A popover beside its button from 768 px and a bottom sheet below. For picking a value or filtering.",
+    open: "Filter reservations",
+    panelTitle: "Filter reservations",
+    panelDescription: "Show only the reservations with this status.",
+    optionAll: "All",
+    optionConfirmed: "Confirmed",
+    optionWaiting: "Waiting",
+    current: "Showing: {status}",
+  },
+  guard: {
+    title: "Leaving with unsaved changes",
+    description: "Edit the note, then follow the link, press Back or reload: the page asks before it lets go.",
+    noteLabel: "Note",
+    save: "Save note",
+    saved: "Saved: {note}",
+    link: "Go to the dashboard",
+  },
 };
 
 const es: KitMessages = {
@@ -193,6 +212,26 @@ const es: KitMessages = {
     cancel: "Cancelar",
     saved: "Guardado: {guest}, {table}",
   },
+  popover: {
+    title: "Popover u hoja",
+    description:
+      "Un popover junto a su botón desde 768 px y una hoja inferior en pantallas menores. Para elegir un valor o filtrar.",
+    open: "Filtrar reservas",
+    panelTitle: "Filtrar reservas",
+    panelDescription: "Muestra solo las reservas con este estado.",
+    optionAll: "Todas",
+    optionConfirmed: "Confirmadas",
+    optionWaiting: "En espera",
+    current: "Mostrando: {status}",
+  },
+  guard: {
+    title: "Salir con cambios sin guardar",
+    description: "Edita la nota y sigue el enlace, pulsa Atrás o recarga: la página pregunta antes de soltarte.",
+    noteLabel: "Nota",
+    save: "Guardar nota",
+    saved: "Guardado: {note}",
+    link: "Ir al panel",
+  },
 };
 
 const de: KitMessages = {
@@ -290,6 +329,27 @@ const de: KitMessages = {
     save: "Reservierung speichern",
     cancel: "Abbrechen",
     saved: "Gespeichert: {guest}, {table}",
+  },
+  popover: {
+    title: "Popover oder Sheet",
+    description:
+      "Ein Popover neben seiner Schaltfläche ab 768 px, darunter ein Sheet von unten. Zum Auswählen eines Werts oder Filtern.",
+    open: "Reservierungen filtern",
+    panelTitle: "Reservierungen filtern",
+    panelDescription: "Zeigt nur die Reservierungen mit diesem Status.",
+    optionAll: "Alle",
+    optionConfirmed: "Bestätigt",
+    optionWaiting: "Wartend",
+    current: "Angezeigt: {status}",
+  },
+  guard: {
+    title: "Verlassen mit ungespeicherten Änderungen",
+    description:
+      "Bearbeite die Notiz und folge dann dem Link, drücke Zurück oder lade neu: Die Seite fragt nach, bevor sie dich gehen lässt.",
+    noteLabel: "Notiz",
+    save: "Notiz speichern",
+    saved: "Gespeichert: {note}",
+    link: "Zum Dashboard",
   },
 };
 
@@ -389,6 +449,27 @@ const fr: KitMessages = {
     save: "Enregistrer la réservation",
     cancel: "Annuler",
     saved: "Enregistré : {guest}, {table}",
+  },
+  popover: {
+    title: "Popover ou feuille",
+    description:
+      "Un popover à côté de son bouton dès 768 px et une feuille depuis le bas en dessous. Pour choisir une valeur ou filtrer.",
+    open: "Filtrer les réservations",
+    panelTitle: "Filtrer les réservations",
+    panelDescription: "N’affiche que les réservations ayant ce statut.",
+    optionAll: "Toutes",
+    optionConfirmed: "Confirmées",
+    optionWaiting: "En attente",
+    current: "Affichage : {status}",
+  },
+  guard: {
+    title: "Quitter avec des modifications non enregistrées",
+    description:
+      "Modifiez la note, puis suivez le lien, appuyez sur Précédent ou rechargez : la page demande avant de vous laisser partir.",
+    noteLabel: "Note",
+    save: "Enregistrer la note",
+    saved: "Enregistré : {note}",
+    link: "Aller au tableau de bord",
   },
 };
 

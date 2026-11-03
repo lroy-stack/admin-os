@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { useMessages } from "@/core/i18n/client";
+import { useGuardedExit } from "@/ds/feedback";
 
 import { DiscardChanges } from "./discard-changes";
 import { overlaysMessageKey } from "./messages";
@@ -72,13 +73,14 @@ export function DialogWindow({
   const current = useViewport();
   const focus = useRestoreFocus(returnFocus);
   const [asking, setAsking] = useState(false);
+  // A route change or Back with unsaved changes asks too, through the same question.
+  const exit = useGuardedExit(dirty && open);
   const [locked, setLocked] = useState<Viewport | null>(null);
   // The container is chosen when the window opens and kept until it closes: swapping Drawer for Dialog on a resize
   // (a phone turned to landscape) would remount the body and lose the form state and the focus return.
   if (open && locked === null && current !== undefined) setLocked(current);
   if (!open && locked !== null) setLocked(null);
   // A close from outside (the parent sets `open` to false) must not leave the question orphaned over the page.
-  // Known limit: a route change or Back unmounts a dirty window without asking; useGuardedExit (task K8) covers it.
   if (!open && asking) setAsking(false);
   const viewport = locked ?? current;
   if (viewport === undefined) return null;
@@ -159,6 +161,13 @@ export function DialogWindow({
         </Dialog>
       )}
       <DiscardChanges open={asking} onOpenChange={setAsking} onDiscard={() => onOpenChange(false)} />
+      <DiscardChanges
+        open={exit.asking}
+        onOpenChange={(next) => {
+          if (!next) exit.stay();
+        }}
+        onDiscard={exit.leave}
+      />
     </>
   );
 }

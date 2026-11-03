@@ -12,6 +12,7 @@ import { AppLogo } from "@/components/app-logo";
 import { Button } from "@/components/ui/button";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { LiquidThumb, useLiquidThumb } from "@/ds/components";
+import { useGuardedLink } from "@/ds/feedback";
 
 import { AccountMenu } from "./account-menu";
 import { isActiveLink } from "./active-link";
@@ -33,6 +34,7 @@ function NavPills({
   className?: string;
 }) {
   const listRef = useRef<HTMLUListElement>(null);
+  const guardLink = useGuardedLink();
   // Move the lens on click instead of waiting for the route to commit; any pathname change clears it.
   const [pending, setPending] = useState<{ url: string; from: string } | null>(null);
   const [renderedPath, setRenderedPath] = useState(pathname);
@@ -69,6 +71,15 @@ function NavPills({
               data-thumb-key={item.url}
               transitionTypes={[index > currentIndex ? "nav-forward" : "nav-back"]}
               aria-current={isActiveLink(pathname, item.url) ? "page" : undefined}
+              onNavigate={(event) => {
+                // A held navigation (unsaved changes) must not leave the lens on the page that was refused.
+                guardLink(item.url)({
+                  preventDefault: () => {
+                    event.preventDefault();
+                    setPending(null);
+                  },
+                });
+              }}
               onClick={(event) => {
                 // Modified or non-primary clicks open elsewhere; the current page stays active.
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;

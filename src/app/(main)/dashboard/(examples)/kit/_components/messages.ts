@@ -106,6 +106,29 @@ export interface KitMessages {
     /** Placeholders: `{guest}`, `{table}`. */
     readonly saved: string;
   };
+  readonly popover: {
+    readonly title: string;
+    readonly description: string;
+    /** The trigger button. */
+    readonly open: string;
+    readonly panelTitle: string;
+    readonly panelDescription: string;
+    readonly optionAll: string;
+    readonly optionConfirmed: string;
+    readonly optionWaiting: string;
+    /** Placeholders: `{status}`. */
+    readonly current: string;
+  };
+  readonly guard: {
+    readonly title: string;
+    readonly description: string;
+    readonly noteLabel: string;
+    readonly save: string;
+    /** Placeholders: `{note}`. */
+    readonly saved: string;
+    /** A link to another page, to try leaving with unsaved changes. */
+    readonly link: string;
+  };
 }
 
 export const kitMessageKey: MessageKey<KitMessages> = messageKey<KitMessages>("kit");

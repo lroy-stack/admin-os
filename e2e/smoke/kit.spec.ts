@@ -473,3 +473,124 @@ test.describe("form stack", () => {
     await expect(opener).toBeFocused();
   });
 });
+
+test.describe("popover or sheet", () => {
+  test("is a popover beside its button from 768 px and a bottom sheet below, with focus in and back", async ({
+    page,
+  }, testInfo) => {
+    const expected = SCREEN[testInfo.project.name as keyof typeof SCREEN];
+    const trigger = page.getByRole("button", { name: "Filter reservations", includeHidden: true });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await trigger.click();
+
+    const panel = page.getByRole("dialog", { name: "Filter reservations" });
+    await expect(panel).toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("[data-window=popover-or-sheet]")).toHaveCount(expected.sheets);
+    await expect.poll(() => focusIsInside(panel)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("a choice applies and closes the panel", async ({ page }) => {
+    const trigger = page.getByRole("button", { name: "Filter reservations", includeHidden: true });
+    await trigger.click();
+
+    await page.getByRole("dialog", { name: "Filter reservations" }).getByRole("button", { name: "Waiting" }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByTestId("kit-status")).toHaveText("Showing: Waiting");
+    await expect(trigger).toBeFocused();
+  });
+});
+
+test.describe("guarded exit", () => {
+  const away = "/dashboard/default";
+  const note = (page: Page) => page.getByLabel("Note", { exact: true });
+  const question = (page: Page) => page.getByRole("alertdialog", { name: "Discard changes?" });
+  const link = (page: Page) => page.getByRole("link", { name: "Go to the dashboard" });
+
+  test("a dirty page asks before an in-app link, and Keep editing keeps the value", async ({ page }) => {
+    await note(page).fill("call the supplier");
+
+    await link(page).click();
+
+    await expect(question(page)).toBeVisible();
+    await question(page).getByRole("button", { name: "Keep editing" }).click();
+    await expect(question(page)).toBeHidden();
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+    await expect(note(page)).toHaveValue("call the supplier");
+  });
+
+  test("Discard continues to the link and leaves no duplicate entry behind", async ({ page }) => {
+    await note(page).fill("call the supplier");
+    await link(page).click();
+
+    await question(page).getByRole("button", { name: "Discard" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`${away}$`));
+    await page.goBack();
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+    await expect(question(page)).toBeHidden();
+  });
+
+  test("a clean page navigates without asking", async ({ page }) => {
+    await link(page).click();
+
+    await expect(page).toHaveURL(new RegExp(`${away}$`));
+  });
+
+  test("a saved note is clean again", async ({ page }) => {
+    await note(page).fill("call the supplier");
+    await page.getByRole("button", { name: "Save note" }).click();
+    await expect(page.getByTestId("kit-note-saved")).toHaveText("Saved: call the supplier");
+
+    await link(page).click();
+
+    await expect(page).toHaveURL(new RegExp(`${away}$`));
+  });
+
+  test("Back asks, Keep editing stays and asks again on the next Back, Discard leaves", async ({ page }) => {
+    await note(page).fill("call the supplier");
+
+    await page.goBack();
+    await expect(question(page)).toBeVisible();
+    await question(page).getByRole("button", { name: "Keep editing" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+    await expect(note(page)).toHaveValue("call the supplier");
+
+    await page.goBack();
+    await expect(question(page)).toBeVisible();
+    await question(page).getByRole("button", { name: "Discard" }).click();
+
+    await expect(page).toHaveURL("about:blank");
+  });
+
+  test("a reload or tab close raises the browser's own prompt", async ({ page }) => {
+    await note(page).fill("call the supplier");
+    const prompt = page.waitForEvent("dialog");
+
+    await page.close({ runBeforeUnload: true });
+
+    const dialog = await prompt;
+    expect(dialog.type()).toBe("beforeunload");
+    await dialog.dismiss();
+  });
+
+  test("a dirty form dialog asks on a route change and keeps its fields on Keep editing", async ({ page }) => {
+    await page.getByRole("button", { name: "Add guest" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add guest" });
+    await dialog.getByLabel("Name").fill("Ana Ruiz");
+
+    await page.goBack();
+
+    await expect(question(page)).toBeVisible();
+    await question(page).getByRole("button", { name: "Keep editing" }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel("Name")).toHaveValue("Ana Ruiz");
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+  });
+});

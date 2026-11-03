@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { useMessages } from "@/core/i18n/client";
+import { useGuardedExit } from "@/ds/feedback";
 
 import { DiscardChanges } from "./discard-changes";
 import { overlaysMessageKey } from "./messages";
@@ -87,6 +88,8 @@ export function DockedPanel({
   const current = panelMode(useViewport());
   const slot = useContext(SlotContext);
   const [asking, setAsking] = useState(false);
+  // A route change or Back with unsaved changes asks too, through the same question.
+  const exit = useGuardedExit(dirty && open);
   const [locked, setLocked] = useState<PanelMode | null>(null);
   if (open && locked === null && current !== undefined) setLocked(current);
   if (!open && locked !== null) setLocked(null);
@@ -156,6 +159,13 @@ export function DockedPanel({
         />
       )}
       <DiscardChanges open={asking} onOpenChange={setAsking} onDiscard={() => onOpenChange(false)} />
+      <DiscardChanges
+        open={exit.asking}
+        onOpenChange={(next) => {
+          if (!next) exit.stay();
+        }}
+        onDiscard={exit.leave}
+      />
     </>
   );
 }

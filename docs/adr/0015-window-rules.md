@@ -45,6 +45,10 @@ Rules for every window:
 - Nothing modal before hydration: the server HTML holds no open window, and a viewport-dependent window waits for the
   client.
 - A window with unsaved changes ignores the backdrop click and asks before it closes.
+- Unsaved changes also guard leaving the page (`useGuardedExit`, `useGuardedLink` in `src/ds/feedback`): a `next/link`
+  click through `onNavigate`, Back and Forward, and a reload or tab close (the browser's own prompt). Back is answered
+  with a history entry the guard pushes while something is dirty, so one extra Back press lands on the same page after
+  a dirty visit; the guard cannot cancel a traversal otherwise.
 - The title names the action ("Seat walk-in"); the primary button repeats the verb.
 - A destructive capability (`effect: "destructive"`) runs only from `ConfirmAction`; a reversible action offers undo
   instead of asking first.

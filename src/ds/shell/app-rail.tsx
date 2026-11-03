@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMessages } from "@/core/i18n/client";
+import { useGuardedLink } from "@/ds/feedback";
 
 import { isActiveLink } from "./active-link";
 import { LayoutControls } from "./layout-controls";
@@ -25,6 +26,7 @@ export function AppRail({
   searchGroups: readonly ShellSearchGroup[];
 }) {
   const pathname = usePathname();
+  const guardLink = useGuardedLink();
   const { landmarks } = useMessages(shellMessageKey);
 
   return (
@@ -40,7 +42,12 @@ export function AppRail({
             <Tooltip key={item.id}>
               <TooltipTrigger asChild>
                 <Button asChild variant="ghost" size="icon" className={railButtonClassName}>
-                  <Link prefetch={false} href={item.url} aria-current={active ? "page" : undefined}>
+                  <Link
+                    prefetch={false}
+                    href={item.url}
+                    onNavigate={guardLink(item.url)}
+                    aria-current={active ? "page" : undefined}
+                  >
                     {item.icon && <item.icon />}
                     <span className="sr-only">{item.title}</span>
                   </Link>
