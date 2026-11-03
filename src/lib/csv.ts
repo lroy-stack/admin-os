@@ -7,14 +7,14 @@ export interface CsvColumn<Row> {
 
 /** First characters a spreadsheet reads as a formula (OWASP CSV injection), full-width forms included. */
 const FORMULA_START = /^[=+\-@\t\r\n＝＋－＠]/;
-const NEEDS_QUOTES = /[",\r\n]/;
 
 function field(cell: CsvCell): string {
   const text = cell === null || cell === undefined ? "" : String(cell);
   // Numbers are data, not text a spreadsheet could execute: only strings are guarded.
   const guarded = typeof cell === "string" && FORMULA_START.test(text);
   const safe = guarded ? `'${text}` : text;
-  return guarded || NEEDS_QUOTES.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+  // Always quoted: a quoted field stays one cell whatever separator the reader uses (`;` in es/de/fr, tab, `|`).
+  return `"${safe.replaceAll('"', '""')}"`;
 }
 
 /** RFC 4180 text with CRLF line endings: a header row, then one row per item. Safe to open in a spreadsheet. */
