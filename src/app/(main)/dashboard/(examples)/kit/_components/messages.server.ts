@@ -112,6 +112,7 @@ const en: KitMessages = {
     save: "Save note",
     saved: "Saved: {note}",
     link: "Go to the dashboard",
+    refresh: "Refresh data",
   },
 };
 
@@ -231,6 +232,7 @@ const es: KitMessages = {
     save: "Guardar nota",
     saved: "Guardado: {note}",
     link: "Ir al panel",
+    refresh: "Actualizar datos",
   },
 };
 
@@ -350,6 +352,7 @@ const de: KitMessages = {
     save: "Notiz speichern",
     saved: "Gespeichert: {note}",
     link: "Zum Dashboard",
+    refresh: "Daten aktualisieren",
   },
 };
 
@@ -470,6 +473,7 @@ const fr: KitMessages = {
     save: "Enregistrer la note",
     saved: "Enregistré : {note}",
     link: "Aller au tableau de bord",
+    refresh: "Actualiser les données",
   },
 };
 

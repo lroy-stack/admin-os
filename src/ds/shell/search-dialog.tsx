@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMessages } from "@/core/i18n/client";
+import { askBeforeLeaving } from "@/ds/feedback";
 
 import { shellMessageKey } from "./messages";
 import { railButtonClassName } from "./rail-button";
@@ -68,7 +69,8 @@ export function SearchDialog({ groups }: { groups: readonly ShellSearchGroup[] }
     if (item.newTab) {
       window.open(item.url, "_blank", "noopener,noreferrer");
     } else {
-      router.push(item.url);
+      // Unsaved changes ask first; Leave pushes the same url.
+      if (!askBeforeLeaving(() => router.push(item.url))) router.push(item.url);
     }
   };
 

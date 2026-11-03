@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export function GuardSection() {
   const dirty = note !== saved;
   const exit = useGuardedExit(dirty);
   const guardLink = useGuardedLink();
+  const router = useRouter();
 
   return (
     <KitSection title={text.title} description={text.description}>
@@ -48,6 +50,9 @@ export function GuardSection() {
           {format(text.saved, locale, { note: saved })}
         </p>
       )}
+      <Button type="button" variant="ghost" className="self-start" onClick={() => router.refresh()}>
+        {text.refresh}
+      </Button>
       <Link href={AWAY} onNavigate={guardLink(AWAY)} className="text-sm underline underline-offset-4">
         {text.link}
       </Link>

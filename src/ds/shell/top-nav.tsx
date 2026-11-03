@@ -73,7 +73,7 @@ function NavPills({
               aria-current={isActiveLink(pathname, item.url) ? "page" : undefined}
               onNavigate={(event) => {
                 // A held navigation (unsaved changes) must not leave the lens on the page that was refused.
-                guardLink(item.url)({
+                guardLink(item.url, { transitionTypes: [index > currentIndex ? "nav-forward" : "nav-back"] })({
                   preventDefault: () => {
                     event.preventDefault();
                     setPending(null);
@@ -133,6 +133,7 @@ export function TopNav({
   const { landmarks, header } = useMessages(shellMessageKey);
   const locale = useLocale();
   const scrolled = useScrolledPast(8);
+  const guardLink = useGuardedLink();
 
   return (
     <header
@@ -144,7 +145,12 @@ export function TopNav({
       )}
     >
       <div className="grid grid-cols-[1fr_auto] items-center gap-3 xl:grid-cols-[1fr_auto_1fr]">
-        <Link prefetch={false} href={brand.href} className="flex w-fit items-center gap-2.5 rounded-xl">
+        <Link
+          prefetch={false}
+          href={brand.href}
+          onNavigate={guardLink(brand.href)}
+          className="flex w-fit items-center gap-2.5 rounded-xl"
+        >
           <span className="liquid-glass-brand bg-brand text-brand-foreground grid size-9 place-items-center rounded-xl">
             <AppLogo className="size-5" />
           </span>
@@ -157,7 +163,7 @@ export function TopNav({
 
         <div className="flex items-center justify-end gap-2">
           <Button asChild variant="ghost" size="icon" className={headerButtonClassName}>
-            <Link prefetch={false} href={inboxHref} aria-label={header.inbox}>
+            <Link prefetch={false} href={inboxHref} onNavigate={guardLink(inboxHref)} aria-label={header.inbox}>
               <Inbox />
             </Link>
           </Button>

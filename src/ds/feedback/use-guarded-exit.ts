@@ -34,10 +34,12 @@ export function useGuardedExit(dirty: boolean): GuardedExit {
       },
     });
     return () => {
-      unregister();
-      // No longer dirty (saved, or discarded elsewhere) while the question was open: drop it.
+      // No longer dirty (saved, or discarded elsewhere) while the question was open: close it as a Stay.
+      const open = pending.current;
       pending.current = null;
       setAsking(false);
+      open?.cancel();
+      unregister();
     };
   }, [dirty]);
 
@@ -51,14 +53,28 @@ export function useGuardedExit(dirty: boolean): GuardedExit {
   return { asking, stay: () => settle("cancel"), leave: () => settle("proceed") };
 }
 
+/** What a `next/link` carries besides its `href`; Leave replays it so the navigation is the one that was held. */
+export interface GuardedLinkOptions {
+  readonly replace?: boolean;
+  readonly scroll?: boolean;
+  readonly transitionTypes?: string[];
+}
+
 /**
  * Builds the `onNavigate` of a `next/link` for `href`: Next 16 runs it on client-side navigations only, and
- * `preventDefault()` cancels them. When a dirty source is registered it asks, and Leave pushes `href` itself.
+ * `preventDefault()` cancels them. When a dirty source is registered it asks, and Leave replays the navigation with
+ * the link's `replace`, `scroll` and `transitionTypes` (`router.push` and `router.replace` accept the last two).
  * Modified clicks and external links never reach it, so they are not guarded (the browser prompt covers a real unload).
  */
-export function useGuardedLink(): (href: string) => (event: { preventDefault: () => void }) => void {
+export function useGuardedLink(): (
+  href: string,
+  options?: GuardedLinkOptions,
+) => (event: { preventDefault: () => void }) => void {
   const router = useRouter();
-  return (href) => (event) => {
-    if (askBeforeLeaving(() => router.push(href))) event.preventDefault();
-  };
+  return (href, { replace = false, scroll, transitionTypes } = {}) =>
+    (event) => {
+      const navigate = () =>
+        replace ? router.replace(href, { scroll, transitionTypes }) : router.push(href, { scroll, transitionTypes });
+      if (askBeforeLeaving(navigate)) event.preventDefault();
+    };
 }

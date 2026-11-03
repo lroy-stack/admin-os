@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, type ReactNode, useRef, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
 
 import { cn } from "cn";
 import { Slot } from "radix-ui";
@@ -56,6 +56,9 @@ export function PopoverOrSheet({
   };
   const triggerRef = useRef<HTMLElement>(null);
   const focus = useRestoreFocus(triggerRef);
+  const ids = { panel: useId(), description: useId() };
+  // Radix returns focus to the trigger unless the close came from an interaction outside; keep that rule.
+  const closedFromOutside = useRef(false);
   const viewport = useViewport();
   const [locked, setLocked] = useState<PanelKind | null>(null);
   const current = viewport === undefined ? undefined : kindOf(viewport);
@@ -73,6 +76,7 @@ export function PopoverOrSheet({
         ref={triggerRef}
         aria-haspopup="dialog"
         aria-expanded={kind === undefined ? false : open}
+        aria-controls={open && kind !== undefined ? ids.panel : undefined}
         onClick={() => setOpen(!open)}
       >
         {trigger}
@@ -81,20 +85,37 @@ export function PopoverOrSheet({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverAnchor virtualRef={triggerRef} />
           <PopoverContent
-            {...focus}
-            {...noDescription}
+            id={ids.panel}
             aria-label={title}
+            aria-describedby={description ? ids.description : undefined}
             align={align}
-            // The trigger toggles on its own click; letting the outside press close first would reopen it.
+            onOpenAutoFocus={() => {
+              closedFromOutside.current = false;
+              focus.onOpenAutoFocus();
+            }}
+            onCloseAutoFocus={(event) => {
+              // Someone clicked or tabbed to another control: focus is theirs now, not the trigger's.
+              if (closedFromOutside.current) return;
+              focus.onCloseAutoFocus(event);
+            }}
             onInteractOutside={(event) => {
-              if (event.target instanceof Node && triggerRef.current?.contains(event.target)) event.preventDefault();
+              // The trigger toggles on its own click; letting the outside press close first would reopen it.
+              if (event.target instanceof Node && triggerRef.current?.contains(event.target)) {
+                event.preventDefault();
+                return;
+              }
+              closedFromOutside.current = true;
             }}
             className={cn(
               "max-h-(--radix-popover-content-available-height) w-72 overflow-y-auto overscroll-contain",
               className,
             )}
           >
-            {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+            {description ? (
+              <p id={ids.description} className="text-muted-foreground text-sm">
+                {description}
+              </p>
+            ) : null}
             {content}
           </PopoverContent>
         </Popover>
@@ -102,6 +123,7 @@ export function PopoverOrSheet({
       {kind === "sheet" ? (
         <Drawer direction="bottom" open={open} onOpenChange={setOpen} autoFocus>
           <DrawerContent
+            id={ids.panel}
             {...focus}
             {...noDescription}
             data-window="popover-or-sheet"

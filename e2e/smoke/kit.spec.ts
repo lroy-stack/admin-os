@@ -27,6 +27,12 @@ const SCREEN = {
   },
 } as const;
 
+/** The index of the current history entry: waits for a Stay's traversal back to the guarded entry to finish. */
+const historyIndex = (page: Page) =>
+  page.evaluate(
+    () => (window as unknown as { navigation: { currentEntry: { index: number } } }).navigation.currentEntry.index,
+  );
+
 test.beforeEach(async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
   await page.goto("/dashboard/kit");
@@ -561,6 +567,8 @@ test.describe("guarded exit", () => {
     await question(page).getByRole("button", { name: "Keep editing" }).click();
     await expect(page).toHaveURL(/\/dashboard\/kit$/);
     await expect(note(page)).toHaveValue("call the supplier");
+    await expect(question(page)).toBeHidden();
+    await expect.poll(() => historyIndex(page)).toBe(1);
 
     await page.goBack();
     await expect(question(page)).toBeVisible();
@@ -592,5 +600,82 @@ test.describe("guarded exit", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel("Name")).toHaveValue("Ana Ruiz");
     await expect(page).toHaveURL(/\/dashboard\/kit$/);
+  });
+});
+
+test.describe("guarded exit after the router rewrites the history state", () => {
+  const note = (page: Page) => page.getByLabel("Note", { exact: true });
+  const question = (page: Page) => page.getByRole("alertdialog", { name: "Discard changes?" });
+
+  const refreshWhileDirty = async (page: Page) => {
+    await note(page).fill("call the supplier");
+    const refreshed = page.waitForResponse((response) => response.request().headers().rsc === "1");
+    await page.getByRole("button", { name: "Refresh data" }).click();
+    await refreshed;
+  };
+
+  test("Back after a refresh asks once, Keep editing stays, and the next Back asks once again", async ({ page }) => {
+    await refreshWhileDirty(page);
+
+    await page.goBack();
+    await expect(question(page)).toHaveCount(1);
+    await question(page).getByRole("button", { name: "Keep editing" }).click();
+    await expect(question(page)).toHaveCount(0);
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+    await expect.poll(() => historyIndex(page)).toBe(1);
+    await page.goBack();
+
+    await expect(question(page)).toHaveCount(1);
+  });
+
+  test("a link after a refresh leaves with no duplicate of the page behind the new one", async ({ page }) => {
+    await refreshWhileDirty(page);
+    await page.getByRole("link", { name: "Go to the dashboard" }).click();
+
+    await question(page).getByRole("button", { name: "Discard" }).click();
+
+    await expect(page).toHaveURL(/\/dashboard\/default$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+    await expect(question(page)).toHaveCount(0);
+  });
+});
+
+test.describe("every way out of the page asks while it is dirty", () => {
+  const question = (page: Page) => page.getByRole("alertdialog", { name: "Discard changes?" });
+
+  test("the logo link asks", async ({ page }) => {
+    await page.getByLabel("Note", { exact: true }).fill("call the supplier");
+
+    await page.locator("header a").first().click();
+
+    await expect(question(page)).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+  });
+
+  test("the search dialog asks before it navigates", async ({ page }) => {
+    await page.getByLabel("Note", { exact: true }).fill("call the supplier");
+    await page.keyboard.press("Control+j");
+
+    await page.getByRole("option").first().click();
+
+    await expect(question(page)).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard\/kit$/);
+  });
+});
+
+test.describe("popover focus", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) < 768, "Below 768 px the panel is a modal sheet");
+
+  test("clicking another field while it is open keeps focus there instead of jumping back to the trigger", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: "Filter reservations" }).click();
+    await expect(page.getByRole("dialog", { name: "Filter reservations" })).toBeVisible();
+
+    await page.getByLabel("Note", { exact: true }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByLabel("Note", { exact: true })).toBeFocused();
   });
 });

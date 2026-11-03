@@ -128,6 +128,8 @@ export interface KitMessages {
     readonly saved: string;
     /** A link to another page, to try leaving with unsaved changes. */
     readonly link: string;
+    /** Runs `router.refresh()`, as a revalidation after a save would: the router rewrites the history state. */
+    readonly refresh: string;
   };
 }
 

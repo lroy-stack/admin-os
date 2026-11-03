@@ -45,10 +45,17 @@ Rules for every window:
 - Nothing modal before hydration: the server HTML holds no open window, and a viewport-dependent window waits for the
   client.
 - A window with unsaved changes ignores the backdrop click and asks before it closes.
-- Unsaved changes also guard leaving the page (`useGuardedExit`, `useGuardedLink` in `src/ds/feedback`): a `next/link`
-  click through `onNavigate`, Back and Forward, and a reload or tab close (the browser's own prompt). Back is answered
-  with a history entry the guard pushes while something is dirty, so one extra Back press lands on the same page after
-  a dirty visit; the guard cannot cancel a traversal otherwise.
+- Unsaved changes also guard leaving the page (`useGuardedExit`, `useGuardedLink`, `askBeforeLeaving` in
+  `src/ds/feedback`): a `next/link` click through `onNavigate` (the shell links and the search dialog included), Back
+  and Forward, and a reload or tab close (the browser's own prompt). Back and Forward are answered with a history
+  entry the guard pushes while something is dirty, recognised by the Navigation API's entry key where it exists
+  (the router's `replaceState` drops any marker in the state) and by a marker otherwise. The Navigation API's
+  `navigate` event is not the mechanism: a `traverse` navigation is cancelable only for a same-document destination
+  in a top-level page and, from the browser's Back button, only with history-action activation (WHATWG HTML, "inner
+  navigate event firing algorithm", steps 8 and 9), and Chrome's guidance is that Back and Forward cannot be
+  cancelled (developer.chrome.com/docs/web-platform/navigation-api). A guard that works only sometimes is not one.
+  When the page stops being dirty on its own page the guard takes its entry off again; elsewhere one extra Back press
+  lands on the same page.
 - The title names the action ("Seat walk-in"); the primary button repeats the verb.
 - A destructive capability (`effect: "destructive"`) runs only from `ConfirmAction`; a reversible action offers undo
   instead of asking first.
