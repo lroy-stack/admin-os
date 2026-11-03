@@ -4,8 +4,10 @@ export {
   type ConfirmOutcome,
   type ConfirmReason,
 } from "./confirm-action";
+export { DiscardChanges } from "./discard-changes";
 export { DockedPanel, DockedPanelLayout, type DockedPanelProps } from "./docked-panel";
 export { FormDialog, type FormDialogProps } from "./form-dialog";
+export { PopoverOrSheet, type PopoverOrSheetProps } from "./popover-or-sheet";
 export { QuickDialog, type QuickDialogProps } from "./quick-dialog";
 export { ResponsivePanel, type ResponsivePanelProps } from "./responsive-panel";
 export { useHydrated } from "./use-hydrated";
