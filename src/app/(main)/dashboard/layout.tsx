@@ -11,6 +11,7 @@ import { textFor } from "@/config/vocabulary.server";
 import { AccessProvider } from "@/core/access/client";
 import { visibleNavIds } from "@/core/nav";
 import { users } from "@/data/users";
+import { feedbackBundle } from "@/ds/feedback/server";
 import { AppBackdrop } from "@/ds/shell";
 import { shellBundle } from "@/ds/shell/server";
 
@@ -51,7 +52,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <LocaleRoot
-      bundles={[shellBundle, examplesBundle, commonBundle, dashboardBundle]}
+      bundles={[shellBundle, feedbackBundle, examplesBundle, commonBundle, dashboardBundle]}
       className={cn(
         "relative isolate flex min-h-svh flex-col",
         // Space above and below full-height app pages (kanban, logistics…): header plus content gutters.
