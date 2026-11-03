@@ -25,6 +25,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:dead-clicks": "DEAD_CLICKS=report playwright test e2e/smoke/dead-clicks.spec.ts",
     "media": "playwright test -c playwright.media.config.ts",
     "mcp:stdio": "tsx --import ./scripts/server-only-hook.mjs scripts/mcp-stdio.ts"
   },

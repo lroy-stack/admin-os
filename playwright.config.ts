@@ -12,6 +12,9 @@ const PORT = Number(process.env.E2E_PORT ?? 3400);
  */
 export default defineConfig({
   testDir: "e2e",
+  // The dead-click sweep (spec 003, D5) takes minutes and only reports until the gate is turned on; it runs on its
+  // own with `npm run test:dead-clicks`.
+  testIgnore: process.env.DEAD_CLICKS ? [] : ["**/dead-clicks.spec.ts"],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
