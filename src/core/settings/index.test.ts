@@ -45,12 +45,28 @@ describe("mergeSettings", () => {
 });
 
 describe("createSettingsReader", () => {
+  it("types a read by the definition: a number setting is a number, a string setting a string", () => {
+    const reader = createSettingsReader(registry);
+    const minutes: number = reader.get(stay);
+    // @ts-expect-error a number setting is not a string
+    const notAString: string = reader.get(stay);
+    const text: string = reader.get(greeting);
+
+    expect([minutes, notAString, text]).toEqual([90, 90, "hello"]);
+  });
+
+  it("refuses a definition the registry does not hold", () => {
+    const stranger = defineSetting({ ...stay, key: "demo.stranger" });
+
+    expect(() => createSettingsReader(registry).get(stranger)).toThrow(/demo.stranger/);
+  });
+
   it("returns the default when the preset does not override", () => {
-    expect(createSettingsReader(registry).get("demo.stay_minutes")).toBe(90);
+    expect(createSettingsReader(registry).get(stay)).toBe(90);
   });
 
   it("returns the preset override over the default", () => {
-    expect(createSettingsReader(registry, { "demo.stay_minutes": 45 }).get("demo.stay_minutes")).toBe(45);
+    expect(createSettingsReader(registry, { "demo.stay_minutes": 45 }).get(stay)).toBe(45);
   });
 
   it("rejects an override that does not parse against the setting's schema", () => {
@@ -158,7 +174,7 @@ describe("a capability handler reading a setting through its context", () => {
     const reader = createSettingsReader(registry, { "demo.stay_minutes": 45 });
     const adapter = createMockAdapter({
       handlers: {
-        ...mockHandler(demoStay, (_input, { settings }) => ok(Number(settings.get("demo.stay_minutes")))),
+        ...mockHandler(demoStay, (_input, { settings }) => ok(settings.get(stay))),
       },
       store: createSessionStore({}),
       clock,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSettingsReader } from "@/core/settings";
+import { walkInStayMinutes } from "@/modules/bookings";
 
 import { SETTINGS } from "./settings";
 import { VERTICALS, type VerticalId } from "./vertical";
@@ -40,6 +41,6 @@ describe("preset settings overrides", () => {
 
   it("lets the salon expect shorter walk-in stays than the default", () => {
     const reader = createSettingsReader(SETTINGS, VERTICALS.salon.settingsDefaults);
-    expect(reader.get("bookings.walk_in.stay_minutes")).toBe(45);
+    expect(reader.get(walkInStayMinutes)).toBe(45);
   });
 });

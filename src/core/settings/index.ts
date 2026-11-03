@@ -42,11 +42,13 @@ export const mergeSettings = <const S extends readonly AnySetting[]>(...settings
   return merged as RegistryOf<S>;
 };
 
-type ValueOf<R extends SettingsRegistry, K extends keyof R> = z.output<R[K]["schema"]>;
-
-export interface SettingsReader<R extends SettingsRegistry = SettingsRegistry> {
-  /** The effective value; throws `UnknownSettingError` for a key the registry lacks (a typed key cannot). */
-  get<K extends keyof R & string>(key: K): ValueOf<R, K>;
+export interface SettingsReader {
+  /**
+   * The effective value, typed by the definition the module declares (`settings.get(walkInStayMinutes)`), so a
+   * handler needs no cast and no import of the registry. Throws `UnknownSettingError` for a definition the registry
+   * does not hold.
+   */
+  get<S extends AnySetting>(setting: S): z.output<S["schema"]>;
   /** Effective values of `keys`, or of every setting; an unknown key is the domain error `settings.unknown_key`. */
   values(keys?: readonly string[]): Result<Record<string, unknown>>;
 }
@@ -62,10 +64,10 @@ export class UnknownSettingError extends Error {
  * Reads settings with a preset's overrides over the registry defaults. Overrides are validated once, so a
  * malformed or unknown override fails when the reader is built, not when a screen reads it.
  */
-export function createSettingsReader<R extends SettingsRegistry>(
-  registry: R,
+export function createSettingsReader(
+  registry: SettingsRegistry,
   overrides: Readonly<Record<string, unknown>> = {},
-): SettingsReader<R> {
+): SettingsReader {
   const effective = new Map<string, unknown>();
   for (const [key, setting] of Object.entries(registry)) {
     effective.set(key, Object.hasOwn(overrides, key) ? setting.schema.parse(overrides[key]) : setting.defaultValue);
@@ -74,10 +76,10 @@ export function createSettingsReader<R extends SettingsRegistry>(
   if (unknown.length > 0) throw new UnknownSettingError(unknown.join(", "));
 
   return {
-    get: ((key: string) => {
-      if (!effective.has(key)) throw new UnknownSettingError(key);
-      return effective.get(key);
-    }) as SettingsReader<R>["get"],
+    get: ((setting: AnySetting) => {
+      if (!effective.has(setting.key)) throw new UnknownSettingError(setting.key);
+      return effective.get(setting.key);
+    }) as SettingsReader["get"],
     values: (keys) => {
       const wanted = keys ?? [...effective.keys()];
       const missing = wanted.filter((key) => !effective.has(key));

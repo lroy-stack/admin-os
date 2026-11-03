@@ -26,7 +26,7 @@ import { SETTINGS } from "./settings";
 import { VERTICALS, type VerticalId } from "./vertical";
 
 /** The settings in effect for a preset: registry defaults with the preset's overrides (ADR 0004). */
-export const settingsFor = (vertical: VerticalId): SettingsReader<typeof SETTINGS> =>
+export const settingsFor = (vertical: VerticalId): SettingsReader =>
   createSettingsReader(SETTINGS, VERTICALS[vertical].settingsDefaults);
 
 /** The demo data of each preset: its seed collections and its seeded business clock (ADR 0004, 0005). */
