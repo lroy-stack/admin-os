@@ -54,8 +54,9 @@ Rules for every window:
   in a top-level page and, from the browser's Back button, only with history-action activation (WHATWG HTML, "inner
   navigate event firing algorithm", steps 8 and 9), and Chrome's guidance is that Back and Forward cannot be
   cancelled (developer.chrome.com/docs/web-platform/navigation-api). A guard that works only sometimes is not one.
-  When the page stops being dirty on its own page the guard takes its entry off again; elsewhere one extra Back press
-  lands on the same page.
+  The guard never removes its entry itself (a `history.back()` would race a navigation the router has started but not
+  committed, such as a dialog closing as its link is followed), so after a dirty visit one extra Back press lands on
+  the same page.
 - The title names the action ("Seat walk-in"); the primary button repeats the verb.
 - A destructive capability (`effect: "destructive"`) runs only from `ConfirmAction`; a reversible action offers undo
   instead of asking first.

@@ -363,45 +363,27 @@ describe("a tab opened directly on the page", () => {
   });
 });
 
-describe("a source that stops being dirty on its own page", () => {
-  it("takes the dead sentinel off the history (Navigation API)", async () => {
+describe("a source that stops being dirty", () => {
+  it.each([true, false])(
+    "never traverses the history by itself, so a window closed by a link click cannot cancel the router's push (Navigation API: %s)",
+    async (navigation) => {
+      const { browser, guard, source } = await setup({ navigation });
+      const unregister = guard.registerExitGuard(source);
+
+      unregister();
+      vi.advanceTimersByTime(1000);
+      browser.routerPush("/page-b");
+
+      expect([browser.win.location.href, browser.index, browser.length]).toEqual(["/page-b", 3, 4]);
+    },
+  );
+
+  it("leaves the sentinel in place, so a Back from the same page lands on it", async () => {
     const { browser, guard, source } = await setup({ navigation: true });
-    const unregister = guard.registerExitGuard(source);
 
-    unregister();
-    vi.advanceTimersByTime(0);
-
-    expect([browser.index, browser.routerPops.length]).toEqual([1, 0]);
-  });
-
-  it("does not unwind when a redirect already moved the person on", async () => {
-    const { browser, guard, source } = await setup({ navigation: true });
-    const unregister = guard.registerExitGuard(source);
-
-    unregister();
-    browser.routerPush("/page-b");
-    vi.advanceTimersByTime(0);
-
-    expect([browser.index, browser.length]).toEqual([3, 4]);
-  });
-
-  it("does not unwind when it became dirty again before the unwind ran", async () => {
-    const { browser, guard, source } = await setup({ navigation: true });
     guard.registerExitGuard(source)();
+    vi.advanceTimersByTime(1000);
 
-    guard.registerExitGuard(source);
-    vi.advanceTimersByTime(0);
-
-    expect([browser.index, browser.length]).toEqual([2, 3]);
-  });
-
-  it("leaves the sentinel alone where entries cannot be told apart (no Navigation API)", async () => {
-    const { browser, guard, source } = await setup({ navigation: false });
-    const unregister = guard.registerExitGuard(source);
-
-    unregister();
-    vi.advanceTimersByTime(0);
-
-    expect(browser.index).toBe(2);
+    expect([browser.index, browser.length, browser.routerPops.length]).toEqual([2, 3, 0]);
   });
 });

@@ -46,7 +46,6 @@ export function isSentinel(state: unknown): boolean {
 
 const entries: ExitGuardEntry[] = [];
 let disarm: (() => void) | null = null;
-let unwindTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Key and index of the history entry the guard pushed; known only where the Navigation API exists. */
 let sentinelKey: string | null = null;
@@ -186,10 +185,6 @@ function leaveByBack() {
 }
 
 function armBrowserGuards(): () => void {
-  if (unwindTimer !== null) {
-    clearTimeout(unwindTimer);
-    unwindTimer = null;
-  }
   const onBeforeUnload = (event: BeforeUnloadEvent) => {
     if (confirmedLeave) return;
     event.preventDefault();
@@ -253,30 +248,7 @@ function armBrowserGuards(): () => void {
     expected = null;
     afterUnwind = null;
     questionOpen = false;
-    unwindIdleSentinel();
+    // The sentinel stays behind on purpose. Taking it off with history.back() would race a navigation the router has
+    // started but not yet committed (a dialog closing as its link is followed), and the traversal would cancel it.
   };
-}
-
-/**
- * The page stopped being dirty on its own page (saved): the sentinel is a dead Back press, so take it off. It is
- * unwound only when it is provably the current entry, in a task after the one that cleaned up. A redirect after the
- * save pushes its page in a later commit, and by then the sentinel is no longer current, so the check skips it; the
- * guard is by key and URL, never by "one step back". Needs the Navigation API (the key); elsewhere it is left alone.
- */
-function unwindIdleSentinel() {
-  if (!navigationApi() || sentinelKey === null) return;
-  const href = window.location.href;
-  const key = sentinelKey;
-  unwindTimer = setTimeout(() => {
-    unwindTimer = null;
-    const current = navigationApi();
-    if (entries.length > 0) return;
-    if (current?.currentEntry?.key !== key || window.location.href !== href) return;
-    const swallow = (event: Event) => {
-      event.stopImmediatePropagation();
-      window.removeEventListener("popstate", swallow, { capture: true });
-    };
-    window.addEventListener("popstate", swallow, { capture: true });
-    window.history.back();
-  }, 0);
 }
