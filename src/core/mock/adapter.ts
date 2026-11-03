@@ -48,6 +48,17 @@ export interface MockAdapterOptions<Data> {
   readonly faults?: FaultMap;
 }
 
+/** Key-order independent JSON of a parsed input, so equal inputs share a fingerprint. */
+const fingerprintOf = (value: unknown): string => {
+  const sorted = JSON.stringify(value, (_key, nested: unknown) =>
+    typeof nested === "object" && nested !== null && !Array.isArray(nested)
+      ? Object.fromEntries(Object.entries(nested).sort(([a], [b]) => a.localeCompare(b)))
+      : nested,
+  );
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: JSON.stringify returns undefined for undefined input; its lib type says string.
+  return sorted ?? "";
+};
+
 const delay = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -89,13 +100,21 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
       }
       const session = store.session(sessionId);
       const replayKey = context.idempotencyKey === undefined ? undefined : `${capability.id}:${context.idempotencyKey}`;
+      const fingerprint = fingerprintOf(input);
       const replayed = replayKey === undefined ? undefined : session.replays.get(replayKey);
-      if (replayed) return replayed;
+      if (replayed) {
+        return replayed.fingerprint === fingerprint
+          ? replayed.result
+          : err(
+              ErrorCodes.idempotencyConflict,
+              `${capability.id} received idempotency key "${context.idempotencyKey}" with a different input`,
+            );
+      }
 
       const result: CallResult<unknown> = capability.approval?.(input, { via: context.via })
         ? approve(session.approvals, capability.id, context.actor.actorId, input)
         : await handler(input, { actor: context.actor, clock, settings, data: session.data });
-      if (replayKey !== undefined) session.replays.set(replayKey, result);
+      if (replayKey !== undefined) session.replays.set(replayKey, { fingerprint, result });
       return result;
     },
   };

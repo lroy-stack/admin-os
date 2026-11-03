@@ -10,6 +10,7 @@ describe("errorClassOf", () => {
     [ErrorCodes.timeout, "timeout"],
     [ErrorCodes.unavailable, "unavailable"],
     [ErrorCodes.idempotencyRequired, "invalid"],
+    [ErrorCodes.idempotencyConflict, "conflict"],
     ["customers.not_found", "not_found"],
     ["customers.required", "invalid"],
     ["customers.invalid", "invalid"],

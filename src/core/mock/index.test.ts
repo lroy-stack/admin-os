@@ -213,6 +213,17 @@ describe("createMockAdapter", () => {
     ]);
   });
 
+  it("refuses a key reused with a different input and applies nothing", async () => {
+    const { clientFor } = setup();
+    const visitor = clientFor("visitor-a");
+    await visitor.call("notes.add", { text: "once" }, { idempotencyKey: "k1" });
+    const reused = await visitor.call("notes.add", { text: "other" }, { idempotencyKey: "k1" });
+    expect([reused, await visitor.call("notes.list", {})]).toMatchObject([
+      { ok: false, error: { code: "client.idempotency_conflict" } },
+      { ok: true, value: ["seeded", "once"] },
+    ]);
+  });
+
   it("holds a write that needs approval and leaves the data alone", async () => {
     const { store, clientFor } = setup();
     const visitor = clientFor("visitor-a");

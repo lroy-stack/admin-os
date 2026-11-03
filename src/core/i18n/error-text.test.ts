@@ -23,6 +23,17 @@ describe("errorText", () => {
   });
 
   it.each([
+    ["en", "This key was already used for a different request. Error code: client.idempotency_conflict."],
+    [
+      "de",
+      "Dieser Schlüssel wurde bereits für eine andere Anfrage verwendet. Fehlercode: client.idempotency_conflict.",
+    ],
+  ] as const)("renders the text of a reused idempotency key in %s", (locale, expected) => {
+    const empty = defineMessages({ en: {}, es: {}, de: {}, fr: {} });
+    expect(errorText({ code: "client.idempotency_conflict" }, empty, locale)).toBe(expected);
+  });
+
+  it.each([
     ["en", "You do not have permission to do this."],
     ["fr", "Vous n’avez pas l’autorisation de faire cela."],
   ] as const)("falls back to the class text in %s", (locale, expected) => {

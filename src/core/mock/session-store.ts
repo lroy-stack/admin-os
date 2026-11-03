@@ -11,8 +11,11 @@ export interface PendingApproval {
 /** One visitor's copy of the demo: their data, their replayable writes and their pending approvals. */
 export interface DemoSession<T> {
   readonly data: T;
-  /** Results of keyed writes, so a retried submission with the same idempotency key is not applied twice. */
-  readonly replays: Map<string, CallResult<unknown>>;
+  /**
+   * Results of keyed writes, so a retried submission with the same idempotency key is not applied twice. The
+   * fingerprint is that of the input the key first arrived with: the same key with another input is a conflict.
+   */
+  readonly replays: Map<string, { readonly fingerprint: string; readonly result: CallResult<unknown> }>;
   readonly approvals: PendingApproval[];
 }
 

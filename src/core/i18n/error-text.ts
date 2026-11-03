@@ -19,6 +19,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     timeout: "The request took too long. Try again.",
     invalid_output: "The service returned an unexpected response. Error code: {code}.",
     "client.idempotency_required": "This action could not be sent safely. Error code: {code}.",
+    "client.idempotency_conflict": "This key was already used for a different request. Error code: {code}.",
     generic: "Something went wrong. Error code: {code}.",
   },
   es: {
@@ -30,6 +31,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     timeout: "La solicitud ha tardado demasiado. Inténtalo de nuevo.",
     invalid_output: "El servicio ha devuelto una respuesta inesperada. Código de error: {code}.",
     "client.idempotency_required": "Esta acción no se ha podido enviar de forma segura. Código de error: {code}.",
+    "client.idempotency_conflict": "Esta clave ya se usó para otra solicitud distinta. Código de error: {code}.",
     generic: "Algo ha salido mal. Código de error: {code}.",
   },
   de: {
@@ -41,6 +43,8 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     timeout: "Die Anfrage hat zu lange gedauert. Versuche es erneut.",
     invalid_output: "Der Dienst hat eine unerwartete Antwort geliefert. Fehlercode: {code}.",
     "client.idempotency_required": "Diese Aktion konnte nicht sicher gesendet werden. Fehlercode: {code}.",
+    "client.idempotency_conflict":
+      "Dieser Schlüssel wurde bereits für eine andere Anfrage verwendet. Fehlercode: {code}.",
     generic: "Etwas ist schiefgelaufen. Fehlercode: {code}.",
   },
   fr: {
@@ -52,6 +56,7 @@ export const defaultErrorMessages = defineMessages<ErrorMessages>({
     timeout: "La requête a pris trop de temps. Réessayez.",
     invalid_output: "Le service a renvoyé une réponse inattendue. Code d’erreur : {code}.",
     "client.idempotency_required": "Cette action n’a pas pu être envoyée en toute sécurité. Code d’erreur : {code}.",
+    "client.idempotency_conflict": "Cette clé a déjà été utilisée pour une autre requête. Code d’erreur : {code}.",
     generic: "Une erreur s’est produite. Code d’erreur : {code}.",
   },
 });

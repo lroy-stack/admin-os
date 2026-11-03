@@ -8,6 +8,8 @@ export const ErrorCodes = {
   unavailable: "transport.unavailable",
   unknownCapability: "client.unknown_capability",
   idempotencyRequired: "client.idempotency_required",
+  /** The same idempotency key arrived with a different input (Stripe answers the same way). */
+  idempotencyConflict: "client.idempotency_conflict",
 } as const;
 
 export type ErrorClass =
@@ -26,6 +28,7 @@ const CLASS_BY_SUFFIX: Readonly<Record<string, ErrorClass>> = {
   invalid: "invalid",
   required: "invalid",
   idempotency_required: "invalid",
+  idempotency_conflict: "conflict",
   conflict: "conflict",
   unavailable: "unavailable",
   timeout: "timeout",
