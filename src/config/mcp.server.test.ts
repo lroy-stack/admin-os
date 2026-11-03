@@ -63,9 +63,29 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       "bookings_list",
       "catalog_list",
       "customers_list",
+      "customers_get",
+      "customers_duplicates_check",
+      "customers_create",
+      "customers_update",
+      "customers_notes_add",
+      "customers_block",
+      "customers_unblock",
       "resources_list",
       "staff_list",
     ]);
+  });
+
+  it.each([
+    ["customers.get", 1],
+    ["customers.duplicates.check", 1],
+    ["customers.create", 2],
+    ["customers.update", 2],
+    ["customers.notes.add", 2],
+    ["customers.block", 2],
+    ["customers.unblock", 2],
+  ] as const)("lists %s as a tool with risk tier %s", async (id, riskTier) => {
+    const { tools } = await connect(owner);
+    expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toMatchObject({ "admin-os/riskTier": riskTier });
   });
 
   it("lists for staff only the tools its permissions reach", async () => {

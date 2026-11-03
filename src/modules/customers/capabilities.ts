@@ -1,7 +1,11 @@
+import { z } from "zod";
+
 import { defineCapability } from "@/core/capability";
 import { pageInput, pageOutput } from "@/core/pagination";
 
-import { customerSchema } from "./schema";
+import { customerCreateInput, customerPatchSchema, customerSchema } from "./schema";
+
+const idInput = z.strictObject({ id: z.string().min(1) });
 
 export const customersList = defineCapability({
   id: "customers.list",
@@ -13,4 +17,94 @@ export const customersList = defineCapability({
   riskTier: 1,
 });
 
-export const customersCapabilities = { "customers.list": customersList } as const;
+export const customersGet = defineCapability({
+  id: "customers.get",
+  summary: "Get one customer by id. Fails with customers.not_found when there is none.",
+  input: idInput,
+  output: customerSchema,
+  permission: "read:customers",
+  effect: "read",
+  riskTier: 1,
+});
+
+/** Which contact detail made a customer match. */
+export const duplicateMatchSchema = z.object({
+  customer: customerSchema,
+  matchedOn: z.array(z.enum(["phone", "email"])).min(1),
+});
+
+export const customersDuplicatesCheck = defineCapability({
+  id: "customers.duplicates.check",
+  summary:
+    "Find existing customers with the same phone (compared as E.164, ignoring spaces and dashes) or the same email (case-insensitive). Use it before customers.create.",
+  input: z.strictObject({ phone: z.string().min(1).optional(), email: z.string().min(1).optional() }),
+  output: z.strictObject({ matches: z.array(duplicateMatchSchema) }),
+  permission: "read:customers",
+  effect: "read",
+  riskTier: 1,
+});
+
+export const customersCreate = defineCapability({
+  id: "customers.create",
+  summary:
+    "Create a customer. Phone must be E.164 (+34600000101). Fails with customers.duplicate when a customer already has that phone or email.",
+  input: customerCreateInput,
+  output: customerSchema,
+  permission: "create:customers",
+  effect: "write",
+  riskTier: 2,
+  requiresIdempotencyKey: true,
+});
+
+export const customersUpdate = defineCapability({
+  id: "customers.update",
+  summary:
+    "Change some fields of a customer; omitted fields stay as they are. Fails with customers.duplicate when the new phone or email belongs to another customer.",
+  input: z.strictObject({ id: z.string().min(1), patch: customerPatchSchema }),
+  output: customerSchema,
+  permission: "update:customers",
+  effect: "write",
+  riskTier: 2,
+});
+
+export const customersNotesAdd = defineCapability({
+  id: "customers.notes.add",
+  summary: "Add a dated note to a customer, signed by the acting staff member.",
+  input: z.strictObject({ id: z.string().min(1), text: z.string().trim().min(1).max(2000) }),
+  output: customerSchema,
+  permission: "update:customers",
+  effect: "write",
+  riskTier: 2,
+  requiresIdempotencyKey: true,
+});
+
+export const customersBlock = defineCapability({
+  id: "customers.block",
+  summary: "Block a customer from new bookings, with the reason staff will see.",
+  input: z.strictObject({ id: z.string().min(1), reason: z.string().trim().min(1).max(500) }),
+  output: customerSchema,
+  permission: "block:customers",
+  effect: "write",
+  riskTier: 2,
+});
+
+export const customersUnblock = defineCapability({
+  id: "customers.unblock",
+  summary: "Lift the block on a customer and clear its reason.",
+  input: idInput,
+  output: customerSchema,
+  permission: "block:customers",
+  effect: "write",
+  riskTier: 2,
+});
+
+export const customersCapabilities = {
+  "customers.list": customersList,
+  "customers.get": customersGet,
+  "customers.duplicates.check": customersDuplicatesCheck,
+  "customers.create": customersCreate,
+  "customers.update": customersUpdate,
+  "customers.notes.add": customersNotesAdd,
+  "customers.block": customersBlock,
+  "customers.unblock": customersUnblock,
+} as const;

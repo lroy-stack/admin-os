@@ -33,6 +33,22 @@ const verticalIds = Object.keys(VERTICALS) as VerticalId[];
 const capabilityIds = Object.keys(CATALOG);
 const quiet = { retryDelayMs: 0, logger: () => undefined } as const;
 
+const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", workshop: "cust-carmen" } as const;
+
+/** The smallest valid input of each capability that needs one; the rest accept `{}`. */
+const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
+  const customer = { id: firstCustomer[vertical] };
+  const inputs: Record<string, Record<string, unknown>> = {
+    "customers.get": customer,
+    "customers.create": { name: "Contract Test", phone: "+34611111111" },
+    "customers.update": { ...customer, patch: { vip: true } },
+    "customers.notes.add": { ...customer, text: "Called back" },
+    "customers.block": { ...customer, reason: "No-show twice" },
+    "customers.unblock": customer,
+  };
+  return inputs[id] ?? {};
+};
+
 const ownerOf = (vertical: VerticalId): Actor => ({
   actorId: "demo-owner",
   roleId: "owner",
@@ -50,17 +66,22 @@ describe("the mock adapter contract (ADR 0008)", () => {
 
     it.each(reachable)("answers %s with output that matches its schema", async (id) => {
       // Development mode throws on contract drift, so a seed or handler that breaks the schema fails here.
-      const client = createClient(CATALOG, getAdapter({ vertical }), {
+      const client = createClient(CATALOG, getAdapter({ vertical, sessionId: crypto.randomUUID() }), {
         ...quiet,
         actor: ownerOf(vertical),
         mode: "development",
       });
-      expect(await client.call(id, {})).toMatchObject({ ok: true });
+      expect(await client.call(id, inputFor(id, vertical), { idempotencyKey: crypto.randomUUID() })).toMatchObject({
+        ok: true,
+      });
     });
 
     it.each(capabilityIds)("answers %s with access.forbidden for an actor without permissions", async (id) => {
       const client = createClient(CATALOG, getAdapter({ vertical }), { ...quiet });
-      expect(await client.call(id, {})).toMatchObject({ ok: false, error: { code: "access.forbidden" } });
+      expect(await client.call(id, inputFor(id, vertical), { idempotencyKey: crypto.randomUUID() })).toMatchObject({
+        ok: false,
+        error: { code: "access.forbidden" },
+      });
     });
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { businessDaySchema, minuteOfDaySchema } from "@/core/clock";
 import { moneySchema } from "@/core/money";
 
 /** What the customer agreed to receive. The whole object is absent when consent is unknown. */
@@ -13,17 +14,30 @@ export const customerFiguresSchema = z.object({
   noShows: z.number().int().nonnegative(),
 });
 
+/** A dated note by the staff member who wrote it. `day` is a business day and `minute` counts from its midnight. */
+export const customerNoteSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1),
+  authorId: z.string().min(1),
+  authorName: z.string().min(1),
+  day: businessDaySchema,
+  minute: minuteOfDaySchema,
+});
+
 export const customerSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   email: z.string().min(1).optional(),
-  phone: z.string().min(1).optional(),
+  phone: z.e164().optional(),
   locale: z.string().min(1).optional(),
   consent: consentSchema.optional(),
   tags: z.array(z.string()),
   vip: z.boolean(),
   blocked: z.boolean(),
-  notes: z.string().optional(),
+  /** Why the customer is blocked; absent when not blocked. */
+  blockReason: z.string().min(1).optional(),
+  /** Oldest first. */
+  notes: z.array(customerNoteSchema),
   figures: customerFiguresSchema,
   ext: z.record(z.string(), z.unknown()).optional(),
 });
@@ -38,4 +52,37 @@ export const assetSchema = z.object({
 });
 
 export type Customer = z.infer<typeof customerSchema>;
+export type CustomerNote = z.infer<typeof customerNoteSchema>;
 export type Asset = z.infer<typeof assetSchema>;
+
+/** The fields a person types when adding or editing a contact. Phone is E.164 (`+34600000101`). */
+const contactFields = {
+  name: z.string().trim().min(1).max(120),
+  phone: z.e164(),
+  email: z.email(),
+  locale: z.string().min(1),
+  marketingConsent: z.boolean(),
+  tags: z.array(z.string().trim().min(1)).max(20),
+};
+
+export const customerCreateInput = z.strictObject({
+  name: contactFields.name,
+  phone: contactFields.phone.optional(),
+  email: contactFields.email.optional(),
+  locale: contactFields.locale.optional(),
+  marketingConsent: contactFields.marketingConsent.optional(),
+  tags: contactFields.tags.default([]),
+});
+
+export const customerPatchSchema = z.strictObject({
+  name: contactFields.name.optional(),
+  phone: contactFields.phone.optional(),
+  email: contactFields.email.optional(),
+  locale: contactFields.locale.optional(),
+  marketingConsent: contactFields.marketingConsent.optional(),
+  tags: contactFields.tags.optional(),
+  vip: z.boolean().optional(),
+});
+
+export type CustomerCreateInput = z.input<typeof customerCreateInput>;
+export type CustomerPatch = z.infer<typeof customerPatchSchema>;

@@ -23,6 +23,7 @@ export const customers: Customer[] = [
     tags: [],
     vip: false,
     blocked: false,
+    notes: [],
     figures: { visits: 3, spend: eur(41_000), lastVisit: "2026-04-02T00:00:00Z", noShows: 0 },
   },
 ];
