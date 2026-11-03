@@ -30,7 +30,7 @@ describe("runWrite", () => {
 
     const result = await runWrite(ID, {}, "attempt-1");
 
-    expect(result).toEqual({ status: "ok" });
+    expect(result).toEqual({ status: "ok", value: { id: "b-1" } });
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
   });
 

@@ -8,8 +8,8 @@ export interface FieldIssue {
 }
 
 /** What a window shows after a write; the approval id never reaches it. */
-export type ActionOutcome =
-  | { readonly status: "ok" }
+export type ActionOutcome<O = unknown> =
+  | { readonly status: "ok"; readonly value: O }
   | { readonly status: "invalid"; readonly issues: readonly FieldIssue[] }
   | { readonly status: "error"; readonly text: string; readonly code: string }
   | { readonly status: "awaiting_approval" };
@@ -26,14 +26,14 @@ const toPath = (dotted: string): (string | number)[] =>
 export const isTransportFailure = (result: SerializedCallResult): boolean =>
   result.status === "error" && result.code.startsWith("transport.");
 
-export function toOutcome(
-  result: SerializedCallResult,
+export function toOutcome<O>(
+  result: SerializedCallResult<O>,
   locale: Locale,
   dictionary: ErrorDictionary = NO_ERROR_MESSAGES,
-): ActionOutcome {
+): ActionOutcome<O> {
   switch (result.status) {
     case "ok":
-      return { status: "ok" };
+      return { status: "ok", value: result.value };
     case "awaiting_approval":
       return { status: "awaiting_approval" };
     case "error": {
@@ -52,4 +52,4 @@ export function toOutcome(
 }
 
 /** The outcome of an action that threw or never answered: the connection failed, not the capability. */
-export const transportFailure: SerializedCallResult = { status: "error", code: ErrorCodes.unavailable };
+export const transportFailure: SerializedCallResult<never> = { status: "error", code: ErrorCodes.unavailable };

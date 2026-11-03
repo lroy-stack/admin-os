@@ -9,16 +9,22 @@ import { type Attempt, attemptFor } from "./attempt";
 import { type ActionOutcome, type ErrorDictionary, isTransportFailure, toOutcome, transportFailure } from "./outcome";
 
 /** A route's Server Action built on `runWrite` (`@/config/write-action.server`). */
-export type CapabilityAction<Input> = (input: Input, attemptKey: string) => Promise<SerializedCallResult>;
+export type CapabilityAction<Input, Output = unknown> = (
+  input: Input,
+  attemptKey: string,
+) => Promise<SerializedCallResult<Output>>;
 
 export interface CapabilityActionOptions {
   /** The owning module's error texts, tried before the shared defaults. */
   readonly errors?: ErrorDictionary;
 }
 
-export interface CapabilityActionHandle<Input> {
-  /** Resolves to the outcome, or to `null` when another submit is still pending and this one was refused. */
-  readonly run: (input: Input) => Promise<ActionOutcome | null>;
+export interface CapabilityActionHandle<Input, Output = unknown> {
+  /**
+   * Resolves to the outcome, or to `null` when another submit is still pending and this one was refused (nothing was
+   * sent; the window keeps showing its pending state).
+   */
+  readonly run: (input: Input) => Promise<ActionOutcome<Output> | null>;
   readonly pending: boolean;
 }
 
@@ -26,10 +32,10 @@ export interface CapabilityActionHandle<Input> {
  * Writes through one capability from a window (ADR 0015): one attempt key per attempt, one submit at a time, and the
  * result turned into what the window shows. A window renders `AwaitingApprovalNotice` itself for `awaiting_approval`.
  */
-export function useCapabilityAction<Input>(
-  action: CapabilityAction<Input>,
+export function useCapabilityAction<Input, Output = unknown>(
+  action: CapabilityAction<Input, Output>,
   options: CapabilityActionOptions = {},
-): CapabilityActionHandle<Input> {
+): CapabilityActionHandle<Input, Output> {
   const locale = useLocale();
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
@@ -43,7 +49,7 @@ export function useCapabilityAction<Input>(
       setPending(true);
       const attempt = attemptFor(unresolved.current, input, () => crypto.randomUUID());
       try {
-        const result = await action(input, attempt.key).catch(() => transportFailure);
+        const result = await action(input, attempt.key).catch((): SerializedCallResult<Output> => transportFailure);
         unresolved.current = isTransportFailure(result) ? attempt : undefined;
         return toOutcome(result, locale, errors);
       } finally {

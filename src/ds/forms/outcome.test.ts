@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { isTransportFailure, NO_ERROR_MESSAGES, toOutcome, transportFailure } from "./outcome";
 
 describe("toOutcome", () => {
-  it("maps a success", () => {
-    expect(toOutcome({ status: "ok" }, "en")).toEqual({ status: "ok" });
+  it("maps a success and passes its value through", () => {
+    expect(toOutcome({ status: "ok", value: { id: "b-1" } }, "en")).toEqual({ status: "ok", value: { id: "b-1" } });
   });
 
   it("maps awaiting approval without any approval id", () => {
@@ -69,7 +69,7 @@ describe("isTransportFailure", () => {
     [{ status: "error", code: "transport.timeout" }, true],
     [transportFailure, true],
     [{ status: "error", code: "bookings.table_taken" }, false],
-    [{ status: "ok" }, false],
+    [{ status: "ok", value: null }, false],
     [{ status: "awaiting_approval" }, false],
   ] as const)("%j is %s", (result, expected) => {
     expect(isTransportFailure(result)).toBe(expected);

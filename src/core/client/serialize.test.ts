@@ -5,8 +5,8 @@ import { err, ok } from "@/core/result";
 import { serializeCallResult } from "./serialize";
 
 describe("serializeCallResult", () => {
-  it("keeps only the status of a success", () => {
-    expect(serializeCallResult(ok({ id: "b-1", note: "private" }))).toEqual({ status: "ok" });
+  it("carries the value of a success", () => {
+    expect(serializeCallResult(ok({ id: "b-1" }))).toEqual({ status: "ok", value: { id: "b-1" } });
   });
 
   it("keeps the code and the field paths of a rejected input", () => {
