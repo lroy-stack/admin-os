@@ -179,9 +179,42 @@ export function toReservations(bookings: readonly Booking[], context: Reservatio
   return bookings.map((booking) => toReservation(booking, context)).sort((a, b) => a.startMin - b.startMin);
 }
 
+/** The booking status the module knows a reservation status by; the inverse of `reservationStatus`. */
+export function bookingStatusFor(status: ReservationStatus): BookingStatus {
+  switch (status) {
+    case "pending":
+      return "pending";
+    case "confirmed":
+      return "confirmed";
+    case "seated":
+      return "in_progress";
+    case "completed":
+      return "completed";
+    case "cancelled":
+      return "cancelled";
+    case "no_show":
+      return "no_show";
+    default: {
+      const unreachable: never = status;
+      return unreachable;
+    }
+  }
+}
+
+/** The reservations with `id` moved to `status`: the optimistic view of a step while its write is in flight. */
+export function withStatus(
+  reservations: readonly Reservation[],
+  step: { readonly id: string; readonly status: ReservationStatus },
+): Reservation[] {
+  return reservations.map((reservation) =>
+    reservation.id === step.id ? { ...reservation, status: step.status } : reservation,
+  );
+}
+
 /**
- * What staff changed on the screen before writes reach the data seam (plan 003, B3): patches by id and the walk-ins
- * seated since. They belong to one business day and are ignored on any other.
+ * What staff changed on the screen before the write that replaces it reaches the data seam: the tables they assigned
+ * (plan 003, B7), by reservation id, and the walk-ins seated since (B4). They belong to one business day and are
+ * ignored on any other.
  */
 export type LocalChanges = {
   readonly businessDay: string;
@@ -191,10 +224,6 @@ export type LocalChanges = {
 
 export const noLocalChanges = (businessDay: string): LocalChanges => ({ businessDay, patches: {}, walkIns: [] });
 
-/** The changes to build on for `businessDay`: those made on it, or none when they were made on another day. */
-const changesFor = (changes: LocalChanges, businessDay: string) =>
-  changes.businessDay === businessDay ? changes : noLocalChanges(businessDay);
-
 /** `change` applied to the reservation `id` of `businessDay`, on top of what was already changed there. */
 export function patchLocal(
   changes: LocalChanges,
@@ -202,13 +231,13 @@ export function patchLocal(
   id: string,
   change: Partial<Reservation>,
 ): LocalChanges {
-  const current = changesFor(changes, businessDay);
+  const current = changes.businessDay === businessDay ? changes : noLocalChanges(businessDay);
   return { ...current, patches: { ...current.patches, [id]: { ...current.patches[id], ...change } } };
 }
 
 /** A walk-in seated on `businessDay`. */
 export function addLocalWalkIn(changes: LocalChanges, businessDay: string, walkIn: Reservation): LocalChanges {
-  const current = changesFor(changes, businessDay);
+  const current = changes.businessDay === businessDay ? changes : noLocalChanges(businessDay);
   return { ...current, walkIns: [...current.walkIns, walkIn] };
 }
 

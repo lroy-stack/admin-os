@@ -65,6 +65,7 @@ const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => 
     },
     "bookings.update": { id: booking, patch: { staffNote: "Checked" } },
     "bookings.status.advance": { id: booking, to: "in_progress" },
+    "bookings.status.undo": { id: booking },
     "bookings.cancel": { id: booking, reason: "Guest called" },
     "bookings.no_show.mark": { id: booking },
     "bookings.walk_in.seat": { partySize: 1, resourceIds: [resource] },
@@ -79,6 +80,20 @@ const seatedWalkIn = async (client: ReturnType<typeof createClient>, vertical: V
     idempotencyKey: crypto.randomUUID(),
   });
   return { id: "ok" in seated && seated.ok ? (seated.value as { id: string }).id : "seat-failed" };
+};
+
+/** A status step to take back: advance the booking first, as the capability needs a step on record. */
+const advancedBooking = async (client: ReturnType<typeof createClient>, vertical: VerticalId) => {
+  await client.call("bookings.status.advance", inputFor("bookings.status.advance", vertical), {
+    idempotencyKey: crypto.randomUUID(),
+  });
+  return inputFor("bookings.status.undo", vertical);
+};
+
+const inputBeforeCall = (client: ReturnType<typeof createClient>, id: string, vertical: VerticalId) => {
+  if (id === "bookings.walk_in.undo") return seatedWalkIn(client, vertical);
+  if (id === "bookings.status.undo") return advancedBooking(client, vertical);
+  return Promise.resolve(inputFor(id, vertical));
 };
 
 const ownerOf = (vertical: VerticalId): Actor => ({
@@ -103,7 +118,7 @@ describe("the mock adapter contract (ADR 0008)", () => {
         actor: ownerOf(vertical),
         mode: "development",
       });
-      const input = id === "bookings.walk_in.undo" ? await seatedWalkIn(client, vertical) : inputFor(id, vertical);
+      const input = await inputBeforeCall(client, id, vertical);
       expect(await client.call(id, input, { idempotencyKey: crypto.randomUUID() })).toMatchObject({ ok: true });
     });
 

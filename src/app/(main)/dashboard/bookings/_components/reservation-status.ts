@@ -42,6 +42,16 @@ export function nextAction(reservation: Reservation): NextAction | null {
   }
 }
 
+/** Only a party still to arrive can be cancelled: a seated or finished one is completed or left as it is. */
+export function isCancellable(reservation: Reservation) {
+  return reservation.status === "pending" || reservation.status === "confirmed";
+}
+
+/** A no-show is a confirmed party that counts as late; before that the server refuses it as too early. */
+export function isNoShowable(reservation: Reservation, nowMin: number, lateAfterMin: number) {
+  return reservation.status === "confirmed" && isLate(reservation, nowMin, lateAfterMin);
+}
+
 export function minutesLate(reservation: Reservation, nowMin = SERVICE_NOW_MIN) {
   return reservation.status === "confirmed" ? Math.max(0, nowMin - reservation.startMin) : 0;
 }

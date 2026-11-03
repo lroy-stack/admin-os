@@ -36,6 +36,9 @@ export const depositSchema = z.object({
 /** A moment on the business clock: the business day and the minute counted from its midnight. */
 export const clockReadingSchema = z.object({ day: businessDaySchema, minute: z.number().int().min(0) });
 
+/** The step `bookings.status.advance` last took and when, so `bookings.status.undo` can take it back. */
+export const statusStepSchema = z.object({ from: z.enum(bookingStatuses), at: clockReadingSchema });
+
 /**
  * The booking without its cross-field check, so callers can `.omit`, `.pick` and `.partial` it (zod 4 refuses on a
  * refined schema). `contactName` labels a booking without a customer record. Times are minutes from midnight of
@@ -64,6 +67,8 @@ export const bookingObject = z.object({
   noShowReason: z.string().min(1).optional(),
   /** When a write created it; seed bookings have none. A walk-in is undone against this moment. */
   createdAt: clockReadingSchema.optional(),
+  /** The last forward step and the status it left; cleared when it is taken back. Cancel and no-show leave none. */
+  lastStep: statusStepSchema.optional(),
   tags: z.array(z.string()),
   ext: z.record(z.string(), z.unknown()).optional(),
 });
@@ -157,5 +162,6 @@ export const walkInUndoOutput = z.object({ id: z.string().min(1) });
 
 export type Availability = z.infer<typeof availabilitySchema>;
 export type ClockReading = z.infer<typeof clockReadingSchema>;
+export type StatusStep = z.infer<typeof statusStepSchema>;
 export type BookingCreateInput = z.input<typeof bookingCreateInput>;
 export type BookingPatch = z.infer<typeof bookingPatchSchema>;

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState } from "react";
+
 import { Ellipsis } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,9 +25,21 @@ import {
 import { StatTiles, TonePill } from "@/ds/components";
 import { ResponsivePanel } from "@/ds/overlays";
 
+import { useBookingWrites } from "./booking-writes";
 import { bookingsMessageKey } from "./messages";
 import { type AdvanceReservation, ReservationActionButton } from "./reservation-action-button";
-import { formatClock, guestName, isActive, isLate, minutesLate, statusTones, tableLabel } from "./reservation-status";
+import { type PendingConfirm, ReservationConfirms } from "./reservation-confirms";
+import {
+  formatClock,
+  guestName,
+  isActive,
+  isCancellable,
+  isLate,
+  isNoShowable,
+  minutesLate,
+  statusTones,
+  tableLabel,
+} from "./reservation-status";
 import { ReservationTags } from "./reservation-tags";
 import type { GuestProfile, Reservation, ServiceDay } from "./view-model";
 
@@ -65,6 +79,12 @@ export function ReservationDrawer({
   const locale = useLocale();
   const currency = useCurrency();
   const profile = reservation?.profile ?? null;
+  const { can } = useBookingWrites();
+  const [confirming, setConfirming] = useState<PendingConfirm | null>(null);
+  const moreActions = useRef<HTMLButtonElement>(null);
+  const canCancel = reservation !== null && can.cancel && isCancellable(reservation);
+  const canNoShow =
+    reservation !== null && can.noShow && isNoShowable(reservation, service.nowMin, service.lateAfterMin);
 
   function lastVisit(profile: GuestProfile) {
     if (profile.lastVisitDaysAgo === null) return text.drawer.firstVisit;
@@ -115,28 +135,42 @@ export function ReservationDrawer({
           {isActive(reservation) && (
             <div className="flex flex-wrap items-center gap-2">
               <ReservationActionButton reservation={reservation} onAdvance={onAdvance} emphasis="primary" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={text.drawer.moreActions}
-                    className="liquid-glass hover:bg-foreground/10 size-9 rounded-full"
-                  >
-                    <Ellipsis />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onSelect={() => onAdvance(reservation.id, "no_show")}>
-                    {text.drawer.markNoShow}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" onSelect={() => onAdvance(reservation.id, "cancelled")}>
-                    {text.drawer.cancelReservation}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {canCancel || canNoShow ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      ref={moreActions}
+                      variant="ghost"
+                      size="icon"
+                      aria-label={text.drawer.moreActions}
+                      className="liquid-glass hover:bg-foreground/10 size-9 rounded-full"
+                    >
+                      <Ellipsis />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {canNoShow ? (
+                      <DropdownMenuItem onSelect={() => setConfirming("no_show")}>
+                        {text.drawer.markNoShow}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canCancel ? (
+                      <DropdownMenuItem variant="destructive" onSelect={() => setConfirming("cancel")}>
+                        {text.drawer.cancelReservation}
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </div>
           )}
+
+          <ReservationConfirms
+            reservation={reservation}
+            confirming={confirming}
+            onClose={() => setConfirming(null)}
+            returnFocus={moreActions}
+          />
 
           <section className="flex flex-col gap-2" aria-labelledby="reservation-guest">
             <h3 id="reservation-guest" className="text-muted-foreground text-xs tracking-wide uppercase">

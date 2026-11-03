@@ -10,6 +10,7 @@ import {
   bookingsList,
   bookingsNoShowMark,
   bookingsStatusAdvance,
+  bookingsStatusUndo,
   bookingsUpdate,
   bookingsWalkInSeat,
   bookingsWalkInUndo,
@@ -25,7 +26,7 @@ import {
   slotStarts,
   stayEnd,
 } from "./rules";
-import type { Availability, BookingInput, BookingPatch } from "./schema";
+import type { Availability, BookingInput, BookingPatch, ClockReading } from "./schema";
 import { lateAfterMinutes, serviceWindow, slotMinutes, walkInStayMinutes, walkInUndoSeconds } from "./settings";
 
 /**
@@ -135,6 +136,16 @@ const isLate = (context: Context, booking: BookingInput): boolean => {
   return serviceMinute(clock) >= booking.startMin + settings.get(lateAfterMinutes);
 };
 
+/**
+ * Whether the undo window that opened at `since` has closed. The clock counts whole minutes, so true elapsed time is
+ * within a minute of the difference: judge by the lower bound, so an undo inside the window is never refused and one
+ * a minute or more past it always is. A moment on another business day, or none recorded, is always past.
+ */
+const undoWindowPassed = ({ clock, settings }: Context, since: ClockReading | undefined): boolean => {
+  const elapsedMin = since?.day === clock.businessDay ? serviceMinute(clock) - since.minute : Number.POSITIVE_INFINITY;
+  return (elapsedMin - 1) * 60 >= settings.get(walkInUndoSeconds);
+};
+
 /** Mock answers for the bookings module (ADR 0005); `src/config/data.server.ts` wires them with the preset seed. */
 export const bookingsMockHandlers = {
   ...mockHandler(bookingsList, (input, { data, clock }: Context) =>
@@ -223,12 +234,33 @@ export const bookingsMockHandlers = {
     return ok(replace(data, applyPatch(booking, patch, endMin)));
   }),
 
-  ...mockHandler(bookingsStatusAdvance, ({ id, to }, { data }: Context) => {
+  ...mockHandler(bookingsStatusAdvance, ({ id, to }, { data, clock }: Context) => {
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
     return NEXT_STATUS[booking.status] === to
-      ? ok(replace(data, { ...booking, status: to }))
+      ? ok(
+          replace(data, {
+            ...booking,
+            status: to,
+            lastStep: { from: booking.status, at: { day: clock.businessDay, minute: serviceMinute(clock) } },
+          }),
+        )
       : invalidTransition(booking.status, to);
+  }),
+
+  ...mockHandler(bookingsStatusUndo, ({ id }, context: Context) => {
+    const { data } = context;
+    const booking = bookingOf(data, id);
+    if (booking === undefined) return notFound("booking", [id]);
+    const { lastStep, ...rest } = booking;
+    // Only the step that left the booking where it is can be taken back: a cancel or an update since breaks the chain.
+    if (lastStep === undefined || NEXT_STATUS[lastStep.from] !== booking.status) {
+      return invalidTransition(booking.status, "its previous status");
+    }
+    if (undoWindowPassed(context, lastStep.at)) {
+      return err("bookings.status_undo_expired", "The undo window for this step has passed", { id });
+    }
+    return ok(replace(data, { ...rest, status: lastStep.from }));
   }),
 
   ...mockHandler(bookingsCancel, ({ id, reason }, { data }: Context) => {
@@ -296,17 +328,13 @@ export const bookingsMockHandlers = {
     return ok(booking);
   }),
 
-  ...mockHandler(bookingsWalkInUndo, ({ id }, { data, clock, settings }: Context) => {
+  ...mockHandler(bookingsWalkInUndo, ({ id }, context: Context) => {
+    const { data } = context;
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
     if (booking.origin !== "walk_in") return err("bookings.not_walk_in", "Only a walk-in can be undone", { id });
     if (booking.status !== "in_progress") return invalidTransition(booking.status, "removed");
-    const seated = booking.createdAt;
-    // The clock counts whole minutes, so true elapsed time is within a minute of the difference. Judge by the lower
-    // bound: an undo inside the window is never refused, one a minute or more past it always is.
-    const elapsedMin =
-      seated?.day === clock.businessDay ? serviceMinute(clock) - seated.minute : Number.POSITIVE_INFINITY;
-    if ((elapsedMin - 1) * 60 >= settings.get(walkInUndoSeconds)) {
+    if (undoWindowPassed(context, booking.createdAt)) {
       return err("bookings.undo_expired", "The undo window for this walk-in has passed", { id });
     }
     data.bookings.splice(

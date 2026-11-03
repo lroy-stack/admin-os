@@ -84,6 +84,10 @@ describe("booking capabilities", () => {
     expect(bookingsCapabilities[id].effect).toBe("destructive");
   });
 
+  it("lets anyone who may update a booking take back a status step", () => {
+    expect(bookingsCapabilities["bookings.status.undo"].permission).toBe("update:bookings");
+  });
+
   it("reads the availability at tier 0", () => {
     expect(bookingsCapabilities["bookings.availability.get"]).toMatchObject({ effect: "read", riskTier: 0 });
   });
@@ -139,6 +143,10 @@ describe("booking error texts", () => {
 
   it("explains a busy resource in French from its own code", () => {
     expect(errorText({ code: "bookings.resource_busy" }, bookingsErrors, "fr")).toContain("déjà réservé");
+  });
+
+  it("explains an expired status undo in French from its own code", () => {
+    expect(errorText({ code: "bookings.status_undo_expired" }, bookingsErrors, "fr")).toContain("trop tard");
   });
 
   it("falls back to the class text for a code it does not own", () => {

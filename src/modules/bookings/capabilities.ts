@@ -74,6 +74,18 @@ export const bookingsStatusAdvance = defineCapability({
   requiresIdempotencyKey: true,
 });
 
+export const bookingsStatusUndo = defineCapability({
+  id: "bookings.status.undo",
+  summary:
+    "Take back the last forward step of bookings.status.advance, returning the booking to the status it left (for example in_progress back to confirmed). Only within bookings.walk_in.undo_seconds of that step; otherwise it fails with bookings.status_undo_expired. Fails with bookings.invalid_transition when the booking has no step to take back, or has moved on since (cancelled, no-show, advanced again by another route).",
+  input: bookingIdInput,
+  output: bookingSchema,
+  permission: "update:bookings",
+  effect: "write",
+  riskTier: 2,
+  requiresIdempotencyKey: true,
+});
+
 export const bookingsCancel = defineCapability({
   id: "bookings.cancel",
   summary:
@@ -128,6 +140,7 @@ export const bookingsCapabilities = {
   "bookings.create": bookingsCreate,
   "bookings.update": bookingsUpdate,
   "bookings.status.advance": bookingsStatusAdvance,
+  "bookings.status.undo": bookingsStatusUndo,
   "bookings.cancel": bookingsCancel,
   "bookings.no_show.mark": bookingsNoShowMark,
   "bookings.walk_in.seat": bookingsWalkInSeat,

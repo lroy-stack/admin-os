@@ -5,6 +5,7 @@ import type { Customer } from "@/modules/customers";
 
 import {
   addLocalWalkIn,
+  bookingStatusFor,
   businessDayFrom,
   customerIdsOf,
   daysBetween,
@@ -21,6 +22,7 @@ import {
   toReservation,
   toReservations,
   withLocalChanges,
+  withStatus,
 } from "./view-model";
 
 const TODAY = "2026-10-31";
@@ -334,6 +336,37 @@ describe("withLocalChanges", () => {
     const changes = { businessDay: "2026-11-01", patches: { a: { status: "seated" as const } }, walkIns: [walkIn] };
 
     expect(withLocalChanges(base, changes, TODAY)).toEqual(base);
+  });
+});
+
+describe("withStatus", () => {
+  const base: Reservation[] = [
+    toReservation(booking({ id: "a", contactName: "A" }), context()),
+    toReservation(booking({ id: "b", contactName: "B" }), context()),
+  ];
+
+  it("moves the reservation it names to the status and leaves the others", () => {
+    expect(withStatus(base, { id: "a", status: "seated" }).map((reservation) => reservation.status)).toEqual([
+      "seated",
+      "confirmed",
+    ]);
+  });
+
+  it("returns every reservation unchanged for an id that is not on the day", () => {
+    expect(withStatus(base, { id: "ghost", status: "seated" })).toEqual(base);
+  });
+});
+
+describe("bookingStatusFor", () => {
+  it.each([
+    ["pending", "pending"],
+    ["confirmed", "confirmed"],
+    ["seated", "in_progress"],
+    ["completed", "completed"],
+    ["cancelled", "cancelled"],
+    ["no_show", "no_show"],
+  ] as const)("names the %s reservation status %s in the module", (reservation, booking) => {
+    expect(bookingStatusFor(reservation)).toBe(booking);
   });
 });
 

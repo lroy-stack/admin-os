@@ -188,6 +188,37 @@ export interface BookingsMessages {
     /** Placeholders: `{count}`. */
     readonly seat: Plural;
   };
+  readonly writes: {
+    /** Placeholders: `{guest}`. The undo toast after a step. */
+    readonly confirmed: string;
+    /** Placeholders: `{guest}`, `{table}`. */
+    readonly seated: string;
+    /** Placeholders: `{guest}`. */
+    readonly completed: string;
+    /** When a write could not be saved and the server gave no reason of its own. */
+    readonly failed: string;
+    readonly cancel: {
+      readonly title: string;
+      readonly verb: string;
+      /** Placeholders: `{guest}`. */
+      readonly consequence: string;
+      readonly reasonLabel: string;
+      readonly reasonRequired: string;
+      readonly reasonTooLong: string;
+      readonly keep: string;
+      readonly done: string;
+    };
+    readonly noShow: {
+      readonly title: string;
+      readonly verb: string;
+      /** Placeholders: `{guest}`. */
+      readonly consequence: string;
+      readonly reasonLabel: string;
+      readonly reasonTooLong: string;
+      readonly keep: string;
+      readonly done: string;
+    };
+  };
   readonly floor: {
     readonly level: string;
     readonly cameraAngle: string;

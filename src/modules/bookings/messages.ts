@@ -35,8 +35,8 @@ export const bookingsMessages = defineMessages<BookingsMessages>({
         description: "The hours of the day when bookings can start, as minutes from midnight.",
       },
       walkInUndo: {
-        label: "Walk-in undo window",
-        description: "Seconds during which a seated walk-in can still be taken back.",
+        label: "Undo window",
+        description: "Seconds during which a seated walk-in or a status step can still be taken back.",
       },
     },
   },
@@ -60,7 +60,8 @@ export const bookingsMessages = defineMessages<BookingsMessages>({
       },
       walkInUndo: {
         label: "Plazo para deshacer",
-        description: "Segundos durante los que se puede deshacer un grupo sin reserva recién sentado.",
+        description:
+          "Segundos durante los que se puede deshacer un grupo sin reserva recién sentado o un cambio de estado.",
       },
     },
   },
@@ -85,7 +86,7 @@ export const bookingsMessages = defineMessages<BookingsMessages>({
       walkInUndo: {
         label: "Rückgängig-Frist",
         description:
-          "Sekunden, in denen eine gerade platzierte Gruppe ohne Reservierung noch zurückgenommen werden kann.",
+          "Sekunden, in denen eine gerade platzierte Gruppe ohne Reservierung oder ein Statuswechsel noch zurückgenommen werden kann.",
       },
     },
   },
@@ -110,7 +111,7 @@ export const bookingsMessages = defineMessages<BookingsMessages>({
       walkInUndo: {
         label: "Délai d’annulation",
         description:
-          "Secondes pendant lesquelles un groupe sans réservation tout juste installé peut encore être annulé.",
+          "Secondes pendant lesquelles un groupe sans réservation tout juste installé ou un changement de statut peut encore être annulé.",
       },
     },
   },
@@ -130,6 +131,7 @@ export const bookingsErrors = defineMessages<ErrorMessages>({
     "bookings.too_early": "It is too soon to mark this booking as a no-show.",
     "bookings.not_walk_in": "Only a walk-in can be taken back this way.",
     "bookings.undo_expired": "It is too late to undo this walk-in.",
+    "bookings.status_undo_expired": "It is too late to undo this step.",
   },
   es: {
     "bookings.not_found": "Esta reserva, este puesto o este contacto ya no existe.",
@@ -145,6 +147,7 @@ export const bookingsErrors = defineMessages<ErrorMessages>({
     "bookings.too_early": "Todavía es pronto para marcar esta reserva como no presentada.",
     "bookings.not_walk_in": "Solo se puede deshacer así un grupo sin reserva.",
     "bookings.undo_expired": "Es demasiado tarde para deshacer este grupo sin reserva.",
+    "bookings.status_undo_expired": "Es demasiado tarde para deshacer este paso.",
   },
   de: {
     "bookings.not_found": "Diese Buchung, dieser Platz oder dieser Kontakt existiert nicht mehr.",
@@ -160,6 +163,7 @@ export const bookingsErrors = defineMessages<ErrorMessages>({
     "bookings.too_early": "Es ist noch zu früh, diese Buchung als nicht erschienen zu markieren.",
     "bookings.not_walk_in": "Nur eine Gruppe ohne Reservierung kann so zurückgenommen werden.",
     "bookings.undo_expired": "Es ist zu spät, diese Gruppe ohne Reservierung zurückzunehmen.",
+    "bookings.status_undo_expired": "Es ist zu spät, diesen Schritt zurückzunehmen.",
   },
   fr: {
     "bookings.not_found": "Cette réservation, cet emplacement ou ce contact n’existe plus.",
@@ -175,5 +179,6 @@ export const bookingsErrors = defineMessages<ErrorMessages>({
     "bookings.too_early": "Il est trop tôt pour marquer cette réservation comme absente.",
     "bookings.not_walk_in": "Seul un groupe sans réservation peut être annulé ainsi.",
     "bookings.undo_expired": "Il est trop tard pour annuler ce groupe sans réservation.",
+    "bookings.status_undo_expired": "Il est trop tard pour annuler cette étape.",
   },
 });

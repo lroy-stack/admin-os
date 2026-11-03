@@ -582,11 +582,92 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
     });
   });
 
+  describe("status steps", () => {
+    const now = CLOCKS[vertical].nowMin;
+    const advanceInput = { id: p.lateConfirmed, to: "in_progress" } as const;
+
+    it("takes back a forward step within the undo window, returning the status it left", async () => {
+      const { client, clientAt } = world(vertical);
+      const advanced = bookingOf(await client.call("bookings.status.advance", advanceInput, key()));
+      const undone = bookingOf(await clientAt(now + 1).call("bookings.status.undo", { id: advanced.id }, key()));
+      expect([advanced.status, undone.status, undone.lastStep]).toEqual(["in_progress", "confirmed", undefined]);
+    });
+
+    it("refuses to take a step back once the window has passed", async () => {
+      const { client, clientAt } = world(vertical);
+      await client.call("bookings.status.advance", advanceInput, key());
+      expect(await clientAt(now + 5).call("bookings.status.undo", { id: p.lateConfirmed }, key())).toMatchObject({
+        ok: false,
+        error: { code: "bookings.status_undo_expired" },
+      });
+    });
+
+    it("keeps the new status when the undo is refused", async () => {
+      const { client, clientAt } = world(vertical);
+      await client.call("bookings.status.advance", advanceInput, key());
+      await clientAt(now + 5).call("bookings.status.undo", { id: p.lateConfirmed }, key());
+      const listed = successValue(await client.call("bookings.list", { businessDay: DAY, limit: 200 })) as {
+        items: { id: string; status: string }[];
+      };
+      expect(listed.items.find((item) => item.id === p.lateConfirmed)?.status).toBe("in_progress");
+    });
+
+    it("has nothing to take back on a booking that never moved", async () => {
+      expect(await world(vertical).client.call("bookings.status.undo", { id: p.lateConfirmed }, key())).toMatchObject({
+        ok: false,
+        error: { code: "bookings.invalid_transition" },
+      });
+    });
+
+    it("takes back only the last step: a second undo has nothing left", async () => {
+      const { client } = world(vertical);
+      await client.call("bookings.status.advance", advanceInput, key());
+      await client.call("bookings.status.undo", { id: p.lateConfirmed }, key());
+      expect(await client.call("bookings.status.undo", { id: p.lateConfirmed }, key())).toMatchObject({
+        ok: false,
+        error: { code: "bookings.invalid_transition" },
+      });
+    });
+
+    it("answers bookings.not_found for an unknown booking", async () => {
+      expect(await world(vertical).client.call("bookings.status.undo", { id: "ghost" }, key())).toMatchObject({
+        ok: false,
+        error: { code: "bookings.not_found" },
+      });
+    });
+
+    it("advances once for a replayed key: the replay returns the first answer", async () => {
+      const { client } = world(vertical);
+      const options = key();
+      const first = await client.call("bookings.status.advance", advanceInput, options);
+      const second = await client.call("bookings.status.advance", advanceInput, options);
+      expect(second).toEqual(first);
+    });
+
+    it("cancels once for a replayed key: the replay returns the first answer and changes nothing", async () => {
+      const { client } = world(vertical);
+      const options = key();
+      const input = { id: p.lateConfirmed, reason: "Guest called" };
+      const first = await client.call("bookings.cancel", input, options);
+      const second = await client.call("bookings.cancel", input, options);
+      expect([second, bookingOf(first).status]).toEqual([first, "cancelled"]);
+    });
+
+    it("marks a no-show once for a replayed key", async () => {
+      const { client } = world(vertical);
+      const options = key();
+      const first = await client.call("bookings.no_show.mark", { id: p.lateConfirmed }, options);
+      const second = await client.call("bookings.no_show.mark", { id: p.lateConfirmed }, options);
+      expect(second).toEqual(first);
+    });
+  });
+
   describe("permissions", () => {
     const writes = [
       ["bookings.create", createInput()],
       ["bookings.update", { id: p.lateConfirmed, patch: { staffNote: "x" } }],
       ["bookings.status.advance", { id: p.lateConfirmed, to: "in_progress" }],
+      ["bookings.status.undo", { id: p.lateConfirmed }],
       ["bookings.cancel", { id: p.lateConfirmed, reason: "r" }],
       ["bookings.no_show.mark", { id: p.lateConfirmed }],
       ["bookings.walk_in.seat", { partySize: 1, resourceIds: [p.free] }],
@@ -674,6 +755,16 @@ describe("booking status transitions", () => {
 
   it.each(refused)("refuses %s to %s with bookings.invalid_transition", async (from, to) => {
     expect(await advance(from, to)).toMatchObject({ ok: false, error: { code: "bookings.invalid_transition" } });
+  });
+
+  it("has nothing to take back once the booking was cancelled after a step", async () => {
+    const { client } = world("hospitality", hospitalityWith(everyStatus));
+    await client.call("bookings.status.advance", { id: "b-pending", to: "confirmed" }, key());
+    await client.call("bookings.cancel", { id: "b-pending", reason: "r" }, key());
+    expect(await client.call("bookings.status.undo", { id: "b-pending" }, key())).toMatchObject({
+      ok: false,
+      error: { code: "bookings.invalid_transition" },
+    });
   });
 
   it("answers bookings.not_found for an unknown booking", async () => {
