@@ -44,6 +44,7 @@ export function useCapabilityAction<Input, Output = unknown>(
 
   const run = useCallback(
     async (input: Input) => {
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: run sets and clears the flag; the rule infers it from its initial literal.
       if (inFlight.current) return null;
       inFlight.current = true;
       setPending(true);

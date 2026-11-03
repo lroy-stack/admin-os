@@ -87,7 +87,7 @@ export function DialogWindow({
   );
   const bottom =
     footer || demo ? (
-      <div data-slot="window-footer" className="flex flex-col gap-3 border-t bg-muted/50 p-4">
+      <div data-slot="window-footer" className="bg-muted/50 flex flex-col gap-3 border-t p-4">
         {demo ? <p className="text-muted-foreground text-xs">{text.window.demoNote}</p> : null}
         {footer ? (
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

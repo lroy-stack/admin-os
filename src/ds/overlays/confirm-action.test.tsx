@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { LocaleProvider, resolveMessages } from "@/core/i18n/client";
 
-import type { ActionOutcome } from "../forms";
+import type { ConfirmOutcome } from "./confirm-action";
 import { ConfirmAction, checkReason, failureText } from "./confirm-action";
 import { overlaysBundle, overlaysMessages } from "./server";
 
@@ -12,7 +12,7 @@ const text = overlaysMessages.en.confirm;
 const reason = { label: "Reason", schema: z.string().trim().min(3, "Write at least 3 characters") };
 
 describe("failureText", () => {
-  it.each<[string, ActionOutcome, string | undefined]>([
+  it.each<[string, ConfirmOutcome, string | undefined]>([
     ["ok", { status: "ok" }, undefined],
     ["awaiting approval", { status: "awaiting_approval" }, undefined],
     ["error", { status: "error", text: "Table is locked", code: "x" }, "Table is locked"],

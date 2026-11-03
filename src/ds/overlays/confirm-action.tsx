@@ -24,6 +24,9 @@ import type { ActionOutcome } from "../forms";
 import { type OverlaysMessages, overlaysMessageKey } from "./messages";
 import { useRestoreFocus } from "./use-restore-focus";
 
+/** What a confirmed action reports back: a write's outcome, with or without the value the write returned. */
+export type ConfirmOutcome = Exclude<ActionOutcome, { readonly status: "ok" }> | { readonly status: "ok" };
+
 export interface ConfirmReason {
   /** Names the field ("Why is it cancelled?"). */
   label: string;
@@ -43,7 +46,7 @@ export interface ConfirmActionProps {
   /** Overrides the Cancel label, for questions such as "Keep editing". */
   cancelLabel?: string;
   /** Runs the action. `error` and `invalid` keep the window open with the text; the others close it. */
-  onConfirm: (reason: string | undefined) => Promise<ActionOutcome>;
+  onConfirm: (reason: string | undefined) => Promise<ConfirmOutcome>;
   /** Controlled use. Leave both out to open it with `trigger`. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -54,7 +57,7 @@ export interface ConfirmActionProps {
 export type ConfirmState = { status: "idle" } | { status: "pending" } | { status: "failed"; text: string };
 
 /** The text to show for an outcome that keeps the window open, or `undefined` when the window may close. */
-export function failureText(outcome: ActionOutcome, text: OverlaysMessages["confirm"]): string | undefined {
+export function failureText(outcome: ConfirmOutcome, text: OverlaysMessages["confirm"]): string | undefined {
   switch (outcome.status) {
     case "ok":
     case "awaiting_approval":
@@ -115,7 +118,7 @@ export function ConfirmAction({
     if (running.current) return;
     running.current = true;
     setState({ status: "pending" });
-    let outcome: ActionOutcome;
+    let outcome: ConfirmOutcome;
     try {
       outcome = await onConfirm(value);
     } catch {
