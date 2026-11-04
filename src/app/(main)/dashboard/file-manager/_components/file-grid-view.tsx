@@ -6,11 +6,10 @@ import { cn } from "cn";
 import { Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 
 import { type FileManagerFile, fileIcons } from "./data";
-import { FileActions } from "./file-actions";
 import { fileManagerMessageKey } from "./messages";
 
 interface FileGridViewProps {
@@ -61,9 +60,6 @@ export function FileGridView({ files }: FileGridViewProps) {
               <CardDescription className="line-clamp-2 break-words hyphens-auto">
                 {format(text.files.modifiedBy, locale, { when: file.modified, owner: file.owner })}
               </CardDescription>
-              <CardAction>
-                <FileActions file={file} onToggleStar={() => toggleStar(file.id)} />
-              </CardAction>
             </CardHeader>
           </Card>
         );

@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 
 import { type FileManagerFile, fileIcons } from "./data";
-import { FileActions } from "./file-actions";
 import { fileManagerMessageKey } from "./messages";
 
 interface FileListViewProps {
@@ -50,14 +49,12 @@ export function FileListView({ files }: FileListViewProps) {
               <TableCell className="pl-0">
                 <div className="flex min-w-0 items-center gap-3">
                   <FileIcon className="text-muted-foreground size-5 shrink-0" />
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto max-w-72 min-w-0 justify-start px-0 text-left whitespace-normal"
+                  <span
+                    className="line-clamp-2 max-w-72 min-w-0 text-sm font-medium break-words hyphens-auto"
                     title={file.name}
                   >
-                    <span className="line-clamp-2 break-words hyphens-auto">{file.name}</span>
-                  </Button>
+                    {file.name}
+                  </span>
                   {file.shared && (
                     <Badge variant="outline" className="hidden shrink-0 xl:inline-flex">
                       {text.files.shared}
@@ -87,7 +84,6 @@ export function FileListView({ files }: FileListViewProps) {
                   >
                     <Star className={cn(file.starred && "fill-current")} />
                   </Button>
-                  <FileActions file={file} onToggleStar={() => toggleStar(file.id)} />
                 </div>
               </TableCell>
             </TableRow>

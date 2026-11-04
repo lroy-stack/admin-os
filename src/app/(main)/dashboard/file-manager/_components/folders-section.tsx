@@ -1,14 +1,6 @@
-import { Clock, Folder, MoreVertical } from "lucide-react";
+import { Clock, Folder } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { getLocale } from "@/config/locale.server";
 import { format } from "@/core/i18n/client";
@@ -55,26 +47,6 @@ export async function FoldersSection({ folders }: FoldersSectionProps) {
                     </CardDescription>
                   </div>
                 </div>
-                <CardAction>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={format(text.actionsFor, locale, { name: folder.name })}
-                      >
-                        <MoreVertical />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem>{text.open}</DropdownMenuItem>
-                        <DropdownMenuItem>{text.copyLink}</DropdownMenuItem>
-                        <DropdownMenuItem>{text.rename}</DropdownMenuItem>
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardAction>
               </CardHeader>
               <CardContent className="text-muted-foreground flex items-start justify-between gap-3 text-xs">
                 <div className="flex min-w-0 items-start gap-1.5">

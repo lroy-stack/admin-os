@@ -1,9 +1,8 @@
 import Link from "next/link";
 
-import { FolderPlus, Grid2X2, List, Upload } from "lucide-react";
+import { Grid2X2, List } from "lucide-react";
 
 import { LocaleBundles } from "@/app/_components/locale-root";
-import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getLocale } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
@@ -12,7 +11,6 @@ import { type FileManagerView, fileRecords, folderRecords } from "./_components/
 import { toFileRows, toFolderRows } from "./_components/file-format";
 import { FileGridView } from "./_components/file-grid-view";
 import { FileListView } from "./_components/file-list-view";
-import { FileManagerToolbar } from "./_components/file-manager-toolbar";
 import { FoldersSection } from "./_components/folders-section";
 import { fileManagerBundle, fileManagerMessages } from "./_components/messages.server";
 
@@ -38,18 +36,7 @@ export default async function Page({ searchParams }: PageProps) {
             <h1 className="text-3xl leading-none tracking-tight">{text.title}</h1>
             <p className="text-muted-foreground text-sm">{text.subtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline">
-              <FolderPlus data-icon="inline-start" />
-              {text.newFolder}
-            </Button>
-            <Button>
-              <Upload data-icon="inline-start" />
-              {text.upload}
-            </Button>
-          </div>
         </div>
-        <FileManagerToolbar />
         <FoldersSection folders={folders} />
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-4">
