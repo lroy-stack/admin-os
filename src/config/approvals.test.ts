@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ROLES, permissionsOf, type RoleId } from "@/core/access";
-import { type ApprovalPolicy, holdsForApproval } from "@/core/approvals";
+import { APPROVAL_TTL_MS, type ApprovalPolicy, holdsForApproval, policyOf } from "@/core/approvals";
 import type { ApprovalContext } from "@/core/capability";
 import { type Actor, createClient } from "@/core/client";
 import { fixedClock } from "@/core/clock";
-import { APPROVAL_TTL_MS, createMockAdapter, createSessionStore, MAX_APPROVALS } from "@/core/mock";
+import { exposedCapabilities } from "@/core/mcp/server";
+import { createMockAdapter, createSessionStore, MAX_APPROVALS } from "@/core/mock";
 import type { Result } from "@/core/result";
 import { createSettingsReader } from "@/core/settings";
 
 import { CATALOG } from "./catalog";
 import { DEMO, heldWritesFor, MOCK_HANDLERS } from "./demo-kernel";
+import { MCP_MANIFEST } from "./mcp-manifest";
 import { SETTINGS } from "./settings";
 import { VERTICALS } from "./vertical";
 
@@ -51,15 +53,15 @@ const setup = ({ policy, revokedRole }: SetupOptions = {}) => {
     },
     now: () => time.ms,
   });
-  const as = (roleId: RoleId, via: ApprovalContext["via"]) =>
+  const as = (roleId: RoleId, via: ApprovalContext["via"], actor: Actor = actorOf(roleId)) =>
     createClient(CATALOG, adapter, {
-      actor: actorOf(roleId),
+      actor,
       via,
       retryDelayMs: 0,
       logger: () => undefined,
       mode: "production",
     });
-  return { time, as, assistant: as("owner", "mcp"), person: as("owner", "ui") };
+  return { time, as, store, assistant: as("owner", "mcp"), person: as("owner", "ui") };
 };
 
 type Harness = ReturnType<typeof setup>;
@@ -69,6 +71,12 @@ const note = (client: Harness["assistant"], text: string) =>
 
 const cancel = (client: Harness["assistant"], id = BOOKING, reason = "Guest called") =>
   client.call("bookings.cancel", { id, reason });
+
+const capabilityOf = (id: string) => {
+  const found = CATALOG[id];
+  if (found === undefined) throw new Error(`The catalogue has no capability "${id}"`);
+  return found;
+};
 
 const idOf = (held: unknown): string => (held as { approvalId: string }).approvalId;
 
@@ -93,7 +101,7 @@ describe("which writes wait (spec 004, D7)", () => {
   ];
 
   it.each(cases)("under %s, %s via %s waits: %s", (policy, capabilityId, via, waits) => {
-    expect(holdsForApproval(policy, CATALOG[capabilityId] ?? CATALOG["clock.get"], via)).toBe(waits);
+    expect(holdsForApproval(policy, capabilityOf(capabilityId), via)).toBe(waits);
   });
 });
 
@@ -173,7 +181,7 @@ describe("the approvals kernel (AC5)", () => {
     const approved = await person.call("approvals.approve", { approvalId: idOf(held) });
 
     expect([read, approved, await statusOfBooking(person)]).toMatchObject([
-      { ok: true, value: { status: "expired" } },
+      { ok: true, value: { status: "expired", decidedAt: new Date(START + APPROVAL_TTL_MS).toISOString() } },
       { ok: false, error: { code: "approvals.expired" } },
       "confirmed",
     ]);
@@ -248,15 +256,244 @@ describe("the approvals kernel (AC5)", () => {
     });
   });
 
-  it.each([
-    ["owner", true],
-    ["manager", true],
-    ["staff", false],
-  ] as const)("lets the %s decide a held write: %s", async (roleId, allowed) => {
+  it.each(["owner", "manager"] as const)("lets the %s approve a held write", async (roleId) => {
     const { assistant, as } = setup();
     const held = await cancel(assistant);
-    const approved = await as(roleId, "ui").call("approvals.approve", { approvalId: idOf(held) });
-    expect(approved).toMatchObject(allowed ? { ok: true } : { ok: false, error: { code: "access.forbidden" } });
+    expect(await as(roleId, "ui").call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({ ok: true });
+  });
+
+  it.each(["approvals.approve", "approvals.reject"] as const)("refuses staff on %s", async (id) => {
+    const { assistant, as } = setup();
+    const held = await cancel(assistant);
+    expect(await as("staff", "ui").call(id, { approvalId: idOf(held) })).toMatchObject({
+      ok: false,
+      error: { code: "access.forbidden" },
+    });
+  });
+
+  it("refuses a decider who may decide but may not do the write, and leaves the request pending", async () => {
+    const { assistant, as } = setup();
+    const held = await cancel(assistant);
+    const clerk: Actor = { actorId: "demo-clerk", roleId: "manager", permissions: ["decide:approvals"] };
+
+    const approved = await as("manager", "ui", clerk).call("approvals.approve", { approvalId: idOf(held) });
+
+    expect([approved, await assistant.call("approvals.get", { approvalId: idOf(held) })]).toMatchObject([
+      { ok: false, error: { code: "access.forbidden" } },
+      { ok: true, value: { status: "pending" } },
+    ]);
+  });
+
+  it("lets one actor see that a write is not another's", async () => {
+    const { assistant, as } = setup();
+    const held = await cancel(assistant);
+    expect(await as("manager", "ui").call("approvals.get", { approvalId: idOf(held) })).toMatchObject({
+      ok: true,
+      value: { requestedByYou: false },
+    });
+  });
+
+  it("keeps two actors' identical requests apart, and the second is a conflict once the first applies", async () => {
+    const { assistant, as, person } = setup();
+    const first = await cancel(assistant);
+    const second = await cancel(as("manager", "mcp"));
+
+    const approvedFirst = await person.call("approvals.approve", { approvalId: idOf(first) });
+    const approvedSecond = await person.call("approvals.approve", { approvalId: idOf(second) });
+
+    expect([idOf(second) === idOf(first), approvedFirst, approvedSecond]).toMatchObject([
+      false,
+      { ok: true },
+      { ok: false, error: { code: "approvals.conflict" } },
+    ]);
+  });
+
+  it("replays a held keyed write retried with the same key, as one approval", async () => {
+    const { assistant, person } = setup({ policy: "all" });
+    const create = () =>
+      assistant.call("customers.create", { name: "Keyed Guest", phone: "+34611222333" }, { idempotencyKey: "k-held" });
+
+    const first = await create();
+    const retry = await create();
+
+    expect([idOf(retry), await person.call("approvals.list", {})]).toMatchObject([
+      idOf(first),
+      { ok: true, value: { items: [{}] } },
+    ]);
+  });
+});
+
+describe("deciding at the same moment", () => {
+  const customerNamed = async (person: Harness["person"], name: string) => {
+    const listed = (await person.call("customers.list", { limit: 200 })) as Result<{ items: { name: string }[] }>;
+    return listed.ok ? listed.value.items.filter((customer) => customer.name === name).length : -1;
+  };
+
+  const cases = [
+    {
+      label: "bookings.cancel",
+      policy: "destructive_and_sensitive",
+      hold: (assistant: Harness["assistant"]) => cancel(assistant),
+      applied: async (person: Harness["person"]) => ({ cancelled: await statusOfBooking(person) }),
+      expected: { cancelled: "cancelled" },
+    },
+    {
+      label: "bookings.staff_note.add",
+      policy: "all",
+      hold: (assistant: Harness["assistant"]) => note(assistant, "Window seat"),
+      applied: async (person: Harness["person"]) => {
+        const fetched = (await person.call("bookings.get", { id: BOOKING })) as Result<{ staffNote?: string }>;
+        return { times: fetched.ok ? (fetched.value.staffNote ?? "").split("Window seat").length - 1 : -1 };
+      },
+      expected: { times: 1 },
+    },
+    {
+      label: "customers.create",
+      policy: "all",
+      hold: (assistant: Harness["assistant"]) =>
+        assistant.call(
+          "customers.create",
+          { name: "Parallel Guest", phone: "+34611999888" },
+          { idempotencyKey: crypto.randomUUID() },
+        ),
+      applied: async (person: Harness["person"]) => ({ created: await customerNamed(person, "Parallel Guest") }),
+      expected: { created: 1 },
+    },
+  ] as const;
+
+  it.each(cases)("applies $label once when it is approved twice in the same tick", async (scenario) => {
+    const { assistant, person } = setup({ policy: scenario.policy });
+    const held = await scenario.hold(assistant);
+
+    const answers = await Promise.all([
+      person.call("approvals.approve", { approvalId: idOf(held) }),
+      person.call("approvals.approve", { approvalId: idOf(held) }),
+    ]);
+
+    expect(answers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ok: true }),
+        expect.objectContaining({ ok: false, error: expect.objectContaining({ code: "approvals.not_pending" }) }),
+      ]),
+    );
+    expect(await scenario.applied(person)).toEqual(scenario.expected);
+    expect(await assistant.call("approvals.get", { approvalId: idOf(held) })).toMatchObject({
+      ok: true,
+      value: { status: "approved" },
+    });
+  });
+
+  it("refuses a rejection that arrives while the approval runs, so the audit stays whole", async () => {
+    const { assistant, person } = setup();
+    const held = await cancel(assistant);
+
+    const [approved, rejected] = await Promise.all([
+      person.call("approvals.approve", { approvalId: idOf(held) }),
+      person.call("approvals.reject", { approvalId: idOf(held) }),
+    ]);
+
+    expect([approved, rejected]).toMatchObject([{ ok: true }, { ok: false, error: { code: "approvals.not_pending" } }]);
+  });
+});
+
+describe("what moved since the write was asked for", () => {
+  it("approves a cancel although someone added a staff note to the same booking meanwhile", async () => {
+    const { assistant, person } = setup();
+    const held = await cancel(assistant);
+    await person.call("bookings.staff_note.add", { id: BOOKING, text: "Seen" }, { idempotencyKey: "k-note" });
+
+    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
+      ok: true,
+      value: { status: "approved" },
+    });
+  });
+
+  it("approves a cancel although the party size of the booking changed meanwhile", async () => {
+    const { assistant, person } = setup();
+    const held = await cancel(assistant);
+    await person.call("bookings.reschedule", { id: BOOKING, partySize: 1 });
+
+    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
+      ok: true,
+      value: { status: "approved" },
+    });
+  });
+
+  it("answers conflict when the booking lost its table meanwhile", async () => {
+    const { assistant, person } = setup();
+    const held = await cancel(assistant);
+    await person.call("bookings.table.assign", { id: BOOKING, resourceIds: ["S8"] });
+
+    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
+      ok: false,
+      error: { code: "approvals.conflict" },
+    });
+  });
+});
+
+describe("failing closed", () => {
+  it("holds destructive writes when the registry has no approval setting", () => {
+    expect(policyOf(createSettingsReader({}))).toBe("destructive_and_sensitive");
+  });
+});
+
+describe("what the default policy holds through MCP (AC5, pinned)", () => {
+  const heldTools = exposedCapabilities(CATALOG, MCP_MANIFEST)
+    .filter((capability) => holdsForApproval("destructive_and_sensitive", capability, "mcp"))
+    .map((capability) => capability.id)
+    .sort();
+
+  it("is exactly these seven writes; a change to the list is a decision, not an accident", () => {
+    expect(heldTools).toEqual([
+      "bookings.cancel",
+      "bookings.no_show.mark",
+      "bookings.reschedule",
+      "bookings.table.assign",
+      "customers.block",
+      "customers.contact.update",
+      "customers.unblock",
+    ]);
+  });
+});
+
+describe("who reads the queue", () => {
+  it.each(["owner", "manager"] as const)("lets the %s list the held writes", async (roleId) => {
+    const { assistant, as } = setup();
+    await cancel(assistant);
+    expect(await as(roleId, "ui").call("approvals.list", {})).toMatchObject({
+      ok: true,
+      value: { items: [{ input: { id: BOOKING } }] },
+    });
+  });
+
+  it("keeps the held inputs from staff", async () => {
+    const { as } = setup();
+    expect(await as("staff", "ui").call("approvals.list", {})).toMatchObject({
+      ok: false,
+      error: { code: "access.forbidden" },
+    });
+  });
+});
+
+describe("who is named on an approved write", () => {
+  it("signs a customer note with the name the requester was shown", async () => {
+    const { as, person } = setup({ policy: "all" });
+    const requester: Actor = { ...actorOf("owner"), displayName: "Alex Morgan" };
+    const held = await as("owner", "mcp", requester).call(
+      "customers.notes.add",
+      { id: "C-iglesias", text: "Prefers the terrace" },
+      { idempotencyKey: crypto.randomUUID() },
+    );
+
+    await person.call("approvals.approve", { approvalId: idOf(held) });
+
+    const customer = (await person.call("customers.get", { id: "C-iglesias" })) as Result<{
+      notes: { authorName: string; authorId: string }[];
+    }>;
+    expect(customer).toMatchObject({
+      ok: true,
+      value: { notes: expect.arrayContaining([expect.objectContaining({ authorName: "Alex Morgan" })]) },
+    });
   });
 });
 
@@ -338,10 +575,12 @@ describe("the queue", () => {
 
 describe("the notification", () => {
   const approvalItems = async (client: Harness["person"]) => {
-    const listed = (await client.call("notifications.list", { limit: 100 })) as Result<{
-      items: { kind: string }[];
-    }>;
-    return listed.ok ? listed.value.items.filter((item) => item.kind === "approval.requested") : [];
+    const listed = await client.call("notifications.list", { limit: 100 });
+    expect(listed).toMatchObject({ ok: true });
+    const { items } = (
+      listed as Result<{ items: { kind: string; id: string }[] }> & { value: { items: { kind: string; id: string }[] } }
+    ).value;
+    return items.filter((item) => item.kind === "approval.requested");
   };
 
   it("tells the people who decide that a write waits, until it is decided", async () => {
@@ -353,7 +592,14 @@ describe("the notification", () => {
     const decided = await approvalItems(person);
 
     expect([waiting, decided]).toMatchObject([
-      [{ params: { capability: "bookings.cancel", target: BOOKING }, link: { entity: "approval" } }],
+      [
+        {
+          bodyKey: "notifications.kinds.approvalRequested.body.bookingsCancel",
+          params: { target: BOOKING },
+          createdAt: { day: "2026-10-31", minute: 13 * 60 },
+          link: { entity: "approval" },
+        },
+      ],
       [],
     ]);
   });
@@ -362,5 +608,21 @@ describe("the notification", () => {
     const { assistant, as } = setup();
     await cancel(assistant);
     expect(await approvalItems(as("staff", "ui"))).toEqual([]);
+  });
+
+  it.each([
+    ["notifications.read_all", () => ({})],
+    ["notifications.read", (ids: string[]) => ({ ids })],
+  ] as const)("stays unread after an agent calls %s", async (id, inputFor) => {
+    const { assistant, person } = setup();
+    const held = await cancel(assistant);
+    const ids = (await approvalItems(person)).map((item) => item.id);
+
+    await assistant.call(id, inputFor(ids));
+
+    expect([idOf(held), await approvalItems(person)]).toMatchObject([
+      idOf(held),
+      [{ id: `approval.requested:${idOf(held)}` }],
+    ]);
   });
 });

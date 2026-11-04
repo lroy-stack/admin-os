@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Actor, CallLogLine } from "@/core/client";
+import { type Actor, type CallLogLine, createClient } from "@/core/client";
 import { type ExposedEntry, exposedCapabilities, type RefusalLogLine, toolNameOf, toolOf } from "@/core/mcp/server";
 import { bookingSchema, bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
@@ -10,6 +10,7 @@ import { notificationsList, notificationsRead } from "@/modules/notifications";
 
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
+import { getAdapter } from "./data.server";
 import { createMcpServer } from "./mcp.server";
 import { MCP_MANIFEST } from "./mcp-manifest";
 import { VERTICALS } from "./vertical";
@@ -271,17 +272,32 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     ]);
   });
 
-  it("holds bookings_cancel for a person under the default policy and leaves the booking as it is (AC5)", async () => {
-    const { client } = await connect(owner, undefined, crypto.randomUUID());
+  it("holds bookings_cancel for a person, and approving it in the web app cancels with the reason (AC5)", async () => {
+    const sessionId = crypto.randomUUID();
+    const { client } = await connect(owner, undefined, sessionId);
+    const person = createClient(CATALOG, getAdapter({ vertical: "hospitality", sessionId }), {
+      actor: owner,
+      retryDelayMs: 0,
+      logger: () => undefined,
+      mode: "production",
+    });
     const cancelled = await client.callTool({
       name: "bookings_cancel",
       arguments: { id: "R-1046", reason: "Guest called" },
     });
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
-    const found = bookingsList.output.parse(listed.structuredContent).items.find((booking) => booking.id === "R-1046");
-    expect([cancelled.structuredContent, found?.status]).toEqual([
+    const waiting = bookingsList.output
+      .parse(listed.structuredContent)
+      .items.find((booking) => booking.id === "R-1046");
+    const { approvalId } = cancelled.structuredContent as { approvalId: string };
+
+    await person.call("approvals.approve", { approvalId });
+
+    const after = await client.callTool({ name: "bookings_get", arguments: { id: "R-1046" } });
+    expect([cancelled.structuredContent, waiting?.status, bookingSchema.parse(after.structuredContent)]).toMatchObject([
       { status: "awaiting_approval", approvalId: expect.any(String) },
       "confirmed",
+      { status: "cancelled", cancelReason: "Guest called" },
     ]);
   });
 

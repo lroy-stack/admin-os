@@ -113,10 +113,11 @@ describe("DemoStore", () => {
 
   it("keeps a held write and its policy across eviction, so a person can still approve it", async () => {
     const sessionId = crypto.randomUUID();
+    await stubFor(sessionId).dispatch("approvals.policy.set", { policy: "all" }, contextFor(sessionId));
     const held = await stubFor(sessionId).dispatch(
-      "bookings.cancel",
-      { id: "R-1046", reason: "Guest called" },
-      contextFor(sessionId, { via: "mcp" }),
+      "bookings.staff_note.add",
+      { id: "R-1046", text: "Window seat" },
+      contextFor(sessionId, { via: "mcp", idempotencyKey: "k-held-note" }),
     );
     const approvalId = (held as { approvalId: string }).approvalId;
 
@@ -130,7 +131,7 @@ describe("DemoStore", () => {
       { status: "awaiting_approval" },
       { ok: true, value: { status: "pending" } },
       { ok: true, value: { status: "approved" } },
-      { ok: true, value: { status: "cancelled" } },
+      { ok: true, value: { staffNote: expect.stringContaining("Window seat") } },
     ]);
   });
 

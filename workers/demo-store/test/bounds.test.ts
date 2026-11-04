@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApprovalRecord } from "@/core/mock";
+import type { ApprovalRecord } from "@/core/approvals";
 
 import { boundSession, MAX_APPROVALS, MAX_REPLAYS } from "../src/bounds";
 
