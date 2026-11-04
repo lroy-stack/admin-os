@@ -11,10 +11,12 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:mcp": "wrangler dev -c workers/mcp/wrangler.jsonc --port 8789 --infer-origin-from-routes=false",
     "build": "next build",
     "deploy:store": "wrangler deploy -c workers/demo-store/wrangler.jsonc",
     "deploy:check": "node scripts/require-deploy-secret.mjs",
-    "deploy": "npm run deploy:check && opennextjs-cloudflare build && npm run deploy:store && opennextjs-cloudflare deploy",
+    "deploy:mcp": "wrangler deploy -c workers/mcp/wrangler.jsonc",
+    "deploy": "npm run deploy:check && opennextjs-cloudflare build && npm run deploy:store && npm run deploy:mcp && opennextjs-cloudflare deploy",
     "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "lint": "biome lint",

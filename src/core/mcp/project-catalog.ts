@@ -85,7 +85,8 @@ export const MAX_RESULT_BYTES = 48 * 1024;
 /** The error code of a result over its bound. */
 export const RESULT_TOO_LARGE = "mcp.result_too_large";
 
-const SERVER_NAME = "admin-os";
+/** `serverInfo.name`; the MCP Worker's health answer names it too. */
+export const SERVER_NAME = "admin-os";
 const JSON_SCHEMA_TARGET = "draft-2020-12";
 
 /**

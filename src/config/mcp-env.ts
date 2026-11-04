@@ -50,7 +50,7 @@ export function parseMcpTokens(raw: string): ReadonlyMap<string, RoleId> {
 type Env = Readonly<Record<string, string | undefined>>;
 
 /** The public demo tokens are in force: no `MCP_TOKENS`, and the mock adapter (an empty value is unset, as in getAdapter). */
-const usesPublicDemoTokens = (env: Env): boolean =>
+export const usesPublicDemoTokens = (env: Env): boolean =>
   !env.MCP_TOKENS?.trim() && [undefined, "", "mock"].includes(env.DATA_ADAPTER);
 
 /** The token map in force: `MCP_TOKENS` when set, the demo tokens on the mock adapter, otherwise none. */

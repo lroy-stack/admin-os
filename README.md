@@ -156,8 +156,26 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run check` | Lint, format and layer boundaries (Biome, dependency-cruiser) |
 | `npm run media` | Rebuilds the screenshots and recordings in `media/` |
 | `npm run preview` | Cloudflare Workers build, served locally on workerd |
-| `npm run deploy` | Checks the session secret, builds for Cloudflare Workers, deploys the demo store Worker, then the app |
+| `npm run deploy` | Checks the session secret, builds for Cloudflare Workers, deploys the demo store Worker, the MCP Worker, then the app |
+| `npm run dev:mcp` | The MCP Worker under `wrangler dev`, at `http://localhost:8789/mcp` |
 | `npm run mcp:stdio` | MCP server over stdio |
+
+### The three Workers locally
+
+The deployed demo is three Workers: the web app, the demo store (`workers/demo-store`, the Durable Object that holds
+each visitor's data) and the MCP server (`workers/mcp`). Locally the web app and the store share one `wrangler dev`
+process and the MCP Worker runs in its own; wrangler's dev registry connects the MCP Worker's `DEMO_STORE` binding to
+the store in the first process.
+
+```bash
+npx opennextjs-cloudflare build
+npx wrangler dev -c wrangler.jsonc -c workers/demo-store/wrangler.jsonc --port 8788   # web and store
+npm run dev:mcp                                                                       # MCP, in a second terminal
+```
+
+The web app answers at `http://localhost:8788`, MCP at `http://localhost:8789/mcp`. Start the web and store process
+first: until the store is registered, MCP writes answer `transport.unavailable`. The public demo tokens are read-only
+there as in production; to try writes, put `MCP_READ_ONLY=false` in `workers/mcp/.dev.vars`.
 
 ## Deploy
 
@@ -166,10 +184,13 @@ deploy your own:
 
 1. In [`wrangler.jsonc`](wrangler.jsonc), rename the worker (its `name` and the `WORKER_SELF_REFERENCE` service) and
    replace the custom domain with a hostname on one of your Cloudflare zones. Without a zone, remove `routes` and set
-   `workers_dev` to `true` to serve it on your workers.dev subdomain.
+   `workers_dev` to `true` to serve it on your workers.dev subdomain. Do the same for the MCP Worker in
+   [`workers/mcp/wrangler.jsonc`](workers/mcp/wrangler.jsonc) (`mcp.admin-os.lr0y.dev` here); Cloudflare creates the
+   DNS record and the certificate of a custom domain on the first deploy.
 2. Log in once with `npx wrangler login`.
 3. Visitors' demo data lives in a Durable Object of its own Worker (`workers/demo-store`), which `npm run deploy`
-   deploys right after the build, so a failed build never leaves it ahead of the app. Give the web Worker the key
+   deploys right after the build, then the MCP Worker (`workers/mcp`), which binds the same store, then the app; a
+   failed build never leaves the store ahead of the app. Give the web Worker the key
    that signs the demo session cookie first (at least 32 characters; `npm run deploy` stops when it is missing, and
    wrangler offers to create the Worker if it does not exist yet):
 

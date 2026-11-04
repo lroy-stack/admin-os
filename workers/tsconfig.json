@@ -11,7 +11,9 @@
     "worker-configuration.d.ts",
     "../node_modules/@cloudflare/vitest-plugin/types/cloudflare-test.d.ts",
     "demo-store/src",
-    "demo-store/test"
+    "demo-store/test",
+    "mcp/src",
+    "mcp/test"
   ],
   "exclude": []
 }

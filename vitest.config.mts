@@ -29,7 +29,13 @@ export default defineConfig({
         // The store tests run inside workerd, against the Durable Object the way Cloudflare runs it (workers/demo-store).
         extends: true,
         plugins: [cloudflareTest({ wrangler: { configPath: "./workers/demo-store/wrangler.jsonc" } })],
-        test: { name: "workers", include: ["workers/**/*.test.ts"] },
+        test: { name: "workers", include: ["workers/demo-store/**/*.test.ts"] },
+      },
+      {
+        // The MCP Worker's tests run inside workerd too, through its fetch handler (workers/mcp, ADR 0016 AC12).
+        extends: true,
+        plugins: [cloudflareTest({ wrangler: { configPath: "./workers/mcp/test/wrangler.jsonc" } })],
+        test: { name: "workers-mcp", include: ["workers/mcp/**/*.test.ts"] },
       },
     ],
   },

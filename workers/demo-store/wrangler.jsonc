@@ -16,7 +16,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DemoStore"] }],
   // wrangler's esbuild resolves without the `react-server` condition, where `server-only` throws.
   "alias": {
-    "server-only": "./stubs/empty.ts"
+    "server-only": "../stubs/server-only.ts"
   },
   "observability": { "enabled": true }
 }
