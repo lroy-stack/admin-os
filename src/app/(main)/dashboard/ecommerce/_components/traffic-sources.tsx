@@ -17,11 +17,14 @@ import {
   useMessages,
 } from "@/core/i18n/client";
 
+import { useEcommerceFilters } from "./ecommerce-filters";
 import { ecommerceMessageKey } from "./messages";
+import type { EcommerceChannel } from "./order-view";
 
 const trafficSources = [
   {
     name: "Meta",
+    channel: "social",
     visits: 5640,
     share: 38,
     change: 0.18,
@@ -29,6 +32,7 @@ const trafficSources = [
   },
   {
     name: "Google",
+    channel: "onlineStore",
     visits: 3740,
     share: 25,
     change: -0.06,
@@ -36,6 +40,7 @@ const trafficSources = [
   },
   {
     name: "Shopify",
+    channel: "onlineStore",
     visits: 2960,
     share: 20,
     change: 0.07,
@@ -43,6 +48,7 @@ const trafficSources = [
   },
   {
     name: "TikTok",
+    channel: "social",
     visits: 1340,
     share: 10,
     change: 0.09,
@@ -50,6 +56,7 @@ const trafficSources = [
   },
   {
     name: "eBay",
+    channel: "marketplace",
     visits: 1080,
     share: 7,
     change: -0.03,
@@ -57,9 +64,17 @@ const trafficSources = [
   },
 ] as const;
 
-const totalVisits = 14_800;
+type TrafficSource = Omit<(typeof trafficSources)[number], "share"> & { readonly share: number };
+
+/** The sources of a channel, with each share recomputed against what that channel brings. */
+function sourcesFor(channel: EcommerceChannel): TrafficSource[] {
+  const visible = trafficSources.filter((source) => channel === "all" || source.channel === channel);
+  const total = visible.reduce((sum, source) => sum + source.visits, 0);
+  return visible.map((source) => ({ ...source, share: total === 0 ? 0 : Math.round((source.visits / total) * 100) }));
+}
 
 type IconLabelProps = {
+  sources: readonly TrafficSource[];
   height?: number | string;
   index?: number;
   width?: number | string;
@@ -70,6 +85,7 @@ type IconLabelProps = {
 type SourceLabelProps = LabelProps & {
   index?: number;
   locale: Locale;
+  sources: readonly TrafficSource[];
 };
 
 type SourceChangeLabelProps = LabelProps & {
@@ -81,12 +97,12 @@ function getNumber(value: number | string | undefined) {
   return typeof value === "number" ? value : Number(value);
 }
 
-function TrafficSourceIconLabel({ height, index, width, x, y }: IconLabelProps) {
+function TrafficSourceIconLabel({ height, index, sources, width, x, y }: IconLabelProps) {
   if (typeof index !== "number") {
     return null;
   }
 
-  const source = trafficSources[index];
+  const source = sources[index];
   const xValue = getNumber(x);
   const yValue = getNumber(y);
   const widthValue = getNumber(width);
@@ -113,12 +129,12 @@ function TrafficSourceIconLabel({ height, index, width, x, y }: IconLabelProps) 
   );
 }
 
-function TrafficSourceNameLabel({ height, index, locale, x, y }: SourceLabelProps) {
+function TrafficSourceNameLabel({ height, index, locale, sources, x, y }: SourceLabelProps) {
   if (typeof index !== "number") {
     return null;
   }
 
-  const source = trafficSources[index];
+  const source = sources[index];
   const xValue = getNumber(x);
   const yValue = getNumber(y);
   const heightValue = getNumber(height);
@@ -167,6 +183,9 @@ function TrafficSourceChangeLabel({ height, locale, value, y }: SourceChangeLabe
 export function TrafficSources() {
   const text = useMessages(ecommerceMessageKey).sources;
   const locale = useLocale();
+  const { channel } = useEcommerceFilters();
+  const visible = sourcesFor(channel);
+  const totalVisits = visible.reduce((sum, source) => sum + source.visits, 0);
   const trafficSourcesConfig = {
     share: { label: text.visitsSeries, color: "var(--chart-1)" },
   } satisfies ChartConfig;
@@ -184,54 +203,60 @@ export function TrafficSources() {
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={trafficSourcesConfig} className="h-54 w-full">
-          <BarChart
-            accessibilityLayer
-            barCategoryGap={12}
-            data={trafficSources}
-            layout="vertical"
-            margin={{ bottom: 0, left: 100, right: 50, top: 0 }}
-          >
-            <defs>
-              <pattern
-                height="4"
-                id="ecommerce-traffic-source-background-pattern"
-                patternTransform="rotate(45)"
-                patternUnits="userSpaceOnUse"
-                width="4"
-              >
-                <rect height="6" width="6" fill="var(--muted)" fillOpacity="0.5" />
-                <line
-                  stroke="var(--muted-foreground)"
-                  strokeOpacity="0.10"
-                  strokeWidth="1.25"
-                  x1="0"
-                  x2="0"
-                  y1="0"
-                  y2="6"
-                />
-              </pattern>
-            </defs>
-            <XAxis dataKey="share" domain={[0, 100]} hide type="number" />
-            <YAxis dataKey="name" hide type="category" />
-            <Bar
-              background={{ fill: "url(#ecommerce-traffic-source-background-pattern)", radius: 8 }}
-              barSize={36}
-              dataKey="share"
-              fill="var(--color-share)"
-              fillOpacity={0.5}
-              name={text.visitsSeries}
-              radius={8}
-              stroke="var(--color-share)"
-              strokeOpacity={0.1}
-              strokeWidth={0.5}
+        {visible.length === 0 ? (
+          <p className="text-muted-foreground flex h-54 items-center justify-center text-center text-sm">
+            {text.empty}
+          </p>
+        ) : (
+          <ChartContainer config={trafficSourcesConfig} className="h-54 w-full">
+            <BarChart
+              accessibilityLayer
+              barCategoryGap={12}
+              data={visible}
+              layout="vertical"
+              margin={{ bottom: 0, left: 100, right: 50, top: 0 }}
             >
-              <LabelList content={<TrafficSourceNameLabel locale={locale} />} dataKey="name" />
-              <LabelList content={<TrafficSourceIconLabel />} dataKey="share" />
-              <LabelList content={<TrafficSourceChangeLabel locale={locale} />} dataKey="change" />
-            </Bar>
-          </BarChart>
-        </ChartContainer>
+              <defs>
+                <pattern
+                  height="4"
+                  id="ecommerce-traffic-source-background-pattern"
+                  patternTransform="rotate(45)"
+                  patternUnits="userSpaceOnUse"
+                  width="4"
+                >
+                  <rect height="6" width="6" fill="var(--muted)" fillOpacity="0.5" />
+                  <line
+                    stroke="var(--muted-foreground)"
+                    strokeOpacity="0.10"
+                    strokeWidth="1.25"
+                    x1="0"
+                    x2="0"
+                    y1="0"
+                    y2="6"
+                  />
+                </pattern>
+              </defs>
+              <XAxis dataKey="share" domain={[0, 100]} hide type="number" />
+              <YAxis dataKey="name" hide type="category" />
+              <Bar
+                background={{ fill: "url(#ecommerce-traffic-source-background-pattern)", radius: 8 }}
+                barSize={36}
+                dataKey="share"
+                fill="var(--color-share)"
+                fillOpacity={0.5}
+                name={text.visitsSeries}
+                radius={8}
+                stroke="var(--color-share)"
+                strokeOpacity={0.1}
+                strokeWidth={0.5}
+              >
+                <LabelList content={<TrafficSourceNameLabel locale={locale} sources={visible} />} dataKey="name" />
+                <LabelList content={<TrafficSourceIconLabel sources={visible} />} dataKey="share" />
+                <LabelList content={<TrafficSourceChangeLabel locale={locale} />} dataKey="change" />
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

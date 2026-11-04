@@ -7,6 +7,7 @@ const order = (payment: OrderRow["payment"], fulfillment: OrderRow["fulfillment"
   id: "#1",
   date: "2026-05-09T16:42:00",
   customer: "Emma Smith",
+  channel: "social",
   payment,
   total: 10,
   itemCount: 1,

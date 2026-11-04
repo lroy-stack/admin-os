@@ -7,8 +7,10 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrency, useLocale, useMessages } from "@/core/i18n/client";
 import { PageHeader, SegmentedControl, type SegmentedOption } from "@/ds/components";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
 import { getGrowthReport, growthKpis, type Period, periods } from "./growth-data";
+import { GROWTH_EXPORT_FILE, growthCsvColumns, growthExportRows } from "./growth-export";
 import { LeadSources } from "./lead-sources";
 import { growthMessageKey } from "./messages";
 import { NewCustomersChart } from "./new-customers-chart";
@@ -42,7 +44,12 @@ export function GrowthReports() {
               options={periodOptions}
               onValueChange={setPeriod}
             />
-            <Button className="liquid-glass-brand h-9 rounded-full px-4">
+            <Button
+              className="liquid-glass-brand h-9 rounded-full px-4"
+              onClick={() =>
+                downloadCsv(GROWTH_EXPORT_FILE, toCsv(growthExportRows(report), growthCsvColumns(text, currency)))
+              }
+            >
               <Download data-icon="inline-start" />
               {text.exportCsv}
             </Button>

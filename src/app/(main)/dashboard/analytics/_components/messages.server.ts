@@ -13,6 +13,7 @@ const en: GrowthMessages = {
   periodLabel: "Report period",
   periods: { threeMonths: "3M", sixMonths: "6M", twelveMonths: "12M" },
   exportCsv: "Export CSV",
+  month: "Month",
   openCustomers: "Open customers",
   openPipeline: "Open pipeline",
   kpis: {
@@ -65,6 +66,7 @@ const es: GrowthMessages = {
   periodLabel: "Periodo del informe",
   periods: { threeMonths: "3 meses", sixMonths: "6 meses", twelveMonths: "12 meses" },
   exportCsv: "Exportar CSV",
+  month: "Mes",
   openCustomers: "Abrir clientes",
   openPipeline: "Abrir embudo",
   kpis: {
@@ -117,6 +119,7 @@ const de: GrowthMessages = {
   periodLabel: "Berichtszeitraum",
   periods: { threeMonths: "3 Mon.", sixMonths: "6 Mon.", twelveMonths: "12 Mon." },
   exportCsv: "CSV exportieren",
+  month: "Monat",
   openCustomers: "Kunden öffnen",
   openPipeline: "Pipeline öffnen",
   kpis: {
@@ -169,6 +172,7 @@ const fr: GrowthMessages = {
   periodLabel: "Période du rapport",
   periods: { threeMonths: "3 mois", sixMonths: "6 mois", twelveMonths: "12 mois" },
   exportCsv: "Exporter en CSV",
+  month: "Mois",
   openCustomers: "Ouvrir les clients",
   openPipeline: "Ouvrir le pipeline",
   kpis: {

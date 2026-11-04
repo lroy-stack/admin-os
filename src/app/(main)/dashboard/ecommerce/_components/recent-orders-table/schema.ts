@@ -7,6 +7,7 @@ export type OrderRow = {
   id: string;
   date: string;
   customer: string;
+  channel: "onlineStore" | "marketplace" | "social" | "retail";
   payment: "paid" | "pending" | "refunded";
   total: number;
   itemCount: number;

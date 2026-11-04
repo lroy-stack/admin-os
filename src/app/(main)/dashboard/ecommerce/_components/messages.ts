@@ -20,7 +20,8 @@ export interface EcommerceMessages {
       readonly social: string;
       readonly retail: string;
     };
-    readonly settings: string;
+    /** The line under the title: the period and channel on show. Placeholders: `{period}`, `{channel}`. */
+    readonly showing: string;
   };
   readonly kpis: {
     readonly totalSales: string;
@@ -54,6 +55,8 @@ export interface EcommerceMessages {
     /** Placeholders: `{count}` (selects the form), `{value}` (the compact figure). */
     readonly visits: Plural;
     readonly visitsSeries: string;
+    /** When the selected channel brings no traffic. */
+    readonly empty: string;
   };
   readonly topProducts: {
     readonly title: string;
@@ -95,6 +98,8 @@ export interface EcommerceMessages {
     readonly next: string;
     /** The featured review's text (demo content). */
     readonly quote: string;
+    readonly quoteSecond: string;
+    readonly quoteThird: string;
     /** Placeholders: `{count}` (selects the form), `{value}` (the compact figure). */
     readonly count: Plural;
     readonly thisMonth: string;
@@ -117,11 +122,8 @@ export interface EcommerceMessages {
       readonly unfulfilled: Plural;
       readonly unpaid: Plural;
       readonly returns: Plural;
-      readonly selected: Plural;
     };
-    readonly openOrders: string;
     readonly downloadOrders: string;
-    readonly moreOptions: string;
     readonly sortByDate: string;
     readonly empty: string;
     /** Placeholders: `{count}` (total, selects the form), `{visible}`, `{total}`. */
@@ -141,11 +143,18 @@ export interface EcommerceMessages {
       readonly date: string;
       readonly actions: string;
     };
-    readonly selectAll: string;
-    /** Placeholders: `{id}`. */
-    readonly selectOrder: string;
     /** Placeholders: `{count}`. */
     readonly items: Plural;
+    readonly paymentLabel: string;
+    readonly fulfillmentLabel: string;
+    readonly itemsLabel: string;
+    readonly panel: {
+      /** Placeholders: `{id}`. */
+      readonly title: string;
+      /** Placeholders: `{customer}`, `{date}`. */
+      readonly description: string;
+      readonly channel: string;
+    };
     readonly payment: { readonly paid: string; readonly pending: string; readonly refunded: string };
     readonly fulfillment: { readonly fulfilled: string; readonly unfulfilled: string; readonly returned: string };
     readonly menu: {

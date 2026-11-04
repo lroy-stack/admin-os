@@ -2,7 +2,7 @@
 import * as React from "react";
 
 import { type ColumnFiltersState, type PaginationState, type SortingState, useTable } from "@tanstack/react-table";
-import { ArrowUpDown, ArrowUpRight, Download, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, Download, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,8 +18,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { format, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
+import { useCopy } from "@/ds/feedback";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
+import { useOpenWindow } from "../../_components/use-open-window";
+import { useEcommerceFilters } from "./ecommerce-filters";
 import { ecommerceMessageKey } from "./messages";
+import { OrderPanel } from "./order-panel";
+import { ordersFor } from "./order-view";
+import { ORDERS_EXPORT_FILE, orderCsvColumns } from "./orders-export";
 import { createRecentOrdersColumns } from "./recent-orders-table/columns";
 import recentOrdersData from "./recent-orders-table/data.json";
 import { preventPaginationNavigation } from "./recent-orders-table/formatters";
@@ -40,8 +47,18 @@ export function RecentOrders() {
   const text = useMessages(ecommerceMessageKey).orders;
   const locale = useLocale();
   const currency = useCurrency();
-  const columns = React.useMemo(() => createRecentOrdersColumns(text, locale, currency), [text, locale, currency]);
-  const [rowSelection, setRowSelection] = React.useState({});
+  const { period, channel } = useEcommerceFilters();
+  const copy = useCopy();
+  const panel = useOpenWindow<OrderRow>();
+  const orders = React.useMemo(() => ordersFor(recentOrders, period, channel), [period, channel]);
+  const columns = React.useMemo(
+    () =>
+      createRecentOrdersColumns(text, locale, currency, {
+        view: panel.show,
+        copyId: (order) => void copy(order.id, text.columns.order),
+      }),
+    [text, locale, currency, panel.show, copy],
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = React.useState<PaginationState>({
@@ -51,17 +68,14 @@ export function RecentOrders() {
 
   const table = useTable({
     features: dataTableFeatures,
-    data: recentOrders,
+    data: orders,
     columns,
     state: {
-      rowSelection,
       sorting,
       columnFilters,
       pagination,
     },
     getRowId: (row) => row.id,
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
@@ -69,14 +83,10 @@ export function RecentOrders() {
 
   const activeFilter = (table.getColumn("statusSummary")?.getFilterValue() as OrderFilter | undefined) ?? "all";
   const orderCount = table.getFilteredRowModel().rows.length;
-  const selectedOrderCount = table.getSelectedRowModel().rows.length;
   const visibleOrderCount = table.getRowModel().rows.length;
   const currentPage = table.state.pagination.pageIndex + 1;
   const pageCount = table.getPageCount();
-  const orderCountDescription =
-    selectedOrderCount > 0
-      ? format(text.counts.selected, locale, { count: selectedOrderCount })
-      : format(text.counts[activeFilter], locale, { count: orderCount });
+  const orderCountDescription = format(text.counts[activeFilter], locale, { count: orderCount });
   const pageNumbers = React.useMemo(() => {
     if (pageCount <= 3) {
       return Array.from({ length: pageCount }, (_, index) => index + 1);
@@ -96,14 +106,21 @@ export function RecentOrders() {
           {orderCountDescription}
         </CardDescription>
         <CardAction className="flex items-center gap-1">
-          <Button aria-label={text.openOrders} size="icon-sm" variant="outline">
-            <ArrowUpRight />
-          </Button>
-          <Button aria-label={text.downloadOrders} size="icon-sm" variant="outline">
+          <Button
+            aria-label={text.downloadOrders}
+            size="icon-sm"
+            variant="outline"
+            onClick={() =>
+              downloadCsv(
+                ORDERS_EXPORT_FILE,
+                toCsv(
+                  table.getFilteredRowModel().rows.map((row) => row.original),
+                  orderCsvColumns(text, currency),
+                ),
+              )
+            }
+          >
             <Download />
-          </Button>
-          <Button aria-label={text.moreOptions} size="icon-sm" variant="outline">
-            <MoreHorizontal />
           </Button>
         </CardAction>
       </CardHeader>
@@ -157,7 +174,7 @@ export function RecentOrders() {
             <TableBody className="**:data-[slot='table-row']:border-border/50 **:data-[slot='table-cell']:px-4 **:data-[slot='table-cell']:py-3 **:data-[slot='table-row']:hover:bg-transparent">
               {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={table.state.rowSelection[row.id] && "selected"}>
+                  <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         <table.FlexRender cell={cell} />
@@ -239,6 +256,16 @@ export function RecentOrders() {
           </Pagination>
         </div>
       </CardContent>
+      {panel.shown ? (
+        <OrderPanel
+          key={panel.shown.opening}
+          order={panel.shown.value}
+          open={panel.shown.open}
+          onOpenChange={panel.onOpenChange}
+          returnFocus={panel.returnFocus}
+          onCopyId={(order) => void copy(order.id, text.columns.order)}
+        />
+      ) : null}
     </Card>
   );
 }

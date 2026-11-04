@@ -6,7 +6,8 @@
     "payment": "pending",
     "total": 248,
     "itemCount": 2,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14536",
@@ -15,7 +16,8 @@
     "payment": "paid",
     "total": 1200,
     "itemCount": 3,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14521",
@@ -24,7 +26,8 @@
     "payment": "pending",
     "total": 79,
     "itemCount": 1,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14508",
@@ -33,7 +36,8 @@
     "payment": "paid",
     "total": 5500,
     "itemCount": 5,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "social"
   },
   {
     "id": "#14492",
@@ -42,7 +46,8 @@
     "payment": "refunded",
     "total": 880,
     "itemCount": 2,
-    "fulfillment": "returned"
+    "fulfillment": "returned",
+    "channel": "retail"
   },
   {
     "id": "#14477",
@@ -51,7 +56,8 @@
     "payment": "paid",
     "total": 7650,
     "itemCount": 4,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14463",
@@ -60,7 +66,8 @@
     "payment": "pending",
     "total": 375,
     "itemCount": 2,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14451",
@@ -69,7 +76,8 @@
     "payment": "paid",
     "total": 38,
     "itemCount": 3,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14438",
@@ -78,7 +86,8 @@
     "payment": "paid",
     "total": 76,
     "itemCount": 1,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "social"
   },
   {
     "id": "#14426",
@@ -87,7 +96,8 @@
     "payment": "refunded",
     "total": 204,
     "itemCount": 2,
-    "fulfillment": "returned"
+    "fulfillment": "returned",
+    "channel": "retail"
   },
   {
     "id": "#14413",
@@ -96,7 +106,8 @@
     "payment": "paid",
     "total": 31,
     "itemCount": 5,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14397",
@@ -105,7 +116,8 @@
     "payment": "pending",
     "total": 52,
     "itemCount": 1,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14382",
@@ -114,7 +126,8 @@
     "payment": "paid",
     "total": 350,
     "itemCount": 4,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14369",
@@ -123,7 +136,8 @@
     "payment": "pending",
     "total": 501,
     "itemCount": 2,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "social"
   },
   {
     "id": "#14354",
@@ -132,7 +146,8 @@
     "payment": "paid",
     "total": 415,
     "itemCount": 6,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "retail"
   },
   {
     "id": "#14341",
@@ -141,7 +156,8 @@
     "payment": "paid",
     "total": 298,
     "itemCount": 2,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14326",
@@ -150,7 +166,8 @@
     "payment": "pending",
     "total": 487,
     "itemCount": 3,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14308",
@@ -159,7 +176,8 @@
     "payment": "paid",
     "total": 178,
     "itemCount": 4,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14295",
@@ -168,7 +186,8 @@
     "payment": "refunded",
     "total": 193,
     "itemCount": 1,
-    "fulfillment": "returned"
+    "fulfillment": "returned",
+    "channel": "social"
   },
   {
     "id": "#14281",
@@ -177,7 +196,8 @@
     "payment": "paid",
     "total": 229,
     "itemCount": 3,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "retail"
   },
   {
     "id": "#14266",
@@ -186,7 +206,8 @@
     "payment": "pending",
     "total": 324,
     "itemCount": 2,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14249",
@@ -195,7 +216,8 @@
     "payment": "paid",
     "total": 397,
     "itemCount": 2,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14234",
@@ -204,7 +226,8 @@
     "payment": "paid",
     "total": 424,
     "itemCount": 5,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14218",
@@ -213,7 +236,8 @@
     "payment": "pending",
     "total": 313,
     "itemCount": 1,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "social"
   },
   {
     "id": "#14205",
@@ -222,7 +246,8 @@
     "payment": "paid",
     "total": 226,
     "itemCount": 3,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "retail"
   },
   {
     "id": "#14186",
@@ -231,7 +256,8 @@
     "payment": "paid",
     "total": 392,
     "itemCount": 4,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14172",
@@ -240,7 +266,8 @@
     "payment": "refunded",
     "total": 683,
     "itemCount": 2,
-    "fulfillment": "returned"
+    "fulfillment": "returned",
+    "channel": "onlineStore"
   },
   {
     "id": "#14157",
@@ -249,7 +276,8 @@
     "payment": "paid",
     "total": 501,
     "itemCount": 7,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14143",
@@ -258,7 +286,8 @@
     "payment": "pending",
     "total": 138,
     "itemCount": 2,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "social"
   },
   {
     "id": "#14126",
@@ -267,7 +296,8 @@
     "payment": "paid",
     "total": 143,
     "itemCount": 3,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "retail"
   },
   {
     "id": "#14112",
@@ -276,7 +306,8 @@
     "payment": "paid",
     "total": 202,
     "itemCount": 1,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14098",
@@ -285,7 +316,8 @@
     "payment": "pending",
     "total": 209,
     "itemCount": 5,
-    "fulfillment": "unfulfilled"
+    "fulfillment": "unfulfilled",
+    "channel": "onlineStore"
   },
   {
     "id": "#14084",
@@ -294,7 +326,8 @@
     "payment": "paid",
     "total": 815,
     "itemCount": 3,
-    "fulfillment": "fulfilled"
+    "fulfillment": "fulfilled",
+    "channel": "marketplace"
   },
   {
     "id": "#14067",
@@ -303,6 +336,7 @@
     "payment": "refunded",
     "total": 297,
     "itemCount": 1,
-    "fulfillment": "returned"
+    "fulfillment": "returned",
+    "channel": "social"
   }
 ]

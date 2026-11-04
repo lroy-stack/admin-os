@@ -8,6 +8,7 @@ export interface GrowthMessages {
   readonly periodLabel: string;
   readonly periods: { readonly threeMonths: string; readonly sixMonths: string; readonly twelveMonths: string };
   readonly exportCsv: string;
+  readonly month: string;
   readonly openCustomers: string;
   readonly openPipeline: string;
   readonly kpis: {

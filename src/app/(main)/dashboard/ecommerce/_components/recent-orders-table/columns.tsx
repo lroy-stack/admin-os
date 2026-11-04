@@ -1,23 +1,12 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { Subscribe } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { format, formatAmount, formatDateTime, type Locale } from "@/core/i18n/client";
 import type { Currency } from "@/core/money/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import type { EcommerceMessages } from "../messages";
+import { type OrderActions, OrderMenu } from "./order-menu";
 import type { OrderFilter, OrderRow } from "./schema";
 
 type OrdersText = EcommerceMessages["orders"];
@@ -68,45 +57,9 @@ export function createRecentOrdersColumns(
   text: OrdersText,
   locale: Locale,
   currency: Currency,
+  actions: OrderActions,
 ): ColumnDef<DataTableFeatures, OrderRow>[] {
   return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <div className="w-10">
-          <Subscribe
-            source={table.atoms.rowSelection}
-            selector={() =>
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected() && "indeterminate")
-            }
-          >
-            {(checked) => (
-              <Checkbox
-                aria-label={text.selectAll}
-                checked={checked}
-                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              />
-            )}
-          </Subscribe>
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="w-10">
-          <Subscribe source={row.table.atoms.rowSelection} selector={(selection) => Boolean(selection?.[row.id])}>
-            {(checked) => (
-              <Checkbox
-                aria-label={format(text.selectOrder, locale, { id: row.original.id })}
-                checked={checked}
-                onCheckedChange={(value) => row.toggleSelected(!!value)}
-              />
-            )}
-          </Subscribe>
-        </div>
-      ),
-      enableHiding: false,
-      enableSorting: false,
-    },
     {
       accessorKey: "id",
       header: text.columns.order,
@@ -159,25 +112,7 @@ export function createRecentOrdersColumns(
     {
       id: "actions",
       header: () => <div className="flex w-full justify-end">{text.columns.actions}</div>,
-      cell: () => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex w-full justify-end">
-              <Button aria-label={text.menu.open} size="icon-sm" variant="ghost">
-                <MoreHorizontal />
-              </Button>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-40">
-            <DropdownMenuLabel>{text.menu.label}</DropdownMenuLabel>
-            <DropdownMenuGroup>
-              <DropdownMenuItem>{text.menu.view}</DropdownMenuItem>
-              <DropdownMenuItem>{text.menu.contact}</DropdownMenuItem>
-              <DropdownMenuItem>{text.menu.copyId}</DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => <OrderMenu order={row.original} text={text.menu} actions={actions} />,
       enableHiding: false,
       enableSorting: false,
     },
