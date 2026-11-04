@@ -38,8 +38,6 @@ const en: AuthMessages = {
   actions: {
     login: "Log in",
     register: "Register",
-    google: "Continue with Google",
-    orContinueWith: "Or continue with",
   },
   validation: {
     emailInvalid: "Enter a valid email address.",
@@ -118,8 +116,6 @@ const es: AuthMessages = {
   actions: {
     login: "Iniciar sesión",
     register: "Registrarse",
-    google: "Continuar con Google",
-    orContinueWith: "O continúa con",
   },
   validation: {
     emailInvalid: "Introduce un correo electrónico válido.",
@@ -199,8 +195,6 @@ const de: AuthMessages = {
   actions: {
     login: "Anmelden",
     register: "Registrieren",
-    google: "Weiter mit Google",
-    orContinueWith: "Oder weiter mit",
   },
   validation: {
     emailInvalid: "Gib eine gültige E-Mail-Adresse ein.",
@@ -281,8 +275,6 @@ const fr: AuthMessages = {
   actions: {
     login: "Se connecter",
     register: "S’inscrire",
-    google: "Continuer avec Google",
-    orContinueWith: "Ou continuez avec",
   },
   validation: {
     emailInvalid: "Saisissez une adresse e-mail valide.",

@@ -11,8 +11,6 @@ const en: InvoiceMessages = {
   },
   title: "Create New Invoice",
   subtitle: "Add invoice details, review the preview, and send it to your client.",
-  actions: { saveDraft: "Save as Draft", send: "Send Invoice" },
-  tabs: { invoice: "Invoice", payment: "Payment", business: "Business" },
   details: {
     reference: "Reference Number",
     issued: "Issued Date",
@@ -20,7 +18,7 @@ const en: InvoiceMessages = {
     pickDate: "Pick a date",
     currency: "Currency",
   },
-  client: { billedTo: "Billed To", add: "Add New Client", label: "Client", select: "Select client" },
+  client: { billedTo: "Billed To", label: "Client", select: "Select client" },
   items: {
     title: "Invoice Items",
     add: "Add Item",
@@ -50,7 +48,7 @@ const en: InvoiceMessages = {
     analytics: "Data analytics report",
     support: "Technical support retainer",
   },
-  preview: { title: "Preview", print: "Print", download: "Download PDF", loading: "Loading Preview" },
+  preview: { title: "Preview", print: "Print", loading: "Loading Preview" },
   paper: {
     invoice: "Invoice",
     labelled: "{label}: {value}",
@@ -94,8 +92,6 @@ const es: InvoiceMessages = {
   },
   title: "Crear factura nueva",
   subtitle: "Añade los datos de la factura, revisa la vista previa y envíasela a tu cliente.",
-  actions: { saveDraft: "Guardar borrador", send: "Enviar factura" },
-  tabs: { invoice: "Factura", payment: "Pago", business: "Empresa" },
   details: {
     reference: "Número de referencia",
     issued: "Fecha de emisión",
@@ -103,7 +99,7 @@ const es: InvoiceMessages = {
     pickDate: "Elegir fecha",
     currency: "Moneda",
   },
-  client: { billedTo: "Facturar a", add: "Añadir cliente", label: "Cliente", select: "Seleccionar cliente" },
+  client: { billedTo: "Facturar a", label: "Cliente", select: "Seleccionar cliente" },
   items: {
     title: "Conceptos de la factura",
     add: "Añadir concepto",
@@ -133,7 +129,7 @@ const es: InvoiceMessages = {
     analytics: "Informe de analítica de datos",
     support: "Soporte técnico mensual",
   },
-  preview: { title: "Vista previa", print: "Imprimir", download: "Descargar PDF", loading: "Cargando vista previa" },
+  preview: { title: "Vista previa", print: "Imprimir", loading: "Cargando vista previa" },
   paper: {
     invoice: "Factura",
     labelled: "{label}: {value}",
@@ -177,8 +173,6 @@ const de: InvoiceMessages = {
   },
   title: "Neue Rechnung erstellen",
   subtitle: "Gib die Rechnungsdaten ein, prüfe die Vorschau und sende die Rechnung an deinen Kunden.",
-  actions: { saveDraft: "Als Entwurf speichern", send: "Rechnung senden" },
-  tabs: { invoice: "Rechnung", payment: "Zahlung", business: "Unternehmen" },
   details: {
     reference: "Referenznummer",
     issued: "Rechnungsdatum",
@@ -186,7 +180,7 @@ const de: InvoiceMessages = {
     pickDate: "Datum wählen",
     currency: "Währung",
   },
-  client: { billedTo: "Rechnung an", add: "Neuen Kunden hinzufügen", label: "Kunde", select: "Kunde auswählen" },
+  client: { billedTo: "Rechnung an", label: "Kunde", select: "Kunde auswählen" },
   items: {
     title: "Rechnungspositionen",
     add: "Position hinzufügen",
@@ -216,7 +210,7 @@ const de: InvoiceMessages = {
     analytics: "Datenanalysebericht",
     support: "Technischer Support (Pauschale)",
   },
-  preview: { title: "Vorschau", print: "Drucken", download: "PDF herunterladen", loading: "Vorschau wird geladen" },
+  preview: { title: "Vorschau", print: "Drucken", loading: "Vorschau wird geladen" },
   paper: {
     invoice: "Rechnung",
     labelled: "{label}: {value}",
@@ -260,8 +254,6 @@ const fr: InvoiceMessages = {
   },
   title: "Créer une facture",
   subtitle: "Renseignez la facture, vérifiez l’aperçu, puis envoyez-la à votre client.",
-  actions: { saveDraft: "Enregistrer le brouillon", send: "Envoyer la facture" },
-  tabs: { invoice: "Facture", payment: "Paiement", business: "Entreprise" },
   details: {
     reference: "Numéro de référence",
     issued: "Date d’émission",
@@ -269,7 +261,7 @@ const fr: InvoiceMessages = {
     pickDate: "Choisir une date",
     currency: "Devise",
   },
-  client: { billedTo: "Facturé à", add: "Ajouter un client", label: "Client", select: "Sélectionner un client" },
+  client: { billedTo: "Facturé à", label: "Client", select: "Sélectionner un client" },
   items: {
     title: "Lignes de facture",
     add: "Ajouter une ligne",
@@ -299,7 +291,7 @@ const fr: InvoiceMessages = {
     analytics: "Rapport d’analyse de données",
     support: "Forfait de support technique",
   },
-  preview: { title: "Aperçu", print: "Imprimer", download: "Télécharger le PDF", loading: "Chargement de l’aperçu" },
+  preview: { title: "Aperçu", print: "Imprimer", loading: "Chargement de l’aperçu" },
   paper: {
     invoice: "Facture",
     labelled: "{label} : {value}",

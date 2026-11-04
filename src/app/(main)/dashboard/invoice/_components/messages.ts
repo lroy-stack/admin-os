@@ -7,8 +7,6 @@ export interface InvoiceMessages {
   readonly meta: PageMeta;
   readonly title: string;
   readonly subtitle: string;
-  readonly actions: { readonly saveDraft: string; readonly send: string };
-  readonly tabs: { readonly invoice: string; readonly payment: string; readonly business: string };
   readonly details: {
     readonly reference: string;
     readonly issued: string;
@@ -18,7 +16,6 @@ export interface InvoiceMessages {
   };
   readonly client: {
     readonly billedTo: string;
-    readonly add: string;
     readonly label: string;
     readonly select: string;
   };
@@ -57,7 +54,6 @@ export interface InvoiceMessages {
   readonly preview: {
     readonly title: string;
     readonly print: string;
-    readonly download: string;
     readonly loading: string;
   };
   /** The printed document. */

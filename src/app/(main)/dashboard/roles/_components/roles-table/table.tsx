@@ -130,6 +130,7 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
                   isActive
                   onClick={(e) => {
                     e.preventDefault();
+                    table.setPageIndex(pageIndex);
                   }}
                 >
                   {formatNumber(pageIndex + 1, locale)}

@@ -15,7 +15,6 @@ export interface AcademyMessages {
   readonly meta: PageMeta;
   readonly title: string;
   readonly greeting: string;
-  readonly actions: { readonly announcement: string; readonly gradebook: string; readonly addAssignment: string };
   readonly timeRange: string;
   /** Placeholders: `{section}`, for example "11A". The class name as the school writes it. */
   readonly grade: string;

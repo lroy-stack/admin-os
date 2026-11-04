@@ -1,16 +1,8 @@
-import { BadgeCheck, Ellipsis, Eye, Mail, Pencil, UserRoundX } from "lucide-react";
+import { BadgeCheck, Mail } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { format, formatPercent, type Locale } from "@/core/i18n/client";
 
 import { profileMessages } from "./messages.server";
@@ -90,32 +82,6 @@ export function ProfileHeader({ profile, locale }: ProfileHeaderProps) {
             {text.email}
           </a>
         </Button>
-        <Button size="sm">
-          <Pencil data-icon="inline-start" />
-          {text.edit}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button aria-label={text.moreActions} size="icon-sm" variant="outline">
-              <Ellipsis />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Eye />
-                {text.viewAsEmployee}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive">
-                <UserRoundX />
-                {text.deactivate}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );

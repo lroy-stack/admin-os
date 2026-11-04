@@ -2,10 +2,9 @@
 import { useMemo, useState } from "react";
 
 import { type ColumnFiltersState, type PaginationState, useTable } from "@tanstack/react-table";
-import { AlertTriangle, ChevronRight, FileUp, Search } from "lucide-react";
+import { AlertTriangle, Search } from "lucide-react";
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,14 +64,6 @@ export function Roles({ roles }: { roles: Role[] }) {
           <h1 className="text-3xl tracking-tight break-words hyphens-auto">{text.title}</h1>
           <p className="text-muted-foreground text-sm">{text.subtitle}</p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline">
-            <FileUp data-icon="inline-start" />
-            {text.actions.importJson}
-          </Button>
-          <Button size="sm">{text.actions.createRole}</Button>
-        </div>
       </div>
 
       <Tabs className="h-full gap-4" defaultValue="roles">
@@ -91,12 +82,6 @@ export function Roles({ roles }: { roles: Role[] }) {
               <AlertTriangle className="size-4" />
               <AlertTitle>{text.review.title}</AlertTitle>
               <AlertDescription>{format(text.review.description, locale, { count: reviewCount })}</AlertDescription>
-              <AlertAction>
-                <Button size="sm" variant="link">
-                  {text.review.action}
-                  <ChevronRight data-icon="inline-end" />
-                </Button>
-              </AlertAction>
             </Alert>
 
             <div className="border-border/70 bg-background overflow-hidden rounded-xl border">

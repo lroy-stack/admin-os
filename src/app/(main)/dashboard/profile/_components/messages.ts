@@ -27,10 +27,6 @@ export interface ProfileMessages {
     readonly completeSr: string;
     readonly verified: string;
     readonly email: string;
-    readonly edit: string;
-    readonly moreActions: string;
-    readonly viewAsEmployee: string;
-    readonly deactivate: string;
   };
   readonly overview: {
     readonly about: string;
@@ -45,7 +41,6 @@ export interface ProfileMessages {
     readonly engagementLength: string;
     readonly reportingLine: string;
     readonly directManager: string;
-    readonly orgChart: string;
   };
   readonly status: {
     readonly recordStatus: string;
@@ -109,7 +104,6 @@ export interface ProfileMessages {
   };
   readonly documents: {
     readonly title: string;
-    readonly add: string;
     readonly caption: string;
     readonly document: string;
     readonly category: string;
@@ -117,8 +111,6 @@ export interface ProfileMessages {
     readonly status: string;
     readonly access: string;
     readonly restricted: string;
-    /** Placeholders: `{name}`. */
-    readonly download: string;
     readonly statuses: { readonly signed: string; readonly current: string };
   };
   /** Shapes of values built from data. */

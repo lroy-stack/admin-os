@@ -1,8 +1,6 @@
-import { Plus } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMessages } from "@/core/i18n/client";
@@ -19,10 +17,6 @@ export function ClientSelector() {
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-medium tracking-tight">{text.billedTo}</h2>
-        <Button type="button" variant="ghost" size="sm">
-          <Plus data-icon="inline-start" />
-          {text.add}
-        </Button>
       </div>
 
       <Controller

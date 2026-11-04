@@ -1,26 +1,20 @@
-import { Download, FileText, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getLocale, getMessages } from "@/config/locale.server";
-import { format } from "@/core/i18n/client";
 
 import { profileMessages } from "./messages.server";
 import type { ProfileDocument } from "./profile-data";
 
 export async function ProfileDocuments({ documents }: { documents: ProfileDocument[] }) {
-  const [text, locale] = await Promise.all([getMessages(profileMessages), getLocale()]);
+  const [text, _locale] = await Promise.all([getMessages(profileMessages), getLocale()]);
   const labels = text.documents;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="font-heading min-w-0 text-base font-medium">{labels.title}</h2>
-        <Button size="sm" className="shrink-0">
-          <FileText data-icon="inline-start" />
-          {labels.add}
-        </Button>
       </div>
 
       <Table className="border-y">
@@ -58,15 +52,7 @@ export async function ProfileDocuments({ documents }: { documents: ProfileDocume
                     <LockKeyhole aria-hidden="true" className="size-3.5" />
                     {labels.restricted}
                   </span>
-                ) : (
-                  <Button
-                    aria-label={format(labels.download, locale, { name: document.name })}
-                    size="icon-sm"
-                    variant="ghost"
-                  >
-                    <Download />
-                  </Button>
-                )}
+                ) : null}
               </TableCell>
             </TableRow>
           ))}

@@ -9,7 +9,6 @@ import { LOCALE_NAMES } from "@/core/i18n/client";
 
 import { LoginForm } from "../../_components/login-form";
 import { authMessages, authPageMeta } from "../../_components/messages.server";
-import { GoogleButton } from "../../_components/social-auth/google-button";
 
 export const generateMetadata = () => pageMetadata("/auth/v2/login", authPageMeta("loginV2"));
 
@@ -24,12 +23,6 @@ export default async function LoginV2() {
           <p className="text-muted-foreground text-sm">{text.loginV2.subtitle}</p>
         </div>
         <div className="space-y-4">
-          <GoogleButton className="w-full" />
-          <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-            <span className="bg-background text-muted-foreground relative z-10 px-2">
-              {text.actions.orContinueWith}
-            </span>
-          </div>
           <LoginForm />
         </div>
       </div>

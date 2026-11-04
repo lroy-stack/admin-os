@@ -1,7 +1,4 @@
-import { BookOpenCheck, Megaphone, Plus } from "lucide-react";
-
 import { LocaleBundles } from "@/app/_components/locale-root";
-import { Button } from "@/components/ui/button";
 import { getMessages } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
 
@@ -24,21 +21,6 @@ export default async function Page() {
           <div className="min-w-0 space-y-1">
             <h1 className="text-3xl tracking-tight break-words hyphens-auto">{text.title}</h1>
             <p className="text-muted-foreground text-sm">{text.greeting}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 lg:w-fit">
-            <Button size="sm">
-              <Megaphone />
-              {text.actions.announcement}
-            </Button>
-            <Button size="sm" variant="outline">
-              <BookOpenCheck />
-              {text.actions.gradebook}
-            </Button>
-            <Button size="sm" variant="outline">
-              <Plus />
-              {text.actions.addAssignment}
-            </Button>
           </div>
         </div>
 

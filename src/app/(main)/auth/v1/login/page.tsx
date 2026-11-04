@@ -7,7 +7,6 @@ import { pageMetadata } from "@/config/metadata.server";
 
 import { LoginForm } from "../../_components/login-form";
 import { authMessages, authPageMeta } from "../../_components/messages.server";
-import { GoogleButton } from "../../_components/social-auth/google-button";
 
 export const generateMetadata = () => pageMetadata("/auth/v1/login", authPageMeta("loginV1"));
 
@@ -38,7 +37,6 @@ export default async function LoginV1() {
           </div>
           <div className="space-y-4">
             <LoginForm />
-            <GoogleButton className="w-full" variant="outline" />
             <p className="text-muted-foreground text-center text-xs">
               {text.loginV1.noAccount}{" "}
               <Link prefetch={false} href="register" className="text-primary">

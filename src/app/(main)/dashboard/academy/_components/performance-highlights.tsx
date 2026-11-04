@@ -75,6 +75,7 @@ function PerformanceHighlightBar({
               <TooltipTrigger
                 aria-label={student.name}
                 className="focus-visible:ring-ring flex size-5 rounded-full outline-none focus-visible:ring-2"
+                data-inert-reason="A tooltip target: the student's details open on hover and focus, not on press."
                 type="button"
               >
                 <Avatar className="bg-muted size-5" size="sm">

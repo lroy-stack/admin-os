@@ -28,10 +28,6 @@ const en: ProfileMessages = {
     completeSr: "Profile {percent} complete",
     verified: "Verified",
     email: "Email",
-    edit: "Edit profile",
-    moreActions: "More profile actions",
-    viewAsEmployee: "View as employee",
-    deactivate: "Deactivate profile",
   },
   overview: {
     about: "About",
@@ -46,7 +42,6 @@ const en: ProfileMessages = {
     engagementLength: "Engagement length",
     reportingLine: "Reporting line",
     directManager: "Direct manager",
-    orgChart: "Org chart",
   },
   status: {
     recordStatus: "Record status",
@@ -109,7 +104,6 @@ const en: ProfileMessages = {
   },
   documents: {
     title: "Documents",
-    add: "Add document",
     caption: "Documents attached to this contractor profile",
     document: "Document",
     category: "Category",
@@ -117,7 +111,6 @@ const en: ProfileMessages = {
     status: "Status",
     access: "Access",
     restricted: "Restricted",
-    download: "Download {name}",
     statuses: { signed: "Signed", current: "Current" },
   },
   values: {
@@ -180,10 +173,6 @@ const es: ProfileMessages = {
     completeSr: "Perfil completo al {percent}",
     verified: "Verificado",
     email: "Correo",
-    edit: "Editar perfil",
-    moreActions: "Más acciones del perfil",
-    viewAsEmployee: "Ver como empleado",
-    deactivate: "Desactivar perfil",
   },
   overview: {
     about: "Acerca de",
@@ -198,7 +187,6 @@ const es: ProfileMessages = {
     engagementLength: "Duración del contrato",
     reportingLine: "Dependencia jerárquica",
     directManager: "Responsable directo",
-    orgChart: "Organigrama",
   },
   status: {
     recordStatus: "Estado del registro",
@@ -261,7 +249,6 @@ const es: ProfileMessages = {
   },
   documents: {
     title: "Documentos",
-    add: "Añadir documento",
     caption: "Documentos adjuntos al perfil del contratista",
     document: "Documento",
     category: "Categoría",
@@ -269,7 +256,6 @@ const es: ProfileMessages = {
     status: "Estado",
     access: "Acceso",
     restricted: "Restringido",
-    download: "Descargar {name}",
     statuses: { signed: "Firmado", current: "Vigente" },
   },
   values: {
@@ -335,10 +321,6 @@ const de: ProfileMessages = {
     completeSr: "Profil zu {percent} vollständig",
     verified: "Verifiziert",
     email: "E-Mail",
-    edit: "Profil bearbeiten",
-    moreActions: "Weitere Profilaktionen",
-    viewAsEmployee: "Als Mitarbeiter ansehen",
-    deactivate: "Profil deaktivieren",
   },
   overview: {
     about: "Über",
@@ -353,7 +335,6 @@ const de: ProfileMessages = {
     engagementLength: "Vertragsdauer",
     reportingLine: "Berichtslinie",
     directManager: "Direkte Führungskraft",
-    orgChart: "Organigramm",
   },
   status: {
     recordStatus: "Datensatzstatus",
@@ -416,7 +397,6 @@ const de: ProfileMessages = {
   },
   documents: {
     title: "Dokumente",
-    add: "Dokument hinzufügen",
     caption: "Dem Auftragnehmerprofil beigefügte Dokumente",
     document: "Dokument",
     category: "Kategorie",
@@ -424,7 +404,6 @@ const de: ProfileMessages = {
     status: "Status",
     access: "Zugriff",
     restricted: "Eingeschränkt",
-    download: "{name} herunterladen",
     statuses: { signed: "Unterzeichnet", current: "Aktuell" },
   },
   values: {
@@ -487,10 +466,6 @@ const fr: ProfileMessages = {
     completeSr: "Profil complet à {percent}",
     verified: "Vérifié",
     email: "E-mail",
-    edit: "Modifier le profil",
-    moreActions: "Plus d’actions pour le profil",
-    viewAsEmployee: "Afficher comme employé",
-    deactivate: "Désactiver le profil",
   },
   overview: {
     about: "À propos",
@@ -505,7 +480,6 @@ const fr: ProfileMessages = {
     engagementLength: "Durée du contrat",
     reportingLine: "Ligne hiérarchique",
     directManager: "Responsable direct",
-    orgChart: "Organigramme",
   },
   status: {
     recordStatus: "Statut de la fiche",
@@ -568,7 +542,6 @@ const fr: ProfileMessages = {
   },
   documents: {
     title: "Documents",
-    add: "Ajouter un document",
     caption: "Documents joints au profil du prestataire",
     document: "Document",
     category: "Catégorie",
@@ -576,7 +549,6 @@ const fr: ProfileMessages = {
     status: "Statut",
     access: "Accès",
     restricted: "Restreint",
-    download: "Télécharger {name}",
     statuses: { signed: "Signé", current: "À jour" },
   },
   values: {

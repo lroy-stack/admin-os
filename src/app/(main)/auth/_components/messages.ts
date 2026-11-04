@@ -17,8 +17,6 @@ export interface AuthMessages {
   readonly actions: {
     readonly login: string;
     readonly register: string;
-    readonly google: string;
-    readonly orContinueWith: string;
   };
   /** Placeholders: `{min}`, the minimum password length. */
   readonly validation: {

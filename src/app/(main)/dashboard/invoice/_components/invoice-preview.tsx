@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Download, Printer } from "lucide-react";
+import { Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -34,13 +34,14 @@ export function InvoicePreview({ invoice }: { invoice: InvoiceFormValues }) {
         <div className="flex items-center justify-between px-4 py-4">
           <h2 className="text-lg font-medium">{text.title}</h2>
           <ButtonGroup>
-            <Button type="button" variant="outline" onClick={handlePrint}>
+            <Button
+              type="button"
+              variant="outline"
+              data-inert-reason="Opens the browser print dialog, which the dead-click sweep cannot observe."
+              onClick={handlePrint}
+            >
               <Printer data-icon="inline-start" />
               {text.print}
-            </Button>
-            <Button type="button" variant="outline">
-              <Download data-icon="inline-start" />
-              {text.download}
             </Button>
           </ButtonGroup>
         </div>

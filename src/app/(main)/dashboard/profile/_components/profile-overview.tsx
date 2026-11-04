@@ -1,7 +1,4 @@
-import { Users } from "lucide-react";
-
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getMessages } from "@/config/locale.server";
 
@@ -78,10 +75,6 @@ export async function ProfileOverview({ profile }: ProfileOverviewProps) {
             <h2 className="font-heading text-base leading-none font-medium">{text.reportingLine}</h2>
             <p className="text-muted-foreground text-sm">{text.directManager}</p>
           </div>
-          <Button size="sm" variant="outline">
-            <Users data-icon="inline-start" />
-            {text.orgChart}
-          </Button>
         </div>
         <div className="flex items-center gap-3 py-3">
           <Avatar size="lg">

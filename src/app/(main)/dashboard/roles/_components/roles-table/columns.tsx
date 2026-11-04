@@ -1,18 +1,8 @@
 "use client";
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreVertical } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { format, formatCalendarDate, formatNumber, type Locale } from "@/core/i18n/client";
+import { formatCalendarDate, formatNumber, type Locale } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import type { RolesMessages } from "../messages";
@@ -117,50 +107,6 @@ export function createRolesColumns(text: RolesMessages, locale: Locale): ColumnD
           {row.original.status === "active" ? text.filters.active : text.filters.needsReview}
         </Badge>
       ),
-    },
-    {
-      id: "actions",
-      header: "",
-      size: 70,
-      cell: ({ row }) => {
-        const isSystemRole = row.original.group === "system";
-        const needsReview = row.original.status === "needsReview";
-        const roleName = text.roleNames[row.original.id];
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={format(text.rowMenu.label, locale, { role: roleName })}
-              >
-                <MoreVertical />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuGroup>
-                {needsReview ? <DropdownMenuItem>{text.rowMenu.reviewChanges}</DropdownMenuItem> : null}
-                <DropdownMenuItem>{text.rowMenu.viewDetails}</DropdownMenuItem>
-                <DropdownMenuItem disabled={isSystemRole}>{text.rowMenu.editRole}</DropdownMenuItem>
-                <DropdownMenuItem disabled={isSystemRole}>{text.rowMenu.duplicateRole}</DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem>{text.rowMenu.reviewPermissions}</DropdownMenuItem>
-                <DropdownMenuItem>{text.rowMenu.manageMembers}</DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem disabled={isSystemRole} variant="destructive">
-                  {text.rowMenu.archiveRole}
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-      enableColumnFilter: false,
     },
   ];
 }

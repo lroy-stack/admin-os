@@ -7,13 +7,11 @@ export interface RolesMessages {
   readonly meta: PageMeta;
   readonly title: string;
   readonly subtitle: string;
-  readonly actions: { readonly importJson: string; readonly createRole: string };
   readonly tabs: { readonly roles: string; readonly permissionSets: string; readonly accessReviews: string };
   readonly review: {
     readonly title: string;
     /** Placeholders: `{count}`, the roles with unreviewed changes. */
     readonly description: Plural;
-    readonly action: string;
   };
   readonly search: { readonly label: string; readonly placeholder: string };
   readonly filters: {
@@ -37,17 +35,6 @@ export interface RolesMessages {
     readonly lastReview: string;
     readonly owner: string;
     readonly status: string;
-  };
-  readonly rowMenu: {
-    /** Placeholders: `{role}`. */
-    readonly label: string;
-    readonly reviewChanges: string;
-    readonly viewDetails: string;
-    readonly editRole: string;
-    readonly duplicateRole: string;
-    readonly reviewPermissions: string;
-    readonly manageMembers: string;
-    readonly archiveRole: string;
   };
   /** Name of the built-in owner of system roles; people keep their own names. */
   readonly systemOwner: string;
