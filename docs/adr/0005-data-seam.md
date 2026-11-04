@@ -174,7 +174,8 @@ Every list capability paginates.
   of its own Worker (`workers/demo-store`), one per `vertical:sessionId`, so every isolate and the MCP door see the
   same state. The mock kernel runs inside the object; the caller sends `dispatch(capabilityId, input, ctx)`. The
   object resets to the seed when its `schemaVersion` changes, refuses a caller whose catalogue differs from its own,
-  keeps at most 200 replay records and 50 approval records (settled ones go first; a pending one is never dropped, and a new hold at the cap answers `approvals.queue_full`), and deletes itself two hours after its last write.
+  keeps at most 200 replay records and 50 approval records (settled ones go first; a pending one is never dropped,
+  and a new hold at the cap answers `approvals.queue_full`), and deletes itself two hours after its last write.
   `clock.get` and `settings.values.get` do not depend on the session and are served in process; a visitor without a
   session never touches the object. The `demo_sid` cookie is `<uuid>.<HMAC-SHA-256>` signed with
   `DEMO_SESSION_SECRET` (the older unsigned `demo_session` is ignored), so an id this server did not issue never names an object; "Reset demo data" deletes the
@@ -277,16 +278,15 @@ Every list capability paginates.
 
 ## Update 2026-11-03: capability descriptor v2
 
-- **Descriptor.** `Capability` gains `riskTier` (required), `mayRequireApproval?` and `requiresIdempotencyKey?`, and
-  `approval(input, context)` now receives an `ApprovalContext` (`{ via: "ui" | "mcp" | "system" }`). Tiers: 0 non-personal
+- **Descriptor.** `Capability` gains `riskTier` (required), `requiresIdempotencyKey?` (and, until H1a, `mayRequireApproval?`), and
+  the call carries an `ApprovalContext` (`{ via: "ui" | "mcp" | "system" }`). Tiers: 0 non-personal
   read · 1 personal read or self-scoped write · 2 business write · 3 irreversible, money or legal.
 - **Client.** `createClient` takes `via` (default `"ui"`; the MCP wiring passes `"mcp"`) and forwards it to the adapter in
   `CallContext`. A call to a capability with `requiresIdempotencyKey` and no key is refused before dispatch with
   `client.idempotency_required` (class `invalid`). Call log lines carry `riskTier` and `via`.
 - **MCP.** Each tool's `_meta` carries `riskTier`.
-- **Invariants** (contract test over `CATALOG`, `src/config/contracts.test.ts`): a read has tier 0 or 1 and no approval
-  rule · tier 3 implies destructive · destructive implies tier 2 or 3 · `approval` is defined exactly when
-  `mayRequireApproval` is true · `requiresIdempotencyKey` implies not a read.
+- **Invariants** (contract test over `CATALOG`, `src/config/contracts.test.ts`): a read has tier 0 or 1 · tier 3
+  implies destructive · destructive implies tier 2 or 3 · `requiresIdempotencyKey` implies not a read.
 - **Amended 2026-11-04 (spec 004 U1, U2).** Every write declares `change` (`add`, `set`, `overwrite` or `remove`) and
   `idempotency` (`key` or `target-state`), and a read declares neither. `key` goes exactly with
   `requiresIdempotencyKey`, and an `add` is `key` (ADR 0016, D6). Set-state writes no longer require a key; the UI
@@ -322,5 +322,5 @@ Every list capability paginates.
   - An approval is revalidated when it is approved, and answers `conflict` if the state moved.
   - Approvals are audited: who asked, and who decided.
   - `AwaitingApproval` is unchanged, and a person resolves it in the web app.
-  - How descriptor v2's `approval` and `mayRequireApproval` feed the policy, or give way to it, is decided by plan H1a,
-    and the descriptor invariant changes with it.
+  - Descriptor v2's `approval` and `mayRequireApproval` gave way to the policy in H1a: both are deleted, with the
+    `read-approval` and `approval-flag` rules.

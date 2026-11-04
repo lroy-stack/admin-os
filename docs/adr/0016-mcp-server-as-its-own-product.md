@@ -345,27 +345,41 @@ same through both doors. Section "Shape" turns them into module boundaries and c
     back: `effect: "destructive"` (`bookings.cancel`, `bookings.no_show.mark`), `change: "overwrite"` or `"remove"`
     (`customers.block`) or `riskTier: 3`. There is no hand list: the descriptor already expresses all three named
     writes. A sensitive write the descriptor cannot express would need a new descriptor fact, not a list.
-  - *Hook.* The kernel evaluates the policy (`holdsForApproval`, `src/core/approvals/policy.ts`). The per-capability
-    `approval` hook stays as an extra rule a capability may add; no catalogue capability uses it, so
-    `mayRequireApproval` is still its own flag and the `read-approval` and `approval-flag` rules are unchanged.
-  - *Record.* `ApprovalRecord` (`src/core/mock/session-store.ts`) adds a key-order independent input fingerprint, an
-    `expected` fingerprint and the decision fields. Times are real ISO instants: the demo's business clock is fixed,
-    so a 24 hour deadline on it would never arrive. Expiry is evaluated on read and on decide, never on a timer.
+  - *Hook.* The kernel evaluates the policy (`holdsForApproval`, `src/core/approvals/policy.ts`) and nothing else.
+    The per-capability `approval` hook, `mayRequireApproval` and their descriptor rules (`read-approval`,
+    `approval-flag`) are deleted: nothing used them, and the hook could hold a web write because it skipped the `via`
+    and policy guards. A registry without the setting falls back to the default policy, never to `none`; a test
+    kernel that must never hold passes `none` explicitly.
+  - *Held by default through MCP.* Requirement change: these seven tools now answer `awaiting_approval` for an
+    assistant, and a test pins the list: `bookings_cancel`, `bookings_no_show_mark`, `bookings_reschedule`,
+    `bookings_table_assign`, `customers_block`, `customers_contact_update`, `customers_unblock`. Before H1a they ran at
+    once. Under `all`, every other exposed write waits too.
+  - *Record.* `ApprovalRecord` (`src/core/approvals/record.ts`) adds a key-order independent input fingerprint, an
+    `expected` fingerprint, `requestedBy` with the requester's `displayName` (an approved note is signed with the
+    name they were shown) and an optional `clientId` for A1, and the decision fields. Times are real ISO instants:
+    the demo's business clock is fixed, so a 24 hour deadline on it would never arrive. Expiry is evaluated on read
+    and on decide, never on a timer; an expired record reads `decidedAt` = its deadline.
   - *Dedupe.* A pending hold with the same `(capabilityId, actorId, input fingerprint)` answers its `approvalId`.
-    A write that cannot run now is refused at once and not queued.
-  - *Revalidation.* On hold the kernel runs the handler on a copy of the session and keeps a fingerprint of the
-    answer. On approve it runs it on a copy again: a different answer is `conflict` (`approvals.conflict`), recorded.
-    For an `add` only whether it can run is compared, because it mints a new id on every run. Then the write runs as
-    the requester with the permissions their role holds today; a role that lost the permission gets
-    `approvals.requester_forbidden`, recorded as `conflict`. A change that touches the business clock (live clock)
-    can read as a conflict; the fixed demo clock cannot.
-  - *Capabilities (all UI-only in the manifest).* `approvals.list` (`read:approvals`, pending first, paginated, with the
-    input), `approvals.approve` and `approvals.reject` (`decide:approvals`, destructive so staff never hold it;
-    owner and manager do), `approvals.policy.set` (`manage:approvals`, elevated, owner).
+    A write that cannot run now is refused at once and not queued; capacity is checked before the rehearsal.
+  - *Revalidation.* On hold the kernel runs the handler on a copy of the session and keeps the changes it makes
+    (state before against after, `src/core/mock/changes.ts`). On approve it rehearses again: other changes, or an
+    error, are `conflict` (`approvals.conflict`), recorded. An unrelated edit, such as a staff note on the same
+    booking, does not matter; a cancel that already happened, or a moved table, does. For an `add` only whether it
+    can run is compared, because it mints a new id on every run. Then the write runs as the requester with the
+    permissions their role holds today; a role that lost the permission gets `approvals.requester_forbidden`,
+    recorded as `conflict`. The decider must also hold the write's own permission. A record is claimed before the
+    first await, so a second approval or a rejection at the same moment answers `approvals.not_pending`, and a
+    record that left `pending` is never rewritten. A live business clock can read as a conflict; the fixed clock
+    cannot.
+  - *Capabilities (all UI-only in the manifest).* `approvals.list` (`review:approvals`, a `restricted` read that
+    owner and manager hold and staff do not, pending first, paginated, with the input), `approvals.approve` and
+    `approvals.reject` (`decide:approvals`, destructive so staff never hold it), `approvals.policy.set`
+    (`manage:approvals`, elevated, owner).
   - *Bounds.* 50 records per session. A new hold first drops settled records, oldest first, and at the cap with all
     pending answers `approvals.queue_full`; `boundSession` in the store never drops a pending record.
   - *Notification.* The feed derives one `approval.requested` item per pending record for actors that hold
-    `decide:approvals`; it disappears when the request is decided or expires.
+    `decide:approvals`, dated by the request and worded per action. It cannot be marked read (`notifications.read` and
+    `read_all` skip it), so an agent cannot silence it; it disappears when the request is decided or expires.
 - **Sources.** S11, S12, S20.
 
 ### D8 — Protocol 2026-07-28, stateless, hardened
