@@ -192,6 +192,19 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
       expect(Object.keys(row ?? {}).sort()).toEqual(["blocked", "email", "id", "name", "phone", "vip"]);
     });
 
+    it.each([
+      ["without accents", "jose nunez"],
+      ["with accents in another case", "JOSÉ NÚÑEZ"],
+    ])("finds an accented name typed %s", async (_label, text) => {
+      const client = session(vertical);
+      const made = customerOf(await client.call("customers.create", { name: "José Núñez" }, key()));
+      expect(rowsOf(await client.call("customers.search", { text })).map((row) => row.id)).toEqual([made.id]);
+    });
+
+    it("does not compare words with phones: bravo 34 finds nobody, not every +34 customer", async () => {
+      expect(rowsOf(await session(vertical).call("customers.search", { text: "bravo 34" }))).toEqual([]);
+    });
+
     it("finds nothing for text that matches no customer", async () => {
       expect(rowsOf(await session(vertical).call("customers.search", { text: "no such person" }))).toEqual([]);
     });

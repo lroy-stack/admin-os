@@ -1,6 +1,7 @@
 import { type MockContext, mockHandler } from "@/core/mock";
 import { paginate } from "@/core/pagination";
 import { err, ok } from "@/core/result";
+import { foldText } from "@/core/text";
 
 import {
   customersBlock,
@@ -22,6 +23,9 @@ interface CustomersData {
 }
 
 type Context = MockContext<CustomersData>;
+
+/** Text made only of what people type in a phone number. */
+const PHONE_SHAPED = /^[\d+\s().-]+$/;
 
 const notFound = (id: string) => err("customers.not_found", `No customer with id ${id}`, { id });
 
@@ -65,14 +69,18 @@ export const customersMockHandlers = {
   ...mockHandler(customersList, (input, { data }: Context) => paginate(data.customers, input)),
 
   ...mockHandler(customersSearch, ({ text, ...page }, { data }: Context) => {
-    const needle = text.toLowerCase();
-    const digits = normalisePhone(text);
+    const needle = foldText(text);
+    // Only text that looks like a phone number is compared with phones, so "bravo 34" does not match every +34.
+    const phoneNeedle =
+      PHONE_SHAPED.test(text) && text.replace(/\D/g, "").length >= 3 ? normalisePhone(text) : undefined;
     const found = data.customers
       .filter(
         (customer) =>
-          customer.name.toLowerCase().includes(needle) ||
-          customer.email?.toLowerCase().includes(needle) === true ||
-          (digits.length >= 2 && customer.phone !== undefined && normalisePhone(customer.phone).includes(digits)),
+          foldText(customer.name).includes(needle) ||
+          (customer.email !== undefined && foldText(customer.email).includes(needle)) ||
+          (phoneNeedle !== undefined &&
+            customer.phone !== undefined &&
+            normalisePhone(customer.phone).includes(phoneNeedle)),
       )
       .map(({ id, name, email, phone, vip, blocked }) => ({
         id,
