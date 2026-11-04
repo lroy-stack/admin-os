@@ -21,7 +21,7 @@ export type WalkInOptions<L extends Located> =
   | { readonly kind: "too_big"; readonly largest: number };
 
 /** The smallest table that seats the party first, so a big table is not spent on two; then by label as people count. */
-const byFit = (a: Located, b: Located) =>
+export const byFit = (a: Located, b: Located) =>
   a.table.capacity - b.table.capacity || a.table.label.localeCompare(b.table.label, undefined, { numeric: true });
 
 /**

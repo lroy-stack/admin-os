@@ -22,7 +22,7 @@ import { formatDuration } from "./floor/table-state";
 import { type BookingsMessages, bookingsMessageKey } from "./messages";
 import { formatClock } from "./reservation-status";
 import type { Reservation, ServiceDay } from "./view-model";
-import { seatedBookingId, toSeatInput, type WalkInFormValues, walkInFormSchema } from "./walk-in-form";
+import { recordId, toSeatInput, type WalkInFormValues, walkInFormSchema } from "./walk-in-form";
 import { MAX_WALK_IN_COVERS, selectedTableId, type WalkInOptions, walkInOptions } from "./walk-in-options";
 
 /** What opened the window: a count, a table to preset when it came from a free table's callout, and the opening. */
@@ -121,7 +121,7 @@ function WalkInWindow({
       return seat.run(toSeatInput(values, tableId));
     },
     onDone: (value) => {
-      const id = seatedBookingId(value);
+      const id = recordId(value);
       const label = locations.find(({ table }) => table.id === tableId)?.table.label ?? "";
       onOpenChange(false);
       if (id !== null) onSeated(id, label);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { seatedBookingId, toSeatInput, walkInFormSchema } from "./walk-in-form";
+import { recordId, toSeatInput, walkInFormSchema } from "./walk-in-form";
 
 const schema = walkInFormSchema({ coversInvalid: "Enter 1 to 20 covers.", nameTooLong: "Too long." });
 
@@ -32,12 +32,12 @@ describe("toSeatInput", () => {
   });
 });
 
-describe("seatedBookingId", () => {
-  it("reads the id of the booking that was seated", () => {
-    expect(seatedBookingId({ id: "bk-1", status: "in_progress" })).toBe("bk-1");
+describe("recordId", () => {
+  it("reads the id of the record that was written", () => {
+    expect(recordId({ id: "bk-1", status: "in_progress" })).toBe("bk-1");
   });
 
-  it("reads nothing from an answer that is not a booking", () => {
-    expect(seatedBookingId("ok")).toBeNull();
+  it("reads nothing from an answer that is not a record", () => {
+    expect(recordId("ok")).toBeNull();
   });
 });

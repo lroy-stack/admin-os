@@ -4,7 +4,7 @@
  * refuses the call (ADR 0005).
  */
 export interface BookingAbilities {
-  /** `create:bookings`: seat a walk-in. */
+  /** `create:bookings`: seat a walk-in or take a reservation. */
   readonly seat: boolean;
   /** `update:bookings`: confirm, seat, complete and take a step back. */
   readonly advance: boolean;

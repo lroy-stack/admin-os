@@ -31,8 +31,8 @@ export function toSeatInput(values: WalkInFormValues, tableId: string) {
   };
 }
 
-/** The id of the booking a seated walk-in returns, or null if the answer is not a booking. */
-export function seatedBookingId(value: unknown): string | null {
+/** The id of the record a write returns (a seated booking, a created customer), or null if the answer has none. */
+export function recordId(value: unknown): string | null {
   const parsed = z.object({ id: z.string().min(1) }).safeParse(value);
   return parsed.success ? parsed.data.id : null;
 }

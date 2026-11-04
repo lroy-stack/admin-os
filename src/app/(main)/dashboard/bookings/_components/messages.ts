@@ -244,6 +244,50 @@ export interface BookingsMessages {
     readonly noTables: string;
     readonly close: string;
   };
+  readonly newReservation: {
+    readonly title: string;
+    readonly description: string;
+    readonly verb: string;
+    readonly guest: {
+      readonly label: string;
+      readonly existing: string;
+      readonly newContact: string;
+      readonly searchLabel: string;
+      readonly searchPlaceholder: string;
+      readonly searching: string;
+      /** Placeholders: `{query}`. */
+      readonly noMatch: string;
+      readonly searchFailed: string;
+      readonly change: string;
+      readonly required: string;
+    };
+    readonly date: { readonly label: string; readonly invalid: string };
+    readonly covers: { readonly label: string; readonly invalid: string };
+    readonly slot: {
+      readonly label: string;
+      readonly loading: string;
+      /** Placeholders: `{party}`. */
+      readonly none: string;
+      readonly failed: string;
+      readonly retry: string;
+      readonly required: string;
+    };
+    readonly table: {
+      readonly label: string;
+      readonly automatic: string;
+      readonly automaticHint: string;
+      readonly needSlot: string;
+      readonly noneFree: string;
+      readonly listLabel: string;
+    };
+    readonly channel: { readonly label: string };
+    readonly note: { readonly label: string; readonly tooLong: string };
+    readonly tags: { readonly label: string; readonly hint: string; readonly invalid: string };
+    /** Placeholders: `{guest}`, `{party}`, `{time}`. */
+    readonly created: string;
+    /** Placeholders: `{day}`. */
+    readonly showDay: string;
+  };
   readonly floor: {
     readonly level: string;
     readonly cameraAngle: string;

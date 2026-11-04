@@ -13,7 +13,11 @@ const REVIEWED_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   "src/app/(main)/dashboard/bookings/actions.ts": [
     "advanceStatus",
     "cancelBooking",
+    "createGuest",
+    "createReservation",
+    "findAvailability",
     "markNoShow",
+    "searchGuests",
     "seatWalkIn",
     "undoStatus",
     "undoWalkIn",

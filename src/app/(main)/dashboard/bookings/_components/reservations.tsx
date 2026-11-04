@@ -45,7 +45,7 @@ import {
 } from "@/ds/components";
 import { ReadState } from "@/ds/feedback";
 import type { CapabilityActionOptions } from "@/ds/forms";
-import { ResponsivePanel, useViewport } from "@/ds/overlays";
+import { DockedPanelLayout, ResponsivePanel, useViewport } from "@/ds/overlays";
 
 import type { BookingAbilities } from "./abilities";
 import { BookingWritesProvider, useStatusWrites } from "./booking-writes";
@@ -60,6 +60,7 @@ import { useFloorPlan } from "./floor/use-floor-plan";
 import { mockVenue } from "./floor/venue";
 import { FullViewFrame } from "./full-view-frame";
 import { bookingsMessageKey } from "./messages";
+import { NewReservationPanel, type ReservationRequest } from "./new-reservation-panel";
 import { planRail } from "./rail/rail-plan";
 import { RailStrip } from "./rail/rail-strip";
 import { TimeRail } from "./rail/time-rail";
@@ -214,6 +215,7 @@ function ServiceScreen({
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>(SHEET_PEEK);
   const [walkIn, setWalkIn] = useState<WalkInRequest | null>(null);
+  const [reservation, setReservation] = useState<ReservationRequest | null>(null);
 
   // Folding the rail is a per-browser preference.
   useEffect(() => {
@@ -353,6 +355,16 @@ function ServiceScreen({
     // On a phone the callout is a sheet of its own; the window replaces it rather than stacking on top of it.
     if (tableId !== null && isMobile) selectTable(null);
     setWalkIn((current) => ({ covers, tableId, opening: (current?.opening ?? 0) + 1, open: true }));
+  }
+
+  /** The New reservation panel, starting from the day on screen. */
+  function openNewReservation() {
+    setReservation((current) => ({
+      date: service.businessDay,
+      covers: 2,
+      opening: (current?.opening ?? 0) + 1,
+      open: true,
+    }));
   }
 
   function toggleAlert(alert: Alert) {
@@ -539,275 +551,306 @@ function ServiceScreen({
 
   return (
     <BookingWritesProvider value={{ can, errors, busy: writes.busy }}>
-      <div className="flex flex-col gap-6">
-        <PageHeader
-          title={text.title}
-          kpis={
-            !shown
-              ? []
-              : [
-                  {
-                    icon: UsersRound,
-                    value: `${formatNumber(seatedGuests, locale)}/${formatNumber(totalSeats(venue), locale)}`,
-                    label: text.kpis.seated,
-                  },
-                  {
-                    icon: Clock,
-                    value: nextArrival ? formatClock(nextArrival.startMin, locale) : "—",
-                    label: nextArrival
-                      ? format(text.kpis.nextArrival, locale, {
-                          guest: guestName(nextArrival, text),
-                          party: format(text.partyShort, locale, { count: nextArrival.partySize }),
-                        })
-                      : text.kpis.noMoreArrivals,
-                  },
-                  { icon: Armchair, value: formatNumber(freeTables, locale), label: text.kpis.tablesFree },
-                ]
-          }
-        />
+      <DockedPanelLayout>
+        <div className="flex flex-col gap-6">
+          <PageHeader
+            title={text.title}
+            kpis={
+              !shown
+                ? []
+                : [
+                    {
+                      icon: UsersRound,
+                      value: `${formatNumber(seatedGuests, locale)}/${formatNumber(totalSeats(venue), locale)}`,
+                      label: text.kpis.seated,
+                    },
+                    {
+                      icon: Clock,
+                      value: nextArrival ? formatClock(nextArrival.startMin, locale) : "—",
+                      label: nextArrival
+                        ? format(text.kpis.nextArrival, locale, {
+                            guest: guestName(nextArrival, text),
+                            party: format(text.partyShort, locale, { count: nextArrival.partySize }),
+                          })
+                        : text.kpis.noMoreArrivals,
+                    },
+                    { icon: Armchair, value: formatNumber(freeTables, locale), label: text.kpis.tablesFree },
+                  ]
+            }
+          />
 
-        <FullViewFrame active={fullView} onExit={() => setFullView(false)} label={text.actions.fullViewRegion}>
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <PeriodStepper
-                label={text.stepper.label}
-                previousLabel={text.stepper.previousDay}
-                todayLabel={text.stepper.today}
-                nextLabel={text.stepper.nextDay}
-                onPrevious={() => goToDay(shiftDay(service.businessDay, -1))}
-                onToday={() => goToDay(null)}
-                onNext={() => goToDay(shiftDay(service.businessDay, 1))}
-              />
-              <h2 className={cn("ml-2 text-xl font-medium tracking-tight", compact && "text-lg")} aria-live="polite">
-                {formatCalendarDate(service.businessDay, locale, { weekday: "short", day: "numeric", month: "short" })}
-                {service.isToday && (
-                  <span className="text-muted-foreground ml-2 text-sm font-normal tabular-nums">
-                    {`· ${formatClock(service.nowMin, locale)}`}
-                  </span>
+          <FullViewFrame active={fullView} onExit={() => setFullView(false)} label={text.actions.fullViewRegion}>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <PeriodStepper
+                  label={text.stepper.label}
+                  previousLabel={text.stepper.previousDay}
+                  todayLabel={text.stepper.today}
+                  nextLabel={text.stepper.nextDay}
+                  onPrevious={() => goToDay(shiftDay(service.businessDay, -1))}
+                  onToday={() => goToDay(null)}
+                  onNext={() => goToDay(shiftDay(service.businessDay, 1))}
+                />
+                <h2 className={cn("ml-2 text-xl font-medium tracking-tight", compact && "text-lg")} aria-live="polite">
+                  {formatCalendarDate(service.businessDay, locale, {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })}
+                  {service.isToday && (
+                    <span className="text-muted-foreground ml-2 text-sm font-normal tabular-nums">
+                      {`· ${formatClock(service.nowMin, locale)}`}
+                    </span>
+                  )}
+                </h2>
+                {/* Phones keep the toggle in one place in both modes, so focus stays on it when full view opens. */}
+                {isMobile && <div className="ml-auto">{fullViewToggle}</div>}
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+                  <SegmentedControl
+                    label={text.views.label}
+                    value={view}
+                    options={viewOptions}
+                    onValueChange={setView}
+                  />
+                  {can.seat && service.isToday ? (
+                    <Button
+                      variant="ghost"
+                      className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4"
+                      onClick={() => openWalkIn(2, null)}
+                    >
+                      <UserPlus data-icon="inline-start" />
+                      {text.actions.walkIn}
+                    </Button>
+                  ) : null}
+                  {can.seat && compact ? (
+                    <Button
+                      size="icon"
+                      aria-label={text.actions.newReservation}
+                      className="liquid-glass-brand size-9 rounded-full"
+                      onClick={openNewReservation}
+                    >
+                      <Plus />
+                    </Button>
+                  ) : null}
+                  {can.seat && !compact ? (
+                    <Button className="liquid-glass-brand h-9 rounded-full px-4" onClick={openNewReservation}>
+                      <Plus data-icon="inline-start" />
+                      {text.actions.newReservation}
+                    </Button>
+                  ) : null}
+                  {compact && toolsMenu}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Compact keeps a running search visible so an active filter never hides. */}
+                {(!compact || query) && (
+                  <SearchCapsule
+                    label={text.search.label}
+                    placeholder={text.search.placeholder}
+                    className="sm:w-72"
+                    value={query}
+                    onValueChange={setQuery}
+                  />
                 )}
-              </h2>
-              {/* Phones keep the toggle in one place in both modes, so focus stays on it when full view opens. */}
-              {isMobile && <div className="ml-auto">{fullViewToggle}</div>}
-              <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-                <SegmentedControl label={text.views.label} value={view} options={viewOptions} onValueChange={setView} />
-                {can.seat && service.isToday ? (
-                  <Button
-                    variant="ghost"
-                    className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4"
-                    onClick={() => openWalkIn(2, null)}
-                  >
-                    <UserPlus data-icon="inline-start" />
-                    {text.actions.walkIn}
-                  </Button>
-                ) : null}
-                {compact ? (
-                  <Button
-                    size="icon"
-                    aria-label={text.actions.newReservation}
-                    className="liquid-glass-brand size-9 rounded-full"
-                  >
-                    <Plus />
-                  </Button>
-                ) : (
-                  <Button className="liquid-glass-brand h-9 rounded-full px-4">
-                    <Plus data-icon="inline-start" />
-                    {text.actions.newReservation}
-                  </Button>
+                {alertChips}
+                {!compact && (
+                  <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+                    {view === "floor" && !fullView && (
+                      <Button
+                        variant="ghost"
+                        className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4 md:hidden"
+                        onClick={() => setRailOpen(true)}
+                      >
+                        <ListOrdered data-icon="inline-start" />
+                        {text.actions.arrivals}
+                      </Button>
+                    )}
+                    {toolsMenu}
+                    {!isMobile && fullViewToggle}
+                  </div>
                 )}
-                {compact && toolsMenu}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Compact keeps a running search visible so an active filter never hides. */}
-              {(!compact || query) && (
-                <SearchCapsule
-                  label={text.search.label}
-                  placeholder={text.search.placeholder}
-                  className="sm:w-72"
-                  value={query}
-                  onValueChange={setQuery}
-                />
+            <div
+              aria-busy={changingDay}
+              className={cn(
+                "transition-opacity",
+                changingDay && "opacity-60",
+                fullView && "min-h-0 flex-1",
+                fullView && view !== "floor" && "overflow-y-auto",
               )}
-              {alertChips}
-              {!compact && (
-                <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-                  {view === "floor" && !fullView && (
+            >
+              <ReadState
+                state={state}
+                reason={reason}
+                onRetry={() => router.refresh()}
+                emptyTitle={text.empty.title}
+                emptyDescription={text.empty.description}
+                emptyAction={
+                  service.isToday ? undefined : (
                     <Button
                       variant="ghost"
-                      className="liquid-glass hover:bg-foreground/10 h-9 rounded-full px-4 md:hidden"
-                      onClick={() => setRailOpen(true)}
+                      className="liquid-glass h-9 rounded-full px-4"
+                      onClick={() => goToDay(null)}
                     >
-                      <ListOrdered data-icon="inline-start" />
-                      {text.actions.arrivals}
+                      {text.empty.backToToday}
                     </Button>
-                  )}
-                  {toolsMenu}
-                  {!isMobile && fullViewToggle}
-                </div>
-              )}
+                  )
+                }
+              >
+                {view === "floor" && (
+                  <ServiceFloor
+                    fullView={fullView}
+                    railCollapsed={railCollapsed}
+                    onRailCollapsedChange={changeRailCollapsed}
+                    rail={rail}
+                    railStrip={<RailStrip plan={railPlan} onExpand={() => changeRailCollapsed(false)} />}
+                    railTitle={text.rail.title}
+                    railSummary={railSummary}
+                    isMobile={isMobile}
+                    sheetSnap={sheetSnap}
+                    onSheetSnapChange={setSheetSnap}
+                    aside={editing && !isMobile ? editorPanel : undefined}
+                    room={
+                      <FloorView
+                        plan={venue}
+                        levelId={level?.id ?? ""}
+                        onLevelChange={(next) => {
+                          setLevelId(next);
+                          // The callout and focus belong to a table on the level being left.
+                          setSelectedTableId(null);
+                          setEditSelection(null);
+                        }}
+                        readings={readings}
+                        describe={(tableId) => {
+                          const reading = readings.get(tableId);
+                          return reading ? describeReading(reading, text, locale, service.nowMin) : "";
+                        }}
+                        mode={editing ? "edit" : "service"}
+                        selectedTableId={editing ? editTableId : selectedTableId}
+                        selectedLandmarkId={editSelection?.kind === "landmark" ? editSelection.id : null}
+                        candidateTableIds={candidateTableIds}
+                        onTableSelect={(tableId) => {
+                          if (!editing) {
+                            selectTable(tableId);
+                            return;
+                          }
+                          if (tableId) setEditSelection({ kind: "table", id: tableId });
+                          else setEditSelection((current) => (current?.kind === "table" ? null : current));
+                        }}
+                        onLandmarkSelect={(landmarkId) => {
+                          if (landmarkId) setEditSelection({ kind: "landmark", id: landmarkId });
+                          else setEditSelection((current) => (current?.kind === "landmark" ? null : current));
+                        }}
+                        onMove={moveElement}
+                        callout={isMobile ? null : callout}
+                        banner={editing ? editorToolbar : assigningBanner}
+                        className="size-full"
+                      />
+                    }
+                  />
+                )}
+                {view === "agenda" && (
+                  <ReservationsAgenda
+                    reservations={filtered}
+                    tables={locations}
+                    service={service}
+                    onOpen={setDetailsId}
+                  />
+                )}
+                {view === "list" && (
+                  <ReservationsList
+                    reservations={filtered}
+                    service={service}
+                    onOpen={setDetailsId}
+                    onAdvance={advance}
+                  />
+                )}
+              </ReadState>
             </div>
-          </div>
+          </FullViewFrame>
 
-          <div
-            aria-busy={changingDay}
-            className={cn(
-              "transition-opacity",
-              changingDay && "opacity-60",
-              fullView && "min-h-0 flex-1",
-              fullView && view !== "floor" && "overflow-y-auto",
-            )}
-          >
-            <ReadState
-              state={state}
-              reason={reason}
-              onRetry={() => router.refresh()}
-              emptyTitle={text.empty.title}
-              emptyDescription={text.empty.description}
-              emptyAction={
-                service.isToday ? undefined : (
-                  <Button variant="ghost" className="liquid-glass h-9 rounded-full px-4" onClick={() => goToDay(null)}>
-                    {text.empty.backToToday}
-                  </Button>
-                )
-              }
+          {isMobile && !fullView && (
+            <ResponsivePanel
+              open={railOpen}
+              onOpenChange={setRailOpen}
+              title={text.rail.title}
+              description={railSummary}
+              className="h-[80dvh]"
+              headerClassName="pb-0"
             >
-              {view === "floor" && (
-                <ServiceFloor
-                  fullView={fullView}
-                  railCollapsed={railCollapsed}
-                  onRailCollapsedChange={changeRailCollapsed}
-                  rail={rail}
-                  railStrip={<RailStrip plan={railPlan} onExpand={() => changeRailCollapsed(false)} />}
-                  railTitle={text.rail.title}
-                  railSummary={railSummary}
-                  isMobile={isMobile}
-                  sheetSnap={sheetSnap}
-                  onSheetSnapChange={setSheetSnap}
-                  aside={editing && !isMobile ? editorPanel : undefined}
-                  room={
-                    <FloorView
-                      plan={venue}
-                      levelId={level?.id ?? ""}
-                      onLevelChange={(next) => {
-                        setLevelId(next);
-                        // The callout and focus belong to a table on the level being left.
-                        setSelectedTableId(null);
-                        setEditSelection(null);
-                      }}
-                      readings={readings}
-                      describe={(tableId) => {
-                        const reading = readings.get(tableId);
-                        return reading ? describeReading(reading, text, locale, service.nowMin) : "";
-                      }}
-                      mode={editing ? "edit" : "service"}
-                      selectedTableId={editing ? editTableId : selectedTableId}
-                      selectedLandmarkId={editSelection?.kind === "landmark" ? editSelection.id : null}
-                      candidateTableIds={candidateTableIds}
-                      onTableSelect={(tableId) => {
-                        if (!editing) {
-                          selectTable(tableId);
-                          return;
-                        }
-                        if (tableId) setEditSelection({ kind: "table", id: tableId });
-                        else setEditSelection((current) => (current?.kind === "table" ? null : current));
-                      }}
-                      onLandmarkSelect={(landmarkId) => {
-                        if (landmarkId) setEditSelection({ kind: "landmark", id: landmarkId });
-                        else setEditSelection((current) => (current?.kind === "landmark" ? null : current));
-                      }}
-                      onMove={moveElement}
-                      callout={isMobile ? null : callout}
-                      banner={editing ? editorToolbar : assigningBanner}
-                      className="size-full"
-                    />
-                  }
-                />
-              )}
-              {view === "agenda" && (
-                <ReservationsAgenda
-                  reservations={filtered}
-                  tables={locations}
-                  service={service}
-                  onOpen={setDetailsId}
-                />
-              )}
-              {view === "list" && (
-                <ReservationsList reservations={filtered} service={service} onOpen={setDetailsId} onAdvance={advance} />
-              )}
-            </ReadState>
-          </div>
-        </FullViewFrame>
+              {rail}
+            </ResponsivePanel>
+          )}
 
-        {isMobile && !fullView && (
-          <ResponsivePanel
-            open={railOpen}
-            onOpenChange={setRailOpen}
-            title={text.rail.title}
-            description={railSummary}
-            className="h-[80dvh]"
-            headerClassName="pb-0"
-          >
-            {rail}
-          </ResponsivePanel>
-        )}
+          {isMobile && (
+            <Drawer
+              open={view === "floor" && callout !== null}
+              onOpenChange={(open) => {
+                if (!open) selectTable(null);
+              }}
+            >
+              <DrawerContent>
+                <DrawerHeader className="sr-only">
+                  <DrawerTitle>
+                    {format(text.sheets.tableTitle, locale, { label: selectedLocation?.table.label ?? "" })}
+                  </DrawerTitle>
+                  <DrawerDescription>{text.sheets.tableDescription}</DrawerDescription>
+                </DrawerHeader>
+                <div className="p-4 pb-8">{callout}</div>
+              </DrawerContent>
+            </Drawer>
+          )}
 
-        {isMobile && (
-          <Drawer
-            open={view === "floor" && callout !== null}
+          {isMobile && editing && (
+            <Drawer
+              open={editSelection !== null || editPanelOpen}
+              onOpenChange={(open) => {
+                if (open) return;
+                setEditSelection(null);
+                setEditPanelOpen(false);
+              }}
+            >
+              <DrawerContent>
+                <DrawerHeader className="sr-only">
+                  <DrawerTitle>{text.sheets.editTitle}</DrawerTitle>
+                  <DrawerDescription>{text.sheets.editDescription}</DrawerDescription>
+                </DrawerHeader>
+                {editorPanel}
+              </DrawerContent>
+            </Drawer>
+          )}
+
+          <WalkInDialog
+            request={walkIn}
+            onOpenChange={(open) => setWalkIn((current) => (current === null ? null : { ...current, open }))}
+            locations={locations}
+            reservations={dayReservations}
+            service={service}
+            errors={errors}
+          />
+
+          <NewReservationPanel
+            request={reservation}
+            onOpenChange={(open) => setReservation((current) => (current === null ? null : { ...current, open }))}
+            locations={locations}
+            service={service}
+            errors={errors}
+            onShowDay={goToDay}
+          />
+
+          <ReservationDrawer
+            reservation={details}
+            service={service}
             onOpenChange={(open) => {
-              if (!open) selectTable(null);
+              if (!open) setDetailsId(null);
             }}
-          >
-            <DrawerContent>
-              <DrawerHeader className="sr-only">
-                <DrawerTitle>
-                  {format(text.sheets.tableTitle, locale, { label: selectedLocation?.table.label ?? "" })}
-                </DrawerTitle>
-                <DrawerDescription>{text.sheets.tableDescription}</DrawerDescription>
-              </DrawerHeader>
-              <div className="p-4 pb-8">{callout}</div>
-            </DrawerContent>
-          </Drawer>
-        )}
-
-        {isMobile && editing && (
-          <Drawer
-            open={editSelection !== null || editPanelOpen}
-            onOpenChange={(open) => {
-              if (open) return;
-              setEditSelection(null);
-              setEditPanelOpen(false);
-            }}
-          >
-            <DrawerContent>
-              <DrawerHeader className="sr-only">
-                <DrawerTitle>{text.sheets.editTitle}</DrawerTitle>
-                <DrawerDescription>{text.sheets.editDescription}</DrawerDescription>
-              </DrawerHeader>
-              {editorPanel}
-            </DrawerContent>
-          </Drawer>
-        )}
-
-        <WalkInDialog
-          request={walkIn}
-          onOpenChange={(open) => setWalkIn((current) => (current === null ? null : { ...current, open }))}
-          locations={locations}
-          reservations={dayReservations}
-          service={service}
-          errors={errors}
-        />
-
-        <ReservationDrawer
-          reservation={details}
-          service={service}
-          onOpenChange={(open) => {
-            if (!open) setDetailsId(null);
-          }}
-          onAdvance={advance}
-        />
-      </div>
+            onAdvance={advance}
+          />
+        </div>
+      </DockedPanelLayout>
     </BookingWritesProvider>
   );
 }
