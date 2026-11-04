@@ -71,10 +71,11 @@ beforeEach(() => {
 });
 
 describe("loadBookings", () => {
-  it("costs a visitor with a session exactly three store requests, none of them per guest", async () => {
+  it("costs a visitor with a session exactly four store requests, none of them per guest", async () => {
     await loadBookings(undefined);
 
-    expect(world.storeCalls).toEqual(["bookings.list", "resources.list", "customers.list"]);
+    // The settings are the session's own (a visitor may change them), so they are read from its object too.
+    expect(world.storeCalls).toEqual(["settings.values.get", "bookings.list", "resources.list", "customers.list"]);
   });
 
   it("names each booking's guest from the directory", async () => {

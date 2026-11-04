@@ -121,6 +121,27 @@ is one, serialised into the boot script (`src/scripts/theme-boot.tsx`).
 > (`read:settings`, tier 0, held by every role; `settings` joins the kernel modules) and, in handlers, through the
 > `settings` reader of the mock context. An unknown key is the error `settings.unknown_key`.
 
+> **Amended 2026-11-04 (spec 008):** a demo session keeps its own setting values, and the kernel capability
+> `settings.values.update` writes them (`manage:settings`, elevated, so owner only; tier 2, `overwrite`,
+> target-state).
+>
+> - **Where they live.** The values sit in the session's data (`data.settings`), not beside it, so an assistant's
+>   change is held, rehearsed, approved and saved like any other write. The reader layers them:
+>   `settings.over(sessionValues)` puts them over the preset's and the registry's values, and a saved value that no
+>   longer parses, or whose key is gone, is ignored. "Reset demo data" drops them with the rest of the session.
+>   `settings.values.get` therefore depends on the session and is no longer answered outside the demo store.
+> - **What a write checks.** `settings.accept(values, permissions)` refuses:
+>   - an unknown key (`settings.unknown_key`);
+>   - a setting another capability owns (`writtenBy`, error `settings.not_writable`);
+>   - a setting whose own permission the caller lacks (`access.forbidden`);
+>   - a value its schema rejects (`schema.invalid_input`, with the paths under `values`).
+> - **The approval policy stays apart.** It is `writtenBy: "approvals.policy.set"`, and the visitor's choice stays in
+>   `DemoSession.approvalPolicy`, out of the data an assistant's writes change. So no assistant can switch approvals
+>   off through `settings.values.update`.
+> - **First editable section.** The business details are `business.profile`, `business.payment` and
+>   `business.invoicing` (`src/core/business`, section `business`, permission `manage:settings`), and each preset
+>   sets its demo company in `settingsDefaults`.
+
 ```ts
 export interface NavEntry {
   readonly id: string;                        // stable: "bookings"

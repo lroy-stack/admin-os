@@ -1,6 +1,7 @@
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
 
+import { workshopBusiness } from "./business";
 import { assetExtSchema, bookingExtSchema, catalogItemExtSchema, staffExtSchema } from "./extensions";
 
 /**
@@ -47,6 +48,7 @@ export const workshop = {
   },
   /** Workshop jobs are booked in half-hour slots. */
   settingsDefaults: {
+    ...workshopBusiness,
     "bookings.slot_minutes": 30,
     "bookings.service_window": { startMin: 8 * 60, endMin: 18 * 60 },
   },

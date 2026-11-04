@@ -63,16 +63,21 @@ const clientOver = (namespace: StoreNamespace | undefined) =>
   );
 
 describe("durableAdapter", () => {
-  it.each(["clock.get", "settings.values.get"] as const)(
-    "answers %s in process, without a store request",
-    async (id) => {
-      const { namespace, dispatched } = recordingNamespace();
+  it("answers clock.get in process, without a store request", async () => {
+    const { namespace, dispatched } = recordingNamespace();
 
-      const answer = await clientOver(namespace).call(id, {});
+    const answer = await clientOver(namespace).call("clock.get", {});
 
-      expect([!isAwaitingApproval(answer) && answer.ok, dispatched.length]).toEqual([true, 0]);
-    },
-  );
+    expect([!isAwaitingApproval(answer) && answer.ok, dispatched.length]).toEqual([true, 0]);
+  });
+
+  it("reads the settings from the session's object, which keeps the visitor's own values", async () => {
+    const { namespace, dispatched } = recordingNamespace();
+
+    await clientOver(namespace).call("settings.values.get", {});
+
+    expect(dispatched.map((call) => call.capabilityId)).toEqual(["settings.values.get"]);
+  });
 
   it("sends every other capability to the object named vertical:sessionId with the call's context", async () => {
     const { namespace, dispatched, names } = recordingNamespace();

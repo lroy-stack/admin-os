@@ -45,6 +45,8 @@ const CLASS_BY_SUFFIX: Readonly<Record<string, ErrorClass>> = {
   staff_note_full: "invalid",
   resource_inactive: "invalid",
   outside_window: "invalid",
+  /** A setting another capability owns (the approval policy): this path never changes it. */
+  not_writable: "forbidden",
   off_grid: "invalid",
   /** A start before the clock: another time works, the same one never will. */
   start_passed: "invalid",

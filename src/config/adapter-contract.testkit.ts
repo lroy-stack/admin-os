@@ -30,6 +30,15 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
     "approvals.approve": { approvalId: "held" },
     "approvals.reject": { approvalId: "held" },
     "approvals.policy.set": { policy: "none" },
+    "settings.values.update": {
+      values: {
+        "business.invoicing": {
+          defaultTax: "vat",
+          taxRates: { gst: 0, vat: 21, "service-tax": 5 },
+          paymentTermsDays: 45,
+        },
+      },
+    },
     "bookings.get": { id: booking },
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
     "customers.contact.update": { ...customer, name: "Contract Test" },
@@ -123,7 +132,7 @@ export function describeAdapterContract(
 ): void {
   describe(`the adapter contract (ADR 0008): ${name}`, () => {
     describe.each(verticalIds)("%s", (vertical) => {
-      const enabled = new Set<string>([...VERTICALS[vertical].modules, "access", "approvals", "clock"]);
+      const enabled = new Set<string>([...VERTICALS[vertical].modules, "access", "approvals", "clock", "settings"]);
       const reachable = capabilityIds.filter((id) => enabled.has(id.split(".")[0] ?? ""));
 
       it.each(reachable)("answers %s with output that matches its schema", async (id) => {

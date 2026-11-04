@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `00fd954c13d69b` | `09720ea5cbef5c` |
-| salon | `00fd954c13d69b` | `09720ea5cbef5c` |
-| workshop | `00fd954c13d69b` | `09720ea5cbef5c` |
+| hospitality | `174336366f674d` | `196402eabfdb3d` |
+| salon | `174336366f674d` | `196402eabfdb3d` |
+| workshop | `174336366f674d` | `196402eabfdb3d` |
 
 ## Tools by preset
 
@@ -66,6 +66,7 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
+| [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ### salon
@@ -103,6 +104,7 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
+| [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ### workshop
@@ -140,6 +142,7 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
+| [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ## Tools
@@ -1207,6 +1210,33 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
       }
     }
   },
+  "additionalProperties": false
+}
+```
+
+### `settings_values_update`
+
+**Change settings.** Change business settings in this demo session: send each key with its whole new value (an object setting is replaced, not merged; read it first with settings_values_get). Each value must pass its setting's rules and the caller must hold the setting's permission. Owner only. The approval policy is not changed here. Fails with settings.unknown_key, settings.not_writable, schema.invalid_input or access.forbidden.
+
+- Capability: `settings.values.update`, permission `manage:settings`, tier 2, idempotency target-state.
+- Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "values"
+  ],
   "additionalProperties": false
 }
 ```

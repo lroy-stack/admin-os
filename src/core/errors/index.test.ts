@@ -22,6 +22,7 @@ describe("errorClassOf", () => {
     ["bookings.not_enough_seats", "invalid"],
     ["bookings.off_grid", "invalid"],
     ["bookings.start_passed", "invalid"],
+    ["settings.not_writable", "forbidden"],
     ["bookings.something_else", "unknown"],
     ["nodot", "unknown"],
   ])("maps %s to %s", (code, expected) => {

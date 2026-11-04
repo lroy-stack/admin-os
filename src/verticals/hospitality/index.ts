@@ -1,6 +1,7 @@
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
 
+import { hospitalityBusiness } from "./business";
 import {
   areaExtSchema,
   bookingExtSchema,
@@ -54,7 +55,7 @@ export const hospitality = {
     area: areaExtSchema,
     staff: staffExtSchema,
   },
-  settingsDefaults: {},
+  settingsDefaults: { ...hospitalityBusiness },
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["diner", "dining", "covers", "waiter", "allergen", "dish", "restaurant", "mesa", "comensal", "carta"],
 } as const;

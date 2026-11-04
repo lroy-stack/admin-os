@@ -15,7 +15,7 @@ import type { BusinessClock } from "@/core/clock";
 import { ErrorCodes } from "@/core/errors";
 import { paginate } from "@/core/pagination";
 import { type CallResult, err, ok, type Result } from "@/core/result";
-import { createSettingsReader, type SettingsReader } from "@/core/settings";
+import { createSettingsReader, keepSessionSettings, type SettingsReader, sessionSettingsOf } from "@/core/settings";
 
 import { evictSettled, MAX_APPROVALS } from "./approval-queue";
 import { changesBetween } from "./changes";
@@ -404,7 +404,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
             context.actor,
             store.read(sessionId),
             store.approvals(sessionId),
-            withSessionPolicy(settings, store.approvalPolicy(sessionId)),
+            withSessionPolicy(settings.over(sessionSettingsOf(store.read(sessionId))), store.approvalPolicy(sessionId)),
             nowMs,
             NO_KERNEL,
           ),
@@ -428,7 +428,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
       }
 
       const run = async (): Promise<CallResult<unknown>> => {
-        const effective = withSessionPolicy(settings, session.approvalPolicy);
+        const effective = withSessionPolicy(settings.over(sessionSettingsOf(session.data)), session.approvalPolicy);
         if (holdsForApproval(policyOf(effective), capability, context.via)) {
           const asked = { input, fingerprint, actor: context.actor, via: context.via };
           return hold(session, capability, handler, asked, effective, nowMs);
@@ -476,6 +476,14 @@ export const kernelMockHandlers: Readonly<Record<string, MockHandler<unknown>>> 
   "settings.values.get": (input, { settings }) => {
     const result = settings.values((input as { keys?: readonly string[] }).keys);
     return result.ok ? ok({ values: result.value }) : result;
+  },
+  "settings.values.update": (input, { actor, settings, data }) => {
+    const accepted = settings.accept((input as { values: Record<string, unknown> }).values, actor.permissions);
+    if (!accepted.ok) return accepted;
+    if (!keepSessionSettings(data, accepted.value)) {
+      return err(ErrorCodes.unavailable, "This demo session keeps no data to hold settings in");
+    }
+    return ok({ values: accepted.value });
   },
   "approvals.get": (input, { actor, approvals, nowMs }) => {
     const { approvalId } = input as { approvalId: string };

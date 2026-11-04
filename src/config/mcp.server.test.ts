@@ -77,6 +77,7 @@ const PINNED = [
   ["notifications_unread_count", true, false, true, 1, false],
   ["resources_list", true, false, true, 0, false],
   ["settings_values_get", true, false, true, 0, false],
+  ["settings_values_update", false, true, true, 2, false],
   ["staff_list", true, false, true, 1, false],
 ] as const;
 

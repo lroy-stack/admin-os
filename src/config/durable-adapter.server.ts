@@ -14,8 +14,11 @@ export interface StoreNamespace {
   get(id: unknown): DemoStoreRpc;
 }
 
-/** Reads that do not depend on the visitor's session: answered in process, so they cost no Durable Object request. */
-const SESSION_FREE_READS: ReadonlySet<string> = new Set(["clock.get", "settings.values.get"]);
+/**
+ * Reads that do not depend on the visitor's session: answered in process, so they cost no Durable Object request. The
+ * business settings are not among them: a session keeps its own values (ADR 0006, amendment 008).
+ */
+const SESSION_FREE_READS: ReadonlySet<string> = new Set(["clock.get"]);
 
 /**
  * Finds the `DEMO_STORE` binding for a call: a Worker hands its own `env.DEMO_STORE`, the web app looks it up in the

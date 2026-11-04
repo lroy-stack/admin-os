@@ -1,6 +1,7 @@
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
 
+import { salonBusiness } from "./business";
 import { catalogItemExtSchema, customerExtSchema, staffExtSchema } from "./extensions";
 
 /**
@@ -46,6 +47,7 @@ export const salon = {
   },
   /** A haircut is 45 minutes, so a walk-in is expected to stay that long. */
   settingsDefaults: {
+    ...salonBusiness,
     "bookings.walk_in.stay_minutes": 45,
     "bookings.service_window": { startMin: 9 * 60, endMin: 18 * 60 },
   },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { businessProfile } from "@/core/business";
 import { createSettingsReader } from "@/core/settings";
 import { walkInStayMinutes } from "@/modules/bookings";
 
@@ -37,6 +38,20 @@ describe("preset settings overrides", () => {
 
   it.each(overrides)("%s overrides %s with a value its schema accepts", (_id, key, value) => {
     expect(SETTINGS[key as keyof typeof SETTINGS].schema.safeParse(value).success).toBe(true);
+  });
+
+  it("gives every preset a demo company of its own", () => {
+    const names = presets.map(([, preset]) =>
+      createSettingsReader(SETTINGS, preset.settingsDefaults).get(businessProfile),
+    );
+    expect(new Set(names.map(({ tradeName }) => tradeName)).size).toBe(presets.length);
+  });
+
+  it("names a demo company in every preset", () => {
+    const names = presets.map(([, preset]) =>
+      createSettingsReader(SETTINGS, preset.settingsDefaults).get(businessProfile),
+    );
+    expect(names.filter(({ tradeName }) => tradeName === "")).toEqual([]);
   });
 
   it("lets the salon expect shorter walk-in stays than the default", () => {

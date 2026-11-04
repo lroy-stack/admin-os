@@ -58,6 +58,7 @@ export const MCP_MANIFEST = {
   },
   "clock.get": { expose: true, title: "Business clock" },
   "settings.values.get": { expose: true, title: "Read settings" },
+  "settings.values.update": { expose: true, title: "Change settings" },
   "bookings.list": {
     expose: true,
     title: "List the day's bookings",

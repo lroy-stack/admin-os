@@ -11,8 +11,10 @@ import {
   createSettingsReader,
   defineSetting,
   mergeSettings,
+  SETTING_NOT_WRITABLE,
   settingsCapabilities,
   settingsValuesGet,
+  settingsValuesUpdate,
   UNKNOWN_SETTING,
 } from "./index";
 
@@ -36,7 +38,20 @@ const greeting = defineSetting({
   descriptionKey: "demo.settings.greeting.description",
 });
 
-const registry = mergeSettings(stay, greeting);
+/** A setting another capability owns, as the approval policy is owned by `approvals.policy.set`. */
+const guarded = defineSetting({
+  key: "demo.guarded",
+  schema: z.enum(["on", "off"]),
+  defaultValue: "on",
+  section: "demo",
+  permission: "update:settings",
+  writtenBy: "demo.guarded.set",
+  labelKey: "demo.settings.guarded.label",
+  descriptionKey: "demo.settings.guarded.description",
+});
+
+const registry = mergeSettings(stay, greeting, guarded);
+const editor = ["update:settings"];
 
 describe("mergeSettings", () => {
   it("refuses two settings with the same key", () => {
@@ -86,12 +101,79 @@ describe("createSettingsReader", () => {
 
   it("lists every effective value when no keys are asked for", () => {
     expect(createSettingsReader(registry, { "demo.greeting": "hi" }).values()).toEqual(
-      ok({ "demo.stay_minutes": 90, "demo.greeting": "hi" }),
+      ok({ "demo.stay_minutes": 90, "demo.greeting": "hi", "demo.guarded": "on" }),
     );
   });
 
   it("lists only the asked keys", () => {
     expect(createSettingsReader(registry).values(["demo.greeting"])).toEqual(ok({ "demo.greeting": "hello" }));
+  });
+});
+
+describe("a reader over a session's own values", () => {
+  it("answers the session's value over the preset's and the default", () => {
+    const reader = createSettingsReader(registry, { "demo.stay_minutes": 45 }).over({ "demo.stay_minutes": 30 });
+    expect([reader.get(stay), reader.get(greeting)]).toEqual([30, "hello"]);
+  });
+
+  it("lists the session's values with the others", () => {
+    expect(createSettingsReader(registry).over({ "demo.greeting": "hey" }).values(["demo.greeting"])).toEqual(
+      ok({ "demo.greeting": "hey" }),
+    );
+  });
+
+  it("ignores a saved value that no longer parses against its setting", () => {
+    expect(createSettingsReader(registry).over({ "demo.stay_minutes": 0 }).get(stay)).toBe(90);
+  });
+
+  it("ignores a saved key that is no longer registered", () => {
+    expect(createSettingsReader(registry).over({ "demo.gone": 1 }).values()).toEqual(
+      createSettingsReader(registry).values(),
+    );
+  });
+
+  it("never answers a session value for a setting another capability owns", () => {
+    expect(createSettingsReader(registry).over({ "demo.guarded": "off" }).get(guarded)).toBe("on");
+  });
+
+  it("is the reader itself without session values", () => {
+    expect(createSettingsReader(registry).over(undefined).get(stay)).toBe(90);
+  });
+});
+
+describe("what a write may set", () => {
+  it("accepts values that parse, as their schemas parse them", () => {
+    expect(createSettingsReader(registry).accept({ "demo.greeting": "hi" }, editor)).toEqual(
+      ok({ "demo.greeting": "hi" }),
+    );
+  });
+
+  it("refuses a key no module declares", () => {
+    expect(createSettingsReader(registry).accept({ "demo.nope": 1 }, editor)).toMatchObject({
+      ok: false,
+      error: { code: UNKNOWN_SETTING, details: { keys: ["demo.nope"] } },
+    });
+  });
+
+  it("refuses a value its schema rejects, naming the key", () => {
+    expect(createSettingsReader(registry).accept({ "demo.stay_minutes": 0 }, editor)).toMatchObject({
+      ok: false,
+      error: { code: "schema.invalid_input", details: { paths: ["values.demo.stay_minutes"] } },
+    });
+  });
+
+  it("refuses a setting the actor lacks the permission for", () => {
+    expect(createSettingsReader(registry).accept({ "demo.greeting": "hi" }, [])).toMatchObject({
+      ok: false,
+      error: { code: "access.forbidden", details: { keys: ["demo.greeting"], permission: "update:settings" } },
+    });
+  });
+
+  it("refuses a setting that another capability changes, and names it", () => {
+    expect(createSettingsReader(registry).accept({ "demo.guarded": "off" }, editor)).toMatchObject({
+      ok: false,
+      error: { code: SETTING_NOT_WRITABLE, details: { key: "demo.guarded", capability: "demo.guarded.set" } },
+    });
   });
 });
 
@@ -140,7 +222,7 @@ describe("settings.values.get", () => {
 
   it("returns the effective values for a role that holds read:settings", async () => {
     expect(await clientFor({ "demo.stay_minutes": 45 }).call("settings.values.get", {})).toEqual(
-      ok({ values: { "demo.stay_minutes": 45, "demo.greeting": "hello" } }),
+      ok({ values: { "demo.stay_minutes": 45, "demo.greeting": "hello", "demo.guarded": "on" } }),
     );
   });
 
@@ -163,6 +245,103 @@ describe("settings.values.get", () => {
       },
     );
     expect(await client.call("settings.values.get", {})).toMatchObject({
+      ok: false,
+      error: { code: "access.forbidden" },
+    });
+  });
+});
+
+const ownerActor: Actor = {
+  actorId: "demo-owner",
+  roleId: "owner",
+  permissions: ["read:settings", "manage:settings", "update:settings"],
+};
+
+describe("settings.values.update", () => {
+  const store = createSessionStore({});
+  const ownerIn = (sessionId?: string) =>
+    createClient(
+      catalog,
+      createMockAdapter({
+        handlers: kernelMockHandlers,
+        store,
+        clock,
+        settings: createSettingsReader(registry, { "demo.stay_minutes": 45 }),
+        ...(sessionId === undefined ? {} : { sessionId }),
+      }),
+      { actor: ownerActor, retryDelayMs: 0, logger: () => undefined, mode: "production" },
+    );
+
+  it("passes the descriptor rules", () => {
+    expect(descriptorViolations(settingsValuesUpdate)).toEqual([]);
+  });
+
+  it("answers the values it set", async () => {
+    expect(await ownerIn("s-answer").call("settings.values.update", { values: { "demo.stay_minutes": 30 } })).toEqual(
+      ok({ values: { "demo.stay_minutes": 30 } }),
+    );
+  });
+
+  it("sets a value that settings.values.get then returns in the same session", async () => {
+    const client = ownerIn("s-same");
+    await client.call("settings.values.update", { values: { "demo.stay_minutes": 30 } });
+    expect(await client.call("settings.values.get", { keys: ["demo.stay_minutes"] })).toEqual(
+      ok({ values: { "demo.stay_minutes": 30 } }),
+    );
+  });
+
+  it("leaves another session on the preset's value", async () => {
+    await ownerIn("s-one").call("settings.values.update", { values: { "demo.stay_minutes": 30 } });
+    expect(await ownerIn("s-other").call("settings.values.get", { keys: ["demo.stay_minutes"] })).toEqual(
+      ok({ values: { "demo.stay_minutes": 45 } }),
+    );
+  });
+
+  it("keeps the values a session set earlier when it sets another", async () => {
+    const client = ownerIn("s-keep");
+    await client.call("settings.values.update", { values: { "demo.stay_minutes": 30 } });
+    await client.call("settings.values.update", { values: { "demo.greeting": "hey" } });
+    expect(await client.call("settings.values.get", { keys: ["demo.stay_minutes", "demo.greeting"] })).toEqual(
+      ok({ values: { "demo.stay_minutes": 30, "demo.greeting": "hey" } }),
+    );
+  });
+
+  it("lets a handler read the session's value through its context", async () => {
+    const adapter = (sessionId: string) =>
+      createMockAdapter({
+        handlers: { ...kernelMockHandlers, ...mockHandler(demoStay, (_input, { settings }) => ok(settings.get(stay))) },
+        store,
+        clock,
+        settings: createSettingsReader(registry),
+        sessionId,
+      });
+    const options = { actor: { ...ownerActor, permissions: [...ownerActor.permissions, "read:demo"] } } as const;
+    const client = createClient(catalog, adapter("s-handler"), { ...options, retryDelayMs: 0, mode: "production" });
+    await client.call("settings.values.update", { values: { "demo.stay_minutes": 25 } });
+    expect(await client.call("demo.stay.get", {})).toEqual(ok(25));
+  });
+
+  it("needs a demo session", async () => {
+    expect(await ownerIn().call("settings.values.update", { values: { "demo.stay_minutes": 30 } })).toMatchObject({
+      ok: false,
+      error: { code: "transport.unavailable" },
+    });
+  });
+
+  it("refuses an empty change", async () => {
+    expect(await ownerIn("s-empty").call("settings.values.update", { values: {} })).toMatchObject({
+      ok: false,
+      error: { code: "schema.invalid_input" },
+    });
+  });
+
+  it("is forbidden without manage:settings", async () => {
+    const client = createClient(
+      catalog,
+      createMockAdapter({ handlers: kernelMockHandlers, store, clock, sessionId: "s-staff" }),
+      { actor: staffActor, retryDelayMs: 0, logger: () => undefined, mode: "production" },
+    );
+    expect(await client.call("settings.values.update", { values: { "demo.greeting": "hi" } })).toMatchObject({
       ok: false,
       error: { code: "access.forbidden" },
     });

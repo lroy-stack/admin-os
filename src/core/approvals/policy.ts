@@ -17,8 +17,9 @@ export type ApprovalPolicy = z.infer<typeof approvalPolicySchema>;
 export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = "destructive_and_sensitive";
 
 /**
- * The setting behind the policy. It is UI-only (no MCP tool changes it) and its permission is elevated: only the
- * owner holds `manage:approvals`. A visitor's choice lives in their session and wins over the preset's value.
+ * The setting behind the policy. It is UI-only (no MCP tool changes it, and `settings.values.update` refuses it) and
+ * its permission is elevated: only the owner holds `manage:approvals`. A visitor's choice lives in their session, out
+ * of the data an assistant's writes change, and wins over the preset's value.
  */
 export const approvalPolicy = defineSetting({
   key: "approvals.policy",
@@ -26,6 +27,7 @@ export const approvalPolicy = defineSetting({
   defaultValue: DEFAULT_APPROVAL_POLICY,
   section: "approvals",
   permission: "manage:approvals",
+  writtenBy: "approvals.policy.set",
   labelKey: "approvals.settings.policy.label",
   descriptionKey: "approvals.settings.policy.description",
 });
@@ -68,5 +70,7 @@ export function withSessionPolicy(settings: SettingsReader, chosen: ApprovalPoli
       if (!base.ok || !Object.hasOwn(base.value, approvalPolicy.key)) return base;
       return ok({ ...base.value, [approvalPolicy.key]: chosen });
     },
+    over: (sessionValues) => withSessionPolicy(settings.over(sessionValues), chosen),
+    accept: (values, permissions) => settings.accept(values, permissions),
   };
 }
