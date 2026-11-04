@@ -1,8 +1,8 @@
 import "server-only";
 
-import { defineMessages } from "@/core/i18n";
+import { defineMessages, type MessageBundle } from "@/core/i18n";
 
-import type { InfrastructureMessages } from "./messages";
+import { type InfrastructureMessages, infrastructureMessageKey } from "./messages";
 
 const en: InfrastructureMessages = {
   meta: {
@@ -13,7 +13,6 @@ const en: InfrastructureMessages = {
   subtitle: "Monitor environments, server health, uptime, and resource usage across every project.",
   lastUpdated: "Last updated: {time}",
   refresh: "Refresh",
-  settings: "Settings",
   summary: {
     projects: { one: "{count} Project", other: "{count} Projects" },
     environments: { one: "{count} Environment", other: "{count} Environments" },
@@ -25,20 +24,19 @@ const en: InfrastructureMessages = {
     organization: "Organization",
     stack: "Stack",
     cloudProvider: "Cloud provider",
-    projectType: "Project type",
     environment: "Environment",
-    filters: "Filters",
+    title: "Filter by {facet}",
+    clear: "Clear",
+    withCount: "{facet} ({count})",
   },
   projects: { console: "Admin Console", analytics: "Analytics", kanban: "Kanban", inbox: "Inbox" },
   project: {
     addEnvironment: "Add Environment",
     actions: "Actions for {project}",
-    activityLogs: "Activity Logs",
-    openConsole: "Open Console",
-    settings: "Project Settings",
     syncStatus: "Sync Status",
-    manageAlerts: "Manage Alerts",
     copyProjectId: "Copy Project ID",
+    idLabel: "project ID",
+    synced: "{project} is in sync. Checked at {time}.",
     noEnvironments: "No environments in this project",
   },
   table: {
@@ -51,15 +49,30 @@ const en: InfrastructureMessages = {
     resources: "Resources",
     server: "Server",
     rowActions: "Actions for {domain}",
-    viewLogs: "View Logs",
-    openConsole: "Open Console",
     restart: "Restart",
+    urlLabel: "URL",
     copyUrl: "Copy URL",
     customServer: "Bare Metal / Custom",
   },
   environments: { expired: "Expired", production: "Production", staging: "Staging" },
   health: { online: "Online", unhealthy: "Unhealthy" },
   resources: { cpu: "CPU", ram: "RAM", disk: "Disk" },
+  noResults: "No environments match your search or filters.",
+  restart: {
+    title: "Restart {domain}?",
+    verb: "Restart",
+    consequence: "The environment is unavailable while it restarts. This is a demo: nothing really restarts.",
+    done: "Restart requested for {domain}",
+  },
+  form: {
+    description: "Add an environment to {project}.",
+    domain: "Domain",
+    platform: "Platform",
+    country: "Country",
+    region: "Plan or region",
+    required: "This field is required.",
+    added: "{domain} added to {project}",
+  },
 };
 
 const es: InfrastructureMessages = {
@@ -73,7 +86,6 @@ const es: InfrastructureMessages = {
     "Supervisa los entornos, el estado de los servidores, la disponibilidad y el uso de recursos de todos los proyectos.",
   lastUpdated: "Última actualización: {time}",
   refresh: "Actualizar",
-  settings: "Ajustes",
   summary: {
     projects: { one: "{count} proyecto", other: "{count} proyectos" },
     environments: { one: "{count} entorno", other: "{count} entornos" },
@@ -85,9 +97,10 @@ const es: InfrastructureMessages = {
     organization: "Organización",
     stack: "Tecnología",
     cloudProvider: "Proveedor de nube",
-    projectType: "Tipo de proyecto",
     environment: "Entorno",
-    filters: "Filtros",
+    title: "Filtrar por {facet}",
+    clear: "Borrar",
+    withCount: "{facet} ({count})",
   },
   projects: {
     console: "Consola de administración",
@@ -98,12 +111,10 @@ const es: InfrastructureMessages = {
   project: {
     addEnvironment: "Añadir entorno",
     actions: "Acciones de {project}",
-    activityLogs: "Registro de actividad",
-    openConsole: "Abrir consola",
-    settings: "Ajustes del proyecto",
     syncStatus: "Estado de sincronización",
-    manageAlerts: "Gestionar alertas",
     copyProjectId: "Copiar ID del proyecto",
+    idLabel: "ID de proyecto",
+    synced: "{project} está sincronizado. Comprobado a las {time}.",
     noEnvironments: "No hay entornos en este proyecto",
   },
   table: {
@@ -116,15 +127,30 @@ const es: InfrastructureMessages = {
     resources: "Recursos",
     server: "Servidor",
     rowActions: "Acciones de {domain}",
-    viewLogs: "Ver registros",
-    openConsole: "Abrir consola",
     restart: "Reiniciar",
+    urlLabel: "URL",
     copyUrl: "Copiar URL",
     customServer: "Servidor dedicado / Personalizado",
   },
   environments: { expired: "Caducado", production: "Producción", staging: "Preproducción" },
   health: { online: "En línea", unhealthy: "Con problemas" },
   resources: { cpu: "CPU", ram: "RAM", disk: "Disco" },
+  noResults: "Ningún entorno coincide con tu búsqueda o filtros.",
+  restart: {
+    title: "¿Reiniciar {domain}?",
+    verb: "Reiniciar",
+    consequence: "El entorno no está disponible mientras se reinicia. Es una demo: no se reinicia nada de verdad.",
+    done: "Reinicio solicitado para {domain}",
+  },
+  form: {
+    description: "Añade un entorno a {project}.",
+    domain: "Dominio",
+    platform: "Plataforma",
+    country: "País",
+    region: "Plan o región",
+    required: "Este campo es obligatorio.",
+    added: "{domain} añadido a {project}",
+  },
 };
 
 const de: InfrastructureMessages = {
@@ -137,7 +163,6 @@ const de: InfrastructureMessages = {
   subtitle: "Überwache Umgebungen, Serverzustand, Verfügbarkeit und Ressourcenauslastung aller Projekte.",
   lastUpdated: "Zuletzt aktualisiert: {time}",
   refresh: "Aktualisieren",
-  settings: "Einstellungen",
   summary: {
     projects: { one: "{count} Projekt", other: "{count} Projekte" },
     environments: { one: "{count} Umgebung", other: "{count} Umgebungen" },
@@ -149,20 +174,19 @@ const de: InfrastructureMessages = {
     organization: "Organisation",
     stack: "Stack",
     cloudProvider: "Cloud-Anbieter",
-    projectType: "Projekttyp",
     environment: "Umgebung",
-    filters: "Filter",
+    title: "Nach {facet} filtern",
+    clear: "Zurücksetzen",
+    withCount: "{facet} ({count})",
   },
   projects: { console: "Admin-Konsole", analytics: "Analysen", kanban: "Kanban", inbox: "Posteingang" },
   project: {
     addEnvironment: "Umgebung hinzufügen",
     actions: "Aktionen für {project}",
-    activityLogs: "Aktivitätsprotokoll",
-    openConsole: "Konsole öffnen",
-    settings: "Projekteinstellungen",
     syncStatus: "Synchronisierungsstatus",
-    manageAlerts: "Warnungen verwalten",
     copyProjectId: "Projekt-ID kopieren",
+    idLabel: "Projekt-ID",
+    synced: "{project} ist synchron. Geprüft um {time}.",
     noEnvironments: "Dieses Projekt hat keine Umgebungen",
   },
   table: {
@@ -175,15 +199,31 @@ const de: InfrastructureMessages = {
     resources: "Ressourcen",
     server: "Server",
     rowActions: "Aktionen für {domain}",
-    viewLogs: "Protokolle anzeigen",
-    openConsole: "Konsole öffnen",
     restart: "Neu starten",
+    urlLabel: "URL",
     copyUrl: "URL kopieren",
     customServer: "Bare Metal / Individuell",
   },
   environments: { expired: "Abgelaufen", production: "Produktion", staging: "Staging" },
   health: { online: "Online", unhealthy: "Beeinträchtigt" },
   resources: { cpu: "CPU", ram: "RAM", disk: "Datenträger" },
+  noResults: "Keine Umgebung passt zu deiner Suche oder deinen Filtern.",
+  restart: {
+    title: "{domain} neu starten?",
+    verb: "Neu starten",
+    consequence:
+      "Die Umgebung ist während des Neustarts nicht erreichbar. Das ist eine Demo: Es wird nichts wirklich neu gestartet.",
+    done: "Neustart für {domain} angefordert",
+  },
+  form: {
+    description: "Füge {project} eine Umgebung hinzu.",
+    domain: "Domain",
+    platform: "Plattform",
+    country: "Land",
+    region: "Tarif oder Region",
+    required: "Dieses Feld ist erforderlich.",
+    added: "{domain} zu {project} hinzugefügt",
+  },
 };
 
 const fr: InfrastructureMessages = {
@@ -197,7 +237,6 @@ const fr: InfrastructureMessages = {
     "Surveillez les environnements, l’état des serveurs, la disponibilité et l’utilisation des ressources de tous vos projets.",
   lastUpdated: "Dernière mise à jour : {time}",
   refresh: "Actualiser",
-  settings: "Paramètres",
   summary: {
     projects: { one: "{count} projet", other: "{count} projets" },
     environments: { one: "{count} environnement", other: "{count} environnements" },
@@ -209,9 +248,10 @@ const fr: InfrastructureMessages = {
     organization: "Organisation",
     stack: "Stack",
     cloudProvider: "Fournisseur cloud",
-    projectType: "Type de projet",
     environment: "Environnement",
-    filters: "Filtres",
+    title: "Filtrer par {facet}",
+    clear: "Effacer",
+    withCount: "{facet} ({count})",
   },
   projects: {
     console: "Console d’administration",
@@ -222,12 +262,10 @@ const fr: InfrastructureMessages = {
   project: {
     addEnvironment: "Ajouter un environnement",
     actions: "Actions pour {project}",
-    activityLogs: "Journal d’activité",
-    openConsole: "Ouvrir la console",
-    settings: "Paramètres du projet",
     syncStatus: "État de la synchronisation",
-    manageAlerts: "Gérer les alertes",
     copyProjectId: "Copier l’ID du projet",
+    idLabel: "ID du projet",
+    synced: "{project} est synchronisé. Vérifié à {time}.",
     noEnvironments: "Aucun environnement dans ce projet",
   },
   table: {
@@ -240,15 +278,36 @@ const fr: InfrastructureMessages = {
     resources: "Ressources",
     server: "Serveur",
     rowActions: "Actions pour {domain}",
-    viewLogs: "Voir les journaux",
-    openConsole: "Ouvrir la console",
     restart: "Redémarrer",
+    urlLabel: "URL",
     copyUrl: "Copier l’URL",
     customServer: "Serveur dédié / Personnalisé",
   },
   environments: { expired: "Expiré", production: "Production", staging: "Préproduction" },
   health: { online: "En ligne", unhealthy: "Dégradé" },
   resources: { cpu: "CPU", ram: "RAM", disk: "Disque" },
+  noResults: "Aucun environnement ne correspond à votre recherche ou à vos filtres.",
+  restart: {
+    title: "Redémarrer {domain} ?",
+    verb: "Redémarrer",
+    consequence:
+      "L’environnement est indisponible pendant le redémarrage. C’est une démo : rien n’est réellement redémarré.",
+    done: "Redémarrage demandé pour {domain}",
+  },
+  form: {
+    description: "Ajoutez un environnement à {project}.",
+    domain: "Domaine",
+    platform: "Plateforme",
+    country: "Pays",
+    region: "Offre ou région",
+    required: "Ce champ est obligatoire.",
+    added: "{domain} ajouté à {project}",
+  },
 };
 
 export const infrastructureMessages = defineMessages<InfrastructureMessages>({ en, es, de, fr });
+
+export const infrastructureBundle: MessageBundle<InfrastructureMessages> = {
+  key: infrastructureMessageKey,
+  dictionary: infrastructureMessages,
+};

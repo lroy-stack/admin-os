@@ -1,20 +1,21 @@
+"use client";
+
+import { useRef } from "react";
+
 import { cn } from "cn";
 import {
   ArrowUpDown,
-  Bell,
   ChevronDown,
   CircleDashed,
   CircleGauge,
   Clock3,
   Copy,
   EllipsisVertical,
-  FileText,
   Plus,
   RefreshCw,
-  Settings,
   SquareTerminal,
-  Terminal,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { SimpleIcon } from "@/components/simple-icon";
 import { Badge } from "@/components/ui/badge";
@@ -29,17 +30,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getLocale, getMessages } from "@/config/locale.server";
-import { format, formatPercent, type Locale } from "@/core/i18n/client";
+import { format, formatPercent, formatTime, type Locale, useLocale, useMessages } from "@/core/i18n/client";
+import { useCopy } from "@/ds/feedback";
 
 import type { InfrastructureEnvironment, InfrastructureGroup } from "./infrastructure-data";
 import { formatLatency, formatUptime } from "./infrastructure-format";
-import type { InfrastructureMessages } from "./messages";
-import { infrastructureMessages } from "./messages.server";
+import { type InfrastructureMessages, infrastructureMessageKey } from "./messages";
 
-export async function ProjectEnvironments({ group }: { group: InfrastructureGroup }) {
-  const [text, locale] = await Promise.all([getMessages(infrastructureMessages), getLocale()]);
+export interface ProjectEnvironmentsProps {
+  group: InfrastructureGroup;
+  /** Opens the Add environment window; `opener` is the button, where focus returns. */
+  onAddEnvironment: (group: InfrastructureGroup, opener: Element | null) => void;
+  /** Opens the restart confirmation; `opener` is the row menu's button. */
+  onRestart: (environment: InfrastructureEnvironment, opener: Element | null) => void;
+}
+
+export function ProjectEnvironments({ group, onAddEnvironment, onRestart }: ProjectEnvironmentsProps) {
+  const text = useMessages(infrastructureMessageKey);
+  const locale = useLocale();
+  const copy = useCopy();
   const projectName = text.projects[group.id];
+  const syncStatus = () =>
+    toast.success(
+      format(text.project.synced, locale, {
+        project: projectName,
+        time: formatTime(Date.now(), locale, Intl.DateTimeFormat().resolvedOptions().timeZone),
+      }),
+    );
 
   return (
     <Collapsible
@@ -60,7 +77,12 @@ export async function ProjectEnvironments({ group }: { group: InfrastructureGrou
           </Button>
         </CollapsibleTrigger>
         <div className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end">
-          <Button variant="ghost" size="sm" className="-ml-1.5 sm:ml-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-1.5 sm:ml-0"
+            onClick={(event) => onAddEnvironment(group, event.currentTarget)}
+          >
             <Plus data-icon="inline-start" />
             {text.project.addEnvironment}
           </Button>
@@ -76,32 +98,14 @@ export async function ProjectEnvironments({ group }: { group: InfrastructureGrou
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuGroup>
-                {group.rows.length > 0 ? (
-                  <DropdownMenuItem>
-                    <FileText />
-                    {text.project.activityLogs}
-                  </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuItem>
-                  <Terminal />
-                  {text.project.openConsole}
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings />
-                  {text.project.settings}
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={syncStatus}>
                   <RefreshCw />
                   {text.project.syncStatus}
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Bell />
-                  {text.project.manageAlerts}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void copy(`prj_${group.id}`, text.project.idLabel)}>
                   <Copy />
                   {text.project.copyProjectId}
                 </DropdownMenuItem>
@@ -113,7 +117,7 @@ export async function ProjectEnvironments({ group }: { group: InfrastructureGrou
 
       <CollapsibleContent>
         {group.rows.length > 0 ? (
-          <EnvironmentTable rows={group.rows} text={text} locale={locale} />
+          <EnvironmentTable rows={group.rows} text={text} locale={locale} onRestart={onRestart} />
         ) : (
           <EmptyProjectState text={text} />
         )}
@@ -126,11 +130,15 @@ function EnvironmentTable({
   rows,
   text,
   locale,
+  onRestart,
 }: {
   rows: InfrastructureEnvironment[];
   text: InfrastructureMessages;
   locale: Locale;
+  onRestart: ProjectEnvironmentsProps["onRestart"];
 }) {
+  const copy = useCopy();
+  const restartTriggers = useRef(new Map<string, HTMLButtonElement>());
   return (
     <div className="[&::-webkit-scrollbar-thumb]:bg-border scrollbar-thin [scrollbar-color:var(--border)_transparent] overflow-x-auto **:data-[slot=table-container]:overflow-visible [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
       <Table className="min-w-[1700px] table-fixed **:data-[slot='table-cell']:px-5 **:data-[slot='table-head']:px-5">
@@ -243,6 +251,10 @@ function EnvironmentTable({
                       variant="ghost"
                       size="icon-sm"
                       className="-mr-2"
+                      ref={(button) => {
+                        if (button) restartTriggers.current.set(row.domain, button);
+                        else restartTriggers.current.delete(row.domain);
+                      }}
                       aria-label={format(text.table.rowActions, locale, { domain: row.domain })}
                     >
                       <SquareTerminal />
@@ -250,22 +262,16 @@ function EnvironmentTable({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-48" align="end">
                     <DropdownMenuGroup>
-                      <DropdownMenuItem>
-                        <FileText />
-                        {text.table.viewLogs}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Terminal />
-                        {text.table.openConsole}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => onRestart(row, restartTriggers.current.get(row.domain) ?? null)}
+                      >
                         <RefreshCw />
                         {text.table.restart}
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => void copy(`https://${row.domain}`, text.table.urlLabel)}>
                         <Copy />
                         {text.table.copyUrl}
                       </DropdownMenuItem>

@@ -1,27 +1,54 @@
-import { Box, Container, Filter, PlusCircle, RefreshCw, Search, Server, Settings } from "lucide-react";
+"use client";
+
+import { useRouter } from "next/navigation";
+
+import { Box, Container, RefreshCw, Search, Server } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import { getLocale, getMessages } from "@/config/locale.server";
-import { format, formatPercent, formatRelative } from "@/core/i18n/client";
+import { format, formatPercent, formatRelative, useLocale, useMessages } from "@/core/i18n/client";
 
-import { infrastructureSummary, SEARCH_SHORTCUT } from "./infrastructure-data";
-import { infrastructureMessages } from "./messages.server";
+import { FacetFilter } from "./facet-filter";
+import { infrastructureGroups, infrastructureSummary, SEARCH_SHORTCUT } from "./infrastructure-data";
+import { CUSTOM_SERVER, facetOptions } from "./infrastructure-filter";
+import { useInfrastructure } from "./infrastructure-state";
+import { infrastructureMessageKey } from "./messages";
 
 /** The monitoring data was refreshed this long ago. */
 const REFRESHED_SECONDS_AGO = 30;
 
-export async function InfrastructureHeader() {
-  const [text, locale] = await Promise.all([getMessages(infrastructureMessages), getLocale()]);
-  const filterButtons = [
-    text.filters.organization,
-    text.filters.stack,
-    text.filters.cloudProvider,
-    text.filters.projectType,
-    text.filters.environment,
-  ];
+export function InfrastructureHeader() {
+  const text = useMessages(infrastructureMessageKey);
+  const locale = useLocale();
+  const router = useRouter();
+  const { query, setQuery, refreshed, markRefreshed } = useInfrastructure();
+
+  const facets = [
+    {
+      facet: "organization",
+      options: facetOptions(infrastructureGroups, "organization").map((value) => ({ value, label: value })),
+    },
+    {
+      facet: "stack",
+      options: facetOptions(infrastructureGroups, "stack").map((value) => ({ value, label: value })),
+    },
+    {
+      facet: "cloudProvider",
+      options: facetOptions(infrastructureGroups, "cloudProvider").map((value) => ({
+        value,
+        label: value === CUSTOM_SERVER ? text.table.customServer : value,
+      })),
+    },
+    {
+      facet: "environment",
+      options: facetOptions(infrastructureGroups, "environment").map((value) => ({
+        value,
+        label: Object.entries(text.environments).find(([kind]) => kind === value)?.[1] ?? value,
+      })),
+    },
+  ] as const;
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,17 +62,22 @@ export async function InfrastructureHeader() {
           </div>
 
           <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            <span className="text-muted-foreground text-sm">
+            <span className="text-muted-foreground text-sm" aria-live="polite">
               {format(text.lastUpdated, locale, {
-                time: formatRelative(-REFRESHED_SECONDS_AGO * 1000, 0, locale),
+                time: formatRelative(refreshed ? 0 : -REFRESHED_SECONDS_AGO * 1000, 0, locale),
               })}
             </span>
             <div className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" size="icon-sm" aria-label={text.refresh}>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={text.refresh}
+                onClick={() => {
+                  router.refresh();
+                  markRefreshed();
+                }}
+              >
                 <RefreshCw />
-              </Button>
-              <Button variant="outline" size="icon-sm" aria-label={text.settings}>
-                <Settings data-icon="inline-start" />
               </Button>
             </div>
           </div>
@@ -80,23 +112,21 @@ export async function InfrastructureHeader() {
           <InputGroupAddon>
             <Search />
           </InputGroupAddon>
-          <InputGroupInput aria-label={text.search.label} placeholder={text.search.placeholder} />
+          <InputGroupInput
+            aria-label={text.search.label}
+            placeholder={text.search.placeholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
           <InputGroupAddon align="inline-end">
             <Kbd>{SEARCH_SHORTCUT}</Kbd>
           </InputGroupAddon>
         </InputGroup>
 
         <div className="flex flex-wrap gap-2">
-          {filterButtons.map((label) => (
-            <Button key={label} variant="outline">
-              <PlusCircle data-icon="inline-start" />
-              {label}
-            </Button>
+          {facets.map((entry) => (
+            <FacetFilter key={entry.facet} facet={entry.facet} options={entry.options} />
           ))}
-          <Button variant="outline">
-            <Filter data-icon="inline-start" />
-            {text.filters.filters}
-          </Button>
         </div>
       </div>
     </div>

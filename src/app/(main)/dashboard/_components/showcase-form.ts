@@ -12,7 +12,8 @@ export interface ShowcaseField {
 /** The two sentences the schema reports, already translated. */
 export interface ShowcaseFormErrors {
   readonly required: string;
-  readonly numberInvalid: string;
+  /** Only needed when a field is a number. */
+  readonly numberInvalid?: string;
 }
 
 export type ShowcaseValues = Record<string, string>;
@@ -27,7 +28,7 @@ function fieldSchema(field: ShowcaseField, errors: ShowcaseFormErrors) {
   const required = field.required === true ? text.min(1, errors.required) : text;
   if (field.kind !== "number") return required;
   return required.refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0), {
-    message: errors.numberInvalid,
+    message: errors.numberInvalid ?? errors.required,
   });
 }
 

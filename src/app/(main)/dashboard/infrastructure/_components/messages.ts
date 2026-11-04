@@ -1,4 +1,4 @@
-import type { PageMeta, Plural } from "@/core/i18n/client";
+import { type MessageKey, messageKey, type PageMeta, type Plural } from "@/core/i18n/client";
 
 import type { EnvironmentKind, HealthStatus, ProjectId } from "./infrastructure-data";
 
@@ -10,7 +10,6 @@ export interface InfrastructureMessages {
   /** Placeholders: `{time}`, the elapsed time. The colon is part of the sentence. */
   readonly lastUpdated: string;
   readonly refresh: string;
-  readonly settings: string;
   readonly summary: {
     readonly projects: Plural;
     readonly environments: Plural;
@@ -23,9 +22,12 @@ export interface InfrastructureMessages {
     readonly organization: string;
     readonly stack: string;
     readonly cloudProvider: string;
-    readonly projectType: string;
     readonly environment: string;
-    readonly filters: string;
+    /** The facet window's heading. Placeholders: `{facet}`. */
+    readonly title: string;
+    readonly clear: string;
+    /** A facet chip with its selection. Placeholders: `{facet}`, `{count}`. */
+    readonly withCount: string;
   };
   /** Demo project names. */
   readonly projects: Readonly<Record<ProjectId, string>>;
@@ -33,12 +35,12 @@ export interface InfrastructureMessages {
     readonly addEnvironment: string;
     /** Placeholders: `{project}`. */
     readonly actions: string;
-    readonly activityLogs: string;
-    readonly openConsole: string;
-    readonly settings: string;
     readonly syncStatus: string;
-    readonly manageAlerts: string;
     readonly copyProjectId: string;
+    /** What a copy confirms, after "Copied". */
+    readonly idLabel: string;
+    /** Placeholders: `{project}`, `{time}`. */
+    readonly synced: string;
     readonly noEnvironments: string;
   };
   readonly table: {
@@ -52,13 +54,36 @@ export interface InfrastructureMessages {
     readonly server: string;
     /** Placeholders: `{domain}`. */
     readonly rowActions: string;
-    readonly viewLogs: string;
-    readonly openConsole: string;
     readonly restart: string;
+    readonly urlLabel: string;
     readonly copyUrl: string;
     readonly customServer: string;
   };
   readonly environments: Readonly<Record<EnvironmentKind, string>>;
   readonly health: Readonly<Record<HealthStatus, string>>;
   readonly resources: { readonly cpu: string; readonly ram: string; readonly disk: string };
+  readonly noResults: string;
+  readonly restart: {
+    /** Placeholders: `{domain}`. */
+    readonly title: string;
+    readonly verb: string;
+    readonly consequence: string;
+    /** Placeholders: `{domain}`. */
+    readonly done: string;
+  };
+  /** The Add environment window; its title and verb are `project.addEnvironment`. */
+  readonly form: {
+    /** Placeholders: `{project}`. */
+    readonly description: string;
+    readonly domain: string;
+    readonly platform: string;
+    readonly country: string;
+    readonly region: string;
+    readonly required: string;
+    /** Placeholders: `{domain}`, `{project}`. */
+    readonly added: string;
+  };
 }
+
+export const infrastructureMessageKey: MessageKey<InfrastructureMessages> =
+  messageKey<InfrastructureMessages>("infrastructure");
