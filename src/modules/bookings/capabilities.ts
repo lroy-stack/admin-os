@@ -59,7 +59,6 @@ export const bookingsUpdate = defineCapability({
   permission: "update:bookings",
   effect: "write",
   riskTier: 2,
-  requiresIdempotencyKey: true,
 });
 
 export const bookingsStatusAdvance = defineCapability({
@@ -71,7 +70,6 @@ export const bookingsStatusAdvance = defineCapability({
   permission: "update:bookings",
   effect: "write",
   riskTier: 2,
-  requiresIdempotencyKey: true,
 });
 
 export const bookingsStatusUndo = defineCapability({
@@ -83,7 +81,6 @@ export const bookingsStatusUndo = defineCapability({
   permission: "update:bookings",
   effect: "write",
   riskTier: 2,
-  requiresIdempotencyKey: true,
 });
 
 export const bookingsCancel = defineCapability({
@@ -95,7 +92,6 @@ export const bookingsCancel = defineCapability({
   permission: "cancel:bookings",
   effect: "destructive",
   riskTier: 2,
-  requiresIdempotencyKey: true,
 });
 
 export const bookingsNoShowMark = defineCapability({
@@ -107,7 +103,6 @@ export const bookingsNoShowMark = defineCapability({
   permission: "noshow:bookings",
   effect: "destructive",
   riskTier: 2,
-  requiresIdempotencyKey: true,
 });
 
 export const bookingsWalkInSeat = defineCapability({
@@ -131,7 +126,6 @@ export const bookingsWalkInUndo = defineCapability({
   permission: "update:bookings",
   effect: "write",
   riskTier: 2,
-  requiresIdempotencyKey: true,
 });
 
 export const bookingsCapabilities = {

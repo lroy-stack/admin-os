@@ -69,9 +69,12 @@ describe("notification capabilities", () => {
     expect(notificationsCapabilities[id]).toMatchObject({ permission, effect, riskTier });
   });
 
-  it.each(["notifications.read", "notifications.read_all"] as const)("%s requires an idempotency key", (id) => {
-    expect(notificationsCapabilities[id]).toMatchObject({ requiresIdempotencyKey: true });
-  });
+  it.each(["notifications.read", "notifications.read_all"] as const)(
+    "%s requires no idempotency key: marking read is idempotent by target state (spec 004 D6)",
+    (id) => {
+      expect(notificationsCapabilities[id].requiresIdempotencyKey).toBeUndefined();
+    },
+  );
 });
 
 describe("deriving notifications from the business day", () => {

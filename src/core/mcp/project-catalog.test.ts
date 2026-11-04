@@ -49,6 +49,17 @@ const notesClear = defineCapability({
   riskTier: 3,
 });
 
+const notesCreate = defineCapability({
+  id: "notes.create",
+  summary: "Create a note; retrying with the same key creates it once.",
+  input: z.strictObject({ text: z.string().min(1) }),
+  output: notesOutput,
+  permission: "create:notes",
+  effect: "write",
+  riskTier: 2,
+  requiresIdempotencyKey: true,
+});
+
 const notesExport = defineCapability({
   id: "notes.export",
   summary: "Export every note as a file the browser downloads.",
@@ -63,6 +74,7 @@ const catalog = {
   "notes.list": notesList,
   "notes.add": notesAdd,
   "notes.clear": notesClear,
+  "notes.create": notesCreate,
   "notes.export": notesExport,
 };
 
@@ -70,6 +82,7 @@ const manifest: McpManifest = {
   "notes.list": { expose: true, title: "List notes" },
   "notes.add": { expose: true, title: "Add a note" },
   "notes.clear": { expose: true, title: "Clear the notes" },
+  "notes.create": { expose: true, title: "Create a note" },
   "notes.export": { uiOnly: "A browser download; an agent reads the same notes with notes_list" },
 };
 
@@ -82,6 +95,10 @@ const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
   ...mockHandler(notesClear, (_input, { data }: { data: Notes }) => {
     data.notes.splice(0);
     return ok({ items: [] });
+  }),
+  ...mockHandler(notesCreate, (input, { data }: { data: Notes }) => {
+    data.notes.push(input.text);
+    return ok({ items: [...data.notes] });
   }),
   ...mockHandler(notesExport, (_input, { data }: { data: Notes }) => ok({ items: [...data.notes] })),
 };
@@ -155,7 +172,7 @@ describe("tool names", () => {
 
 describe("listing", () => {
   it.each([
-    ["the owner", owner, ["notes_list", "notes_add", "notes_clear"]],
+    ["the owner", owner, ["notes_list", "notes_add", "notes_clear", "notes_create"]],
     ["a reader", reader, ["notes_list"]],
     ["an actor without permissions", nobody, []],
   ] as const)("%s lists exactly the tools its permissions reach", async (_label, actor, expected) => {
@@ -326,5 +343,117 @@ describe("calls", () => {
       _meta: { [IDEMPOTENCY_META_KEY]: 42 },
     });
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "schema.invalid_input" } });
+  });
+});
+
+describe("idempotency by operation (spec 004 D6)", () => {
+  const notesAfter = async (client: Client) =>
+    notesOutput.parse((await client.callTool({ name: "notes_list", arguments: {} })).structuredContent).items;
+
+  it("advertises a required idempotencyKey argument on a create", async () => {
+    const { tools } = await (await connect(owner)).listTools();
+    expect(tools.find((tool) => tool.name === "notes_create")?.inputSchema).toMatchObject({
+      properties: { text: { type: "string" }, idempotencyKey: { type: "string", minLength: 1, maxLength: 128 } },
+      required: ["text", "idempotencyKey"],
+    });
+  });
+
+  it("advertises no idempotencyKey argument on a write that needs no key", async () => {
+    const { tools } = await (await connect(owner)).listTools();
+    expect(tools.find((tool) => tool.name === "notes_add")?.inputSchema.properties).not.toHaveProperty(
+      "idempotencyKey",
+    );
+  });
+
+  it("applies a create retried with the same idempotencyKey argument once", async () => {
+    const client = await connect(owner);
+    const call = { name: "notes_create", arguments: { text: "once", idempotencyKey: "k-1" } };
+    const first = await client.callTool(call);
+    const retry = await client.callTool(call);
+    expect([retry.structuredContent, await notesAfter(client)]).toEqual([first.structuredContent, ["seeded", "once"]]);
+  });
+
+  it("applies a create once when the host sends the key in _meta only", async () => {
+    const client = await connect(owner);
+    const call = { name: "notes_create", arguments: { text: "once" }, _meta: { [IDEMPOTENCY_META_KEY]: "k-1" } };
+    await client.callTool(call);
+    await client.callTool(call);
+    expect(await notesAfter(client)).toEqual(["seeded", "once"]);
+  });
+
+  it("accepts the same key in the argument and in _meta", async () => {
+    const result = await (await connect(owner)).callTool({
+      name: "notes_create",
+      arguments: { text: "both", idempotencyKey: "k-1" },
+      _meta: { [IDEMPOTENCY_META_KEY]: "k-1" },
+    });
+    expect(result).toMatchObject({ structuredContent: { items: ["seeded", "both"] } });
+  });
+
+  it("refuses a create without a key with client.idempotency_required on the idempotencyKey path", async () => {
+    const client = await connect(owner);
+    const result = await client.callTool({ name: "notes_create", arguments: { text: "no key" } });
+    expect([result, await notesAfter(client)]).toMatchObject([
+      {
+        isError: true,
+        structuredContent: { code: "client.idempotency_required", details: { paths: ["idempotencyKey"] } },
+      },
+      ["seeded"],
+    ]);
+  });
+
+  it("refuses different keys in the argument and in _meta", async () => {
+    const result = await (await connect(owner)).callTool({
+      name: "notes_create",
+      arguments: { text: "two keys", idempotencyKey: "k-1" },
+      _meta: { [IDEMPOTENCY_META_KEY]: "k-2" },
+    });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "schema.invalid_input",
+        details: { paths: ["idempotencyKey", `_meta.${IDEMPOTENCY_META_KEY}`] },
+      },
+    });
+  });
+
+  it.each([42, "", "k".repeat(129)])("refuses the idempotencyKey argument %j", async (idempotencyKey) => {
+    const result = await (await connect(owner)).callTool({
+      name: "notes_create",
+      arguments: { text: "bad key", idempotencyKey },
+    });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: { code: "schema.invalid_input", details: { paths: ["idempotencyKey"] } },
+    });
+  });
+
+  it("answers the same key with other arguments with client.idempotency_conflict", async () => {
+    const client = await connect(owner);
+    await client.callTool({ name: "notes_create", arguments: { text: "first", idempotencyKey: "k-1" } });
+    const reused = await client.callTool({ name: "notes_create", arguments: { text: "other", idempotencyKey: "k-1" } });
+    expect(reused).toMatchObject({ isError: true, structuredContent: { code: "client.idempotency_conflict" } });
+  });
+
+  it("refuses an idempotencyKey argument on a tool that takes none, as an unknown field", async () => {
+    const result = await (await connect(owner)).callTool({
+      name: "notes_add",
+      arguments: { text: "hello", idempotencyKey: "k-1" },
+    });
+    expect(result).toMatchObject({ isError: true, structuredContent: { code: "schema.invalid_input" } });
+  });
+
+  it("throws when a keyed capability already has an input named idempotencyKey", () => {
+    const clash = defineCapability({
+      id: "notes.clash",
+      summary: "A create whose own input already uses the key's name.",
+      input: z.strictObject({ idempotencyKey: z.string() }),
+      output: notesOutput,
+      permission: "create:notes",
+      effect: "write",
+      riskTier: 2,
+      requiresIdempotencyKey: true,
+    });
+    expect(() => toolOf(clash, { expose: true, title: "Clash" })).toThrow(/without a field named "idempotencyKey"/);
   });
 });

@@ -166,16 +166,44 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     },
   );
 
-  it("seats a walk-in through bookings_walk_in_seat and shows it in bookings_list", async () => {
+  it("seats a walk-in with arguments only and shows it in bookings_list (AC4)", async () => {
     const { client } = await connect(owner, undefined, crypto.randomUUID());
     const seated = await client.callTool({
       name: "bookings_walk_in_seat",
-      arguments: { partySize: 2, resourceIds: ["S8"] },
-      _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
+      arguments: { partySize: 2, resourceIds: ["S8"], idempotencyKey: crypto.randomUUID() },
     });
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
     const ids = bookingsList.output.parse(listed.structuredContent).items.map((booking) => booking.id);
     expect(ids).toContain(bookingSchema.parse(seated.structuredContent).id);
+  });
+
+  it("seats a walk-in retried with the same idempotencyKey once (AC4)", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const call = {
+      name: "bookings_walk_in_seat",
+      arguments: { partySize: 2, resourceIds: ["S8"], idempotencyKey: crypto.randomUUID() },
+    };
+    const first = bookingSchema.parse((await client.callTool(call)).structuredContent);
+    const retry = bookingSchema.parse((await client.callTool(call)).structuredContent);
+    const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
+    const walkIns = bookingsList.output
+      .parse(listed.structuredContent)
+      .items.filter((booking) => booking.resourceIds.includes("S8") && booking.origin === "walk_in");
+    expect([retry.id, walkIns.map((booking) => booking.id)]).toEqual([first.id, [first.id]]);
+  });
+
+  it("advances a booking's status without a key, and a repeated advance changes nothing (AC4)", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const call = { name: "bookings_status_advance", arguments: { id: "R-1046", to: "in_progress" } };
+    const advanced = await client.callTool(call);
+    const repeated = await client.callTool(call);
+    const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
+    const found = bookingsList.output.parse(listed.structuredContent).items.find((booking) => booking.id === "R-1046");
+    expect([advanced.structuredContent, repeated, found?.status]).toMatchObject([
+      { status: "in_progress" },
+      { isError: true, structuredContent: { code: "bookings.invalid_transition" } },
+      "in_progress",
+    ]);
   });
 
   it("marks a notification read through notifications_read and lowers the unread count", async () => {
@@ -186,7 +214,6 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const marked = await client.callTool({
       name: "notifications_read",
       arguments: { ids: before.items.map((item) => item.id).slice(0, 1) },
-      _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
     });
     const after = notificationsList.output.parse(
       (await client.callTool({ name: "notifications_list", arguments: { limit: 50 } })).structuredContent,
@@ -202,7 +229,6 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const cancelled = await client.callTool({
       name: "bookings_cancel",
       arguments: { id: "R-1046", reason: "Guest called" },
-      _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
     });
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
     const found = bookingsList.output.parse(listed.structuredContent).items.find((booking) => booking.id === "R-1046");
@@ -218,7 +244,6 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     const result = await client.callTool({
       name: "bookings_cancel",
       arguments: { id: "R-1046", reason: "Guest called" },
-      _meta: { "admin-os/idempotencyKey": crypto.randomUUID() },
     });
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "access.forbidden" } });
   });

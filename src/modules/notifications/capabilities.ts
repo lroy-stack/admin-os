@@ -35,7 +35,6 @@ export const notificationsRead = defineCapability({
   permission: "update:notifications",
   effect: "write",
   riskTier: 1,
-  requiresIdempotencyKey: true,
 });
 
 export const notificationsReadAll = defineCapability({
@@ -46,7 +45,6 @@ export const notificationsReadAll = defineCapability({
   permission: "update:notifications",
   effect: "write",
   riskTier: 1,
-  requiresIdempotencyKey: true,
 });
 
 export const notificationsCapabilities = {

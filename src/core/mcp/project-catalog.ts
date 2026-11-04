@@ -1,5 +1,6 @@
 import {
   type CallToolResult,
+  type JSONValue,
   Server,
   type ServerContext,
   type Tool,
@@ -20,14 +21,23 @@ import { type ExposedEntry, exposedCapabilities, type McpManifest } from "./mani
  * construction (spec D4).
  */
 
-/** `_meta` key a client may set on `tools/call` to make a write safe to retry (ADR 0005 idempotency). */
+/**
+ * The argument a create or add tool requires, so a retry applies once (spec 004 D6): a model writes `arguments`,
+ * while `_meta` belongs to the host.
+ */
+export const IDEMPOTENCY_ARGUMENT = "idempotencyKey";
+
+/** `_meta` key a host may also set on `tools/call` to make a write safe to retry (ADR 0005 idempotency). */
 export const IDEMPOTENCY_META_KEY = "admin-os/idempotencyKey";
 
 /** Tool `_meta` key with the capability's risk tier (0 to 3). */
 export const RISK_TIER_META_KEY = "admin-os/riskTier";
 
-/** Tool `_meta` key, present and true when a call must carry `IDEMPOTENCY_META_KEY` in its own `_meta`. */
+/** Tool `_meta` key, present and true when the tool requires the `IDEMPOTENCY_ARGUMENT` argument. */
 export const REQUIRES_KEY_META_KEY = "admin-os/requiresIdempotencyKey";
+
+const IDEMPOTENCY_ARGUMENT_DESCRIPTION =
+  "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict.";
 
 /** The client the projection dispatches through, bound to the calling actor and one correlation id per call. */
 export type ClientFactory = (actor: Actor, correlationId: string) => DataClient<Catalog>;
@@ -78,6 +88,27 @@ const jsonSchemaOf = (schema: z.ZodType, io: "input" | "output"): JsonObjectSche
   return { ...json, type: "object" };
 };
 
+/** The capability's input, plus the required `idempotencyKey` argument when the capability needs a key (D6). */
+const inputSchemaOf = (capability: AnyCapability): JsonObjectSchema => {
+  const schema = jsonSchemaOf(capability.input, "input");
+  if (capability.requiresIdempotencyKey !== true) return schema;
+  const { properties } = schema;
+  if (properties === undefined || Object.hasOwn(properties, IDEMPOTENCY_ARGUMENT)) {
+    throw new Error(
+      `${capability.id} needs an idempotency key, so its input must be an object without a field named "${IDEMPOTENCY_ARGUMENT}"`,
+    );
+  }
+  const { $schema: _dialect, ...keySchema } = z.toJSONSchema(
+    idempotencyKeySchema.describe(IDEMPOTENCY_ARGUMENT_DESCRIPTION),
+    { target: JSON_SCHEMA_TARGET },
+  );
+  return {
+    ...schema,
+    properties: { ...properties, [IDEMPOTENCY_ARGUMENT]: keySchema as JSONValue },
+    required: [...(schema.required ?? []), IDEMPOTENCY_ARGUMENT],
+  };
+};
+
 /**
  * The exposed capabilities the actor holds the permission for: a tool the actor cannot call is never offered
  * (ADR 0006), and a UI-only capability is never a tool.
@@ -91,7 +122,7 @@ export const toolOf = (capability: AnyCapability, entry: ExposedEntry): Tool => 
   name: toolNameOf(capability.id),
   title: entry.title,
   description: capability.summary,
-  inputSchema: jsonSchemaOf(capability.input, "input"),
+  inputSchema: inputSchemaOf(capability),
   outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
   annotations: annotationsOf(capability),
   _meta: {
@@ -156,15 +187,61 @@ const readOnlyRefusal = (name: string) =>
     `Tool "${name}" changes data, and this server is read-only: it lists and runs read tools only.`,
   );
 
-/** Reads need no key; a write carries the client's key when `_meta` offers a valid one (ADR 0009). */
-const idempotencyKeyOf = (
-  capability: AnyCapability,
-  meta: ServerContext["mcpReq"]["_meta"],
-): { readonly key?: string; readonly invalid: boolean } => {
-  const raw = meta?.[IDEMPOTENCY_META_KEY];
-  if (capability.effect === "read" || raw === undefined) return { invalid: false };
-  const parsed = idempotencyKeySchema.safeParse(raw);
-  return parsed.success ? { key: parsed.data, invalid: false } : { invalid: true };
+type ToolArguments = Readonly<Record<string, unknown>>;
+
+/** What a call carries for the client: the capability's own arguments and, for a write, the idempotency key. */
+type PreparedCall =
+  | { readonly ok: true; readonly input: ToolArguments; readonly key?: string }
+  | { readonly ok: false; readonly error: CallToolResult };
+
+const keyIssue = (where: string) =>
+  toolError(ErrorCodes.invalidInput, `${where} must be a string of 1 to 128 characters`, { paths: [where] });
+
+/**
+ * Splits the key from the arguments (spec 004 D6). A create or add takes `idempotencyKey` as an argument; a host may
+ * also send `_meta["admin-os/idempotencyKey"]`, and when both arrive they must be the same key. Set-state writes take
+ * no key argument but keep a `_meta` key when the host sends one; reads ignore both.
+ */
+const prepareCall = (capability: AnyCapability, args: ToolArguments, meta: ServerContext["mcpReq"]["_meta"]) => {
+  if (capability.effect === "read") return { ok: true, input: args } satisfies PreparedCall;
+  const keyed = capability.requiresIdempotencyKey === true;
+  const { [IDEMPOTENCY_ARGUMENT]: rawArgument, ...rest } = args;
+  const input = keyed ? rest : args;
+  const rawMeta = meta?.[IDEMPOTENCY_META_KEY];
+  const fromMeta = idempotencyKeySchema.safeParse(rawMeta);
+  if (rawMeta !== undefined && !fromMeta.success) {
+    return { ok: false, error: keyIssue(`_meta.${IDEMPOTENCY_META_KEY}`) } satisfies PreparedCall;
+  }
+  const fromArgument = idempotencyKeySchema.safeParse(rawArgument);
+  if (keyed && rawArgument !== undefined && !fromArgument.success) {
+    return { ok: false, error: keyIssue(IDEMPOTENCY_ARGUMENT) } satisfies PreparedCall;
+  }
+  const argumentKey = keyed && fromArgument.success ? fromArgument.data : undefined;
+  const metaKey = fromMeta.success ? fromMeta.data : undefined;
+  if (argumentKey !== undefined && metaKey !== undefined && argumentKey !== metaKey) {
+    return {
+      ok: false,
+      error: toolError(
+        ErrorCodes.invalidInput,
+        `The ${IDEMPOTENCY_ARGUMENT} argument and _meta.${IDEMPOTENCY_META_KEY} carry different keys; send one key, or the same key in both`,
+        { paths: [IDEMPOTENCY_ARGUMENT, `_meta.${IDEMPOTENCY_META_KEY}`] },
+      ),
+    } satisfies PreparedCall;
+  }
+  const key = argumentKey ?? metaKey;
+  if (keyed && key === undefined) {
+    return {
+      ok: false,
+      error: toolError(
+        ErrorCodes.idempotencyRequired,
+        `${toolNameOf(capability.id)} needs the ${IDEMPOTENCY_ARGUMENT} argument`,
+        {
+          paths: [IDEMPOTENCY_ARGUMENT],
+        },
+      ),
+    } satisfies PreparedCall;
+  }
+  return { ok: true, input, ...(key === undefined ? {} : { key }) } satisfies PreparedCall;
 };
 
 /**
@@ -193,17 +270,13 @@ export function projectCatalog(options: ProjectionOptions): Server {
     const { name } = request.params;
     const capability = index.get(name);
     if (capability === undefined) return withheldWrites.has(name) ? readOnlyRefusal(name) : forbidden(name);
-    const idempotency = idempotencyKeyOf(capability, ctx.mcpReq._meta);
-    if (idempotency.invalid) {
-      return toolError(ErrorCodes.invalidInput, `${IDEMPOTENCY_META_KEY} must be a string of 1 to 128 characters`, {
-        paths: [`_meta.${IDEMPOTENCY_META_KEY}`],
-      });
-    }
+    const prepared: PreparedCall = prepareCall(capability, request.params.arguments ?? {}, ctx.mcpReq._meta);
+    if (!prepared.ok) return prepared.error;
     const client = createClient(actor, crypto.randomUUID());
     // The client validates the arguments itself, so a bad input is `schema.invalid_input` exactly as in the UI.
-    const result = await client.call(capability.id, request.params.arguments ?? {}, {
+    const result = await client.call(capability.id, prepared.input, {
       signal: ctx.mcpReq.signal,
-      ...(idempotency.key === undefined ? {} : { idempotencyKey: idempotency.key }),
+      ...(prepared.key === undefined ? {} : { idempotencyKey: prepared.key }),
     });
     return server.projectCallToolResult(toCallToolResult(result), outputSchemas.get(name));
   });

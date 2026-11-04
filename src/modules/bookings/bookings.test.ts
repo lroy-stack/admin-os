@@ -74,11 +74,24 @@ describe("booking capabilities", () => {
   });
 
   it.each(Object.values(bookingsCapabilities).filter((capability) => capability.effect !== "read"))(
-    "$id is a tier 2 write that requires an idempotency key",
+    "$id is a tier 2 write",
     (capability) => {
-      expect([capability.riskTier, capability.requiresIdempotencyKey]).toEqual([2, true]);
+      expect(capability.riskTier).toBe(2);
     },
   );
+
+  it.each([
+    ["bookings.create", true],
+    ["bookings.walk_in.seat", true],
+    ["bookings.update", undefined],
+    ["bookings.status.advance", undefined],
+    ["bookings.status.undo", undefined],
+    ["bookings.cancel", undefined],
+    ["bookings.no_show.mark", undefined],
+    ["bookings.walk_in.undo", undefined],
+  ] as const)("%s requires an idempotency key only when it creates (spec 004 D6): %s", (id, required) => {
+    expect(bookingsCapabilities[id].requiresIdempotencyKey).toBe(required);
+  });
 
   it.each(["bookings.cancel", "bookings.no_show.mark"] as const)("%s is destructive", (id) => {
     expect(bookingsCapabilities[id].effect).toBe("destructive");

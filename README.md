@@ -191,6 +191,9 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
   either default.
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
 
+Create and add tools take a required `idempotencyKey` argument: a new UUID for each operation, the same one to retry
+it safely. Other writes take no key and are safe to repeat.
+
 Claude Code, from the repository root:
 
 ```bash

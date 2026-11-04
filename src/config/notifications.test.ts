@@ -136,11 +136,13 @@ describe.each(presets)("notifications in the %s preset", (vertical) => {
     });
   });
 
-  it("refuses notifications.read without an idempotency key", async () => {
-    expect(await session(vertical).call("notifications.read", { ids: ["a:1"] })).toMatchObject({
-      ok: false,
-      error: { code: "client.idempotency_required" },
-    });
+  it("marks notifications read without an idempotency key, since marking read is idempotent (spec 004 D6)", async () => {
+    const client = session(vertical);
+    const [target] = (await feed(client)).items;
+    const input = { ids: [target?.id ?? ""] };
+    const first = readOutcome(await client.call("notifications.read", input));
+    const again = readOutcome(await client.call("notifications.read", input));
+    expect([first.marked, again.marked]).toEqual([1, 0]);
   });
 
   it("does not show one session's read marks to another", async () => {
