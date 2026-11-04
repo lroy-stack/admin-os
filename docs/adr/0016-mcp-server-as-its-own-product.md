@@ -631,8 +631,9 @@ These are places where the first draft found a decision incomplete. Each came wi
    holds the write. Binds A1b.
 2. **D4: (a).** The session and role cookies take `Domain` from `DEMO_COOKIE_DOMAIN` (`admin-os.lr0y.dev` in
    production, unset locally), and the consent page lives in the MCP Worker. The signed session cookie takes a new name
-   so unsigned legacy cookies are ignored, and writing a domain-scoped cookie expires its host-only variant. Binds S1b
-   and A1a.
+   (`demo_sid`) so unsigned legacy cookies are ignored. A stale host-only `demo_role` is not expired, since Next keeps
+   one `Set-Cookie` per name: browsers send older cookies first and Next's parser keeps the last duplicate, so the newer
+   domain cookie wins. Binds S1b and A1a.
 3. **D6: the undos are UI-only.** `bookings.status.undo` and `bookings.walk_in.undo` are the undo affordance of the
    person who just acted; agents use the forward capabilities, so the manifest marks both UI-only and the question of
    their key does not reach MCP. `bookings.staff_note.add` takes a key. Every exposed write declares its idempotency
