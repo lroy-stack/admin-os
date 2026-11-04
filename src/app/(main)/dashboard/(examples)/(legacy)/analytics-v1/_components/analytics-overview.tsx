@@ -28,6 +28,7 @@ import {
   useMessages,
 } from "@/core/i18n/client";
 import { CurrencyTooltipContent } from "@/ds/components";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
 import {
   type FilterToggleKey,
@@ -41,6 +42,7 @@ import { formatDays, formatPoints, formatSignedAmount } from "./analytics-format
 import { analyticsV1MessageKey } from "./messages";
 
 const STALLED_THRESHOLD_DAYS = 14;
+const REVENUE_FILE = "revenue.csv";
 
 /** A calendar day as an ISO key ("2026-10-31"), built from the local parts the date picker produced. */
 function isoDay(day: Date) {
@@ -68,6 +70,7 @@ function buildRevenueChartData(from: Date, to: Date) {
 
 export function AnalyticsOverview() {
   const text = useMessages(analyticsV1MessageKey).overview;
+  const currency = useCurrency();
   const [dateRange, setDateRange] = React.useState<{ from: Date; to: Date }>(() => {
     const to = startOfDay(new Date());
     return { from: subDays(to, 29), to };
@@ -102,7 +105,18 @@ export function AnalyticsOverview() {
 
         <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
-          <Button variant="secondary">
+          <Button
+            variant="secondary"
+            onClick={() =>
+              downloadCsv(
+                REVENUE_FILE,
+                toCsv(revenueSeries, [
+                  { header: text.day, value: (point) => point.day },
+                  { header: `${text.revenue} (${currency})`, value: (point) => point.revenue },
+                ]),
+              )
+            }
+          >
             <Download />
             {text.export}
           </Button>

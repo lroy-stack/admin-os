@@ -31,18 +31,35 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, useLocale, useMessages } from "@/core/i18n/client";
+import { format, formatRelative, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
+import { useToastWithUndo } from "@/ds/feedback";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
 import { crmV1MessageKey } from "../messages";
-import { createRecentLeadsColumns } from "./columns";
+import { createRecentLeadsColumns, MINUTE_MS, REFERENCE_TIME } from "./columns";
 import type { RecentLeadRow } from "./schema";
 
-export function RecentLeadsTable({ data }: { data: RecentLeadRow[] }) {
+const LEADS_FILE = "recent-leads.csv";
+
+export function RecentLeadsTable({ data: initialData }: { data: RecentLeadRow[] }) {
   const text = useMessages(crmV1MessageKey);
   const t = text.table;
   const locale = useLocale();
-  const columns = React.useMemo(() => createRecentLeadsColumns(text, locale), [text, locale]);
+  const withUndo = useToastWithUndo();
+  const [data, setData] = React.useState(initialData);
+  const deleteLead = React.useCallback(
+    (lead: RecentLeadRow) => {
+      const index = data.findIndex((row) => row.id === lead.id);
+      setData((current) => current.filter((row) => row.id !== lead.id));
+      withUndo({
+        message: format(text.table.deleted, locale, { name: lead.name }),
+        undo: () => setData((current) => [...current.slice(0, index), lead, ...current.slice(index)]),
+      });
+    },
+    [data, locale, text.table.deleted, withUndo],
+  );
+  const columns = React.useMemo(() => createRecentLeadsColumns(text, locale, deleteLead), [text, locale, deleteLead]);
   const columnLabels: Record<string, string> = {
     id: t.columns.ref,
     name: t.columns.name,
@@ -112,7 +129,31 @@ export function RecentLeadsTable({ data }: { data: RecentLeadRow[] }) {
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" size="sm" aria-label={t.export}>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={t.export}
+              onClick={() =>
+                downloadCsv(
+                  LEADS_FILE,
+                  toCsv(
+                    table.getFilteredRowModel().rows.map((row) => row.original),
+                    [
+                      { header: t.columns.ref, value: (lead) => lead.id },
+                      { header: t.columns.name, value: (lead) => lead.name },
+                      { header: t.columns.company, value: (lead) => lead.company },
+                      { header: t.columns.status, value: (lead) => text.statuses[lead.status] },
+                      { header: t.columns.source, value: (lead) => text.sources[lead.source] },
+                      {
+                        header: t.columns.lastActivity,
+                        value: (lead) =>
+                          formatRelative(REFERENCE_TIME - lead.minutesAgo * MINUTE_MS, REFERENCE_TIME, locale),
+                      },
+                    ],
+                  ),
+                )
+              }
+            >
               <Download data-icon="inline-start" />
               <span className="hidden lg:inline">{t.export}</span>
             </Button>

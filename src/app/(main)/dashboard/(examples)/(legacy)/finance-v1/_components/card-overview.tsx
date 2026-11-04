@@ -2,7 +2,6 @@ import { Home, Receipt, Sparkles, Zap } from "lucide-react";
 import { siApple, siMastercard } from "simple-icons";
 
 import { SimpleIcon } from "@/components/simple-icon";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
@@ -93,15 +92,6 @@ export async function CardOverview() {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Button className="w-full" size="sm">
-              {labels.manage}
-            </Button>
-
-            <Button className="w-full" variant="outline" size="sm">
-              {labels.add}
-            </Button>
-          </div>
           <Separator />
 
           <div className="space-y-4">
@@ -137,10 +127,6 @@ export async function CardOverview() {
                 </div>
               ))}
             </div>
-
-            <Button className="w-full" size="sm" variant="outline">
-              {labels.viewAll}
-            </Button>
           </div>
         </div>
       </CardContent>

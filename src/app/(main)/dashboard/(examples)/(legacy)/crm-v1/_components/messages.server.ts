@@ -37,7 +37,6 @@ const en: CrmV1Messages = {
   insights: {
     leadsBySource: "Leads by source",
     leads: "Leads",
-    viewReport: "View full report",
     downloadCsv: "Download CSV",
     projectRevenue: "Project revenue vs. target",
     actual: "Actual",
@@ -101,7 +100,8 @@ const en: CrmV1Messages = {
     selectAll: "Select all",
     selectRow: "Select row",
     openMenu: "Open menu",
-    menu: { view: "View", assign: "Assign", archive: "Archive", delete: "Delete" },
+    menu: { delete: "Delete" },
+    deleted: "{name} deleted",
     empty: "No results found.",
     selected: {
       one: "{selected} of {count} row selected.",
@@ -149,7 +149,6 @@ const es: CrmV1Messages = {
   insights: {
     leadsBySource: "Leads por origen",
     leads: "Leads",
-    viewReport: "Ver informe completo",
     downloadCsv: "Descargar CSV",
     projectRevenue: "Ingresos por proyecto frente al objetivo",
     actual: "Real",
@@ -216,7 +215,8 @@ const es: CrmV1Messages = {
     selectAll: "Seleccionar todo",
     selectRow: "Seleccionar fila",
     openMenu: "Abrir menú",
-    menu: { view: "Ver", assign: "Asignar", archive: "Archivar", delete: "Eliminar" },
+    menu: { delete: "Eliminar" },
+    deleted: "{name} eliminado",
     empty: "No se encontraron resultados.",
     selected: {
       one: "{selected} de {count} fila seleccionada.",
@@ -264,7 +264,6 @@ const de: CrmV1Messages = {
   insights: {
     leadsBySource: "Leads nach Quelle",
     leads: "Leads",
-    viewReport: "Vollständigen Bericht anzeigen",
     downloadCsv: "CSV herunterladen",
     projectRevenue: "Projektumsatz vs. Ziel",
     actual: "Ist",
@@ -328,7 +327,8 @@ const de: CrmV1Messages = {
     selectAll: "Alle auswählen",
     selectRow: "Zeile auswählen",
     openMenu: "Menü öffnen",
-    menu: { view: "Anzeigen", assign: "Zuweisen", archive: "Archivieren", delete: "Löschen" },
+    menu: { delete: "Löschen" },
+    deleted: "{name} gelöscht",
     empty: "Keine Ergebnisse gefunden.",
     selected: {
       one: "{selected} von {count} Zeile ausgewählt.",
@@ -376,7 +376,6 @@ const fr: CrmV1Messages = {
   insights: {
     leadsBySource: "Prospects par source",
     leads: "Prospects",
-    viewReport: "Voir le rapport complet",
     downloadCsv: "Télécharger le CSV",
     projectRevenue: "Chiffre d’affaires par projet et objectif",
     actual: "Réel",
@@ -443,7 +442,8 @@ const fr: CrmV1Messages = {
     selectAll: "Tout sélectionner",
     selectRow: "Sélectionner la ligne",
     openMenu: "Ouvrir le menu",
-    menu: { view: "Voir", assign: "Attribuer", archive: "Archiver", delete: "Supprimer" },
+    menu: { delete: "Supprimer" },
+    deleted: "{name} supprimé",
     empty: "Aucun résultat.",
     selected: {
       one: "{selected} sur {count} ligne sélectionnée.",

@@ -1,6 +1,5 @@
 import { WalletMinimal } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
 import { formatAmount } from "@/core/i18n/client";
@@ -30,15 +29,6 @@ export async function PrimaryAccount() {
           </p>
 
           <p className="text-muted-foreground text-xs">{labels.balance}</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button className="min-w-0 flex-1" size="sm">
-            {labels.pay}
-          </Button>
-          <Button className="min-w-0 flex-1" size="sm" variant="outline">
-            {labels.request}
-          </Button>
         </div>
       </CardContent>
     </Card>

@@ -24,8 +24,6 @@ export interface FinanceV1Messages {
     readonly primaryAccount: {
       readonly title: string;
       readonly balance: string;
-      readonly pay: string;
-      readonly request: string;
     };
     readonly netWorth: { readonly title: string; readonly period: string; readonly scope: string };
     readonly monthlyCashFlow: { readonly title: string; readonly period: string };
@@ -76,10 +74,7 @@ export interface FinanceV1Messages {
     readonly billingDay: string;
     readonly limit: string;
     readonly availableBalance: string;
-    readonly manage: string;
-    readonly add: string;
     readonly upcomingPayments: string;
-    readonly viewAll: string;
     /** Placeholders: `{date}`. */
     readonly dueOn: string;
     readonly payments: {

@@ -28,7 +28,6 @@ export interface CrmV1Messages {
   readonly insights: {
     readonly leadsBySource: string;
     readonly leads: string;
-    readonly viewReport: string;
     readonly downloadCsv: string;
     readonly projectRevenue: string;
     readonly actual: string;
@@ -71,11 +70,10 @@ export interface CrmV1Messages {
     readonly selectRow: string;
     readonly openMenu: string;
     readonly menu: {
-      readonly view: string;
-      readonly assign: string;
-      readonly archive: string;
       readonly delete: string;
     };
+    /** Placeholders: `{name}`. */
+    readonly deleted: string;
     readonly empty: string;
     /** Placeholders: `{selected}`, `{count}` (rows in total). */
     readonly selected: Plural;

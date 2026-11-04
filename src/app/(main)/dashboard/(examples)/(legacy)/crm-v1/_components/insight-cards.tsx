@@ -14,9 +14,12 @@ import {
   useMessages,
 } from "@/core/i18n/client";
 import { CurrencyTooltipContent } from "@/ds/components";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
 import { leadSourceColors, leadsBySourceChartData, projectRevenueChartData, projectRevenueSummary } from "./crm.config";
 import { crmV1MessageKey } from "./messages";
+
+const LEADS_BY_SOURCE_FILE = "leads-by-source.csv";
 
 export function InsightCards() {
   const text = useMessages(crmV1MessageKey);
@@ -109,10 +112,20 @@ export function InsightCards() {
           </ul>
         </CardContent>
         <CardFooter className="gap-2">
-          <Button size="sm" variant="outline" className="h-auto min-h-8 basis-1/2 py-1 whitespace-normal">
-            {t.viewReport}
-          </Button>
-          <Button size="sm" variant="outline" className="h-auto min-h-8 basis-1/2 py-1 whitespace-normal">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-auto min-h-8 w-full py-1 whitespace-normal"
+            onClick={() =>
+              downloadCsv(
+                LEADS_BY_SOURCE_FILE,
+                toCsv(leadsBySourceChartData, [
+                  { header: t.leadsBySource, value: (row) => text.sources[row.source] },
+                  { header: t.leads, value: (row) => row.leads },
+                ]),
+              )
+            }
+          >
             {t.downloadCsv}
           </Button>
         </CardFooter>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
@@ -10,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useChartFormatters, useMessages } from "@/core/i18n/client";
 import { CurrencyTooltipContent } from "@/ds/components";
 
+import { type CashFlowPeriod, cashFlowPeriods, inCashFlowPeriod, isCashFlowPeriod } from "./cash-flow-periods";
 import { financeV1MessageKey } from "./messages";
 
 // Months are calendar months of one year, so the chart formats them with the active locale.
@@ -28,12 +31,13 @@ const chartData = [
   { month: "2026-12", income: 4700, expenses: -3400 },
 ];
 
-const totalIncome = chartData.reduce((acc, item) => acc + item.income, 0);
-const totalExpenses = chartData.reduce((acc, item) => acc + Math.abs(item.expenses), 0);
-
 export function CashFlowOverview() {
   const text = useMessages(financeV1MessageKey).cashFlow;
   const fmt = useChartFormatters();
+  const [period, setPeriod] = useState<CashFlowPeriod>("thisYear");
+  const visible = chartData.filter((item) => inCashFlowPeriod(item.month, period));
+  const totalIncome = visible.reduce((acc, item) => acc + item.income, 0);
+  const totalExpenses = visible.reduce((acc, item) => acc + Math.abs(item.expenses), 0);
   const chartConfig = {
     income: { label: text.income, color: "var(--chart-1)" },
     expenses: { label: text.expenses, color: "var(--chart-2)" },
@@ -45,16 +49,17 @@ export function CashFlowOverview() {
         <CardTitle>{text.title}</CardTitle>
         <CardDescription>{text.description}</CardDescription>
         <CardAction>
-          <Select defaultValue="this-year">
+          <Select value={period} onValueChange={(value) => isCashFlowPeriod(value) && setPeriod(value)}>
             <SelectTrigger size="sm" className="w-40" aria-label={text.periodPlaceholder}>
               <SelectValue placeholder={text.periodPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="this-month">{text.periods.thisMonth}</SelectItem>
-                <SelectItem value="last-6-months">{text.periods.lastSixMonths}</SelectItem>
-                <SelectItem value="ytd">{text.periods.yearToDate}</SelectItem>
-                <SelectItem value="this-year">{text.periods.thisYear}</SelectItem>
+                {cashFlowPeriods.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {text.periods[value]}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -89,7 +94,7 @@ export function CashFlowOverview() {
             stackOffset="sign"
             margin={{ left: 0, right: 0, top: 25, bottom: 0 }}
             accessibilityLayer
-            data={chartData}
+            data={visible}
           >
             <CartesianGrid vertical={false} />
             <XAxis

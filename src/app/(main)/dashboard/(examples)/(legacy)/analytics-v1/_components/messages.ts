@@ -22,6 +22,7 @@ export interface AnalyticsV1Messages {
       readonly includeRenewals: { readonly label: string; readonly summary: string };
     };
     readonly export: string;
+    readonly day: string;
     readonly revenue: string;
     /** Placeholders: `{amount}`. */
     readonly previous: string;

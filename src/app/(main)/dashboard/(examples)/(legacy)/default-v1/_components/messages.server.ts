@@ -50,7 +50,6 @@ const en: DefaultV1Messages = {
     selectView: "Select a view",
     view: "View",
     toggleColumns: "Toggle columns",
-    addSection: "Add section",
     columns: {
       header: "Section",
       type: "Section type",
@@ -75,7 +74,7 @@ const en: DefaultV1Messages = {
     assignReviewer: "Assign reviewer",
     dragToReorder: "Drag to reorder",
     openMenu: "Open menu",
-    actions: { edit: "Edit", copy: "Make a copy", favorite: "Favorite", delete: "Delete" },
+    actions: { delete: "Delete" },
     selectAll: "Select all",
     selectRow: "Select row",
     empty: "No results found.",
@@ -86,7 +85,7 @@ const en: DefaultV1Messages = {
     previousPage: "Go to previous page",
     nextPage: "Go to next page",
     lastPage: "Go to last page",
-    toast: { saving: "Saving {header}", saved: "Saved", error: "Something went wrong." },
+    toast: { saved: "Saved", deleted: "{header} deleted" },
     drawer: {
       description: {
         one: "Showing total visitors for the last month",
@@ -162,7 +161,6 @@ const es: DefaultV1Messages = {
     selectView: "Seleccionar vista",
     view: "Ver",
     toggleColumns: "Mostrar columnas",
-    addSection: "Añadir sección",
     columns: {
       header: "Sección",
       type: "Tipo de sección",
@@ -187,7 +185,7 @@ const es: DefaultV1Messages = {
     assignReviewer: "Asignar revisor",
     dragToReorder: "Arrastrar para reordenar",
     openMenu: "Abrir menú",
-    actions: { edit: "Editar", copy: "Hacer una copia", favorite: "Marcar como favorita", delete: "Eliminar" },
+    actions: { delete: "Eliminar" },
     selectAll: "Seleccionar todo",
     selectRow: "Seleccionar fila",
     empty: "No se encontraron resultados.",
@@ -198,7 +196,7 @@ const es: DefaultV1Messages = {
     previousPage: "Ir a la página anterior",
     nextPage: "Ir a la página siguiente",
     lastPage: "Ir a la última página",
-    toast: { saving: "Guardando {header}", saved: "Guardado", error: "Algo ha salido mal." },
+    toast: { saved: "Guardado", deleted: "{header} eliminada" },
     drawer: {
       description: {
         one: "Visitantes totales del último mes",
@@ -274,7 +272,6 @@ const de: DefaultV1Messages = {
     selectView: "Ansicht auswählen",
     view: "Ansicht",
     toggleColumns: "Spalten anzeigen",
-    addSection: "Abschnitt hinzufügen",
     columns: {
       header: "Abschnitt",
       type: "Abschnittstyp",
@@ -299,7 +296,7 @@ const de: DefaultV1Messages = {
     assignReviewer: "Prüfer zuweisen",
     dragToReorder: "Zum Neuordnen ziehen",
     openMenu: "Menü öffnen",
-    actions: { edit: "Bearbeiten", copy: "Kopie erstellen", favorite: "Als Favorit markieren", delete: "Löschen" },
+    actions: { delete: "Löschen" },
     selectAll: "Alle auswählen",
     selectRow: "Zeile auswählen",
     empty: "Keine Ergebnisse gefunden.",
@@ -310,7 +307,7 @@ const de: DefaultV1Messages = {
     previousPage: "Zur vorherigen Seite",
     nextPage: "Zur nächsten Seite",
     lastPage: "Zur letzten Seite",
-    toast: { saving: "{header} wird gespeichert", saved: "Gespeichert", error: "Etwas ist schiefgelaufen." },
+    toast: { saved: "Gespeichert", deleted: "{header} gelöscht" },
     drawer: {
       description: {
         one: "Besucher insgesamt im letzten Monat",
@@ -386,7 +383,6 @@ const fr: DefaultV1Messages = {
     selectView: "Sélectionner une vue",
     view: "Affichage",
     toggleColumns: "Afficher les colonnes",
-    addSection: "Ajouter une section",
     columns: {
       header: "Section",
       type: "Type de section",
@@ -411,7 +407,7 @@ const fr: DefaultV1Messages = {
     assignReviewer: "Attribuer un relecteur",
     dragToReorder: "Faire glisser pour réorganiser",
     openMenu: "Ouvrir le menu",
-    actions: { edit: "Modifier", copy: "Dupliquer", favorite: "Ajouter aux favoris", delete: "Supprimer" },
+    actions: { delete: "Supprimer" },
     selectAll: "Tout sélectionner",
     selectRow: "Sélectionner la ligne",
     empty: "Aucun résultat.",
@@ -422,11 +418,7 @@ const fr: DefaultV1Messages = {
     previousPage: "Aller à la page précédente",
     nextPage: "Aller à la page suivante",
     lastPage: "Aller à la dernière page",
-    toast: {
-      saving: "Enregistrement en cours : {header}",
-      saved: "Enregistré",
-      error: "Une erreur s’est produite.",
-    },
+    toast: { saved: "Enregistré", deleted: "{header} supprimée" },
     drawer: {
       description: {
         one: "Total des visiteurs sur le dernier mois",

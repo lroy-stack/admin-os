@@ -12,7 +12,7 @@ const en: FinanceV1Messages = {
   tabs: { overview: "Overview", activity: "Activity", insights: "Insights", utilities: "Utilities" },
   kpis: {
     versusLastMonth: "{change} vs last month",
-    primaryAccount: { title: "Primary account", balance: "Available balance", pay: "Pay", request: "Request" },
+    primaryAccount: { title: "Primary account", balance: "Available balance" },
     netWorth: { title: "Net worth", period: "This month", scope: "Across all linked accounts" },
     monthlyCashFlow: { title: "Monthly cash flow", period: "This month · Net" },
     savingsRate: { title: "Savings rate", period: "This month · After expenses", note: "Above your average" },
@@ -65,10 +65,7 @@ const en: FinanceV1Messages = {
     billingDay: "Day {day} of each month",
     limit: "Card limit",
     availableBalance: "Available balance",
-    manage: "Manage card",
-    add: "Add card",
     upcomingPayments: "Upcoming payments",
-    viewAll: "View all payments",
     dueOn: "Due on {date}",
     payments: {
       rent: "Apartment rent",
@@ -88,7 +85,7 @@ const es: FinanceV1Messages = {
   tabs: { overview: "Resumen", activity: "Actividad", insights: "Análisis", utilities: "Suministros" },
   kpis: {
     versusLastMonth: "{change} vs. mes anterior",
-    primaryAccount: { title: "Cuenta principal", balance: "Saldo disponible", pay: "Pagar", request: "Solicitar" },
+    primaryAccount: { title: "Cuenta principal", balance: "Saldo disponible" },
     netWorth: { title: "Patrimonio neto", period: "Este mes", scope: "En todas las cuentas vinculadas" },
     monthlyCashFlow: { title: "Flujo de caja mensual", period: "Este mes · Neto" },
     savingsRate: { title: "Tasa de ahorro", period: "Este mes · Después de gastos", note: "Por encima de tu media" },
@@ -141,10 +138,7 @@ const es: FinanceV1Messages = {
     billingDay: "Día {day} de cada mes",
     limit: "Límite de la tarjeta",
     availableBalance: "Saldo disponible",
-    manage: "Gestionar tarjeta",
-    add: "Añadir tarjeta",
     upcomingPayments: "Próximos pagos",
-    viewAll: "Ver todos los pagos",
     dueOn: "Vence el {date}",
     payments: {
       rent: "Alquiler del piso",
@@ -164,7 +158,7 @@ const de: FinanceV1Messages = {
   tabs: { overview: "Übersicht", activity: "Aktivität", insights: "Einblicke", utilities: "Nebenkosten" },
   kpis: {
     versusLastMonth: "{change} ggü. Vormonat",
-    primaryAccount: { title: "Hauptkonto", balance: "Verfügbarer Kontostand", pay: "Zahlen", request: "Anfordern" },
+    primaryAccount: { title: "Hauptkonto", balance: "Verfügbarer Kontostand" },
     netWorth: { title: "Nettovermögen", period: "Diesen Monat", scope: "Über alle verknüpften Konten" },
     monthlyCashFlow: { title: "Monatlicher Cashflow", period: "Diesen Monat · Netto" },
     savingsRate: { title: "Sparquote", period: "Diesen Monat · Nach Ausgaben", note: "Über deinem Durchschnitt" },
@@ -220,10 +214,7 @@ const de: FinanceV1Messages = {
     billingDay: "{day}. des Monats",
     limit: "Kartenlimit",
     availableBalance: "Verfügbarer Kontostand",
-    manage: "Karte verwalten",
-    add: "Karte hinzufügen",
     upcomingPayments: "Anstehende Zahlungen",
-    viewAll: "Alle Zahlungen anzeigen",
     dueOn: "Fällig am {date}",
     payments: {
       rent: "Wohnungsmiete",
@@ -243,7 +234,7 @@ const fr: FinanceV1Messages = {
   tabs: { overview: "Aperçu", activity: "Activité", insights: "Analyses", utilities: "Charges" },
   kpis: {
     versusLastMonth: "{change} vs mois précédent",
-    primaryAccount: { title: "Compte principal", balance: "Solde disponible", pay: "Payer", request: "Demander" },
+    primaryAccount: { title: "Compte principal", balance: "Solde disponible" },
     netWorth: { title: "Patrimoine net", period: "Ce mois-ci", scope: "Sur tous les comptes liés" },
     monthlyCashFlow: { title: "Flux de trésorerie mensuel", period: "Ce mois-ci · Net" },
     savingsRate: { title: "Taux d’épargne", period: "Ce mois-ci · Après dépenses", note: "Au-dessus de votre moyenne" },
@@ -296,10 +287,7 @@ const fr: FinanceV1Messages = {
     billingDay: "Le {day} de chaque mois",
     limit: "Plafond de la carte",
     availableBalance: "Solde disponible",
-    manage: "Gérer la carte",
-    add: "Ajouter une carte",
     upcomingPayments: "Paiements à venir",
-    viewAll: "Voir tous les paiements",
     dueOn: "Échéance le {date}",
     payments: {
       rent: "Loyer de l’appartement",

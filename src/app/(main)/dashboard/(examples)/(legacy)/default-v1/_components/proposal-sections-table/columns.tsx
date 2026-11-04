@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { RestrictToVerticalAxis } from "@dnd-kit/abstract/modifiers";
 import { useSortable } from "@dnd-kit/react/sortable";
@@ -28,7 +28,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -40,7 +39,6 @@ import {
   format,
   formatCalendarDate,
   formatPercent,
-  type Locale,
   useChartFormatters,
   useLocale,
   useMessages,
@@ -50,7 +48,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { type DefaultV1Messages, defaultV1MessageKey } from "../messages";
 import { VisitorsTooltip } from "../visitors-tooltip";
-import { type ProposalSectionsRow, sectionStatuses, sectionTypes } from "./schema";
+import {
+  type ProposalSectionsRow,
+  type SectionStatus,
+  type SectionType,
+  sectionStatuses,
+  sectionTypes,
+} from "./schema";
+import { useSectionEdits } from "./section-edits";
 
 // Calendar months of the drawer's demo chart; the names come from `Intl` in the active locale.
 const chartData = [
@@ -89,19 +94,43 @@ function DragHandle() {
   );
 }
 
+type SectionDraft = Pick<ProposalSectionsRow, "header" | "target" | "limit" | "reviewer"> & {
+  type: SectionType;
+  status: SectionStatus;
+};
+
+const toDraft = (item: ProposalSectionsRow): SectionDraft => ({
+  header: item.header,
+  type: item.type,
+  status: item.status,
+  target: item.target,
+  limit: item.limit,
+  reviewer: item.reviewer,
+});
+
 function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
   const messages = useMessages(defaultV1MessageKey);
   const text = messages.table;
   const locale = useLocale();
   const fmt = useChartFormatters();
   const isMobile = useIsMobile();
+  const edits = useSectionEdits();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(() => toDraft(item));
   const chartConfig = {
     desktop: { label: messages.chart.series.desktop, color: "var(--primary)" },
     mobile: { label: messages.chart.series.mobile, color: "var(--primary)" },
   } satisfies ChartConfig;
 
   return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
+    <Drawer
+      direction={isMobile ? "bottom" : "right"}
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setDraft(toDraft(item));
+        setOpen(next);
+      }}
+    >
       <DrawerTrigger asChild>
         <Button
           variant="link"
@@ -182,12 +211,21 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="header">{text.drawer.fields.header}</Label>
-              <Input id="header" defaultValue={item.header} />
+              <Input
+                id="header"
+                value={draft.header}
+                onChange={(event) => setDraft({ ...draft, header: event.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <Label htmlFor="type">{text.drawer.fields.type}</Label>
-                <Select defaultValue={item.type}>
+                <Select
+                  value={draft.type}
+                  onValueChange={(value) =>
+                    setDraft({ ...draft, type: sectionTypes.find((type) => type === value) ?? draft.type })
+                  }
+                >
                   <SelectTrigger id="type" className="w-full">
                     <SelectValue placeholder={text.drawer.selectType} />
                   </SelectTrigger>
@@ -204,7 +242,12 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="status">{text.drawer.fields.status}</Label>
-                <Select defaultValue={item.status}>
+                <Select
+                  value={draft.status}
+                  onValueChange={(value) =>
+                    setDraft({ ...draft, status: sectionStatuses.find((status) => status === value) ?? draft.status })
+                  }
+                >
                   <SelectTrigger id="status" className="w-full">
                     <SelectValue placeholder={text.drawer.selectStatus} />
                   </SelectTrigger>
@@ -223,16 +266,27 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <Label htmlFor="target">{text.drawer.fields.target}</Label>
-                <Input id="target" defaultValue={item.target} />
+                <Input
+                  id="target"
+                  value={draft.target}
+                  onChange={(event) => setDraft({ ...draft, target: event.target.value })}
+                />
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="limit">{text.drawer.fields.limit}</Label>
-                <Input id="limit" defaultValue={item.limit} />
+                <Input
+                  id="limit"
+                  value={draft.limit}
+                  onChange={(event) => setDraft({ ...draft, limit: event.target.value })}
+                />
               </div>
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="reviewer">{text.drawer.fields.reviewer}</Label>
-              <Select defaultValue={item.reviewer ?? undefined}>
+              <Select
+                value={draft.reviewer ?? undefined}
+                onValueChange={(value) => setDraft({ ...draft, reviewer: value })}
+              >
                 <SelectTrigger id="reviewer" className="w-full">
                   <SelectValue placeholder={text.drawer.selectReviewer} />
                 </SelectTrigger>
@@ -250,7 +304,15 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
           </form>
         </div>
         <DrawerFooter>
-          <Button>{text.drawer.save}</Button>
+          <Button
+            onClick={() => {
+              edits.update(item.id, draft);
+              setOpen(false);
+              toast.success(text.toast.saved);
+            }}
+          >
+            {text.drawer.save}
+          </Button>
           <DrawerClose asChild>
             <Button variant="outline">{text.drawer.close}</Button>
           </DrawerClose>
@@ -260,20 +322,86 @@ function ProposalSectionDetailViewer({ item }: { item: ProposalSectionsRow }) {
   );
 }
 
-function createInlineSaveHandler(header: string, text: DefaultV1Messages["table"], locale: Locale) {
-  return (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: format(text.toast.saving, locale, { header }),
-      success: text.toast.saved,
-      error: text.toast.error,
-    });
+/** The Target and Limit cells: typing then Enter or leaving the field saves the value to the row. */
+function InlineValue({ row, field, label }: { row: ProposalSectionsRow; field: "target" | "limit"; label: string }) {
+  const edits = useSectionEdits();
+  const save = (value: string) => {
+    if (value !== row[field]) edits.update(row.id, { [field]: value });
   };
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        save(new FormData(event.currentTarget).get(field)?.toString() ?? row[field]);
+      }}
+    >
+      <Label htmlFor={`${row.id}-${field}`} className="sr-only">
+        {label}
+      </Label>
+      <Input
+        id={`${row.id}-${field}`}
+        name={field}
+        defaultValue={row[field]}
+        onBlur={(event) => save(event.currentTarget.value)}
+        className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
+      />
+    </form>
+  );
+}
+
+function ReviewerCell({ row, text }: { row: ProposalSectionsRow; text: DefaultV1Messages["table"] }) {
+  const edits = useSectionEdits();
+  if (row.reviewer !== null) return row.reviewer;
+
+  return (
+    <>
+      <Label htmlFor={`${row.id}-reviewer`} className="sr-only">
+        {text.columns.reviewer}
+      </Label>
+      <Select onValueChange={(name) => edits.update(row.id, { reviewer: name })}>
+        <SelectTrigger
+          id={`${row.id}-reviewer`}
+          className="w-44 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+          size="sm"
+        >
+          <SelectValue placeholder={text.assignReviewer} />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectGroup>
+            {reviewers.slice(0, 2).map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
+  );
+}
+
+function RowMenu({ row, text }: { row: ProposalSectionsRow; text: DefaultV1Messages["table"] }) {
+  const edits = useSectionEdits();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="text-muted-foreground data-[state=open]:bg-muted flex size-8" size="icon">
+          <EllipsisVerticalIcon />
+          <span className="sr-only">{text.openMenu}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-32">
+        <DropdownMenuItem variant="destructive" onSelect={() => edits.remove(row)}>
+          {text.actions.delete}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function createProposalSectionsColumns(
   text: DefaultV1Messages["table"],
-  locale: Locale,
 ): ColumnDef<DataTableFeatures, ProposalSectionsRow>[] {
   return [
     {
@@ -354,93 +482,21 @@ export function createProposalSectionsColumns(
     {
       accessorKey: "target",
       header: () => <div className="w-full text-right">{text.columns.target}</div>,
-      cell: ({ row }) => (
-        <form onSubmit={createInlineSaveHandler(row.original.header, text, locale)}>
-          <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-            {text.columns.target}
-          </Label>
-          <Input
-            id={`${row.original.id}-target`}
-            defaultValue={row.original.target}
-            className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-          />
-        </form>
-      ),
+      cell: ({ row }) => <InlineValue row={row.original} field="target" label={text.columns.target} />,
     },
     {
       accessorKey: "limit",
       header: () => <div className="w-full text-right">{text.columns.limit}</div>,
-      cell: ({ row }) => (
-        <form onSubmit={createInlineSaveHandler(row.original.header, text, locale)}>
-          <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-            {text.columns.limit}
-          </Label>
-          <Input
-            id={`${row.original.id}-limit`}
-            defaultValue={row.original.limit}
-            className="hover:bg-input/30 focus-visible:bg-background dark:focus-visible:bg-input/30 dark:hover:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-          />
-        </form>
-      ),
+      cell: ({ row }) => <InlineValue row={row.original} field="limit" label={text.columns.limit} />,
     },
     {
       accessorKey: "reviewer",
       header: text.columns.reviewer,
-      cell: ({ row }) => {
-        if (row.original.reviewer !== null) {
-          return row.original.reviewer;
-        }
-
-        return (
-          <>
-            <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-              {text.columns.reviewer}
-            </Label>
-            <Select>
-              <SelectTrigger
-                id={`${row.original.id}-reviewer`}
-                className="w-44 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-                size="sm"
-              >
-                <SelectValue placeholder={text.assignReviewer} />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectGroup>
-                  {reviewers.slice(0, 2).map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </>
-        );
-      },
+      cell: ({ row }) => <ReviewerCell row={row.original} text={text} />,
     },
     {
       id: "actions",
-      cell: () => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="text-muted-foreground data-[state=open]:bg-muted flex size-8"
-              size="icon"
-            >
-              <EllipsisVerticalIcon />
-              <span className="sr-only">{text.openMenu}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-32">
-            <DropdownMenuItem>{text.actions.edit}</DropdownMenuItem>
-            <DropdownMenuItem>{text.actions.copy}</DropdownMenuItem>
-            <DropdownMenuItem>{text.actions.favorite}</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">{text.actions.delete}</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => <RowMenu row={row.original} text={text} />,
       enableSorting: false,
     },
   ];

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,8 +103,8 @@ export async function DriversCoverageTriage() {
               <span className="text-foreground">{t.dueValue}</span>
             </span>
           </div>
-          <Button variant="secondary" size="sm" className="h-auto min-h-7 px-3 py-1 text-xs whitespace-normal">
-            {format(t.openTopDeals, locale, { count: coverageFigures.topDeals })}
+          <Button variant="secondary" size="sm" className="h-auto min-h-7 px-3 py-1 text-xs whitespace-normal" asChild>
+            <Link href="/dashboard/crm">{format(t.openTopDeals, locale, { count: coverageFigures.topDeals })}</Link>
           </Button>
         </div>
 

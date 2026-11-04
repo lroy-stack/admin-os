@@ -9,9 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatRelative, type Locale } from "@/core/i18n/client";
@@ -21,13 +19,14 @@ import type { CrmV1Messages } from "../messages";
 import type { RecentLeadRow } from "./schema";
 
 /** The demo's reference instant: "last activity" is written relative to it, so the text is the same on every render. */
-const REFERENCE_TIME = Date.UTC(2026, 9, 31, 12);
-const MINUTE_MS = 60_000;
+export const REFERENCE_TIME = Date.UTC(2026, 9, 31, 12);
+export const MINUTE_MS = 60_000;
 
 /** The table's columns in one locale; headers, badges, menu items and relative times come from the dictionary. */
 export function createRecentLeadsColumns(
   text: CrmV1Messages,
   locale: Locale,
+  onDelete: (row: RecentLeadRow) => void,
 ): ColumnDef<DataTableFeatures, RecentLeadRow>[] {
   return [
     {
@@ -112,7 +111,7 @@ export function createRecentLeadsColumns(
     },
     {
       id: "actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="text-muted-foreground flex size-8">
@@ -121,15 +120,9 @@ export function createRecentLeadsColumns(
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-auto min-w-32">
-            <DropdownMenuGroup>
-              <DropdownMenuItem>{text.table.menu.view}</DropdownMenuItem>
-              <DropdownMenuItem>{text.table.menu.assign}</DropdownMenuItem>
-              <DropdownMenuItem>{text.table.menu.archive}</DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive">{text.table.menu.delete}</DropdownMenuItem>
-            </DropdownMenuGroup>
+            <DropdownMenuItem variant="destructive" onSelect={() => onDelete(row.original)}>
+              {text.table.menu.delete}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),

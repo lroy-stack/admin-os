@@ -47,7 +47,6 @@ export interface DefaultV1Messages {
     readonly selectView: string;
     readonly view: string;
     readonly toggleColumns: string;
-    readonly addSection: string;
     readonly columns: {
       readonly header: string;
       readonly type: string;
@@ -62,9 +61,6 @@ export interface DefaultV1Messages {
     readonly dragToReorder: string;
     readonly openMenu: string;
     readonly actions: {
-      readonly edit: string;
-      readonly copy: string;
-      readonly favorite: string;
       readonly delete: string;
     };
     readonly selectAll: string;
@@ -80,10 +76,9 @@ export interface DefaultV1Messages {
     readonly nextPage: string;
     readonly lastPage: string;
     readonly toast: {
-      /** Placeholders: `{header}`. */
-      readonly saving: string;
       readonly saved: string;
-      readonly error: string;
+      /** Placeholders: `{header}`. */
+      readonly deleted: string;
     };
     readonly drawer: {
       /** Placeholders: `{count}` (months). */
