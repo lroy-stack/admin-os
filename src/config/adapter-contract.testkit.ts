@@ -20,7 +20,7 @@ const bookable = {
 } as const;
 
 /** The smallest valid input of each capability that needs one; the rest accept `{}`. */
-const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
+export const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
   const customer = { id: firstCustomer[vertical] };
   const { booking, resource, startMin } = bookable[vertical];
   const inputs: Record<string, Record<string, unknown>> = {
@@ -89,7 +89,7 @@ const heldApproval = async (adapter: Adapter, vertical: VerticalId) => {
 
 const HELD_WRITE_CAPABILITIES: readonly string[] = ["approvals.get", "approvals.approve", "approvals.reject"];
 
-const inputBeforeCall = (
+export const inputBeforeCall = (
   client: ReturnType<typeof createClient>,
   id: string,
   vertical: VerticalId,

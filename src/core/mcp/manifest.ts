@@ -16,6 +16,18 @@ export interface ExposedEntry {
    * description names those tools, and so does `schema.invalid_input` when that field is wrong.
    */
   readonly ids?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * The result as an agent gets it (spec 004 D5, principle 7): the capability's output parsed through this schema, so
+   * a field it leaves out is stripped from the result and from the advertised output schema. The capability's own
+   * output, which the web app reads, does not change. Use an object schema that strips unknown keys.
+   */
+  readonly concise?: z.ZodType;
+  /**
+   * Paths to free text that people or other agents wrote (`guestNote`, `notes[].text`, `items[].cancelReason`): each
+   * is returned as `{ untrusted: true, text }`, in the result and in the output schema. A path that reaches no string
+   * field of the output throws when the tool is projected.
+   */
+  readonly untrusted?: readonly string[];
 }
 
 /** A capability only the web app calls, with the reason it is not a tool. */

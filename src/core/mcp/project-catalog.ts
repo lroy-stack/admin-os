@@ -14,6 +14,7 @@ import { ErrorCodes } from "@/core/errors";
 import { type CallResult, isAwaitingApproval } from "@/core/result";
 
 import { type ExposedEntry, exposedCapabilities, type McpManifest } from "./manifest";
+import { markUntrusted, markUntrustedSchema, resultBytes } from "./present";
 
 /**
  * The MCP projection of the catalogue (ADR 0009): one tool per capability the manifest exposes and the actor may
@@ -72,6 +73,18 @@ export interface ProjectionOptions {
   readonly logRefusal?: (line: RefusalLogLine) => void;
 }
 
+/**
+ * The most bytes any tool result may carry: the structured content plus the text that repeats it, so an agent reads
+ * about 24 KiB of JSON (roughly 6k tokens), a page it can use whole and well under the output ceilings clients apply.
+ * One bound for every tool: a list is a page of at most 200 concise rows and a record is one booking or customer, so
+ * a tighter bound per tool would only break a customer who has many notes. The seed is far below it; real data is
+ * what the check at the call is for.
+ */
+export const MAX_RESULT_BYTES = 48 * 1024;
+
+/** The error code of a result over its bound. */
+export const RESULT_TOO_LARGE = "mcp.result_too_large";
+
 const SERVER_NAME = "admin-os";
 const JSON_SCHEMA_TARGET = "draft-2020-12";
 
@@ -108,9 +121,27 @@ export const annotationsOf = (capability: AnyCapability): ToolAnnotations => {
   };
 };
 
-/** A write may answer with its value or with `awaiting_approval`, so its advertised output covers both. */
-const resultSchemaOf = (capability: AnyCapability): z.ZodType =>
-  capability.effect === "read" ? capability.output : z.union([capability.output, awaitingApprovalSchema]);
+/**
+ * What the tool returns on success: the manifest's concise schema when it has one, else the capability's output. A
+ * write may also answer with `awaiting_approval`, so its advertised output covers both.
+ */
+const resultSchemaOf = (capability: AnyCapability, entry: ExposedEntry): z.ZodType => {
+  const output = entry.concise ?? capability.output;
+  return capability.effect === "read" ? output : z.union([output, awaitingApprovalSchema]);
+};
+
+/** The output schema `tools/list` advertises: concise, and with the untrusted free text shaped as it is returned. */
+const outputSchemaOf = (capability: AnyCapability, entry: ExposedEntry): JsonObjectSchema => {
+  const schema = jsonSchemaOf(resultSchemaOf(capability, entry), "output");
+  if (entry.untrusted === undefined) return schema;
+  return markUntrustedSchema(schema, entry.untrusted, toolNameOf(capability.id)) as JsonObjectSchema;
+};
+
+/** A successful value as the agent gets it: projected to the concise shape, then with untrusted text marked. */
+const presentValue = (entry: ExposedEntry, value: unknown): unknown => {
+  const concise = entry.concise === undefined ? value : entry.concise.parse(value);
+  return entry.untrusted === undefined ? concise : markUntrusted(concise, entry.untrusted);
+};
 
 type JsonObjectSchema = Tool["inputSchema"];
 
@@ -181,7 +212,12 @@ const idSourcesOf = (entry: ExposedEntry, toolIds: ReadonlySet<string>, fields?:
 const descriptionOf = (capability: AnyCapability, entry: ExposedEntry, toolIds: ReadonlySet<string>): string => {
   const summary = withToolNames(capability.summary, toolIds);
   const sources = idSourcesOf(entry, toolIds);
-  return sources.length === 0 ? summary : `${summary} Find valid ids: ${sources.join("; ")}.`;
+  const getId = `${capability.id.split(".")[0]}.get`;
+  const concise =
+    entry.concise !== undefined && toolIds.has(getId)
+      ? ` Rows are concise: ${toolNameOf(getId)} has the whole record.`
+      : "";
+  return `${summary}${concise}${sources.length === 0 ? "" : ` Find valid ids: ${sources.join("; ")}.`}`;
 };
 
 /** `toolIds` are the capabilities listed as tools, so the description can name them by tool name. */
@@ -194,7 +230,7 @@ export const toolOf = (
   title: entry.title,
   description: descriptionOf(capability, entry, toolIds),
   inputSchema: inputSchemaOf(capability),
-  outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
+  outputSchema: outputSchemaOf(capability, entry),
   annotations: annotationsOf(capability),
   // The key requirement is the required `idempotencyKey` argument itself, so `_meta` carries the tier only.
   _meta: { [RISK_TIER_META_KEY]: capability.riskTier },
@@ -393,6 +429,38 @@ const explainNotFound = (
   return toolError(error.code, `${error.message}. Find valid ids: ${sources.join("; ")}.`, error.details);
 };
 
+/**
+ * A result over its bound is never cut: the agent gets an error that says how to ask for less. A list is paged with a
+ * smaller `limit`; one record is read with the module's get tool. A write has already applied by now, so its error
+ * says so and tells the agent not to retry.
+ */
+const withinBound = (
+  capability: AnyCapability,
+  toolIds: ReadonlySet<string>,
+  input: ToolArguments,
+  result: CallToolResult,
+): CallToolResult => {
+  const bytes = resultBytes(result);
+  if (bytes <= MAX_RESULT_BYTES) return result;
+  const name = toolNameOf(capability.id);
+  const getId = `${capability.id.split(".")[0]}.get`;
+  const advice = [
+    ...(Object.hasOwn(inputSchemaOf(capability).properties ?? {}, "limit")
+      ? [
+          `call ${name} again with a smaller limit than ${String(input.limit ?? "the default")} and page with nextCursor`,
+        ]
+      : []),
+    ...(toolIds.has(getId) && getId !== capability.id ? [`read one record with ${toolNameOf(getId)}`] : []),
+  ];
+  const applied = capability.effect === "read" ? [] : [`${name} applied its change; do not retry it.`];
+  const message = [
+    `${name} would return ${bytes} bytes, over its limit of ${MAX_RESULT_BYTES}.`,
+    ...applied,
+    advice.length > 0 ? `To read it, ${advice.join(", or ")}.` : "Ask for less data: nothing was cut.",
+  ].join(" ");
+  return toolError(RESULT_TOO_LARGE, message, { bytes, limit: MAX_RESULT_BYTES });
+};
+
 /** Result `_meta` key with the call's correlation id, the one in the server's call log line (spec 004 U3). */
 export const CORRELATION_META_KEY = "admin-os/correlationId";
 
@@ -446,8 +514,12 @@ export function projectCatalog(options: ProjectionOptions): Server {
 
   /** The client's answer as an MCP result; an input or not-found error also says how to fix the call. */
   const resultOf = (capability: AnyCapability, input: ToolArguments, result: CallResult<unknown>): CallToolResult => {
-    if (isAwaitingApproval(result) || result.ok) return toCallToolResult(result);
     const entry = manifest[capability.id] as ExposedEntry;
+    if (isAwaitingApproval(result)) return toCallToolResult(result);
+    if (result.ok) {
+      const presented = toCallToolResult({ ok: true, value: presentValue(entry, result.value) });
+      return withinBound(capability, toolIds, input, presented);
+    }
     const explained =
       result.error.code === ErrorCodes.invalidInput
         ? explainInvalidInput(capability, entry, toolIds, input, result.error.details)

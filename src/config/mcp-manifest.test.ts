@@ -47,4 +47,25 @@ describe("the MCP manifest (spec 004 D5)", () => {
   it.each(exposedWrites)("$id declares its idempotency mode (ADR 0016, resolution 3)", (capability) => {
     expect(["key", "target-state"]).toContain(capability.idempotency);
   });
+
+  // The paths are pinned so a field cannot leave the registry unnoticed (security review, 2026-11-04).
+  it.each([
+    ["bookings.get", ["guestNote", "staffNote", "cancelReason", "noShowReason", "contactName"]],
+    ["bookings.create", ["guestNote", "staffNote", "cancelReason", "noShowReason", "contactName"]],
+    ["bookings.walk_in.seat", ["guestNote", "staffNote", "cancelReason", "noShowReason", "contactName"]],
+    ["bookings.list", ["items[].cancelReason", "items[].noShowReason", "items[].contactName"]],
+    ["bookings.search", ["items[].contactName"]],
+    ["customers.get", ["notes[].text", "blockReason"]],
+    ["customers.notes.add", ["notes[].text", "blockReason"]],
+  ] as const)("marks the free text of %s as untrusted: %j", (id, paths) => {
+    expect(MCP_MANIFEST[id]).toMatchObject({ untrusted: paths });
+  });
+
+  it.each(["tags[]", "tags", "name", "phone", "email"])(
+    "leaves %s plain in every booking and customer path, since an agent needs it unwrapped",
+    (path) => {
+      const marked = Object.values(MCP_MANIFEST).flatMap((entry) => ("untrusted" in entry ? entry.untrusted : []));
+      expect(marked.filter((marking) => marking.endsWith(path))).toEqual([]);
+    },
+  );
 });

@@ -8,6 +8,7 @@ export {
   type ToolManifest,
   type UiOnlyEntry,
 } from "./manifest";
+export { resultBytes, UNTRUSTED_KEY } from "./present";
 export {
   annotationsOf,
   awaitingApprovalSchema,
@@ -16,8 +17,10 @@ export {
   IDEMPOTENCY_ARGUMENT,
   IDEMPOTENCY_META_KEY,
   type InstructionsContext,
+  MAX_RESULT_BYTES,
   type ProjectionOptions,
   projectCatalog,
+  RESULT_TOO_LARGE,
   type RefusalLogLine,
   RISK_TIER_META_KEY,
   TOOL_LIST_CACHE_HINT,
