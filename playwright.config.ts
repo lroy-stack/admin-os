@@ -27,7 +27,10 @@ export default defineConfig({
     { name: "1440", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
-    command: `npm run build && npm run start -- --port ${PORT}`,
+    // CI builds in a step of its own (E2E_PREBUILT), so the smoke step times the tests alone.
+    command: process.env.E2E_PREBUILT
+      ? `npm run start -- --port ${PORT}`
+      : `npm run build && npm run start -- --port ${PORT}`,
     url: `http://localhost:${PORT}/dashboard/default`,
     reuseExistingServer: !process.env.CI,
     timeout: 300_000,

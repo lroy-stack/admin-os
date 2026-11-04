@@ -1,5 +1,5 @@
 # The gates of every commit (AGENTS.md "Setup", spec 002 AC-R): lint and layer rules, the Worker typecheck and bundle
-# check, types, unit and contract tests, the production build and the Playwright smoke.
+# check, types, unit and contract tests, then the production build and the Playwright smoke.
 name: CI
 
 on:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   gates:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,13 +31,50 @@ jobs:
         run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm test
+
+  # The smoke runs in parallel shards, each on its own build. Playwright splits a run by test count, so the dead-click
+  # sweep (about 40 % of the time in 74 tests of one file) is sharded on its own and the rest of the smoke apart from
+  # it; otherwise its tests would land in one or two shards.
+  smoke:
+    name: smoke (${{ matrix.suite }} ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { suite: dead-clicks, filter: --grep, shard: 1/4 }
+          - { suite: dead-clicks, filter: --grep, shard: 2/4 }
+          - { suite: dead-clicks, filter: --grep, shard: 3/4 }
+          - { suite: dead-clicks, filter: --grep, shard: 4/4 }
+          - { suite: rest, filter: --grep-invert, shard: 1/8 }
+          - { suite: rest, filter: --grep-invert, shard: 2/8 }
+          - { suite: rest, filter: --grep-invert, shard: 3/8 }
+          - { suite: rest, filter: --grep-invert, shard: 4/8 }
+          - { suite: rest, filter: --grep-invert, shard: 5/8 }
+          - { suite: rest, filter: --grep-invert, shard: 6/8 }
+          - { suite: rest, filter: --grep-invert, shard: 7/8 }
+          - { suite: rest, filter: --grep-invert, shard: 8/8 }
+    env:
+      DATA_ADAPTER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Playwright smoke (builds and starts the app)
-        run: npm run test:e2e
+      - name: Production build
+        run: npm run build
+      - name: Playwright smoke
+        run: npx playwright test ${{ matrix.filter }} 'dead-clicks\.spec' --shard=${{ matrix.shard }}
+        env:
+          E2E_PREBUILT: "1"
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ strategy.job-index }}
           path: |
             playwright-report
             test-results
