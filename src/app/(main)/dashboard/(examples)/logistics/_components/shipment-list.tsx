@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { type CSSProperties, useId, useState } from "react";
 
 import { cn } from "cn";
 import { Plane, Search, Ship, SlidersHorizontal, Truck } from "lucide-react";
@@ -6,12 +6,22 @@ import { Plane, Search, Ship, SlidersHorizontal, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
+import { PopoverOrSheet } from "@/ds/overlays";
 
 import { logisticsMessageKey } from "./messages";
 import { shipmentTotals } from "./shipment-data";
+import {
+  filterShipments,
+  type ModeFilter,
+  modeFilters,
+  noShipmentFilter,
+  type ShipmentTab,
+  shipmentTabs,
+} from "./shipment-filter";
 import type { Shipment } from "./shipment-localize";
 
 const modeIcons = {
@@ -141,28 +151,57 @@ function ShipmentCard({ shipment, active, onSelectShipment }: ShipmentCardProps)
   );
 }
 
+const isTab = (value: string): value is ShipmentTab => shipmentTabs.some((tab) => tab === value);
+const isMode = (value: string): value is ModeFilter => modeFilters.some((mode) => mode === value);
+
 export function ShipmentList({ shipments, selectedShipmentId, onSelectShipment }: ShipmentListProps) {
-  const text = useMessages(logisticsMessageKey).list;
+  const messages = useMessages(logisticsMessageKey);
+  const text = messages.list;
   const locale = useLocale();
-  const tabs = [
-    { value: "all", label: format(text.tabs.all, locale, { count: shipmentTotals.all }) },
-    { value: "in-transit", label: format(text.tabs.inTransit, locale, { count: shipmentTotals.inTransit }) },
-    { value: "delivered", label: format(text.tabs.delivered, locale, { count: shipmentTotals.delivered }) },
-    { value: "delayed", label: format(text.tabs.delayed, locale, { count: shipmentTotals.delayed }) },
-  ];
+  const [filter, setFilter] = useState(noShipmentFilter);
+  const modeGroup = useId();
+  const visible = filterShipments(shipments, filter);
+  const tabs = shipmentTabs.map((value) => ({
+    value,
+    label: format(text.tabs[value], locale, { count: shipmentTotals[value] }),
+  }));
 
   return (
     <Card className="h-full rounded-none ring-0">
       <CardHeader>
         <CardTitle className="text-xl font-normal">{text.title}</CardTitle>
         <CardAction>
-          <Button size="icon-sm" variant="ghost" aria-label={text.filter}>
-            <SlidersHorizontal />
-          </Button>
+          <PopoverOrSheet
+            title={text.filter}
+            className="w-56"
+            align="end"
+            trigger={
+              <Button size="icon-sm" variant="ghost" aria-label={text.filter}>
+                <SlidersHorizontal />
+              </Button>
+            }
+          >
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-medium">{messages.details.transportMode}</legend>
+              <RadioGroup
+                value={filter.mode}
+                onValueChange={(value) => isMode(value) && setFilter({ ...filter, mode: value })}
+              >
+                {modeFilters.map((mode) => (
+                  <div key={mode} className="flex items-center gap-2">
+                    <RadioGroupItem value={mode} id={`${modeGroup}-${mode}`} />
+                    <label htmlFor={`${modeGroup}-${mode}`} className="text-sm">
+                      {mode === "all" ? text.allModes : messages.modes[mode]}
+                    </label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </fieldset>
+          </PopoverOrSheet>
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 overflow-hidden px-0">
-        <Tabs defaultValue="all">
+        <Tabs value={filter.tab} onValueChange={(value) => isTab(value) && setFilter({ ...filter, tab: value })}>
           <TabsList className="w-full justify-start gap-4 overflow-x-auto border-b px-4" variant="line">
             {tabs.map((tab) => (
               <TabsTrigger key={tab.value} className="flex-none text-xs" value={tab.value}>
@@ -174,7 +213,13 @@ export function ShipmentList({ shipments, selectedShipmentId, onSelectShipment }
 
         <div className="px-4">
           <InputGroup className="h-8">
-            <InputGroupInput className="h-8" aria-label={text.searchLabel} placeholder={text.searchPlaceholder} />
+            <InputGroupInput
+              className="h-8"
+              aria-label={text.searchLabel}
+              placeholder={text.searchPlaceholder}
+              value={filter.query}
+              onChange={(event) => setFilter({ ...filter, query: event.target.value })}
+            />
             <InputGroupAddon>
               <Search />
             </InputGroupAddon>
@@ -183,7 +228,12 @@ export function ShipmentList({ shipments, selectedShipmentId, onSelectShipment }
 
         <ScrollArea className="h-0 flex-1">
           <div className="flex flex-col gap-4 px-4">
-            {shipments.map((shipment) => (
+            {visible.length === 0 ? (
+              <p className="text-muted-foreground py-6 text-center text-sm" role="status">
+                {text.empty}
+              </p>
+            ) : null}
+            {visible.map((shipment) => (
               <ShipmentCard
                 active={shipment.id === selectedShipmentId}
                 key={shipment.id}

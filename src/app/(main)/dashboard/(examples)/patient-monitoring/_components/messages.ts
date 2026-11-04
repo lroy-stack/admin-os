@@ -10,15 +10,12 @@ export interface MonitoringMessages {
     /** Placeholders: `{count}`. */
     readonly patients: Plural;
     readonly audioOn: string;
+    readonly audioOff: string;
     readonly networkOn: string;
     /** Placeholders: `{device}`, a device code. */
     readonly device: string;
   };
   readonly footer: {
-    readonly mainScreen: string;
-    readonly patientSetup: string;
-    readonly alarmReview: string;
-    readonly waveReview: string;
     readonly trends: string;
     readonly print: string;
     readonly silence: string;
@@ -40,16 +37,8 @@ export interface MonitoringMessages {
     readonly acknowledged: string;
   };
   readonly tabs: {
-    readonly realTime: string;
     readonly events: string;
     readonly trends: string;
-    readonly disclosure: string;
-  };
-  readonly realTime: { readonly title: string; readonly description: string };
-  readonly disclosure: {
-    readonly title: string;
-    /** Placeholders: `{hours}`. */
-    readonly description: string;
   };
   readonly events: { readonly time: string; readonly event: string; readonly recent: string };
   /** One sentence per event kind; `nibp` takes `{value}`, `leadSelected` `{lead}`, `hrAbove` `{limit}`. */

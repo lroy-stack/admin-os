@@ -1,11 +1,9 @@
-import type { PageMeta, Plural } from "@/core/i18n/client";
+import { type MessageKey, messageKey, type PageMeta, type Plural } from "@/core/i18n/client";
 
 /**
  * Text of /dashboard/productivity, including its demo tasks, projects and notes (business text).
- * Every consumer is a Server Component (the one client piece gets resolved props), so there is no `messageKey`.
  */
 export interface ProductivityMessages {
-  readonly viewAll: string;
   readonly meta: PageMeta;
   readonly greeting: {
     /** Placeholders: `{name}`. */
@@ -25,6 +23,7 @@ export interface ProductivityMessages {
   };
   readonly tasks: {
     readonly title: string;
+    readonly empty: string;
     readonly rangeLabel: string;
     readonly ranges: { readonly today: string; readonly tomorrow: string; readonly thisWeek: string };
     readonly newTask: string;
@@ -46,12 +45,18 @@ export interface ProductivityMessages {
   };
   readonly projects: {
     readonly title: string;
+    readonly empty: string;
+    readonly progress: string;
     readonly filterLabel: string;
     readonly filters: { readonly active: string; readonly planning: string; readonly completed: string };
     readonly new: string;
     /** Placeholders: `{date}`. */
     readonly due: string;
-    readonly statuses: { readonly inProgress: string; readonly planning: string };
+    readonly statuses: {
+      readonly inProgress: string;
+      readonly planning: string;
+      readonly completed: string;
+    };
     /** Demo projects. */
     readonly items: {
       readonly roadmap: { readonly title: string; readonly description: string };
@@ -65,7 +70,6 @@ export interface ProductivityMessages {
     readonly newTask: string;
     readonly newProject: string;
     readonly newGoal: string;
-    readonly upload: string;
   };
   readonly quote: {
     readonly title: string;
@@ -74,6 +78,8 @@ export interface ProductivityMessages {
   readonly focus: {
     readonly title: string;
     readonly start: string;
+    readonly pause: string;
+    readonly resume: string;
     readonly noNotifications: string;
   };
   readonly notes: {
@@ -95,4 +101,26 @@ export interface ProductivityMessages {
     /** Selected by the total number of goals. Placeholders: `{done}`, `{count}`. */
     readonly goals: Plural;
   };
+  readonly done: string;
+  /** The labels and sentence of the windows that add a task, project, note or goal. */
+  readonly forms: {
+    readonly required: string;
+    readonly title: string;
+    readonly description: string;
+    readonly tag: string;
+    readonly when: string;
+    readonly time: string;
+    readonly status: string;
+    readonly due: string;
+    readonly goal: string;
+  };
+  readonly toasts: {
+    readonly task: string;
+    readonly project: string;
+    readonly note: string;
+    readonly goal: string;
+  };
 }
+
+export const productivityMessageKey: MessageKey<ProductivityMessages> =
+  messageKey<ProductivityMessages>("productivity");

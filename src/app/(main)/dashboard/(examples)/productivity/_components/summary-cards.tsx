@@ -1,24 +1,28 @@
+"use client";
+
 import { ArrowRight, Clock3, Focus, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLocale } from "@/config/locale.server";
-import { format, formatNumber, formatPercent } from "@/core/i18n/client";
+import { format, formatNumber, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
 
-import { productivityMessages } from "./messages.server";
+import { productivityMessageKey } from "./messages";
+import { useProductivity } from "./productivity-provider";
+import { scheduledToday } from "./productivity-state";
 
-const SCHEDULED_TASKS = 4;
 const WEEK_PROGRESS = 0.68;
 const FOCUS_HOURS_REMAINING = 2;
 
-export async function SummaryCards() {
-  const locale = await getLocale();
-  const text = productivityMessages[locale].summary;
+export function SummaryCards() {
+  const locale = useLocale();
+  const text = useMessages(productivityMessageKey).summary;
+  const { state } = useProductivity();
+  const scheduledTasks = scheduledToday(state.tasks);
   const summaryCards = [
     {
       key: "today",
       title: text.today,
-      value: formatNumber(SCHEDULED_TASKS, locale),
-      description: format(text.tasksScheduled, locale, { count: SCHEDULED_TASKS }),
+      value: formatNumber(scheduledTasks, locale),
+      description: format(text.tasksScheduled, locale, { count: scheduledTasks }),
       icon: Clock3,
     },
     {

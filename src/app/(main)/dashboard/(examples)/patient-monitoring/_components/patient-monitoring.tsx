@@ -12,12 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 
 import { monitoringMessageKey } from "./messages";
+import { isTab, useMonitoring } from "./monitoring-provider";
 import { PatientCard } from "./patient-card";
 import { PatientDetail } from "./patient-detail";
 import type { PatientRecord } from "./patient-localize";
 import { PatientTrends } from "./patient-trends";
-
-const DISCLOSURE_HOURS = 24;
 
 interface PatientMonitoringProps {
   patients: PatientRecord[];
@@ -26,6 +25,7 @@ interface PatientMonitoringProps {
 export function PatientMonitoring({ patients }: PatientMonitoringProps) {
   const text = useMessages(monitoringMessageKey);
   const locale = useLocale();
+  const { tab, setTab } = useMonitoring();
   const [selectedPatientId, setSelectedPatientId] = useState("cardiac-04");
   const [acknowledgedPatientIds, setAcknowledgedPatientIds] = useState<string[]>([]);
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId) ?? patients[0];
@@ -98,24 +98,15 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
 
         <PatientDetail hasActiveAlarm={hasActiveAlarm} patient={selectedPatient} />
 
-        <Tabs className="min-h-0 flex-1 gap-0" defaultValue="trends">
+        <Tabs className="min-h-0 flex-1 gap-0" value={tab} onValueChange={(value) => isTab(value) && setTab(value)}>
           <TabsList
             className="*:border-border w-full justify-start gap-0 overflow-x-auto border-b p-0 *:h-full *:flex-none *:rounded-none *:border-0 *:border-r *:px-3 *:after:-bottom-px!"
             variant="line"
           >
-            <TabsTrigger value="real-time">{text.tabs.realTime}</TabsTrigger>
             <TabsTrigger value="events">{text.tabs.events}</TabsTrigger>
             <TabsTrigger value="trends">{text.tabs.trends}</TabsTrigger>
-            <TabsTrigger value="disclosure">{text.tabs.disclosure}</TabsTrigger>
           </TabsList>
 
-          <TabsContent
-            className="m-0 flex flex-col items-center justify-center gap-1 px-4 text-center"
-            value="real-time"
-          >
-            <p className="text-sm font-medium">{text.realTime.title}</p>
-            <p className="text-muted-foreground text-xs">{text.realTime.description}</p>
-          </TabsContent>
           <TabsContent className="m-0" value="events">
             <div className="min-h-44">
               <div className="bg-muted/40 text-muted-foreground grid grid-cols-[4rem_minmax(0,1fr)] px-4 py-2 text-xs font-medium">
@@ -136,15 +127,6 @@ export function PatientMonitoring({ patients }: PatientMonitoringProps) {
           </TabsContent>
           <TabsContent className="m-0" value="trends">
             <PatientTrends patient={selectedPatient} />
-          </TabsContent>
-          <TabsContent
-            className="m-0 flex flex-col items-center justify-center gap-1 px-4 text-center"
-            value="disclosure"
-          >
-            <p className="text-sm font-medium">{text.disclosure.title}</p>
-            <p className="text-muted-foreground text-xs">
-              {format(text.disclosure.description, locale, { hours: DISCLOSURE_HOURS })}
-            </p>
           </TabsContent>
         </Tabs>
       </div>

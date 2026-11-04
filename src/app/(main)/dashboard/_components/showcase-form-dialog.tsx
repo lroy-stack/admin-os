@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { type ActionOutcome, FormField, FormFooter, useWindowForm } from "@/ds/forms";
-import { FormDialog, type ReturnFocus } from "@/ds/overlays";
+import { FormDialog, QuickDialog, type ReturnFocus } from "@/ds/overlays";
 
 import {
   emptyShowcaseValues,
@@ -28,6 +28,8 @@ export interface ShowcaseFormDialogProps {
   /** The values an edit starts from; a blank form when absent. */
   initial?: ShowcaseValues;
   returnFocus: ReturnFocus;
+  /** `quick` for a short task of up to four fields (ADR 0015); `form` (default) for a record. */
+  kind?: "quick" | "form";
   /** Receives the trimmed values; the window closes after it returns. */
   onSave: (values: ShowcaseValues) => void;
 }
@@ -46,6 +48,7 @@ export function ShowcaseFormDialog({
   errors,
   initial,
   returnFocus,
+  kind = "form",
   onSave,
 }: ShowcaseFormDialogProps) {
   const schema = useMemo(() => showcaseFormSchema(fields, errors), [fields, errors]);
@@ -59,8 +62,10 @@ export function ShowcaseFormDialog({
   });
   const { control } = windowForm.form;
 
+  const Window = kind === "quick" ? QuickDialog : FormDialog;
+
   return (
-    <FormDialog
+    <Window
       demo
       open={open}
       onOpenChange={onOpenChange}
@@ -104,11 +109,12 @@ export function ShowcaseFormDialog({
                 return <Input {...control} readOnly={readOnly} type="number" inputMode="decimal" min={0} step="any" />;
               }
               if (field.kind === "date") return <Input {...control} readOnly={readOnly} type="date" />;
+              if (field.kind === "time") return <Input {...control} readOnly={readOnly} type="time" />;
               return <Input {...control} readOnly={readOnly} autoComplete="off" />;
             }}
           </FormField>
         ))}
       </form>
-    </FormDialog>
+    </Window>
   );
 }

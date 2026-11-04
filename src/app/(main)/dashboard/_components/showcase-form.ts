@@ -4,7 +4,7 @@ import { z } from "zod";
 export interface ShowcaseField {
   readonly name: string;
   readonly label: string;
-  readonly kind: "text" | "number" | "date" | "select" | "textarea";
+  readonly kind: "text" | "number" | "date" | "time" | "select" | "textarea";
   readonly required?: boolean;
   readonly options?: readonly { readonly value: string; readonly label: string }[];
 }

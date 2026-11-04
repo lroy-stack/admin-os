@@ -27,6 +27,8 @@ export interface LogisticsMessages {
     };
     readonly searchLabel: string;
     readonly searchPlaceholder: string;
+    readonly allModes: string;
+    readonly empty: string;
     readonly cargo: string;
     /** The abbreviation is read the same in all four languages. */
     readonly eta: string;
@@ -42,6 +44,10 @@ export interface LogisticsMessages {
   readonly details: {
     readonly empty: string;
     readonly copyId: string;
+    readonly copyCustomerId: string;
+    /** What a copy confirms, after "Copied". */
+    readonly shipmentIdLabel: string;
+    readonly customerIdLabel: string;
     /** Placeholders: `{progress}`, the formatted percentage. */
     readonly complete: string;
     /** Placeholders: `{eta}`, `{meta}`. */
@@ -52,19 +58,6 @@ export interface LogisticsMessages {
     readonly status: string;
     /** Placeholders: `{mode}`, `{route}`. */
     readonly modeRoute: string;
-    readonly tabs: {
-      readonly overview: string;
-      readonly route: string;
-      readonly cargo: string;
-      readonly documents: string;
-      readonly activity: string;
-    };
-    readonly comingSoon: {
-      readonly route: string;
-      readonly cargo: string;
-      readonly documents: string;
-      readonly activity: string;
-    };
     readonly contact: Readonly<Record<TransportMode, string>>;
     readonly transportNumber: Readonly<Record<TransportMode, string>>;
   };

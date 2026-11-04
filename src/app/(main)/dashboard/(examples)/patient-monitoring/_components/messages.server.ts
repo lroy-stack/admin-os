@@ -14,14 +14,11 @@ const en: MonitoringMessages = {
     title: "Central patient monitoring",
     patients: { one: "{count} patient", other: "{count} patients" },
     audioOn: "Alarm audio enabled",
+    audioOff: "Alarm audio silenced",
     networkOn: "Monitoring network connected",
     device: "Device {device} connected",
   },
   footer: {
-    mainScreen: "Main screen",
-    patientSetup: "Patient setup",
-    alarmReview: "Alarm review",
-    waveReview: "Wave review",
     trends: "Trends",
     print: "Print",
     silence: "Silence",
@@ -37,18 +34,8 @@ const en: MonitoringMessages = {
     acknowledged: "Acknowledged",
   },
   tabs: {
-    realTime: "Real time",
     events: "Event review",
     trends: "Trends",
-    disclosure: "Full disclosure",
-  },
-  realTime: {
-    title: "Live monitoring is active",
-    description: "Waveforms and vital signs update continuously above.",
-  },
-  disclosure: {
-    title: "Full disclosure recording is active",
-    description: "Continuous waveform history is available for the last {hours} hours.",
   },
   events: { time: "Time", event: "Event", recent: "Recent events" },
   eventLines: {
@@ -95,14 +82,11 @@ const es: MonitoringMessages = {
     title: "Monitorización central de pacientes",
     patients: { one: "{count} paciente", other: "{count} pacientes" },
     audioOn: "Audio de alarma activado",
+    audioOff: "Audio de alarmas silenciado",
     networkOn: "Red de monitorización conectada",
     device: "Dispositivo {device} conectado",
   },
   footer: {
-    mainScreen: "Pantalla principal",
-    patientSetup: "Configuración del paciente",
-    alarmReview: "Revisión de alarmas",
-    waveReview: "Revisión de ondas",
     trends: "Tendencias",
     print: "Imprimir",
     silence: "Silenciar",
@@ -118,18 +102,8 @@ const es: MonitoringMessages = {
     acknowledged: "Reconocida",
   },
   tabs: {
-    realTime: "Tiempo real",
     events: "Revisión de eventos",
     trends: "Tendencias",
-    disclosure: "Registro completo",
-  },
-  realTime: {
-    title: "La monitorización en directo está activa",
-    description: "Las ondas y las constantes vitales se actualizan de forma continua arriba.",
-  },
-  disclosure: {
-    title: "La grabación del registro completo está activa",
-    description: "El historial continuo de ondas está disponible para las últimas {hours} horas.",
   },
   events: { time: "Hora", event: "Evento", recent: "Eventos recientes" },
   eventLines: {
@@ -176,14 +150,11 @@ const de: MonitoringMessages = {
     title: "Zentrale Patientenüberwachung",
     patients: { one: "{count} Patient", other: "{count} Patienten" },
     audioOn: "Alarmton aktiviert",
+    audioOff: "Alarmton stummgeschaltet",
     networkOn: "Überwachungsnetzwerk verbunden",
     device: "Gerät {device} verbunden",
   },
   footer: {
-    mainScreen: "Hauptbildschirm",
-    patientSetup: "Patienteneinstellungen",
-    alarmReview: "Alarmübersicht",
-    waveReview: "Kurvenübersicht",
     trends: "Trends",
     print: "Drucken",
     silence: "Stummschalten",
@@ -199,18 +170,8 @@ const de: MonitoringMessages = {
     acknowledged: "Quittiert",
   },
   tabs: {
-    realTime: "Echtzeit",
     events: "Ereignisprüfung",
     trends: "Trends",
-    disclosure: "Full Disclosure",
-  },
-  realTime: {
-    title: "Die Live-Überwachung ist aktiv",
-    description: "Kurven und Vitalparameter werden oben laufend aktualisiert.",
-  },
-  disclosure: {
-    title: "Die Full-Disclosure-Aufzeichnung ist aktiv",
-    description: "Der durchgehende Kurvenverlauf ist für die letzten {hours} Stunden verfügbar.",
   },
   events: { time: "Zeit", event: "Ereignis", recent: "Letzte Ereignisse" },
   eventLines: {
@@ -257,14 +218,11 @@ const fr: MonitoringMessages = {
     title: "Surveillance centrale des patients",
     patients: { one: "{count} patient", other: "{count} patients" },
     audioOn: "Son d’alarme activé",
+    audioOff: "Audio des alarmes coupé",
     networkOn: "Réseau de surveillance connecté",
     device: "Appareil {device} connecté",
   },
   footer: {
-    mainScreen: "Écran principal",
-    patientSetup: "Configuration du patient",
-    alarmReview: "Revue des alarmes",
-    waveReview: "Revue des courbes",
     trends: "Tendances",
     print: "Imprimer",
     silence: "Mettre en sourdine",
@@ -280,18 +238,8 @@ const fr: MonitoringMessages = {
     acknowledged: "Acquittée",
   },
   tabs: {
-    realTime: "Temps réel",
     events: "Revue des événements",
     trends: "Tendances",
-    disclosure: "Enregistrement complet",
-  },
-  realTime: {
-    title: "La surveillance en direct est active",
-    description: "Les courbes et les constantes vitales sont mises à jour en continu ci-dessus.",
-  },
-  disclosure: {
-    title: "L’enregistrement complet est actif",
-    description: "L’historique continu des courbes est disponible pour les {hours} dernières heures.",
   },
   events: { time: "Heure", event: "Événement", recent: "Événements récents" },
   eventLines: {

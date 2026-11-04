@@ -6,8 +6,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
+import { useCopy } from "@/ds/feedback";
 
 import { handlingTagIcons } from "./handling-icons";
 import { logisticsMessageKey } from "./messages";
@@ -40,17 +40,12 @@ const statusBadgeClasses: Record<Shipment["status"], string> = {
   customsHold: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
+/** A number in the range reserved for fiction, so the demo never dials anyone. */
+const DEMO_PHONE = "+15555550100";
+
 type ShipmentDetailsProps = {
   shipment: Shipment | null;
 };
-
-function ComingSoon({ children }: { children: string }) {
-  return (
-    <div className="text-muted-foreground grid h-full place-items-center rounded-md border border-dashed p-4 text-center text-sm">
-      {children}
-    </div>
-  );
-}
 
 function EmptyShipmentOverview() {
   const text = useMessages(logisticsMessageKey).details;
@@ -66,6 +61,7 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
   const text = messages.details;
   const locale = useLocale();
   const ContactIcon = modeIcons[shipment.mode];
+  const copy = useCopy();
 
   return (
     <div className="flex flex-col gap-4">
@@ -74,7 +70,12 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
           <h1 className="text-lg font-medium tracking-tight tabular-nums sm:text-xl">
             {format(messages.shipmentId, locale, { id: shipment.id })}
           </h1>
-          <Button variant="ghost" size="icon-sm" aria-label={text.copyId}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={text.copyId}
+            onClick={() => void copy(shipment.id, text.shipmentIdLabel)}
+          >
             <Copy />
           </Button>
         </div>
@@ -105,7 +106,14 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
             <div className="text-sm leading-tight font-medium break-words">{shipment.customer.name}</div>
             <div className="text-muted-foreground flex items-center gap-2">
               <span className="text-xs leading-none tracking-tight tabular-nums">{shipment.customer.id}</span>
-              <Copy className="size-3 shrink-0" />
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={text.copyCustomerId}
+                onClick={() => void copy(shipment.customer.id, text.customerIdLabel)}
+              >
+                <Copy className="size-3 shrink-0" />
+              </Button>
             </div>
           </div>
         </div>
@@ -129,15 +137,19 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <h2 className="min-w-0 font-medium break-words">{text.cargoDetails}</h2>
 
-          <Button variant="outline" size="sm">
-            <ContactIcon data-icon="inline-start" />
-            {text.contact[shipment.mode]}
+          <Button variant="outline" size="sm" asChild>
+            <a href={`tel:${DEMO_PHONE}`}>
+              <ContactIcon data-icon="inline-start" />
+              {text.contact[shipment.mode]}
+            </a>
           </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-[1.35fr_1fr_1.1fr_1.15fr_1fr]">
           <div className="col-span-2 flex min-w-0 flex-col gap-1 md:col-span-1 md:gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">{text.tabs.cargo}</div>
+            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">
+              {messages.list.cargo}
+            </div>
             <div className="text-sm leading-tight break-words hyphens-auto">{shipment.cargo}</div>
           </div>
 
@@ -203,8 +215,6 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
 }
 
 export function ShipmentDetails({ shipment }: ShipmentDetailsProps) {
-  const text = useMessages(logisticsMessageKey).details;
-
   if (!shipment) {
     return (
       <div className="grid h-full min-h-0 grid-rows-[320px_1fr] overflow-hidden lg:grid-rows-[420px_1fr]">
@@ -224,44 +234,8 @@ export function ShipmentDetails({ shipment }: ShipmentDetailsProps) {
         <ShipmentRouteMap shipment={shipment} />
       </div>
       <div className="min-h-0 overflow-hidden">
-        <div className="h-full min-h-0 py-2">
-          <Tabs defaultValue="overview" className="h-full gap-0">
-            <TabsList
-              className="w-full justify-start gap-2 overflow-x-auto border-b px-4 **:data-[slot=tabs-trigger]:text-xs sm:gap-4 sm:**:data-[slot=tabs-trigger]:text-sm"
-              variant="line"
-            >
-              <TabsTrigger className="flex-none" value="overview">
-                {text.tabs.overview}
-              </TabsTrigger>
-              <TabsTrigger className="flex-none" value="route">
-                {text.tabs.route}
-              </TabsTrigger>
-              <TabsTrigger className="flex-none" value="cargo">
-                {text.tabs.cargo}
-              </TabsTrigger>
-              <TabsTrigger className="flex-none" value="documents">
-                {text.tabs.documents}
-              </TabsTrigger>
-              <TabsTrigger className="flex-none" value="activity">
-                {text.tabs.activity}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent className="min-h-0 overflow-auto p-4" value="overview">
-              <ShipmentOverview shipment={shipment} />
-            </TabsContent>
-            <TabsContent className="p-4" value="route">
-              <ComingSoon>{text.comingSoon.route}</ComingSoon>
-            </TabsContent>
-            <TabsContent className="p-4" value="cargo">
-              <ComingSoon>{text.comingSoon.cargo}</ComingSoon>
-            </TabsContent>
-            <TabsContent className="p-4" value="documents">
-              <ComingSoon>{text.comingSoon.documents}</ComingSoon>
-            </TabsContent>
-            <TabsContent className="p-4" value="activity">
-              <ComingSoon>{text.comingSoon.activity}</ComingSoon>
-            </TabsContent>
-          </Tabs>
+        <div className="h-full min-h-0 overflow-auto p-4">
+          <ShipmentOverview shipment={shipment} />
         </div>
       </div>
     </div>

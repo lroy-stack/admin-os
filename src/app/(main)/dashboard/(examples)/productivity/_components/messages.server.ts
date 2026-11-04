@@ -1,11 +1,10 @@
 import "server-only";
 
-import { defineMessages } from "@/core/i18n";
+import { defineMessages, type MessageBundle } from "@/core/i18n";
 
-import type { ProductivityMessages } from "./messages";
+import { type ProductivityMessages, productivityMessageKey } from "./messages";
 
 const en: ProductivityMessages = {
-  viewAll: "View all",
   meta: {
     title: "Open Source Productivity Dashboard with shadcn/ui",
     description:
@@ -26,6 +25,7 @@ const en: ProductivityMessages = {
   },
   tasks: {
     title: "Tasks",
+    empty: "No tasks in this range.",
     rangeLabel: "Task range",
     ranges: { today: "Today", tomorrow: "Tomorrow", thisWeek: "This week" },
     newTask: "New task",
@@ -40,11 +40,13 @@ const en: ProductivityMessages = {
   },
   projects: {
     title: "Projects",
+    empty: "No projects with this status.",
+    progress: "Progress",
     filterLabel: "Project filter",
     filters: { active: "Active", planning: "Planning", completed: "Completed" },
     new: "New",
     due: "Due {date}",
-    statuses: { inProgress: "In progress", planning: "Planning" },
+    statuses: { inProgress: "In progress", planning: "Planning", completed: "Completed" },
     items: {
       roadmap: { title: "Q2 roadmap", description: "Ship better, ship smarter." },
       website: { title: "Website redesign", description: "Clean, modern, and fast." },
@@ -57,7 +59,6 @@ const en: ProductivityMessages = {
     newTask: "New task",
     newProject: "New project",
     newGoal: "New goal",
-    upload: "Upload",
   },
   quote: {
     title: "Small, consistent actions lead to big results.",
@@ -66,6 +67,8 @@ const en: ProductivityMessages = {
   focus: {
     title: "Focus",
     start: "Start",
+    pause: "Pause",
+    resume: "Resume",
     noNotifications: "No notifications · Full focus",
   },
   notes: {
@@ -84,10 +87,22 @@ const en: ProductivityMessages = {
     encouragement: "You’re doing great. Keep the momentum going.",
     goals: { one: "{done} of {count} goal completed", other: "{done} of {count} goals completed" },
   },
+  done: "Done",
+  forms: {
+    required: "This field is required.",
+    title: "Title",
+    description: "Description",
+    tag: "Tag",
+    when: "When",
+    time: "Time",
+    status: "Status",
+    due: "Due date",
+    goal: "Goal",
+  },
+  toasts: { task: "Task added", project: "Project added", note: "Note added", goal: "Goal added" },
 };
 
 const es: ProductivityMessages = {
-  viewAll: "Ver todo",
   meta: {
     title: "Panel de productividad de código abierto con shadcn/ui",
     description:
@@ -108,6 +123,7 @@ const es: ProductivityMessages = {
   },
   tasks: {
     title: "Tareas",
+    empty: "No hay tareas en este periodo.",
     rangeLabel: "Periodo de las tareas",
     ranges: { today: "Hoy", tomorrow: "Mañana", thisWeek: "Esta semana" },
     newTask: "Nueva tarea",
@@ -122,11 +138,13 @@ const es: ProductivityMessages = {
   },
   projects: {
     title: "Proyectos",
+    empty: "No hay proyectos con este estado.",
+    progress: "Progreso",
     filterLabel: "Filtro de proyectos",
     filters: { active: "Activos", planning: "En planificación", completed: "Completados" },
     new: "Nuevo",
     due: "Vence el {date}",
-    statuses: { inProgress: "En curso", planning: "En planificación" },
+    statuses: { inProgress: "En curso", planning: "En planificación", completed: "Completado" },
     items: {
       roadmap: { title: "Hoja de ruta del T2", description: "Entregar mejor, con más criterio." },
       website: { title: "Rediseño del sitio web", description: "Limpio, moderno y rápido." },
@@ -139,7 +157,6 @@ const es: ProductivityMessages = {
     newTask: "Nueva tarea",
     newProject: "Nuevo proyecto",
     newGoal: "Nuevo objetivo",
-    upload: "Subir",
   },
   quote: {
     title: "Las acciones pequeñas y constantes llevan a grandes resultados.",
@@ -148,6 +165,8 @@ const es: ProductivityMessages = {
   focus: {
     title: "Concentración",
     start: "Iniciar",
+    pause: "Pausar",
+    resume: "Reanudar",
     noNotifications: "Sin notificaciones · Concentración total",
   },
   notes: {
@@ -166,10 +185,22 @@ const es: ProductivityMessages = {
     encouragement: "Lo estás haciendo genial. Mantén el ritmo.",
     goals: { one: "{done} de {count} objetivo completado", other: "{done} de {count} objetivos completados" },
   },
+  done: "Hecho",
+  forms: {
+    required: "Este campo es obligatorio.",
+    title: "Título",
+    description: "Descripción",
+    tag: "Etiqueta",
+    when: "Cuándo",
+    time: "Hora",
+    status: "Estado",
+    due: "Fecha de vencimiento",
+    goal: "Objetivo",
+  },
+  toasts: { task: "Tarea añadida", project: "Proyecto añadido", note: "Nota añadida", goal: "Objetivo añadido" },
 };
 
 const de: ProductivityMessages = {
-  viewAll: "Alle anzeigen",
   meta: {
     title: "Open-Source-Produktivitäts-Dashboard mit shadcn/ui",
     description:
@@ -190,6 +221,7 @@ const de: ProductivityMessages = {
   },
   tasks: {
     title: "Aufgaben",
+    empty: "Keine Aufgaben in diesem Zeitraum.",
     rangeLabel: "Zeitraum der Aufgaben",
     ranges: { today: "Heute", tomorrow: "Morgen", thisWeek: "Diese Woche" },
     newTask: "Neue Aufgabe",
@@ -204,11 +236,13 @@ const de: ProductivityMessages = {
   },
   projects: {
     title: "Projekte",
+    empty: "Keine Projekte mit diesem Status.",
+    progress: "Fortschritt",
     filterLabel: "Projektfilter",
     filters: { active: "Aktiv", planning: "In Planung", completed: "Abgeschlossen" },
     new: "Neu",
     due: "Frist: {date}",
-    statuses: { inProgress: "In Bearbeitung", planning: "In Planung" },
+    statuses: { inProgress: "In Bearbeitung", planning: "In Planung", completed: "Abgeschlossen" },
     items: {
       roadmap: { title: "Q2-Roadmap", description: "Besser liefern, schlauer arbeiten." },
       website: { title: "Website-Relaunch", description: "Klar, modern und schnell." },
@@ -221,7 +255,6 @@ const de: ProductivityMessages = {
     newTask: "Neue Aufgabe",
     newProject: "Neues Projekt",
     newGoal: "Neues Ziel",
-    upload: "Hochladen",
   },
   quote: {
     title: "Kleine, stetige Schritte führen zu großen Ergebnissen.",
@@ -230,6 +263,8 @@ const de: ProductivityMessages = {
   focus: {
     title: "Fokus",
     start: "Starten",
+    pause: "Pausieren",
+    resume: "Fortsetzen",
     noNotifications: "Keine Benachrichtigungen · Volle Konzentration",
   },
   notes: {
@@ -248,10 +283,27 @@ const de: ProductivityMessages = {
     encouragement: "Das läuft richtig gut. Bleib im Schwung.",
     goals: { one: "{done} von {count} Ziel erreicht", other: "{done} von {count} Zielen erreicht" },
   },
+  done: "Fertig",
+  forms: {
+    required: "Dieses Feld ist erforderlich.",
+    title: "Titel",
+    description: "Beschreibung",
+    tag: "Kategorie",
+    when: "Wann",
+    time: "Uhrzeit",
+    status: "Status",
+    due: "Fälligkeitsdatum",
+    goal: "Ziel",
+  },
+  toasts: {
+    task: "Aufgabe hinzugefügt",
+    project: "Projekt hinzugefügt",
+    note: "Notiz hinzugefügt",
+    goal: "Ziel hinzugefügt",
+  },
 };
 
 const fr: ProductivityMessages = {
-  viewAll: "Tout afficher",
   meta: {
     title: "Tableau de bord de productivité open source avec shadcn/ui",
     description:
@@ -272,6 +324,7 @@ const fr: ProductivityMessages = {
   },
   tasks: {
     title: "Tâches",
+    empty: "Aucune tâche sur cette période.",
     rangeLabel: "Période des tâches",
     ranges: { today: "Aujourd’hui", tomorrow: "Demain", thisWeek: "Cette semaine" },
     newTask: "Nouvelle tâche",
@@ -286,11 +339,13 @@ const fr: ProductivityMessages = {
   },
   projects: {
     title: "Projets",
+    empty: "Aucun projet avec ce statut.",
+    progress: "Progression",
     filterLabel: "Filtre des projets",
     filters: { active: "Actifs", planning: "En préparation", completed: "Terminés" },
     new: "Nouveau",
     due: "Échéance : {date}",
-    statuses: { inProgress: "En cours", planning: "En préparation" },
+    statuses: { inProgress: "En cours", planning: "En préparation", completed: "Terminé" },
     items: {
       roadmap: { title: "Feuille de route du T2", description: "Livrer mieux, livrer plus malin." },
       website: { title: "Refonte du site web", description: "Épuré, moderne et rapide." },
@@ -303,7 +358,6 @@ const fr: ProductivityMessages = {
     newTask: "Nouvelle tâche",
     newProject: "Nouveau projet",
     newGoal: "Nouvel objectif",
-    upload: "Téléverser",
   },
   quote: {
     title: "De petites actions régulières mènent à de grands résultats.",
@@ -312,6 +366,8 @@ const fr: ProductivityMessages = {
   focus: {
     title: "Concentration",
     start: "Démarrer",
+    pause: "Mettre en pause",
+    resume: "Reprendre",
     noNotifications: "Aucune notification · Concentration totale",
   },
   notes: {
@@ -330,6 +386,24 @@ const fr: ProductivityMessages = {
     encouragement: "Vous faites du bon travail. Gardez l’élan.",
     goals: { one: "{done} sur {count} objectif atteint", other: "{done} sur {count} objectifs atteints" },
   },
+  done: "Terminé",
+  forms: {
+    required: "Ce champ est obligatoire.",
+    title: "Titre",
+    description: "Description",
+    tag: "Étiquette",
+    when: "Quand",
+    time: "Heure",
+    status: "Statut",
+    due: "Date d’échéance",
+    goal: "Objectif",
+  },
+  toasts: { task: "Tâche ajoutée", project: "Projet ajouté", note: "Note ajoutée", goal: "Objectif ajouté" },
 };
 
 export const productivityMessages = defineMessages<ProductivityMessages>({ en, es, de, fr });
+
+export const productivityBundle: MessageBundle<ProductivityMessages> = {
+  key: productivityMessageKey,
+  dictionary: productivityMessages,
+};
