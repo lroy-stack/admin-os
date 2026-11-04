@@ -1,125 +1,64 @@
 # Contributing to admin-OS
 
-Thanks for showing interest in improving **admin-OS** (repo: `admin-os`).  
-This guide will help you set up your environment and understand how to contribute.
+Thank you for helping. This page is the workflow; the code conventions are in [`AGENTS.md`](AGENTS.md), which people
+and coding agents follow alike, and the guides are in [`docs/`](docs/README.md).
 
----
+## Before you start
 
-## Overview
+- For a bug, open an [issue](https://github.com/lroy-stack/admin-os/issues) with the steps, what you expected, what
+  happened, and the preset, role, viewport and browser.
+- For a feature or a larger change, open an issue first, so the approach is agreed before the code. A new screen
+  pattern, window type, token or dependency needs that conversation: the design rules and the layers are settled
+  ([`AGENTS.md`](AGENTS.md), [Architecture](docs/guides/architecture.md)).
+- To report a vulnerability, follow [`SECURITY.md`](SECURITY.md); do not open a public issue.
 
-This project is built with **Next.js 16**, **TypeScript**, **Tailwind CSS v4**, and **Shadcn UI**.  
-The goal is to keep the codebase modular, scalable, and easy to extend.
+## Set up
 
----
+Fork the repository, clone your fork and follow the [development guide](docs/guides/development.md):
 
-## Project Layout
-
-Code is organised in package-shaped layers with one dependency direction (see `docs/adr/0003-package-shaped-layers.md`):
-
-```
-src
-├── core          # Contracts: results, errors, capabilities, money, i18n, clock, channels
-├── ds            # Design system: tokens, glass styles, presets, shared components, shell, preferences
-├── modules       # Generic domains: bookings, customers, catalog, staff, resources
-├── verticals     # Presets: hospitality (reference), salon, workshop
-├── components    # shadcn/ui primitives (do not edit by hand)
-└── app           # Thin Next.js routes; route-only code stays in each route's _components
+```bash
+git clone https://github.com/<your-user>/admin-os.git
+cd admin-os
+npm install
+npm run dev
 ```
 
-Code starts in its route and moves into a layer when a second consumer needs it.
+## Make the change
 
----
+- Branch from `main`: `feat/<topic>`, `fix/<topic>` or `docs/<topic>`.
+- Keep a commit to one concern, with a [Conventional Commits](https://www.conventionalcommits.org/) message:
+  `feat(bookings): …`, `fix(ds): …`, `docs: …`, `test: …`, `ci: …`, `chore: …`.
+- A bug fix starts with a test that fails without it.
+- Follow the paths in [Building on the template](docs/guides/extending.md) for modules, presets, controls, adapters
+  and MCP tools.
 
-## Getting Started
+## Check it
 
-### Fork and Clone the Repository
+These must pass before you push; CI runs them on every pull request.
 
-1. Fork the Repository
-   
-   Click [here](https://github.com/lroy-stack/admin-os/fork) to fork the repository.
+```bash
+npm run check
+npx tsc --noEmit
+npm test
+```
 
-2. Clone the Repository  
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/admin-os.git
-   ```
-   
-3. Navigate into the Project  
-   ```bash
-   cd admin-os
-   ```
+Also run, when they apply:
 
-4. **Install dependencies**
-   ```bash
-   npm install
-   ```
+| When you change… | Run |
+| --- | --- |
+| the shell, routing or how a screen loads | `npm run test:e2e` |
+| what a screen looks like | `npm run media`, and commit the regenerated images in `media/` |
+| a capability or the MCP manifest | `npm run mcp:reference`, before `npm test` |
 
-5. **Run the dev server**
-   ```bash
-   npm run dev
-   ```
-   App will be available at [http://localhost:3000](http://localhost:3000).
+The pre-commit hook runs Biome on the staged files and the layer rules; fix what it reports rather than bypassing it.
 
----
+## Open the pull request
 
-## Contribution Flow
+- Say what changed, why, and how you verified it (the commands and their result).
+- For a visible change, add screenshots at phone and desktop width, in light and dark.
+- Link the issue it closes.
+- Keep it focused: a refactor that the change does not need belongs in its own pull request.
 
-- Always create a new branch before working on changes:
-  ```bash
-  git checkout -b feature/my-update
-  ```
+## License
 
-- Use clear commit messages:
-  ```bash
-  git commit -m "feat: add finance dashboard screen"
-  ```
-
-- Before you push, run the checks:
-  ```bash
-  npm run check && npx tsc --noEmit && npm test
-  ```
-  Run `npm run test:e2e` as well when you change the shell, routing or how a screen loads.
-- Open a Pull Request once ready.
-- If your change adds a new UI screen or component, include a screenshot in your PR description. If it changes a
-  screen shown in the README, run `npm run media` and commit the regenerated images in `media/`.
-
----
-
-## Where to Contribute
-
-- **External Pages**: Landing pages or other non-dashboard routes → `src/app/(external)/`  
-- **Auth Screens**: Login, register, and authentication layouts → `src/app/(main)/auth/`  
-- **Dashboard Screens**: Feature dashboards like CRM, Finance, Analytics → `src/app/(main)/dashboard/`
-- **Components**: Reusable UI goes in `src/components/`  
-- **Hooks**: Custom logic goes in `src/hooks/`  
-- **Themes**: New presets under `src/ds/styles/presets/`  
-
----
-
-## Guidelines
-
-- Prefer **TypeScript types** over `any`
-- Husky pre-commit hooks are enabled - linting and formatting run automatically when you commit, and if there are errors the commit will be blocked until they are fixed. 
-- Follow **Shadcn UI** style & Tailwind v4 conventions
-- Keep accessibility in mind (ARIA, keyboard nav)
-- Use clear commit messages with conventional prefixes (`feat:`, `fix:`, `chore:`, etc.)
-- Avoid unnecessary dependencies — prefer existing utilities where possible
-
----
-
-## Submitting PRs
-
-- Open a Pull Request once your changes are ready.  
-- Ensure your branch is up to date with `main` before submitting.  
-- Reference any related issue in your PR for context.
-
----
-
-## Questions & Support
-
-- Report bugs, suggestions, or issues via [GitHub Issues](https://github.com/lroy-stack/admin-os/issues)
-
----
-
-Your contributions keep this project growing. 🚀
-
-**Happy Vibe Coding!**
+By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).

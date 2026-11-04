@@ -9,6 +9,9 @@
     "type": "git",
     "url": "https://github.com/lroy-stack/admin-os.git"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:mcp": "wrangler dev -c workers/mcp/wrangler.jsonc --port 8789 --infer-origin-from-routes=false",

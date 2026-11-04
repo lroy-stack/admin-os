@@ -6,7 +6,7 @@
  * the Claude usage of whoever runs it.
  *
  * It starts nothing. Before `npm run eval:mcp`, build once (`npx opennextjs-cloudflare build`), then run these three
- * processes, each in its own terminal (README, "MCP"):
+ * processes, each in its own terminal (docs/guides/mcp.md, "Agent evals"):
  *   npx wrangler dev -c wrangler.jsonc -c workers/demo-store/wrangler.jsonc --port 8788
  *   npm run dev:mcp     # with workers/mcp/.dev.vars holding MCP_TOKENS=eval-owner-0001:owner and MCP_READ_ONLY=false
  *   npm run dev:mcp:read-only   # port 8790: the public demo tokens, read-only, whatever .dev.vars says

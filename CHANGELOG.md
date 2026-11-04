@@ -5,6 +5,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The documentation is split by purpose: a short README, guides in `docs/guides` (development, architecture,
+  building on the template, deployment, MCP) under an index in `docs/README.md`, a rewritten `CONTRIBUTING.md` and a
+  new `SECURITY.md`. `package.json` declares Node.js 24 in `engines`.
+
 ### Fixed
 
 - `npm run deploy` stops unless `NEXT_PUBLIC_SITE_URL` is a public https URL, read from the shell and the `.env`

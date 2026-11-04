@@ -8,8 +8,9 @@ import { resolve } from "node:path";
  * under `wrangler dev`, with a real browser on the web side. On demand only (`npm run test:e2e:workers`): it is not
  * part of the default e2e or of CI, because it needs wrangler and two processes.
  *
- * Topology, as in README "The three Workers locally": the web app and the store share one `wrangler dev`, the MCP
- * Worker runs in its own, and wrangler's dev registry connects the MCP Worker's `DEMO_STORE` binding to the store.
+ * Topology, as in docs/guides/development.md, "The three Workers locally": the web app and the store share one
+ * `wrangler dev`, the MCP Worker runs in its own, and wrangler's dev registry connects the MCP Worker's `DEMO_STORE`
+ * binding to the store.
  * The two Workers must sign and verify `demo_sid` with the same `DEMO_SESSION_SECRET`; a throwaway one is made for
  * each run and handed to both through the environment (`CLOUDFLARE_INCLUDE_PROCESS_ENV`), so no `.dev.vars` is written.
  * `DEMO_COOKIE_DOMAIN` is empty, so the cookies stay host-only on localhost.

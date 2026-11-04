@@ -1,7 +1,8 @@
 // The MCP Worker as its tests run it (vitest project `workers-mcp`): the same entry, vars and compatibility as
 // ../wrangler.jsonc, with the store's `DemoStore` hosted in this script, since the plugin cannot bundle a second
 // TypeScript Worker for a `script_name` binding, and a limit a test reaches quickly (`TEST_RATE_LIMIT` in
-// support.ts). The cross-script binding itself runs under `wrangler dev` (README, "The three Workers locally").
+// support.ts). The cross-script binding itself runs under `wrangler dev` (docs/guides/development.md, "The three
+// Workers locally").
 {
   "$schema": "../../../node_modules/wrangler/config-schema.json",
   "name": "admin-os-mcp-test",

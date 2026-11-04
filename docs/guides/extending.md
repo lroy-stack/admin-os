@@ -1,0 +1,97 @@
+# Building on the template
+
+Each path below names the files to touch, in order, and the decision record behind it. After a change,
+`npx tsc --noEmit`, `npm test` and `npm run check` tell you what is still missing; `npm run check:fix` sorts imports.
+Read [Architecture](architecture.md) first for the layers and the data seam.
+
+- [Add a module](#add-a-module)
+- [Add a preset](#add-a-preset)
+- [Wire a control](#wire-a-control)
+- [Swap the adapter](#swap-the-adapter)
+- [Expose a capability to MCP](#expose-a-capability-to-mcp)
+
+## Add a module
+
+Decision records: [ADR 0004](../adr/0004-vertical-presets-and-generic-domains.md),
+[0005](../adr/0005-data-seam.md), [0006](../adr/0006-registries-permissions-navigation.md). The smallest complete
+example is `src/modules/notifications`.
+
+1. **Schemas.** `src/modules/<domain>/schema.ts` holds the zod schemas for the records, inputs and outputs. Money is
+   integer minor units (`moneySchema`), phones are E.164.
+2. **Capabilities.** `capabilities.ts` declares one `defineCapability` per operation:
+   - an id `<domain>.<verb>` and a `summary` an agent can act on;
+   - `input`, `output` and a `permission` such as `read:<domain>`;
+   - an `effect` (`read`, `write` or `destructive`) and a `riskTier`;
+   - for writes, `change` and `idempotency`.
+
+   Collect them in one `<domain>Capabilities` record; `index.ts` re-exports the capabilities and the schemas.
+3. **Mock handlers.** `mock.ts` has a `mockHandler` per capability over the demo data. `server.ts` exports them with
+   `messages.ts`, the module's error and label texts in en, es, de and fr.
+4. **Registration.** Register a new module in `src/config`: its `<domain>Capabilities` in `SOURCE_CATALOGS`
+   (`catalog.ts`) and its handlers in `MOCK_HANDLERS` (`demo-kernel.ts`).
+   - A capability added to an existing module needs neither, since the module's record is already there.
+   - A capability that takes required input also gives its smallest valid input to `inputFor`
+     (`src/config/adapter-contract.testkit.ts`), so the adapter contract can call it.
+5. **MCP.** Classify every capability, as [Expose a capability to MCP](#expose-a-capability-to-mcp) says. Until you
+   do, the catalogue does not compile.
+6. **Turn it on.** Add the module id to the `modules` of each preset that offers it. Roles get its permissions from
+   their rule; a module that is off grants nothing.
+7. **Tests, at two levels.**
+   - In the module (`<domain>.test.ts`), test the schemas and handlers on an inline fixture and run
+     `assertDictionaryParity` over its messages. A module sits below the presets and cannot import their seeds.
+   - On a preset's seed, test it in `src/config/<domain>.test.ts`, which builds a client with
+     `createClient(CATALOG, getAdapter({ vertical, sessionId }), …)`, as `src/config/customers.test.ts` does.
+
+## Add a preset
+
+Decision record: [ADR 0004](../adr/0004-vertical-presets-and-generic-domains.md).
+
+1. Copy `src/verticals/salon`.
+   - `index.ts` lists the modules, the nav, the roles, the typed `ext` slots, the setting defaults and the `leakTerms`
+     that must never reach the generic layers.
+   - `server.ts` and `seed.ts` hold the vocabulary and the demo data.
+2. Add it to `VERTICALS` (`src/config/vertical.ts`) and `DEMO` (`src/config/demo-kernel.ts`).
+
+The leak test and the seed tests check it.
+
+## Wire a control
+
+Decision records: [ADR 0005](../adr/0005-data-seam.md), [0007](../adr/0007-i18n-typed-dictionaries.md),
+[0015](../adr/0015-window-rules.md). The reference screen is `src/app/(main)/dashboard/customers`.
+
+- **A read** happens on the server: `const { client } = await getRuntime()`, then
+  `client.call("<capability>", input)`. The screen shows the outcome through `ReadState`; an error is never an empty
+  list.
+- **A write** is a Server Action that calls `runWrite("<capability>", input, attemptKey)`
+  (`src/config/write-action.server.ts`). Run it from the client with `useCapabilityAction`, inside the window the job
+  calls for, and add the action to the inventory in `src/config/server-actions.test.ts`.
+- **Access.** Hide what the actor cannot do with `can()`.
+- **Words.** Take every visible word from the screen's dictionary, in all four languages.
+
+## Swap the adapter
+
+Decision record: [ADR 0005](../adr/0005-data-seam.md).
+
+1. The app reaches data only through the `Adapter` interface (`src/core/client/index.ts`): one `dispatch` per
+   capability call. Implement it for your backend.
+2. Select it by `DATA_ADAPTER` in `getAdapter` (`src/config/data.server.ts`).
+3. Run the shared contract against it with `describeAdapterContract` (`src/config/adapter-contract.testkit.ts`), as
+   `src/config/data.server.test.ts` does for the in-memory adapter.
+
+## Expose a capability to MCP
+
+Decision records: [ADR 0009](../adr/0009-mcp-server.md), [0016](../adr/0016-mcp-server-as-its-own-product.md).
+
+1. **Classify it** in `MCP_MANIFEST` (`src/config/mcp-manifest.ts`): `expose: true` with the `title` clients show, or
+   `uiOnly` with the reason.
+   - A small read needs nothing else.
+   - A list tool returns `concise` rows.
+   - `ids` names the tools that list valid values for an id field.
+   - `untrusted` marks free text people typed.
+2. **Pin what an agent sees** (annotations, tier and key requirement) in the `PINNED` table of
+   `src/config/mcp.server.test.ts`. The test lists every tool in name order and fails on a tool it does not know.
+3. **Regenerate the reference** with `npm run mcp:reference` before `npm test`; the reference test fails while
+   [`docs/mcp/reference.md`](../mcp/reference.md) is stale.
+
+The tool's input, output and permission are the capability's own, and a write the approval policy holds waits for a
+person in the bell. The MCP Worker serves it over Streamable HTTP, and `npm run mcp:stdio` over stdio.
