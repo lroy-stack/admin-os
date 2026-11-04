@@ -13,7 +13,7 @@ const en: ShellMessages = {
   account: {
     label: "Account: {name}",
     account: "Account",
-    billing: "Billing",
+    businessSettings: "Business settings",
     notifications: "Notifications",
     logOut: "Log out",
     demo: {
@@ -63,7 +63,7 @@ const es: ShellMessages = {
   account: {
     label: "Cuenta: {name}",
     account: "Cuenta",
-    billing: "Facturación",
+    businessSettings: "Ajustes del negocio",
     notifications: "Notificaciones",
     logOut: "Cerrar sesión",
     demo: {
@@ -113,7 +113,7 @@ const de: ShellMessages = {
   account: {
     label: "Konto: {name}",
     account: "Konto",
-    billing: "Abrechnung",
+    businessSettings: "Unternehmenseinstellungen",
     notifications: "Benachrichtigungen",
     logOut: "Abmelden",
     demo: {
@@ -163,7 +163,7 @@ const fr: ShellMessages = {
   account: {
     label: "Compte : {name}",
     account: "Compte",
-    billing: "Facturation",
+    businessSettings: "Paramètres de l’entreprise",
     notifications: "Notifications",
     logOut: "Se déconnecter",
     demo: {

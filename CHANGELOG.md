@@ -12,6 +12,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   section is the business details (`business.profile`, `business.payment`, `business.invoicing`); each preset ships
   a demo company. Over MCP an assistant's change waits for the owner's approval, and the approval policy is never
   changed this way.
+- **Settings page** (`/dashboard/settings`, "Business settings" in the account menu, which replaces the Billing item
+  that led nowhere): every role reads the business details; the owner edits them in a form dialog.
 
 ### Changed
 

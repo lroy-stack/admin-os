@@ -15,7 +15,7 @@ export interface ShellMessages {
     /** Placeholders: `{name}`. */
     readonly label: string;
     readonly account: string;
-    readonly billing: string;
+    readonly businessSettings: string;
     readonly notifications: string;
     readonly logOut: string;
     readonly demo: {

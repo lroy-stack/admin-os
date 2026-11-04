@@ -30,6 +30,7 @@ const REVIEWED_ACTIONS: Readonly<Record<string, readonly string[]>> = {
     "undoWalkIn",
   ],
   "src/app/(main)/dashboard/customers/actions.ts": ["createContact", "findDuplicateContacts"],
+  "src/app/(main)/dashboard/settings/actions.ts": ["updateBusinessDetails"],
   "src/ds/preferences/actions.ts": ["setCurrency", "setLocale", "setPreference"],
 };
 

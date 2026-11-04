@@ -2,7 +2,9 @@
 
 import { useOptimistic, useTransition } from "react";
 
-import { BadgeCheck, Bell, CreditCard, LogOut, RotateCcw } from "lucide-react";
+import Link from "next/link";
+
+import { BadgeCheck, Bell, Building2, LogOut, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
+import { useGuardedLink } from "@/ds/feedback";
 import { getInitials } from "@/lib/utils";
 
 import { shellMessageKey } from "./messages";
@@ -53,8 +56,18 @@ function DemoSwitch({ label, control, failed }: { label: string; control: ShellS
   );
 }
 
-export function AccountMenu({ account, demo }: { account: ShellAccount; demo?: ShellDemo }) {
+export function AccountMenu({
+  account,
+  demo,
+  settingsHref,
+}: {
+  account: ShellAccount;
+  demo?: ShellDemo;
+  /** Where the business settings live; the app owns its routes. */
+  settingsHref: string;
+}) {
   const { account: text } = useMessages(shellMessageKey);
+  const guardLink = useGuardedLink();
   const locale = useLocale();
   const [, startTransition] = useTransition();
 
@@ -96,9 +109,11 @@ export function AccountMenu({ account, demo }: { account: ShellAccount; demo?: S
             <BadgeCheck />
             {text.account}
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <CreditCard />
-            {text.billing}
+          <DropdownMenuItem asChild>
+            <Link prefetch={false} href={settingsHref} onNavigate={guardLink(settingsHref)}>
+              <Building2 />
+              {text.businessSettings}
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             <Bell />
