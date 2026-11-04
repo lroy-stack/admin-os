@@ -240,3 +240,64 @@ or process's demo session, and the projection's generic tests already cover appr
   set; unset, the server is read-only exactly while the public demo tokens are in force (no `MCP_TOKENS`, mock
   adapter). stdio is the developer's own session and writes unless `MCP_READ_ONLY=true`.
 
+## Amendment 2026-11-04: its own Worker, a typed manifest, scopes and Origin validation (ADR 0016)
+
+ADR 0016 makes the MCP server its own product (spec 004).
+
+**What still holds:** the projection through the UI's client, the low-level `Server`, the mapping of `CallResult`,
+and unlisted names answering `access.forbidden`.
+
+**What changes:**
+
+- **Its own Worker.**
+  - `workers/mcp` serves `createMcpHandler` at `/mcp` on `mcp.admin-os.lr0y.dev`, beside the web app.
+  - It imports the domain core through a composition root without Next or React. A dependency rule and a test over
+    the bundle's metafile prove it.
+  - `/api/mcp` answers `410` with a JSON-RPC error naming the new URL for one release, then goes (plan W3).
+  - The "Runtime: Node" reason above (demo sessions in this process's memory) no longer applies: sessions live in the
+    store's Durable Object (ADR 0005, amendment 2026-11-04).
+  - stdio runs the same composition, and gains `MCP_SCOPES`, default `read` (plan W2, A2).
+- **A typed manifest.**
+  - `satisfies Record<CapabilityId, {expose, title, concise?} | {uiOnly: reason}>` selects and presents capabilities.
+    Inputs always come from the capability, and a new capability does not compile until it is classified.
+  - The projection table changes accordingly. `title` comes from the manifest, and the description still comes from
+    `summary`.
+  - Annotations come from the capability's facts, not only its `effect`. `destructiveHint` is true for destructive
+    writes and for writes that overwrite or remove. `idempotentHint` is true for reads and set-state writes. A test pins
+    them per tool.
+  - `serverInfo.version` is a hash of the projected surface, tools are listed in a deterministic order, and
+    `tools/list` carries the SDK's `CacheHint`. `tools.listChanged` stays `false`.
+- **Idempotency.**
+  - Create and add take a required `idempotencyKey` argument, and set-state writes take none (ADR 0016, D6).
+  - `_meta["admin-os/idempotencyKey"]` is still accepted, and must match the argument when both are present.
+  - The tool `_meta` flag `admin-os/requiresIdempotencyKey` (amendment 2026-11-03) becomes redundant once the key is a
+    required argument.
+- **Scopes `read` and `write`, with step-up.**
+  - One OAuth 2.1 resource, through `workers-oauth-provider`, replaces the static demo tokens. The protected resource
+    metadata now names the authorization server, and tokens are checked for this resource.
+  - The grant is `{sessionId, role, scopes}`, bound to the visitor's signed demo session. The session-per-token rule
+    and the shared public tokens go. Whether `MCP_TOKENS` stays for private deployments is decided in plan A1a.
+  - `read` is the default grant, and `write` is a separate, revocable consent. A token without `write` lists no write.
+    A write call answers HTTP `403` with `WWW-Authenticate: Bearer error="insufficient_scope", scope="write"`.
+  - **An exception to "unknown and forbidden names answer the same".** The scope challenge is an HTTP answer, given
+    before the projection runs, so it tells a write's name from an unknown one. The catalogue is public and its
+    reference is generated from it (spec 004, AC10), so nothing secret is revealed. Names outside the role still answer
+    `access.forbidden`.
+  - **Where the challenge is answered.** SDK 2.4.0's `createMcpHandler` resolves per-call scope challenges only for an
+    `McpServer` (`dist/index.mjs:1194`). The projection stays a low-level `Server`, for the reasons in "Options
+    considered", so the Worker's gate answers the challenge with the SDK's `bearerAuthChallengeResponse`. The
+    projection applies the same pure function to listing and to dispatch.
+  - **A new revisit condition for option 1:** the per-tool `scopeChallenge` of `McpServer`, together with the
+    conditions listed under "Revisit when".
+  - **`MCP_READ_ONLY`** keeps the rule of the amendment above, and stays on for the public deployment until the scope
+    tests pass (plan A1b). After that it remains a switch. Under it, a write answers `access.forbidden` with the
+    read-only message, never a challenge.
+- **Origin validation, reversing "Not added: host or origin allowlists".**
+  - A request to `/mcp` whose `Origin` is present and not on the allowlist answers `403` (`validateOriginHeader`).
+    Two things justify the reversal: the 2026-07-28 transport makes the check a MUST, and the consent flow now trusts
+    the demo session cookie, which is the condition that line named for revisiting.
+  - CORS exposes `WWW-Authenticate` and allows `Authorization`, `Content-Type`, `MCP-Protocol-Version`, `Mcp-Method`
+    and `Mcp-Name`.
+  - Workers rate limits guard `/register`, `/authorize`, `/token`, each grant, and new demo sessions per IP.
+- **Logs.** The Worker writes one line per call, with the correlation id, client id, tool, status and duration.
+

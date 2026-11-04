@@ -274,3 +274,36 @@ Every list capability paginates.
 - **Invariants** (contract test over `CATALOG`, `src/config/contracts.test.ts`): a read has tier 0 or 1 and no approval
   rule · tier 3 implies destructive · destructive implies tier 2 or 3 · `approval` is defined exactly when
   `mayRequireApproval` is true · `requiresIdempotencyKey` implies not a read.
+
+## Amendment 2026-11-04: the demo store moves into a Durable Object; approvals become a policy (ADR 0016)
+
+- **Why.** The "sessions are lost often" revisit condition above has fired. On production on 2026-11-03, one
+  `customers_create` followed by 12 `customers_list` calls saw the new customer once (spec 004). The web demo's Server
+  Actions share the same in-process stores (`src/config/data.server.ts:52`), so the screens are affected too. Spike S0
+  measured the replacement: 12 of 12 reads in both directions, and 20 parallel writes with one key applied once
+  (ADR 0016, D1 and D2).
+- **The per-session store moves into a Durable Object.** On Workers, each demo session is one `DemoStore` object,
+  named `vertical:sessionId`, in its own Worker, `workers/demo-store`. The object runs this ADR's mock kernel
+  (`createMockAdapter`) inside it. The web app and the MCP Worker reach it through a durable `Adapter` bound by
+  `script_name`, so the `Adapter` contract, the screens, the routes and the modules do not change. Tests and stdio
+  keep the in-memory store.
+- **What changes in "Per-session store".**
+  - Reads without a session still see the immutable seed. They are served in process, with no Durable Object request.
+  - The LRU of 100 sessions goes, because each session is its own object. The 2-hour TTL becomes an idle alarm that
+    deletes the object.
+  - The session's data, its keyed replays (bounded) and its pending approvals persist in the object's storage (SQLite
+    backend).
+  - `demo_session` is signed with HMAC. An unsigned or forged value starts a new session.
+  - Writes without a session still answer `transport.unavailable`.
+- **The consequence "Demo state can reset on Cloudflare" is replaced.** A session now resets after 2 hours idle, on
+  "Reset demo data", or when the store's snapshot schema changes. Screens keep applying the returned values, which is
+  still good practice, but this no longer stands in for consistency.
+- **Approvals become a policy (ADR 0016, D7).** The policy, not a per-capability predicate, decides which writes wait
+  for a person. It is a UI-only, elevated setting with a safe default, and it decides by risk tier and sensitivity, not
+  only by `destructive`.
+  - Approvals expire after 24 hours.
+  - An approval is revalidated when it is approved, and answers `conflict` if the state moved.
+  - Approvals are audited: who asked, and who decided.
+  - `AwaitingApproval` is unchanged, and a person resolves it in the web app.
+  - How descriptor v2's `approval` and `mayRequireApproval` feed the policy, or give way to it, is decided by plan H1a,
+    and the descriptor invariant changes with it.
