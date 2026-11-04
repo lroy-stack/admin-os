@@ -127,6 +127,13 @@ preset-registered record sections. Generic screens never read `ext`.
 | **conversations** (inbox engine) | `Conversation {id, channel, participants, assigneeId, links}`, `Message` | WhatsApp booking intake | Reminders | Quote approval by SMS |
 | **agenda** engine | `AgendaLayer` and `AgendaItem` (ADR 0006), resources as rows | Reservations, shifts, closures | Appointments by stylist | Bays by day |
 
+> **Amended 2026-11-04 (ADR 0018):** `inventory` joins the generic modules: what a business keeps and buys.
+> `StockItem {id, name (i18n field), sku, catalogItemId?, unit, onHand, reorderPoint, supplierId?}`,
+> `Supplier {id, name, email?, phone?, leadTimeDays?}` and
+> `PurchaseOrder {id, supplierId, status, lines[] (stockItemId, qty, unitCost), orderedOn, expectedOn?}`. It reads
+> catalog ids and never writes the catalog. Hospitality keeps drinks and shop goods, the salon its retail and
+> professional products, the workshop its parts. A catalog collection is a preset's set of `categoryId`s.
+
 ### Where the reservations module belongs
 
 **Decision:** a generic `bookings` module plus a **hospitality floor-plan extension**, registered as a bookings

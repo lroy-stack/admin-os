@@ -142,6 +142,11 @@ is one, serialised into the boot script (`src/scripts/theme-boot.tsx`).
 >   `business.invoicing` (`src/core/business`, section `business`, permission `manage:settings`), and each preset
 >   sets its demo company in `settingsDefaults`.
 
+> **Amended 2026-11-04 (ADR 0018):** product views are the first registry built in code. Modules declare view kinds
+> with `defineViewKind` (`src/core/views`), each naming its module and its read capability; a preset lists its views
+> under `productViews`. A view whose module is off or whose permission the actor lacks is hidden at runtime, and the
+> contract test keeps this record's rule: every entry names a declared kind of an enabled module.
+
 ```ts
 export interface NavEntry {
   readonly id: string;                        // stable: "bookings"
