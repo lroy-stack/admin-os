@@ -119,11 +119,93 @@ describe("DemoStore", () => {
     expect([ran, await customerCount(client)]).toEqual([true, before]);
   });
 
-  it("schedules no alarm for a session that only reads", async () => {
+  it("holds no storage and no alarm for a session that only reads", async () => {
     const sessionId = crypto.randomUUID();
     await customerCount(clientFor(sessionId));
 
-    expect(await runDurableObjectAlarm(stubFor(sessionId))).toBe(false);
+    const tables = await runInDurableObject(stubFor(sessionId), (_instance, state) =>
+      state.storage.sql.exec("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'session'").toArray(),
+    );
+
+    expect([tables.length, await runDurableObjectAlarm(stubFor(sessionId))]).toEqual([0, false]);
+  });
+
+  it("moves the idle alarm forward on a second write", async () => {
+    const sessionId = crypto.randomUUID();
+    const client = clientFor(sessionId);
+    const alarmOf = () => runInDurableObject(stubFor(sessionId), (_instance, state) => state.storage.getAlarm());
+    await client.call("customers.create", newCustomer("First"), { idempotencyKey: crypto.randomUUID() });
+    const first = await alarmOf();
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await client.call("customers.create", newCustomer("Second"), { idempotencyKey: crypto.randomUUID() });
+
+    expect((await alarmOf()) ?? 0).toBeGreaterThan(first ?? Number.POSITIVE_INFINITY);
+  });
+
+  it("starts from the seed when the saved row is corrupt", async () => {
+    const sessionId = crypto.randomUUID();
+    const client = clientFor(sessionId);
+    const before = await customerCount(client);
+    await runInDurableObject(stubFor(sessionId), (_instance, state) => {
+      state.storage.sql.exec(
+        "CREATE TABLE session (id INTEGER PRIMARY KEY CHECK (id = 1), schema_version INTEGER NOT NULL, owner TEXT NOT NULL, snapshot TEXT NOT NULL)",
+      );
+      state.storage.sql.exec(
+        "INSERT INTO session VALUES (1, ?, ?, 'not json')",
+        SCHEMA_VERSION,
+        `hospitality:${sessionId}`,
+      );
+    });
+    await abortAllDurableObjects();
+
+    expect(await customerCount(client)).toBe(before);
+  });
+
+  it("refuses a call for another session than the one the object holds", async () => {
+    const sessionId = crypto.randomUUID();
+    await clientFor(sessionId).call("customers.create", newCustomer("Mine"), { idempotencyKey: crypto.randomUUID() });
+
+    const answer = await stubFor(sessionId).dispatch("customers.list", { limit: 5 }, contextFor("someone-else"));
+
+    expect(answer).toMatchObject({ ok: false, error: { code: "access.forbidden" } });
+  });
+
+  it("does not keep a write that finishes after the idle alarm wiped the object", async () => {
+    const sessionId = crypto.randomUUID();
+    const client = clientFor(sessionId);
+    const before = await customerCount(client);
+    await client.call("customers.create", newCustomer("Before"), { idempotencyKey: crypto.randomUUID() });
+    const late = stubFor(sessionId).dispatch(
+      "customers.create",
+      newCustomer("Late"),
+      contextFor(sessionId, { idempotencyKey: "late", faults: [["customers.create", { latencyMs: 300 }]] }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    await runDurableObjectAlarm(stubFor(sessionId));
+
+    expect([await late, await customerCount(client)]).toEqual([
+      expect.objectContaining({ ok: false, error: expect.objectContaining({ code: "transport.unavailable" }) }),
+      before,
+    ]);
+  });
+
+  it("answers schema.invalid_input for an input the capability does not accept", async () => {
+    const sessionId = crypto.randomUUID();
+
+    const answer = await stubFor(sessionId).dispatch("customers.create", { nonsense: true }, contextFor(sessionId));
+
+    expect(answer).toMatchObject({ ok: false, error: { code: "schema.invalid_input" } });
+  });
+
+  it("answers schema.invalid_input for a malformed call context", async () => {
+    const answer = await stubFor("any").dispatch("clock.get", {}, {
+      ...contextFor("any"),
+      via: "carrier-pigeon",
+    } as never);
+
+    expect(answer).toMatchObject({ ok: false, error: { code: "schema.invalid_input" } });
   });
 
   it("keeps at most MAX_REPLAYS idempotency records in storage", async () => {

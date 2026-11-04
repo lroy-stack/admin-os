@@ -84,10 +84,19 @@ export const ownerOf = (vertical: VerticalId): Actor => ({
   permissions: permissionsOf(DEFAULT_ROLES[0], CATALOG, VERTICALS[vertical].modules),
 });
 
-/** What every adapter answers (ADR 0008): the same suite runs against the in-memory kernel and the Durable Object. */
+/** Everything a visitor can read in a preset, as one value, so two moments of a session can be compared. */
+const stateOf = (client: ReturnType<typeof createClient>, ids: readonly string[], vertical: VerticalId) =>
+  Promise.all(ids.map((id) => client.call(id, inputFor(id, vertical))));
+
+/**
+ * What every adapter answers (ADR 0008): the same suite runs against the in-memory kernel and the Durable Object.
+ * An adapter whose state can be lost passes `evict`, which drops its in-memory state; then every write must leave
+ * the same reads after it.
+ */
 export function describeAdapterContract(
   name: string,
   adapterFor: (vertical: VerticalId, sessionId: string) => Adapter,
+  evict?: () => Promise<void>,
 ): void {
   describe(`the adapter contract (ADR 0008): ${name}`, () => {
     describe.each(verticalIds)("%s", (vertical) => {
@@ -104,6 +113,25 @@ export function describeAdapterContract(
         const input = await inputBeforeCall(client, id, vertical);
         expect(await client.call(id, input, { idempotencyKey: crypto.randomUUID() })).toMatchObject({ ok: true });
       });
+
+      if (evict !== undefined) {
+        const readIds = reachable.filter((id) => CATALOG[id]?.effect === "read");
+        const writeIds = reachable.filter((id) => CATALOG[id]?.effect !== "read");
+
+        it.each(writeIds)("keeps what %s wrote when the object is evicted", async (id) => {
+          const client = createClient(CATALOG, adapterFor(vertical, crypto.randomUUID()), {
+            ...quiet,
+            actor: ownerOf(vertical),
+            mode: "production",
+          });
+          await client.call(id, await inputBeforeCall(client, id, vertical), { idempotencyKey: crypto.randomUUID() });
+          const before = await stateOf(client, readIds, vertical);
+
+          await evict();
+
+          expect(await stateOf(client, readIds, vertical)).toEqual(before);
+        });
+      }
 
       it.each(capabilityIds)("answers %s with access.forbidden for an actor without permissions", async (id) => {
         const client = createClient(CATALOG, adapterFor(vertical, crypto.randomUUID()), { ...quiet });
