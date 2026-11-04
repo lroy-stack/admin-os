@@ -40,11 +40,16 @@ utilities.
 - **Permissions** come from roles defined as rules over the catalogue (owner, manager, staff). The adapter checks every
   call; the UI only hides what the actor cannot do ([ADR 0006](../adr/0006-registries-permissions-navigation.md)).
 - **Approvals.** A policy holds an assistant's writes for a person, who approves or rejects them from the bell.
+- **Settings.** Business rules and the business's own details are settings: a module declares each one with its
+  schema, default and write permission, a preset sets its values, and a demo session keeps the visitor's changes over
+  them (`settings.values.update`, owner only). The Settings page (`/dashboard/settings`) shows the business details
+  and the invoice prints them. The approval policy is a setting no assistant can change
+  ([ADR 0006](../adr/0006-registries-permissions-navigation.md)).
 
 ## Presets
 
 A preset is a business type over the generic modules: which modules are on, the navigation, the roles, typed
-extension slots, setting defaults, vocabulary and seed data ([ADR 0004](../adr/0004-vertical-presets-and-generic-domains.md)).
+extension slots, setting defaults (its demo company among them), vocabulary and seed data ([ADR 0004](../adr/0004-vertical-presets-and-generic-domains.md)).
 Hospitality says *tables* and *covers*, the salon *chairs*, the workshop *bays*; the modules underneath are the same, and
 a leak test keeps each preset's words out of the generic layers.
 

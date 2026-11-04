@@ -6,6 +6,7 @@ Read [Architecture](architecture.md) first for the layers and the data seam.
 
 - [Add a module](#add-a-module)
 - [Add a preset](#add-a-preset)
+- [Configure your business](#configure-your-business)
 - [Wire a control](#wire-a-control)
 - [Swap the adapter](#swap-the-adapter)
 - [Expose a capability to MCP](#expose-a-capability-to-mcp)
@@ -53,6 +54,21 @@ Decision record: [ADR 0004](../adr/0004-vertical-presets-and-generic-domains.md)
 2. Add it to `VERTICALS` (`src/config/vertical.ts`) and `DEMO` (`src/config/demo-kernel.ts`).
 
 The leak test and the seed tests check it.
+
+## Configure your business
+
+Decision record: [ADR 0006](../adr/0006-registries-permissions-navigation.md) (the spec 008 amendment).
+
+1. In your preset's `settingsDefaults` (`src/verticals/<preset>/index.ts`), set `business.profile` (trade name,
+   legal name, tax ID, email, phone, website, address lines), `business.payment` (account holder, account number,
+   bank) and `business.invoicing` (default tax, the rate of each tax, payment terms in days). The schemas are in
+   `src/core/business`; the demo companies in `src/verticals/<preset>/business.ts` are fictional and show the shape.
+2. The owner can change them at runtime on the Settings page (`/dashboard/settings`), or an assistant through
+   `settings_values_update`; the invoice reads them on every request.
+3. To make another setting editable, give it the permission of the role that may change it. A setting another
+   capability owns declares `writtenBy`, and `settings.values.update` refuses it, as it does for the approval policy.
+
+`src/config/settings.test.ts` checks that every preset's values parse against the schemas.
 
 ## Wire a control
 

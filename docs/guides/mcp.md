@@ -100,6 +100,9 @@ grant's scopes over HTTP: `read` by default, `read write` for the role's writes 
   is safe.
 - **Approvals.** A write the approval policy holds waits for a person in the web app's bell; the agent checks it with
   `approvals_get`.
+- **Settings.** `settings_values_get` reads the business settings; `settings_values_update` (owner only) changes them
+  in the caller's demo session, sending each key with its whole value. Under the default policy the change waits for
+  the owner's approval, and it never changes the approval policy itself.
 - **Versioning.** `serverInfo.version` is a hash of the tool list, so it changes whenever a tool does. If a client
   keeps showing an old list after an update, reconnect it (in Claude Code, `/mcp`, then reconnect `admin-os`).
 - **Moved endpoint.** The web app's old endpoint, `https://admin-os.lr0y.dev/api/mcp`, answers `410` with the new URL.

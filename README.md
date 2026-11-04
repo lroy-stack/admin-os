@@ -27,6 +27,8 @@ data of its own for each visitor.
   full-screen service view; status changes, walk-ins and new reservations with undo where an action can be reversed.
 - **Customers.** A directory with search, a VIP filter, CSV export and a new-contact window that warns about a
   duplicate phone.
+- **Business settings and invoices.** The owner sets the business details once in Settings; the invoice prints them,
+  bills the customers and starts from the catalog.
 - **Presets.** Hospitality, salon and workshop run the same generic modules with their own vocabulary, navigation and
   seed data.
 - **Liquid-glass interface.** Five themes in light and dark, checked against WCAG contrast, on desktop, tablet and
