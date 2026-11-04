@@ -642,6 +642,10 @@ These are places where the first draft found a decision incomplete. Each came wi
    longer holds it. Binds H1a.
 5. **D8: both readings accepted.** The per-IP limit guards new demo sessions; `serverInfo.version` hashes the projected
    `tools/list`. Binds U2 and A1b.
+6. **D5, as built: consent, VIP and tags are set at create only.** No screen changed them after create, so T2a deleted
+   `customers.update` instead of keeping a UI-only remainder (no dead code). `customers.consent.set` and
+   `customers.vip.set` arrive as UI-only capabilities with the first screen that needs them. `bookings.reschedule`
+   takes optional `resourceIds`, so moving a booking to another time and other tables stays one atomic call.
 
 ## Sources
 
