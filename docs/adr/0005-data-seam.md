@@ -308,7 +308,7 @@ Every list capability paginates.
     deletes the object.
   - The session's data, its keyed replays (bounded) and its pending approvals persist in the object's storage (SQLite
     backend).
-  - `demo_session` is signed with HMAC. An unsigned or forged value starts a new session.
+  - `demo_sid` is signed with HMAC and carries its issue time. An unsigned, forged or expired value starts a new session.
   - Writes without a session still answer `transport.unavailable`.
 - **The consequence "Demo state can reset on Cloudflare" is replaced.** A session now resets after 2 hours idle, on
   "Reset demo data", or when the store's snapshot schema changes. Screens keep applying the returned values, which is
