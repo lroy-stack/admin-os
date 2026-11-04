@@ -156,7 +156,7 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run check` | Lint, format and layer boundaries (Biome, dependency-cruiser) |
 | `npm run media` | Rebuilds the screenshots and recordings in `media/` |
 | `npm run preview` | Cloudflare Workers build, served locally on workerd |
-| `npm run deploy` | Deploys the demo store Worker, then the Cloudflare Workers build |
+| `npm run deploy` | Checks the session secret, builds for Cloudflare Workers, deploys the demo store Worker, then the app |
 | `npm run mcp:stdio` | MCP server over stdio |
 
 ## Deploy
@@ -169,8 +169,9 @@ deploy your own:
    `workers_dev` to `true` to serve it on your workers.dev subdomain.
 2. Log in once with `npx wrangler login`.
 3. Visitors' demo data lives in a Durable Object of its own Worker (`workers/demo-store`), which `npm run deploy`
-   deploys first. Give the web Worker the key that signs the demo session cookie (at least 32 characters; wrangler
-   offers to create the Worker if it does not exist yet):
+   deploys right after the build, so a failed build never leaves it ahead of the app. Give the web Worker the key
+   that signs the demo session cookie first (at least 32 characters; `npm run deploy` stops when it is missing, and
+   wrangler offers to create the Worker if it does not exist yet):
 
    ```bash
    openssl rand -base64 32 | npx wrangler secret put DEMO_SESSION_SECRET

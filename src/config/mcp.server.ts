@@ -35,7 +35,9 @@ export interface McpServerOptions {
 export function createMcpServer(options: McpServerOptions): Server {
   const adapter = getAdapter({
     vertical: options.vertical,
-    sessionId: options.sessionId,
+    // A read-only server never writes, so it needs no session: its reads are served from the seed in process, with
+    // no Durable Object request and no object left behind per token.
+    sessionId: options.readOnly === true ? undefined : options.sessionId,
     faults: parseFaults(process.env.MOCK_FAULTS),
   });
   return projectCatalog({
