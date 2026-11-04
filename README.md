@@ -181,7 +181,8 @@ when Cloudflare recycles the instance. Any Node.js host works too: `npm run buil
 ## MCP
 
 The same capabilities the screens use are MCP tools, filtered by the caller's role
-([ADR 0009](docs/adr/0009-mcp-server.md)). Two transports serve them:
+([ADR 0009](docs/adr/0009-mcp-server.md)); every tool, per preset and role, is in the generated
+[MCP reference](docs/mcp/reference.md). Two transports serve them:
 
 - **Streamable HTTP** at `/api/mcp`, with a bearer token. `MCP_TOKENS` maps tokens to roles (see
   [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`,

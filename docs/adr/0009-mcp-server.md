@@ -325,3 +325,5 @@ and unlisted names answering `access.forbidden`.
   `_meta["admin-os/correlationId"]`, the id of the server's call log line. A call refused before dispatch (unknown,
   forbidden or read-only tool, missing or bad key) writes its own line, `{event: "mcp.refused", tool, status: <code>,
   correlationId, actorRole, via: "mcp"}`, so write attempts on a read-only server are audited.
+- **Reference.** The [MCP reference](../mcp/reference.md) is generated from this projection by
+  `npm run mcp:reference`; `src/config/mcp-reference.test.ts` fails while it is stale (spec 004 AC10).
