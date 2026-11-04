@@ -102,8 +102,11 @@ test.describe("glass capsules on a coarse pointer", () => {
   for (const route of CAPSULE_ROUTES) {
     test(`every sliding thumb on ${route} stays inside its capsule`, async ({ page }) => {
       await page.goto(route);
-      // Wait for a capsule's own thumb: the nav thumb appears first, and a slow machine measures before the rest.
-      await expect(page.locator('.liquid-glass[data-slot="toggle-group"] > .liquid-thumb').first()).toBeVisible();
+      // Wait for a capsule's own thumb: the nav thumb appears first, and a slow machine measures before the rest. The
+      // wait is generous because a loaded CI machine draws the bookings scene in software before the thumbs.
+      await expect(page.locator('.liquid-glass[data-slot="toggle-group"] > .liquid-thumb').first()).toBeVisible({
+        timeout: 30_000,
+      });
       const { checked, outside } = await thumbsOutsideCapsules(page);
       expect(checked).toBeGreaterThan(0);
       expect(outside).toEqual([]);
@@ -133,7 +136,12 @@ test.describe("pills on a coarse pointer", () => {
   test("booking tags stay on one line in the list", async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
     await page.goto("/dashboard/bookings");
-    await page.getByRole("radiogroup", { name: "Reservations view" }).getByRole("radio", { name: "List" }).click();
+    // The room loads lazily (a WebGL engine in its own chunk): a table plate on screen means the page is hydrated, so
+    // the List radio answers. The wait is generous because a loaded CI machine renders the scene in software.
+    await expect(page.getByRole("button", { name: /^S3, \d+ seats/ })).toBeVisible({ timeout: 30_000 });
+    const list = page.getByRole("radiogroup", { name: "Reservations view" }).getByRole("radio", { name: "List" });
+    await list.click();
+    await expect(list).toBeChecked();
     const tags = page.getByRole("list", { name: "Notes" }).locator('[data-slot="badge"]');
     await expect(tags.first()).toBeVisible();
     const heights = await tags.evaluateAll((badges) => badges.map((badge) => badge.getBoundingClientRect().height));

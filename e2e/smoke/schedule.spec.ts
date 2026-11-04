@@ -43,6 +43,10 @@ test.describe("schedule", () => {
   test.beforeEach(async ({ page }) => {
     problems = watch(page);
     await page.goto("/dashboard/calendar");
+    // The demo events are built after mount, in the device's time zone, and the calendar renders them in one heavy
+    // pass. The month's first event on screen means that pass is over; on a loaded CI machine a first click that lands
+    // in it can be lost. The wait is generous for the same reason.
+    await expect(eventBlock(page, "Monthly planning")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Add event" })).toBeVisible();
   });
 
