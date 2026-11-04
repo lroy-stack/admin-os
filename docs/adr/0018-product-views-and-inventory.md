@@ -3,6 +3,10 @@
 Status: accepted (owner, 2026-11-04) · Date: 2026-11-04 · Related: ADR 0003, 0004, 0005, 0006, 0015 · Amends: ADR 0004 (domain table),
 ADR 0006 (the first view registry in code)
 
+> **Amended 2026-11-04 (ADR 0019):** `Supplier` leaves `inventory`. A supplier is a `parties` record with the
+> `supplier` role, and `StockItem.supplierId` and `PurchaseOrder.supplierId` name it through an optional reference;
+> `inventory` reads parties and never writes them.
+
 ## Context
 
 The owner asked for a Products screen that shows, through a toggle, the views that fit the business:

@@ -37,6 +37,7 @@ reference is generated from the code.
 | [ADR 0015](adr/0015-window-rules.md) | The window is chosen by the job, from one shared kit |
 | [ADR 0016](adr/0016-mcp-server-as-its-own-product.md) | The MCP server is its own Worker over a durable demo store, with scoped access |
 | [ADR 0018](adr/0018-product-views-and-inventory.md) | Products: `catalog` for what a business sells, `inventory` for what it keeps, views each preset picks |
+| [ADR 0019](adr/0019-billing-parties.md) | Parties: who a business invoices and buys from, apart from the agenda's customers |
 
 ## Design and language
 

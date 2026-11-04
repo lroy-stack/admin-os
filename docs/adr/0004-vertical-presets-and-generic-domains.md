@@ -134,6 +134,10 @@ preset-registered record sections. Generic screens never read `ext`.
 > catalog ids and never writes the catalog. Hospitality keeps drinks and shop goods, the salon its retail and
 > professional products, the workshop its parts. A catalog collection is a preset's set of `categoryId`s.
 
+> **Amended 2026-11-04 (ADR 0019):** `parties` joins the generic modules: who a business invoices and buys from.
+> `Party {id, kind: person | company, legalName, tradeName?, taxId, addressLines, countryCode, email, phone?, roles
+> (client, supplier), notes?}`. It is never an agenda customer, and the two are not linked.
+
 ### Where the reservations module belongs
 
 **Decision:** a generic `bookings` module plus a **hospitality floor-plan extension**, registered as a bookings
