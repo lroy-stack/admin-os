@@ -1,4 +1,5 @@
 import type { BusinessClock } from "@/core/clock";
+import type { ApprovalRecord } from "@/core/mock";
 import type { BookingInput } from "@/modules/bookings";
 
 import type { Notification, NotificationMoment } from "./schema";
@@ -88,8 +89,37 @@ export function deriveNotifications(source: FeedSource, clock: BusinessClock, ru
     .sort(newestFirst);
 }
 
+/**
+ * One notification per write an assistant asked for that still waits for a person (ADR 0016, D7). It lasts as long as
+ * the request is pending: deciding or expiring it removes it from the feed. `target` is the record the input names,
+ * when it names one, so the text can say "cancel R-1043".
+ */
+export function deriveApprovalNotifications(
+  approvals: readonly ApprovalRecord[],
+  clock: BusinessClock,
+  nowMs: number,
+): Notification[] {
+  const createdAt: NotificationMoment = { day: clock.businessDay, minute: clock.nowMin };
+  return approvals
+    .filter((record) => record.status === "pending" && Date.parse(record.expiresAt) > nowMs)
+    .map((record) => {
+      const target = (record.input as { id?: unknown } | null)?.id;
+      return {
+        id: `approval.requested:${record.approvalId}`,
+        kind: "approval.requested",
+        titleKey: "notifications.kinds.approvalRequested.title",
+        bodyKey: "notifications.kinds.approvalRequested.body",
+        params: { capability: record.capabilityId, target: typeof target === "string" ? target : "" },
+        createdAt,
+        link: { entity: "approval", id: record.approvalId },
+      };
+    });
+}
+
 const kindKey = (kind: Notification["kind"]): string => {
   switch (kind) {
+    case "approval.requested":
+      return "approvalRequested";
     case "booking.soon":
       return "bookingSoon";
     case "booking.late":

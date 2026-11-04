@@ -6,7 +6,7 @@ import type { Adapter } from "@/core/client";
 import { fixedClock, liveClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type FaultMap, type SessionStore } from "@/core/mock";
 
-import { DEMO, type DemoSeed, MOCK_HANDLERS, settingsFor } from "./demo-kernel";
+import { DEMO, type DemoSeed, heldWritesFor, MOCK_HANDLERS, settingsFor } from "./demo-kernel";
 import { durableAdapter } from "./durable-adapter.server";
 import type { VerticalId } from "./vertical";
 
@@ -52,6 +52,7 @@ export function getAdapter(options: {
     sessionId: options.sessionId,
     clock: clockLive ? liveClock(clock, new Date()) : fixedClock(clock),
     settings: settingsFor(options.vertical),
+    heldWrites: heldWritesFor(options.vertical),
     faults: options.faults,
   });
   if (process.env.DATA_STORE === "durable" && options.sessionId !== undefined) {

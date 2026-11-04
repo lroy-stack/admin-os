@@ -4,7 +4,7 @@ import { err, ok, type Result } from "@/core/result";
 import { lateAfterMinutes } from "@/modules/bookings";
 
 import { notificationsList, notificationsRead, notificationsReadAll, notificationsUnreadCount } from "./capabilities";
-import { deriveNotifications, type FeedSource } from "./derive";
+import { deriveApprovalNotifications, deriveNotifications, type FeedSource } from "./derive";
 import type { Notification, NotificationMoment } from "./schema";
 import { bookingSoonMinutes } from "./settings";
 
@@ -21,12 +21,17 @@ const marksOf = (data: FeedSource): Readonly<Record<string, NotificationMoment>>
   (data as MarkedData).notificationReads ?? {};
 
 /** The feed with its read marks applied, newest first. */
-const feedOf = ({ data, clock, settings }: Context): Notification[] => {
+const feedOf = ({ data, clock, settings, actor, approvals, nowMs }: Context): Notification[] => {
   const marks = marksOf(data);
-  return deriveNotifications(data, clock, {
+  const bookingItems = deriveNotifications(data, clock, {
     soonMinutes: settings.get(bookingSoonMinutes),
     lateAfterMinutes: settings.get(lateAfterMinutes),
-  }).map((item) => {
+  });
+  // Only the people who can decide hear that a write waits.
+  const approvalItems = actor.permissions.includes("decide:approvals")
+    ? deriveApprovalNotifications(approvals, clock, nowMs)
+    : [];
+  return [...approvalItems, ...bookingItems].map((item) => {
     const readAt = marks[item.id];
     return readAt === undefined ? item : { ...item, readAt };
   });

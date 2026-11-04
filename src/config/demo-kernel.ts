@@ -1,7 +1,8 @@
 import "server-only";
 
+import { permissionsOf } from "@/core/access";
 import type { ClockSeed } from "@/core/clock";
-import { kernelMockHandlers, type MockHandler } from "@/core/mock";
+import { type HeldWrites, kernelMockHandlers, type MockHandler } from "@/core/mock";
 import { createSettingsReader, type SettingsReader } from "@/core/settings";
 import { bookingsMockHandlers } from "@/modules/bookings/server";
 import { catalogMockHandlers } from "@/modules/catalog/server";
@@ -13,12 +14,23 @@ import { hospitalityClock, hospitalitySeed } from "@/verticals/hospitality/serve
 import { salonClock, salonSeed } from "@/verticals/salon/server";
 import { workshopClock, workshopSeed } from "@/verticals/workshop/server";
 
+import { CATALOG } from "./catalog";
 import { SETTINGS } from "./settings";
 import { VERTICALS, type VerticalId } from "./vertical";
 
 /** The settings in effect for a preset: registry defaults with the preset's overrides (ADR 0004). */
 export const settingsFor = (vertical: VerticalId): SettingsReader =>
   createSettingsReader(SETTINGS, VERTICALS[vertical].settingsDefaults);
+
+/** What approving a held write needs: the catalogue, and what each role of the preset holds today (ADR 0016, D7). */
+export const heldWritesFor = (vertical: VerticalId): HeldWrites => ({
+  catalog: CATALOG,
+  permissionsOfRole: (roleId) => {
+    const { roles, modules } = VERTICALS[vertical];
+    const role = roles.find((preset) => preset.id === roleId);
+    return role ? permissionsOf(role, CATALOG, modules) : [];
+  },
+});
 
 /** The demo data of each preset: its seed collections and its seeded business clock (ADR 0004, 0005). */
 export const DEMO = {

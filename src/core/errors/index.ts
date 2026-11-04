@@ -34,6 +34,11 @@ const CLASS_BY_SUFFIX: Readonly<Record<string, ErrorClass>> = {
   resource_busy: "conflict",
   invalid_transition: "conflict",
   closed: "conflict",
+  /** A held write that was decided, or timed out, before this call; or one whose requester lost the right. */
+  not_pending: "conflict",
+  expired: "conflict",
+  requester_forbidden: "forbidden",
+  queue_full: "unavailable",
   too_early: "conflict",
   undo_expired: "conflict",
   not_enough_seats: "invalid",

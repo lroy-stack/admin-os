@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { businessDaySchema, minuteOfDaySchema } from "@/core/clock";
 
-export const notificationKinds = ["booking.soon", "booking.late", "booking.new"] as const;
+export const notificationKinds = ["booking.soon", "booking.late", "booking.new", "approval.requested"] as const;
 
 /** A moment on the business clock: the business day and the minute counted from its midnight. */
 export const notificationMomentSchema = z.object({ day: businessDaySchema, minute: minuteOfDaySchema });

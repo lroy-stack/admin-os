@@ -1,6 +1,7 @@
 import "server-only";
 
 import { accessMessages } from "@/core/access/server";
+import { approvalsMessages } from "@/core/approvals/server";
 import { flattenMessages, type Locale, type Message, type Vocabulary } from "@/core/i18n";
 import { navigationMessages } from "@/core/nav/server";
 import { bookingsMessages } from "@/modules/bookings/server";
@@ -18,6 +19,7 @@ import type { VerticalId } from "./vertical";
 /** The default messages of each module and of the kernel (`access`, `nav`), keyed by the first segment of a message key. */
 export const MODULE_MESSAGES: Readonly<Record<string, Readonly<Record<Locale, unknown>>>> = {
   access: accessMessages,
+  approvals: approvalsMessages,
   nav: navigationMessages,
   bookings: bookingsMessages,
   catalog: catalogMessages,

@@ -13,6 +13,19 @@ const CUSTOMER_IDS = ["customers.search", "customers.duplicates.check"] as const
 export const MCP_MANIFEST = {
   "access.me.get": { expose: true, title: "Who am I" },
   "approvals.get": { expose: true, title: "Check a held write" },
+  "approvals.list": {
+    uiOnly:
+      "The queue a person decides from; it returns the held input, which an assistant has no need to read (spec 004, D7)",
+  },
+  "approvals.approve": {
+    uiOnly: "Approving is the human step the policy exists for; an assistant must never approve its own write (D7)",
+  },
+  "approvals.reject": {
+    uiOnly: "Rejecting is a person's decision, taken in the web app (D7)",
+  },
+  "approvals.policy.set": {
+    uiOnly: "The owner's control over what assistants may do without asking; elevated and never an MCP tool (D7)",
+  },
   "clock.get": { expose: true, title: "Business clock" },
   "settings.values.get": { expose: true, title: "Read settings" },
   "bookings.list": { expose: true, title: "List the day's bookings" },

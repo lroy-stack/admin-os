@@ -10,13 +10,14 @@ interface SettingText {
   readonly description: string;
 }
 
-/** Placeholders: `{name}`, `{time}` (HH:mm), `{partySize}` and, for soon and late, `{minutes}`. */
+/** Placeholders: `{name}`, `{time}` (HH:mm), `{partySize}` and, for soon and late, `{minutes}`; for a waiting write, `{capability}` and `{target}`. */
 export interface NotificationsMessages {
   readonly title: string;
   readonly kinds: {
     readonly bookingSoon: KindText;
     readonly bookingLate: KindText;
     readonly bookingNew: KindText;
+    readonly approvalRequested: KindText;
   };
   readonly settings: { readonly bookingSoon: SettingText };
 }
@@ -34,6 +35,10 @@ export const notificationsMessages = defineMessages<NotificationsMessages>({
         body: "{name}, party of {partySize}, was due at {time}, {minutes} min ago.",
       },
       bookingNew: { title: "New booking", body: "{name}, party of {partySize}, at {time}." },
+      approvalRequested: {
+        title: "An assistant is waiting for your approval",
+        body: "An assistant asks to run {capability} {target}.",
+      },
     },
     settings: {
       bookingSoon: {
@@ -54,6 +59,10 @@ export const notificationsMessages = defineMessages<NotificationsMessages>({
         body: "{name}, {partySize} personas, tenía hora a las {time}, hace {minutes} min.",
       },
       bookingNew: { title: "Nueva reserva", body: "{name}, {partySize} personas, a las {time}." },
+      approvalRequested: {
+        title: "Un asistente espera tu aprobación",
+        body: "Un asistente pide ejecutar {capability} {target}.",
+      },
     },
     settings: {
       bookingSoon: {
@@ -74,6 +83,10 @@ export const notificationsMessages = defineMessages<NotificationsMessages>({
         body: "{name}, {partySize} Personen, wurde um {time} erwartet, vor {minutes} Min.",
       },
       bookingNew: { title: "Neue Buchung", body: "{name}, {partySize} Personen, um {time}." },
+      approvalRequested: {
+        title: "Ein Assistent wartet auf Ihre Genehmigung",
+        body: "Ein Assistent möchte {capability} {target} ausführen.",
+      },
     },
     settings: {
       bookingSoon: {
@@ -94,6 +107,10 @@ export const notificationsMessages = defineMessages<NotificationsMessages>({
         body: "{name}, {partySize} personnes, était attendu à {time}, il y a {minutes} min.",
       },
       bookingNew: { title: "Nouvelle réservation", body: "{name}, {partySize} personnes, à {time}." },
+      approvalRequested: {
+        title: "Un assistant attend votre approbation",
+        body: "Un assistant demande d’exécuter {capability} {target}.",
+      },
     },
     settings: {
       bookingSoon: {

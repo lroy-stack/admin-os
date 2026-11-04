@@ -1,11 +1,33 @@
+import type { ApprovalPolicy, ApprovalStatus } from "@/core/approvals";
+import type { ApprovalContext } from "@/core/capability";
 import type { CallResult } from "@/core/result";
 
-/** A write that waits for a human (ADR 0005, approval rule). */
-export interface PendingApproval {
+/**
+ * A write that waits for a person, with who asked, who decided and how it ended (ADR 0016, D7). The decision fields
+ * are filled in place when the record leaves `pending`. Times are real ISO instants: the demo's business clock is
+ * fixed, so a deadline on it would never arrive.
+ */
+export interface ApprovalRecord {
   readonly approvalId: string;
   readonly capabilityId: string;
-  readonly actorId: string;
+  /** The parsed input as asked; never returned by `approvals.get`. */
   readonly input: unknown;
+  /** Key-order independent fingerprint of `input`, to dedupe a retried hold. */
+  readonly fingerprint: string;
+  /** What the write answered when it was asked, so approving can tell that the state moved. */
+  readonly expected: string;
+  readonly requestedBy: { readonly actorId: string; readonly role: string; readonly via: ApprovalContext["via"] };
+  readonly requestedAt: string;
+  readonly expiresAt: string;
+  status: ApprovalStatus;
+  decidedBy?: { readonly actorId: string; readonly role: string };
+  decidedAt?: string;
+  /** Why the approver rejected it. */
+  reason?: string;
+  /** The value the approved write returned. */
+  result?: unknown;
+  /** Why a held write could not run (`conflict`). */
+  error?: { readonly code: string; readonly message: string };
 }
 
 /** One visitor's copy of the demo: their data, their replayable writes and their pending approvals. */
@@ -16,14 +38,18 @@ export interface DemoSession<T> {
    * fingerprint is that of the input the key first arrived with: the same key with another input is a conflict.
    */
   readonly replays: Map<string, { readonly fingerprint: string; readonly result: CallResult<unknown> }>;
-  readonly approvals: PendingApproval[];
+  readonly approvals: ApprovalRecord[];
+  /** The visitor's choice of which assistant writes wait; absent means the preset's setting applies. */
+  approvalPolicy?: ApprovalPolicy;
 }
 
 export interface SessionStore<T> {
   /** What a read sees: the session's copy when it exists, otherwise the immutable seed. */
   read(sessionId: string | undefined): T;
   /** The writes held for a person in this session; none without a session. */
-  approvals(sessionId: string | undefined): readonly PendingApproval[];
+  approvals(sessionId: string | undefined): readonly ApprovalRecord[];
+  /** The approval policy this session chose, if any. */
+  approvalPolicy(sessionId: string | undefined): ApprovalPolicy | undefined;
   /** The session a write acts on, created from the seed on first use. */
   session(sessionId: string): DemoSession<T>;
   /** "Reset demo data": drops the copy, so the next read sees the seed again. */
@@ -72,6 +98,7 @@ export function createSessionStore<T>(seed: T, options: StoreOptions = {}): Sess
   return {
     read: (sessionId) => live(sessionId)?.data ?? base,
     approvals: (sessionId) => live(sessionId)?.approvals ?? [],
+    approvalPolicy: (sessionId) => live(sessionId)?.approvalPolicy,
     session: (sessionId) => {
       const existing = live(sessionId);
       if (existing) return existing;

@@ -271,7 +271,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     ]);
   });
 
-  it("cancels a booking through bookings_cancel with a reason and shows it cancelled in bookings_list", async () => {
+  it("holds bookings_cancel for a person under the default policy and leaves the booking as it is (AC5)", async () => {
     const { client } = await connect(owner, undefined, crypto.randomUUID());
     const cancelled = await client.callTool({
       name: "bookings_cancel",
@@ -279,10 +279,9 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     });
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
     const found = bookingsList.output.parse(listed.structuredContent).items.find((booking) => booking.id === "R-1046");
-    expect([bookingSchema.parse(cancelled.structuredContent).status, found?.status, found?.cancelReason]).toEqual([
-      "cancelled",
-      "cancelled",
-      "Guest called",
+    expect([cancelled.structuredContent, found?.status]).toEqual([
+      { status: "awaiting_approval", approvalId: expect.any(String) },
+      "confirmed",
     ]);
   });
 

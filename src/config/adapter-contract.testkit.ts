@@ -27,6 +27,9 @@ const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => 
     "customers.get": customer,
     "customers.search": { text: "ab" },
     "approvals.get": { approvalId: "held" },
+    "approvals.approve": { approvalId: "held" },
+    "approvals.reject": { approvalId: "held" },
+    "approvals.policy.set": { policy: "none" },
     "bookings.get": { id: booking },
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
     "customers.contact.update": { ...customer, name: "Contract Test" },
@@ -72,7 +75,27 @@ const advancedBooking = async (client: ReturnType<typeof createClient>, vertical
   return inputFor("bookings.status.undo", vertical);
 };
 
-const inputBeforeCall = (client: ReturnType<typeof createClient>, id: string, vertical: VerticalId) => {
+/** A cancel asked by an assistant waits for a person under the default policy; its id is what the approvals take. */
+const heldApproval = async (adapter: Adapter, vertical: VerticalId) => {
+  const assistant = createClient(CATALOG, adapter, {
+    ...quiet,
+    actor: ownerOf(vertical),
+    via: "mcp",
+    mode: "production",
+  });
+  const held = await assistant.call("bookings.cancel", inputFor("bookings.cancel", vertical));
+  return { approvalId: "approvalId" in held ? held.approvalId : "hold-failed" };
+};
+
+const HELD_WRITE_CAPABILITIES: readonly string[] = ["approvals.get", "approvals.approve", "approvals.reject"];
+
+const inputBeforeCall = (
+  client: ReturnType<typeof createClient>,
+  id: string,
+  vertical: VerticalId,
+  adapter: Adapter,
+) => {
+  if (HELD_WRITE_CAPABILITIES.includes(id)) return heldApproval(adapter, vertical);
   if (id === "bookings.walk_in.undo") return seatedWalkIn(client, vertical);
   if (id === "bookings.status.undo") return advancedBooking(client, vertical);
   return Promise.resolve(inputFor(id, vertical));
@@ -100,17 +123,18 @@ export function describeAdapterContract(
 ): void {
   describe(`the adapter contract (ADR 0008): ${name}`, () => {
     describe.each(verticalIds)("%s", (vertical) => {
-      const enabled = new Set<string>([...VERTICALS[vertical].modules, "access", "clock"]);
+      const enabled = new Set<string>([...VERTICALS[vertical].modules, "access", "approvals", "clock"]);
       const reachable = capabilityIds.filter((id) => enabled.has(id.split(".")[0] ?? ""));
 
       it.each(reachable)("answers %s with output that matches its schema", async (id) => {
         // Development mode throws on contract drift, so a seed or handler that breaks the schema fails here.
-        const client = createClient(CATALOG, adapterFor(vertical, crypto.randomUUID()), {
+        const adapter = adapterFor(vertical, crypto.randomUUID());
+        const client = createClient(CATALOG, adapter, {
           ...quiet,
           actor: ownerOf(vertical),
           mode: "development",
         });
-        const input = await inputBeforeCall(client, id, vertical);
+        const input = await inputBeforeCall(client, id, vertical, adapter);
         expect(await client.call(id, input, { idempotencyKey: crypto.randomUUID() })).toMatchObject({ ok: true });
       });
 
@@ -119,12 +143,13 @@ export function describeAdapterContract(
         const writeIds = reachable.filter((id) => CATALOG[id]?.effect !== "read");
 
         it.each(writeIds)("keeps what %s wrote when the object is evicted", async (id) => {
-          const client = createClient(CATALOG, adapterFor(vertical, crypto.randomUUID()), {
+          const adapter = adapterFor(vertical, crypto.randomUUID());
+          const client = createClient(CATALOG, adapter, {
             ...quiet,
             actor: ownerOf(vertical),
             mode: "production",
           });
-          const written = await client.call(id, await inputBeforeCall(client, id, vertical), {
+          const written = await client.call(id, await inputBeforeCall(client, id, vertical, adapter), {
             idempotencyKey: crypto.randomUUID(),
           });
           expect(written).toMatchObject({ ok: true });

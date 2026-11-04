@@ -257,7 +257,14 @@ describe("createMockAdapter", () => {
     });
     expect(store.session("visitor-a")).toMatchObject({
       data: { notes: ["seeded"] },
-      approvals: [{ capabilityId: "notes.add", actorId: "demo-owner", input: { text: "!delete all" } }],
+      approvals: [
+        {
+          capabilityId: "notes.add",
+          requestedBy: { actorId: "demo-owner", role: "owner", via: "ui" },
+          status: "pending",
+          input: { text: "!delete all" },
+        },
+      ],
     });
   });
 
