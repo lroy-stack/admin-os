@@ -37,6 +37,7 @@ const CLASS_BY_SUFFIX: Readonly<Record<string, ErrorClass>> = {
   too_early: "conflict",
   undo_expired: "conflict",
   not_enough_seats: "invalid",
+  staff_note_full: "invalid",
   resource_inactive: "invalid",
   outside_window: "invalid",
   off_grid: "invalid",

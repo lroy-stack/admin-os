@@ -226,6 +226,28 @@ describe("createMockAdapter", () => {
     ]);
   });
 
+  it("applies one keyed write sent five times in parallel once", async () => {
+    const { clientFor } = setup();
+    const visitor = clientFor("visitor-a");
+    await Promise.all(
+      Array.from({ length: 5 }, () => visitor.call("notes.add", { text: "once" }, { idempotencyKey: "k1" })),
+    );
+    expect(await visitor.call("notes.list", {})).toEqual({ ok: true, value: ["seeded", "once"] });
+  });
+
+  it("answers a parallel duplicate with another input as an idempotency conflict", async () => {
+    const { clientFor } = setup();
+    const visitor = clientFor("visitor-a");
+    const [first, second] = await Promise.all([
+      visitor.call("notes.add", { text: "once" }, { idempotencyKey: "k1" }),
+      visitor.call("notes.add", { text: "other" }, { idempotencyKey: "k1" }),
+    ]);
+    expect([first, second]).toMatchObject([
+      { ok: true },
+      { ok: false, error: { code: "client.idempotency_conflict" } },
+    ]);
+  });
+
   it("holds a write that needs approval and leaves the data alone", async () => {
     const { store, clientFor } = setup();
     const visitor = clientFor("visitor-a");

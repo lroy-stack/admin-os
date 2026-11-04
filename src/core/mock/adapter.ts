@@ -61,6 +61,20 @@ const fingerprintOf = (value: unknown): string => {
   return sorted ?? "";
 };
 
+/** Keyed writes still running, per session, so a duplicate sent in parallel can wait for the first answer. */
+const inFlightBySession = new WeakMap<
+  object,
+  Map<string, { fingerprint: string; result: Promise<CallResult<unknown>> }>
+>();
+
+const inFlightOf = (session: object) => {
+  const existing = inFlightBySession.get(session);
+  if (existing) return existing;
+  const created = new Map<string, { fingerprint: string; result: Promise<CallResult<unknown>> }>();
+  inFlightBySession.set(session, created);
+  return created;
+};
+
 const delay = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -119,16 +133,36 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
             );
       }
 
-      const result: CallResult<unknown> = capability.approval?.(input, { via: context.via })
-        ? approve(session.approvals, capability.id, context.actor.actorId, input)
-        : await handler(input, {
-            actor: context.actor,
-            clock,
-            settings,
-            approvals: session.approvals,
-            data: session.data,
-          });
-      if (replayKey !== undefined) session.replays.set(replayKey, { fingerprint, result });
+      const run = async (): Promise<CallResult<unknown>> =>
+        capability.approval?.(input, { via: context.via })
+          ? approve(session.approvals, capability.id, context.actor.actorId, input)
+          : await handler(input, {
+              actor: context.actor,
+              clock,
+              settings,
+              approvals: session.approvals,
+              data: session.data,
+            });
+      if (replayKey === undefined) return run();
+
+      // A duplicate that arrives while the first call still runs waits for it instead of applying the write again.
+      const running = inFlightOf(session);
+      const first = running.get(replayKey);
+      if (first) {
+        return first.fingerprint === fingerprint
+          ? first.result
+          : err(
+              ErrorCodes.idempotencyConflict,
+              `${capability.id} received idempotency key "${context.idempotencyKey}" with a different input`,
+            );
+      }
+      const result = run()
+        .then((answer) => {
+          session.replays.set(replayKey, { fingerprint, result: answer });
+          return answer;
+        })
+        .finally(() => running.delete(replayKey));
+      running.set(replayKey, { fingerprint, result });
       return result;
     },
   };
