@@ -279,7 +279,6 @@ export interface BookingsMessages {
       readonly needSlot: string;
       readonly noneFree: string;
       readonly listLabel: string;
-      readonly pickOnFloor: string;
     };
     readonly channel: { readonly label: string };
     readonly note: { readonly label: string; readonly tooLong: string };

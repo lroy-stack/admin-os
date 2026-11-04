@@ -19,7 +19,6 @@ const en: OverlaysMessages = {
     discard: "Discard",
   },
   window: { close: "Close", demoNote: "Demo data, not saved" },
-  dock: { pickHint: "Choose on the page. Press Escape to cancel.", stopPicking: "Stop choosing" },
 };
 
 const es: OverlaysMessages = {
@@ -37,7 +36,6 @@ const es: OverlaysMessages = {
     discard: "Descartar",
   },
   window: { close: "Cerrar", demoNote: "Datos de demostración, no se guardan" },
-  dock: { pickHint: "Elige en la página. Pulsa Escape para cancelar.", stopPicking: "Dejar de elegir" },
 };
 
 const de: OverlaysMessages = {
@@ -55,7 +53,6 @@ const de: OverlaysMessages = {
     discard: "Verwerfen",
   },
   window: { close: "Schließen", demoNote: "Demodaten, nicht gespeichert" },
-  dock: { pickHint: "Wähle auf der Seite. Mit Escape abbrechen.", stopPicking: "Auswahl beenden" },
 };
 
 const fr: OverlaysMessages = {
@@ -73,7 +70,6 @@ const fr: OverlaysMessages = {
     discard: "Abandonner",
   },
   window: { close: "Fermer", demoNote: "Données de démonstration, non enregistrées" },
-  dock: { pickHint: "Choisissez sur la page. Appuyez sur Échap pour annuler.", stopPicking: "Arrêter la sélection" },
 };
 
 export const overlaysMessages = defineMessages<OverlaysMessages>({ en, es, de, fr });

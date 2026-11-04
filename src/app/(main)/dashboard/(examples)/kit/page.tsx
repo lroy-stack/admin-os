@@ -1,10 +1,8 @@
 import { LocaleBundles } from "@/app/_components/locale-root";
 import { getMessages } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
-import { DockedPanelLayout } from "@/ds/overlays";
 
 import { ConfirmSection } from "./_components/confirm-section";
-import { DockSection } from "./_components/dock-section";
 import { FormSection } from "./_components/form-section";
 import { GuardSection } from "./_components/guard-section";
 import { kitBundle, kitMessages } from "./_components/messages.server";
@@ -24,17 +22,14 @@ export default async function Page() {
           <h1 className="text-3xl tracking-tight break-words hyphens-auto">{text.title}</h1>
           <p className="text-muted-foreground text-sm">{text.subtitle}</p>
         </div>
-        <DockedPanelLayout>
-          <div className="grid gap-4 md:grid-cols-2">
-            <PanelSection />
-            <ConfirmSection />
-            <QuickSection />
-            <FormSection />
-            <PopoverSection />
-            <GuardSection />
-            <DockSection />
-          </div>
-        </DockedPanelLayout>
+        <div className="grid gap-4 md:grid-cols-2">
+          <PanelSection />
+          <ConfirmSection />
+          <QuickSection />
+          <FormSection />
+          <PopoverSection />
+          <GuardSection />
+        </div>
       </div>
     </LocaleBundles>
   );

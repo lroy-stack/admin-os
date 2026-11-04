@@ -83,29 +83,6 @@ export interface KitMessages {
     /** Placeholders: `{count}`. How many submits reached the demo server, so a refused second submit is visible. */
     readonly attempts: string;
   };
-  readonly dock: {
-    readonly title: string;
-    readonly description: string;
-    readonly open: string;
-    readonly windowTitle: string;
-    readonly windowDescription: string;
-    readonly floorLabel: string;
-    /** Placeholders: `{number}`. */
-    readonly tableName: string;
-    /** Placeholders: `{table}`. */
-    readonly floorSelected: string;
-    readonly floorNone: string;
-    readonly guestLabel: string;
-    readonly tableLabel: string;
-    readonly tableAuto: string;
-    readonly pick: string;
-    /** Shown instead of the pick button when the panel is a full-screen sheet. */
-    readonly sheetNote: string;
-    readonly save: string;
-    readonly cancel: string;
-    /** Placeholders: `{guest}`, `{table}`. */
-    readonly saved: string;
-  };
   readonly popover: {
     readonly title: string;
     readonly description: string;

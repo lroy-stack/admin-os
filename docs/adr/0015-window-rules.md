@@ -2,6 +2,8 @@
 
 Status: accepted · Date: 2026-11-03 · Related: ADR 0003, 0005, 0007, 0008
 
+Amended 2026-11-04: the `DockedPanel` (task K5) is reverted; New reservation is a `FormDialog`.
+
 ## Context
 
 - **Calls to action with no window.** An audit of the demo found 137 controls that do nothing or only change
@@ -33,7 +35,6 @@ The window is chosen by the job, never by the screen, from one kit in `src/ds/ov
 | Confirm an irreversible or destructive action | `ConfirmAction` | Centered alert dialog, Cancel focused | Centered |
 | A short task, one decision, up to four fields | `QuickDialog` | Centered dialog, at most 480 px wide | Bottom sheet |
 | Create or edit a record that needs nothing from the page | `FormDialog` | Centered dialog, at most 640 px | Full-screen sheet |
-| Create or edit while the page stays in use (pick a table on the floor) | `DockedPanel`, nonmodal | Right column from 1024 px; the page stays usable | Full-screen sheet |
 | Look at a record and act on it | `RecordPanel`, on `ResponsivePanel` | Column from 1024 px | Pushed full screen |
 | Pick a value, filter, small settings, notifications | `PopoverOrSheet` | Popover | Bottom sheet |
 | A task in several steps | A page with the step in the URL | Page | Page |
@@ -41,6 +42,9 @@ The window is chosen by the job, never by the screen, from one kit in `src/ds/ov
 Rules for every window:
 
 - At most two windows deep: a window and a `ConfirmAction` above it.
+- A window never narrows, pushes or reflows the page; it opens above the page (owner decision, 2026-11-04: opening a
+  form must not deform what the person is looking at). Where a choice would come from the page, such as a table on the
+  floor, the window offers it as a list of the fitting options inside its own form.
 - Escape closes the top window, and focus returns to the control that opened it.
 - Nothing modal before hydration: the server HTML holds no open window, and a viewport-dependent window waits for the
   client.
@@ -67,10 +71,8 @@ Rules for every window:
 ## Consequences
 
 - New screens and modules add flows without new container code, and a reviewer can check a window against one table.
-- Create and edit forms move off side sheets. The `ResponsivePanel` side sheet stays the base of the record panel and
-  of the docked panel, where the page context matters.
-- The bookings screen gains a nonmodal panel, which needs care for accessibility: a labelled region, focus moved in on
-  open and back on close, Escape to close, and a modal sheet on phones.
+- Create and edit forms move off side sheets. The `ResponsivePanel` side sheet stays the base of the record panel.
+- No window changes the page's geometry, so the page under a window keeps its columns, widths and scroll.
 - An e2e detector of dead controls measures the remaining gaps and, once they reach zero, fails the build on a new
   one.
 
@@ -78,6 +80,7 @@ Rules for every window:
 
 - **Side sheets for every create and edit form.** Familiar from many admin templates, but it hides the page behind a
   backdrop without using the extra height, and Primer advises against it for forms.
-- **A modal for New reservation.** Simpler, but the host needs the floor to choose a table while taking the booking;
-  NN/g advises against modals when the decision needs information outside them.
+- **A docked column for New reservation** (built as `DockedPanel` in K5, reverted 2026-11-04). It kept the floor in
+  view to pick a table, but it narrowed the page and deformed the room and the arrivals list each time it opened. The
+  table is chosen in the dialog instead, from the list of tables that fit the party and the time.
 - **Leave each screen to choose.** The current state, and the cause of the inconsistency above.

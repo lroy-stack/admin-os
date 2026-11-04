@@ -3,16 +3,14 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { watch } from "./watch";
 
 /**
- * The New reservation panel (plan 003, B5, BK2, AC4): the header button opens a nonmodal panel on desktop and a
- * full-screen sheet on a phone; a guest found by name, a day, a party, a time from the availability and Create make one
+ * The New reservation window (plan 003, B5, BK2, AC4): the header button opens a form dialog (a full-screen sheet on a
+ * phone) above the page, which it never reflows (ADR 0015); a guest found by name, a day, a party, a time from the availability and Create make one
  * booking that the day lists. The seeded day has "now" at 8:40 PM, Saturday Oct 31.
  */
 
-const openPanel = async (page: Page) => {
+const openDialog = async (page: Page) => {
   await page.getByRole("button", { name: "New reservation" }).click();
-  const panel = page
-    .getByRole("region", { name: "New reservation" })
-    .or(page.getByRole("dialog", { name: "New reservation" }));
+  const panel = page.getByRole("dialog", { name: "New reservation" });
   await expect(panel).toBeVisible();
   return panel;
 };
@@ -35,7 +33,7 @@ const toastOf = (page: Page, message: string | RegExp) =>
 const view = (page: Page, name: "Floor" | "Agenda" | "List") =>
   page.getByRole("radiogroup", { name: "Reservations view" }).getByRole("radio", { name });
 
-test.describe("new reservation panel", () => {
+test.describe("new reservation window", () => {
   test.describe.configure({ timeout: 90_000 });
 
   let problems: string[] = [];
@@ -52,20 +50,20 @@ test.describe("new reservation panel", () => {
   });
 
   test("books an existing guest at a time, and the day lists the booking", async ({ page }) => {
-    const panel = await openPanel(page);
+    const panel = await openDialog(page);
 
     await pickGuest(panel, "Ortega", "Ortega +34600000102");
     await panel.getByRole("radio", { name: "9:15 PM" }).click();
     await panel.getByRole("button", { name: "Create reservation" }).click();
 
     await expect(toastOf(page, "Booked Ortega · 2 guests · 9:15 PM")).toBeVisible();
-    await expect(page.getByRole("region", { name: "New reservation" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "New reservation" })).toHaveCount(0);
     await view(page, "List").click();
     await expect(page.getByRole("row", { name: /9:15 PM.*Ortega/ })).toBeVisible();
   });
 
   test("a new contact is created with the booking", async ({ page }) => {
-    const panel = await openPanel(page);
+    const panel = await openDialog(page);
 
     await panel.getByRole("radio", { name: "New contact" }).click();
     await panel.getByLabel("Name").fill("Nadal");
@@ -79,7 +77,7 @@ test.describe("new reservation panel", () => {
   });
 
   test("a party that no time fits says so and offers no time", async ({ page }) => {
-    const panel = await openPanel(page);
+    const panel = await openDialog(page);
 
     await addGuests(panel, 38);
 
@@ -88,7 +86,7 @@ test.describe("new reservation panel", () => {
   });
 
   test("asks for a guest and a time before it writes", async ({ page }) => {
-    const panel = await openPanel(page);
+    const panel = await openDialog(page);
 
     await panel.getByRole("button", { name: "Create reservation" }).click();
 
@@ -97,7 +95,7 @@ test.describe("new reservation panel", () => {
   });
 
   test("another day offers its own times and the toast offers to show that day", async ({ page }) => {
-    const panel = await openPanel(page);
+    const panel = await openDialog(page);
 
     await panel.getByLabel("Date").fill("2026-11-02");
     await expect(panel.getByRole("radio", { name: "7:00 PM" })).toBeVisible();
@@ -113,7 +111,7 @@ test.describe("new reservation panel", () => {
   });
 
   test("a double submit books once", async ({ page }) => {
-    const panel = await openPanel(page);
+    const panel = await openDialog(page);
     await pickGuest(panel, "Ortega", "Ortega +34600000102");
     await panel.getByRole("radio", { name: "10:00 PM" }).click();
 
@@ -124,17 +122,17 @@ test.describe("new reservation panel", () => {
     await expect(page.getByRole("row", { name: /10:00 PM.*Ortega/ })).toHaveCount(1);
   });
 
-  test("Escape closes a clean panel and returns focus to the button", async ({ page }) => {
-    await openPanel(page);
+  test("Escape closes a clean window and returns focus to the button", async ({ page }) => {
+    await openDialog(page);
 
     await page.keyboard.press("Escape");
 
-    await expect(page.getByRole("region", { name: "New reservation" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "New reservation" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "New reservation" })).toBeFocused();
   });
 
-  test("a panel with typed changes asks before it closes", async ({ page }) => {
-    const panel = await openPanel(page);
+  test("a window with typed changes asks before it closes", async ({ page }) => {
+    const panel = await openDialog(page);
     await panel.getByLabel("Note").fill("Window seat");
 
     await page.keyboard.press("Escape");
@@ -142,59 +140,41 @@ test.describe("new reservation panel", () => {
     await expect(page.getByRole("alertdialog")).toBeVisible();
   });
 
-  test.describe("on a desktop, the table is picked on the floor", () => {
-    test.skip(({ viewport }) => (viewport?.width ?? 0) < 1024, "The panel docks beside the floor from 1024 px");
+  test("the table is chosen from the list of tables that fit the time, and the booking lists it", async ({ page }) => {
+    const panel = await openDialog(page);
+    await pickGuest(panel, "Ortega", "Ortega +34600000102");
+    await panel.getByRole("radio", { name: "9:15 PM" }).click();
 
-    const plate = (page: Page, label: string) =>
-      page.getByRole("button", { name: new RegExp(`^${label}, \\d+ seats`) });
+    await panel.getByRole("radio", { name: /^B2/ }).click();
+    await panel.getByRole("button", { name: "Create reservation" }).click();
 
-    test("choosing a time lights the tables that fit, and a click fills the Table field", async ({ page }) => {
-      const panel = await openPanel(page);
-      await pickGuest(panel, "Ortega", "Ortega +34600000102");
-
-      await panel.getByRole("radio", { name: "9:15 PM" }).click();
-
-      await expect(page.getByText("Choose on the page. Press Escape to cancel.")).toBeVisible();
-      await expect(plate(page, "B2")).toHaveAttribute("data-candidate", "true");
-      await expect(plate(page, "S1")).toHaveAttribute("data-candidate", "false");
-
-      await plate(page, "B2").click();
-
-      await expect(panel.getByText("B2", { exact: true })).toBeVisible();
-      await expect(page.getByText("Choose on the page. Press Escape to cancel.")).toHaveCount(0);
-      await panel.getByRole("button", { name: "Create reservation" }).click();
-      await expect(toastOf(page, "Booked Ortega · 2 guests · 9:15 PM")).toBeVisible();
-      await view(page, "List").click();
-      await expect(page.getByRole("row", { name: /9:15 PM.*Ortega.*B2/ })).toBeVisible();
-    });
-
-    test("Escape leaves pick mode and keeps the panel open", async ({ page }) => {
-      const panel = await openPanel(page);
-      await panel.getByRole("radio", { name: "9:15 PM" }).click();
-      await expect(plate(page, "B2")).toHaveAttribute("data-candidate", "true");
-
-      await page.keyboard.press("Escape");
-
-      await expect(plate(page, "B2")).toHaveAttribute("data-candidate", "false");
-      await expect(page.getByRole("region", { name: "New reservation" })).toBeVisible();
-      await expect(panel.getByRole("button", { name: "Pick on the floor" })).toBeEnabled();
-    });
+    await expect(toastOf(page, "Booked Ortega · 2 guests · 9:15 PM")).toBeVisible();
+    await view(page, "List").click();
+    await expect(page.getByRole("row", { name: /9:15 PM.*Ortega.*B2/ })).toBeVisible();
   });
 
-  test.describe("on a phone, the table is picked from a list", () => {
-    test.skip(({ viewport }) => (viewport?.width ?? 0) >= 768, "A full-screen sheet below 1024 px");
+  test.describe("on a desktop", () => {
+    test.skip(({ viewport }) => (viewport?.width ?? 0) < 768, "The arrivals column is shown from 768 px");
 
-    test("lists the tables that fit the time and books the one chosen", async ({ page }) => {
-      const panel = await openPanel(page);
-      await pickGuest(panel, "Ortega", "Ortega +34600000102");
-      await panel.getByRole("radio", { name: "9:15 PM" }).click();
+    test("opening the window leaves the arrivals column and the floor where they were", async ({ page }) => {
+      // Handles, not role queries: the page behind an open dialog is hidden from the accessibility tree.
+      const arrivals = await page
+        .getByRole("button", { name: "Fold arrivals" })
+        .locator("xpath=ancestor::*[@data-slot='card'][1]")
+        .elementHandle();
+      const floor = await page
+        .getByRole("button", { name: "Fold arrivals" })
+        .locator("xpath=ancestor::*[@data-slot='card'][1]/following-sibling::*[1]")
+        .elementHandle();
+      const arrivalsBefore = await arrivals?.boundingBox();
+      const floorBefore = await floor?.boundingBox();
 
-      await panel.getByRole("radio", { name: /^B2/ }).click();
-      await panel.getByRole("button", { name: "Create reservation" }).click();
+      await openDialog(page);
 
-      await expect(toastOf(page, "Booked Ortega · 2 guests · 9:15 PM")).toBeVisible();
-      await view(page, "List").click();
-      await expect(page.getByRole("row", { name: /9:15 PM.*Ortega.*B2/ })).toBeVisible();
+      expect(arrivalsBefore).toBeTruthy();
+      expect(floorBefore).toBeTruthy();
+      expect(await arrivals?.boundingBox()).toEqual(arrivalsBefore);
+      expect(await floor?.boundingBox()).toEqual(floorBefore);
     });
   });
 });
