@@ -7,13 +7,19 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 import { useLocale, useMessages } from "@/core/i18n/client";
 
-import type { InvoiceFormValues } from "./data";
+import type { InvoiceFormValues, InvoiceToDetails } from "./data";
 import { InvoiceForm } from "./invoice-form";
 import { InvoicePreview } from "./invoice-preview";
 import { createInvoiceSchema } from "./invoice-schema";
 import { invoiceMessageKey } from "./messages";
 
-export function Invoice({ initialInvoice }: { initialInvoice: InvoiceFormValues }) {
+export function Invoice({
+  initialInvoice,
+  clients,
+}: {
+  initialInvoice: InvoiceFormValues;
+  clients: readonly InvoiceToDetails[];
+}) {
   const text = useMessages(invoiceMessageKey);
   const locale = useLocale();
   const schema = useMemo(() => createInvoiceSchema(text.validation, locale), [text.validation, locale]);
@@ -27,7 +33,7 @@ export function Invoice({ initialInvoice }: { initialInvoice: InvoiceFormValues 
   return (
     <FormProvider {...form}>
       <form className="grid gap-5 xl:grid-cols-2" noValidate onSubmit={(event) => event.preventDefault()}>
-        <InvoiceForm />
+        <InvoiceForm clients={clients} />
         <InvoicePreview invoice={invoice} />
       </form>
     </FormProvider>

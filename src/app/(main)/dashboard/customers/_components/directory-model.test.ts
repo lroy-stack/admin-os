@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { toCsv } from "@/lib/csv";
 
-import { type CustomerRow, csvColumns, majorUnits, visibleRows } from "./directory-model";
+import { type CustomerRow, csvColumns, visibleRows } from "./directory-model";
 import { customerDirectoryMessages } from "./messages.server";
 
 const row = (overrides: Partial<CustomerRow> & Pick<CustomerRow, "id" | "name">): CustomerRow => ({
@@ -80,16 +80,6 @@ describe("visibleRows", () => {
 
   it("combines the search with the status filter", () => {
     expect(names(visibleRows(rows, { ...base, status: "vip", query: "ana" }))).toEqual([]);
-  });
-});
-
-describe("majorUnits", () => {
-  it("uses two decimals for euros", () => {
-    expect(majorUnits(15050, "EUR")).toBe(150.5);
-  });
-
-  it("uses none for yen", () => {
-    expect(majorUnits(1500, "JPY")).toBe(1500);
   });
 });
 

@@ -1,9 +1,10 @@
 import { z } from "zod";
 
+import { invoiceTaxIds } from "@/core/business";
 import { format, formatNumber, formatPercent, type Locale } from "@/core/i18n/client";
 import { CURRENCIES } from "@/core/money/client";
 
-import type { InvoiceFromDetails, InvoiceToDetails } from "./data";
+import type { InvoiceFromDetails, InvoiceTaxRates, InvoiceToDetails } from "./data";
 import type { InvoiceMessages } from "./messages";
 
 const isoDate = (message: string) => z.string().refine((value) => !Number.isNaN(Date.parse(value)), message);
@@ -29,7 +30,9 @@ export function createInvoiceSchema(messages: InvoiceMessages["validation"], loc
       to: z.custom<InvoiceToDetails>(),
       issuedDate: isoDate(text.invalidDate),
       paymentDueDate: isoDate(text.invalidDate),
-      taxId: z.enum(["gst", "vat", "service-tax", "none"]),
+      taxId: z.enum(invoiceTaxIds),
+      // The business settings' rates (spec 008), validated where they are set.
+      taxRates: z.custom<InvoiceTaxRates>(),
       discountType: z.enum(["fixed", "percent"]),
       discountValue: z.number({ error: text.discountNotNegative }).min(0, text.discountNotNegative),
       items: z.array(

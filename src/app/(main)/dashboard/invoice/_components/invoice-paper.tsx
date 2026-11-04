@@ -64,7 +64,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
           <div>
             <p>{paper.paymentAccount}</p>
             <p>{invoice.from.paymentAccountName}</p>
-            <p>{labelled(paper.routingNumber, invoice.from.routingNumber)}</p>
+            {invoice.from.accountNumber ? <p>{labelled(paper.accountNumber, invoice.from.accountNumber)}</p> : null}
           </div>
         </section>
 
@@ -75,7 +75,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
             {invoice.from.addressLines.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            <p>{labelled(paper.taxId, invoice.from.taxId)}</p>
+            {invoice.from.taxId ? <p>{labelled(paper.taxId, invoice.from.taxId)}</p> : null}
           </div>
           <div>
             <p className="mb-4 font-semibold uppercase">{paper.billTo}</p>
@@ -83,7 +83,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
             {invoice.to.addressLines.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            <p>{labelled(paper.taxId, invoice.to.taxId)}</p>
+            {invoice.to.taxId ? <p>{labelled(paper.taxId, invoice.to.taxId)}</p> : null}
           </div>
         </section>
       </header>
@@ -142,9 +142,9 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
 
       <footer className="absolute right-12.25 bottom-11 left-12.25 grid grid-cols-2 gap-14 text-sm leading-relaxed text-neutral-500">
         <div>
-          <p>{invoice.from.email}</p>
-          <p>{invoice.from.phone}</p>
-          <p>{invoice.from.website}</p>
+          {invoice.from.email ? <p>{invoice.from.email}</p> : null}
+          {invoice.from.phone ? <p>{invoice.from.phone}</p> : null}
+          {invoice.from.website ? <p>{invoice.from.website}</p> : null}
         </div>
         <div>
           <p>{paper.promptProcessing}</p>

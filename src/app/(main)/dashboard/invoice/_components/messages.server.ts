@@ -11,6 +11,7 @@ const en: InvoiceMessages = {
   },
   title: "Create New Invoice",
   subtitle: "Add invoice details, review the preview, and send it to your client.",
+  businessDetails: "Business details",
   details: {
     reference: "Reference Number",
     issued: "Issued Date",
@@ -43,11 +44,6 @@ const en: InvoiceMessages = {
     value: "Discount value",
   },
   taxes: { gst: "GST", vat: "VAT", "service-tax": "Service Tax", none: "No Tax" },
-  demoItems: {
-    hosting: "Cloud hosting services",
-    analytics: "Data analytics report",
-    support: "Technical support retainer",
-  },
   preview: { title: "Preview", print: "Print", loading: "Loading Preview" },
   paper: {
     invoice: "Invoice",
@@ -56,7 +52,7 @@ const en: InvoiceMessages = {
     issued: "Issued",
     paymentDue: "Payment due",
     paymentAccount: "Payment account",
-    routingNumber: "Routing no.",
+    accountNumber: "Account no.",
     from: "From",
     billTo: "Bill to",
     taxId: "Tax ID",
@@ -92,6 +88,7 @@ const es: InvoiceMessages = {
   },
   title: "Crear factura nueva",
   subtitle: "Añade los datos de la factura, revisa la vista previa y envíasela a tu cliente.",
+  businessDetails: "Datos del negocio",
   details: {
     reference: "Número de referencia",
     issued: "Fecha de emisión",
@@ -124,11 +121,6 @@ const es: InvoiceMessages = {
     value: "Valor del descuento",
   },
   taxes: { gst: "GST", vat: "IVA", "service-tax": "Impuesto sobre servicios", none: "Sin impuesto" },
-  demoItems: {
-    hosting: "Servicios de alojamiento en la nube",
-    analytics: "Informe de analítica de datos",
-    support: "Soporte técnico mensual",
-  },
   preview: { title: "Vista previa", print: "Imprimir", loading: "Cargando vista previa" },
   paper: {
     invoice: "Factura",
@@ -137,7 +129,7 @@ const es: InvoiceMessages = {
     issued: "Emisión",
     paymentDue: "Vencimiento",
     paymentAccount: "Cuenta de pago",
-    routingNumber: "N.º de ruta",
+    accountNumber: "N.º de cuenta",
     from: "De",
     billTo: "Facturar a",
     taxId: "NIF",
@@ -173,6 +165,7 @@ const de: InvoiceMessages = {
   },
   title: "Neue Rechnung erstellen",
   subtitle: "Gib die Rechnungsdaten ein, prüfe die Vorschau und sende die Rechnung an deinen Kunden.",
+  businessDetails: "Unternehmensdaten",
   details: {
     reference: "Referenznummer",
     issued: "Rechnungsdatum",
@@ -205,11 +198,6 @@ const de: InvoiceMessages = {
     value: "Rabattwert",
   },
   taxes: { gst: "GST", vat: "MwSt.", "service-tax": "Dienstleistungssteuer", none: "Keine Steuer" },
-  demoItems: {
-    hosting: "Cloud-Hosting-Leistungen",
-    analytics: "Datenanalysebericht",
-    support: "Technischer Support (Pauschale)",
-  },
   preview: { title: "Vorschau", print: "Drucken", loading: "Vorschau wird geladen" },
   paper: {
     invoice: "Rechnung",
@@ -218,7 +206,7 @@ const de: InvoiceMessages = {
     issued: "Rechnungsdatum",
     paymentDue: "Zahlbar bis",
     paymentAccount: "Zahlungskonto",
-    routingNumber: "Bankleitzahl",
+    accountNumber: "Kontonummer",
     from: "Von",
     billTo: "Rechnung an",
     taxId: "Steuer-ID",
@@ -254,6 +242,7 @@ const fr: InvoiceMessages = {
   },
   title: "Créer une facture",
   subtitle: "Renseignez la facture, vérifiez l’aperçu, puis envoyez-la à votre client.",
+  businessDetails: "Données de l’entreprise",
   details: {
     reference: "Numéro de référence",
     issued: "Date d’émission",
@@ -286,11 +275,6 @@ const fr: InvoiceMessages = {
     value: "Valeur de la remise",
   },
   taxes: { gst: "GST", vat: "TVA", "service-tax": "Taxe de service", none: "Sans taxe" },
-  demoItems: {
-    hosting: "Services d’hébergement cloud",
-    analytics: "Rapport d’analyse de données",
-    support: "Forfait de support technique",
-  },
   preview: { title: "Aperçu", print: "Imprimer", loading: "Chargement de l’aperçu" },
   paper: {
     invoice: "Facture",
@@ -299,7 +283,7 @@ const fr: InvoiceMessages = {
     issued: "Émise le",
     paymentDue: "Échéance",
     paymentAccount: "Compte de paiement",
-    routingNumber: "N° d’acheminement",
+    accountNumber: "N° de compte",
     from: "De",
     billTo: "Facturé à",
     taxId: "N° fiscal",

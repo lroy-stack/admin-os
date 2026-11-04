@@ -1,15 +1,32 @@
 import { describe, expect, it } from "vitest";
 
+import { VERTICALS } from "@/config/vertical";
+import { businessDetailsSchema } from "@/core/business";
 import { format, formatNumber, formatPercent, LOCALES, placeholdersOf } from "@/core/i18n";
 
-import { createDefaultInvoice, type InvoiceFormValues, type InvoiceLineItem } from "./data";
+import { createDefaultInvoice, type InvoiceFormValues, type InvoiceLineItem, type InvoiceSeed } from "./data";
 import { createInvoiceSchema } from "./invoice-schema";
 import { invoiceMessages } from "./messages.server";
 
 const today = "2026-10-31";
 
+/** The hospitality preset's company: its business settings, the other keys of its overrides left out. */
+const business = businessDetailsSchema.parse(VERTICALS.hospitality.settingsDefaults);
+
+const seedFor = (day: string): InvoiceSeed => ({
+  today: day,
+  currency: "EUR",
+  business,
+  clients: [{ id: "C-ortega", name: "Ortega", email: "ortega@example.com", addressLines: [], taxId: "" }],
+  items: [
+    { id: "dish-croquetas", description: "Ham croquettes", quantity: 1, unitPrice: 11 },
+    { id: "dish-arroz", description: "Seafood rice", quantity: 2, unitPrice: 24 },
+  ],
+  issuerName: "Alex Morgan",
+});
+
 function validate(locale: (typeof LOCALES)[number], change: (invoice: ReturnType<typeof base>) => void) {
-  const invoice = base(locale);
+  const invoice = base();
   change(invoice);
   const result = createInvoiceSchema(invoiceMessages[locale].validation, locale).safeParse(invoice);
   return result.success ? [] : result.error.issues.map((issue) => issue.message);
@@ -26,8 +43,8 @@ function patchFirstItem(invoice: InvoiceFormValues, patch: Partial<InvoiceLineIt
   invoice.items = invoice.items.map((item, index) => (index === 0 ? { ...item, ...patch } : item));
 }
 
-function base(locale: (typeof LOCALES)[number]) {
-  return createDefaultInvoice(today, "EUR", invoiceMessages[locale].demoItems);
+function base() {
+  return createDefaultInvoice(seedFor(today));
 }
 
 describe("invoice schema", () => {
@@ -97,11 +114,11 @@ describe("invoice schema", () => {
 
 describe("the demo invoice's dates", () => {
   it.each([
-    ["2026-10-31", "2026-11-14"],
-    ["2026-12-25", "2027-01-08"],
-    ["2026-03-20", "2026-04-03"],
-  ])("dates it %s and due 14 days later on %s, whatever the device zone", (day, due) => {
-    const invoice = createDefaultInvoice(day, "EUR", invoiceMessages.en.demoItems);
+    ["2026-10-31", "2026-11-15"],
+    ["2026-12-25", "2027-01-09"],
+    ["2026-03-20", "2026-04-04"],
+  ])("dates it %s and due after the business's 15 days on %s, whatever the device zone", (day, due) => {
+    const invoice = createDefaultInvoice(seedFor(day));
     expect([invoice.issuedDate, invoice.paymentDueDate]).toEqual([day, due]);
   });
 });

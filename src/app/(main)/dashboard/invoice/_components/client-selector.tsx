@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
-import { type InvoiceFormValues, invoiceClients } from "./data";
+import type { InvoiceFormValues, InvoiceToDetails } from "./data";
 import { invoiceMessageKey } from "./messages";
 
-export function ClientSelector() {
+/** Who the invoice bills: one of the session's customers (spec 008). */
+export function ClientSelector({ clients }: { clients: readonly InvoiceToDetails[] }) {
   const text = useMessages(invoiceMessageKey).client;
   const { control } = useFormContext<InvoiceFormValues>();
 
@@ -31,7 +32,7 @@ export function ClientSelector() {
               <Select
                 value={selectedClient.id}
                 onValueChange={(clientId) => {
-                  const nextClient = invoiceClients.find((item) => item.id === clientId);
+                  const nextClient = clients.find((item) => item.id === clientId);
 
                   if (nextClient) {
                     field.onChange(nextClient);
@@ -56,7 +57,7 @@ export function ClientSelector() {
                 </SelectTrigger>
                 <SelectContent position="popper">
                   <SelectGroup>
-                    {invoiceClients.map((clientOption) => (
+                    {clients.map((clientOption) => (
                       <SelectItem key={clientOption.id} value={clientOption.id}>
                         {clientOption.name}
                       </SelectItem>

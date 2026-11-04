@@ -1,27 +1,25 @@
+import Link from "next/link";
+
+import { Building2 } from "lucide-react";
+
 import { LocaleBundles } from "@/app/_components/locale-root";
+import { Button } from "@/components/ui/button";
 import { getCurrency, getLocale } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
-import { getRuntime } from "@/config/runtime";
-import { businessClockSchema } from "@/core/clock";
-import { isAwaitingApproval } from "@/core/result";
 
 import { createDefaultInvoice } from "./_components/data";
 import { Invoice } from "./_components/invoice";
+import { loadInvoiceSeed } from "./_components/load-invoice.server";
 import { invoiceBundle, invoiceMessages } from "./_components/messages.server";
 
 export const generateMetadata = () => pageMetadata("/dashboard/invoice", invoiceMessages);
 
 export default async function Page() {
-  const [locale, currency, { client }] = await Promise.all([getLocale(), getCurrency(), getRuntime()]);
+  const [locale, currency] = await Promise.all([getLocale(), getCurrency()]);
   const text = invoiceMessages[locale];
-  // The day is the business's (clock capability, ADR 0005), not the server's, which runs in UTC.
-  const answer = await client.call("clock.get", {});
-  if (isAwaitingApproval(answer) || !answer.ok) {
-    throw new Error("The business clock is unavailable.");
-  }
-  const { today } = businessClockSchema.parse(answer.value);
-  // The demo document is seeded on the server in the request's language and the business currency.
-  const initialInvoice = createDefaultInvoice(today, currency, text.demoItems);
+  // The document starts from the business settings, the session's customers and catalog (spec 008).
+  const seed = await loadInvoiceSeed(currency);
+  const initialInvoice = createDefaultInvoice(seed);
 
   return (
     <LocaleBundles bundles={[invoiceBundle]}>
@@ -31,10 +29,20 @@ export default async function Page() {
             <h1 className="text-3xl leading-none font-medium tracking-tight">{text.title}</h1>
             <p className="text-muted-foreground text-sm">{text.subtitle}</p>
           </div>
+          <Button
+            asChild
+            variant="ghost"
+            className="liquid-glass hover:bg-foreground/10 h-8 w-fit rounded-full px-3 text-xs"
+          >
+            <Link prefetch={false} href="/dashboard/settings">
+              <Building2 data-icon="inline-start" />
+              {text.businessDetails}
+            </Link>
+          </Button>
         </div>
 
         {/* A new language or currency reseeds the demo document, so its text and amounts never mix. */}
-        <Invoice key={`${locale}-${currency}`} initialInvoice={initialInvoice} />
+        <Invoice key={`${locale}-${currency}`} initialInvoice={initialInvoice} clients={seed.clients} />
       </div>
     </LocaleBundles>
   );

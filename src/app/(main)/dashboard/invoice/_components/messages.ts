@@ -7,6 +7,8 @@ export interface InvoiceMessages {
   readonly meta: PageMeta;
   readonly title: string;
   readonly subtitle: string;
+  /** The link from the invoice to the business settings it prints (spec 008). */
+  readonly businessDetails: string;
   readonly details: {
     readonly reference: string;
     readonly issued: string;
@@ -47,10 +49,8 @@ export interface InvoiceMessages {
     readonly percent: string;
     readonly value: string;
   };
-  /** Tax names by the ids of `invoiceTaxOptions`. */
+  /** Tax names by the ids of `invoiceTaxIds` (`@/core/business`). */
   readonly taxes: Readonly<Record<InvoiceTaxId, string>>;
-  /** Demo line items (business text, written in each language for the demo). */
-  readonly demoItems: { readonly hosting: string; readonly analytics: string; readonly support: string };
   readonly preview: {
     readonly title: string;
     readonly print: string;
@@ -65,7 +65,7 @@ export interface InvoiceMessages {
     readonly issued: string;
     readonly paymentDue: string;
     readonly paymentAccount: string;
-    readonly routingNumber: string;
+    readonly accountNumber: string;
     readonly from: string;
     readonly billTo: string;
     readonly taxId: string;

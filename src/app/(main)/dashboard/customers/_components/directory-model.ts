@@ -1,3 +1,4 @@
+import { majorUnits } from "@/core/money/client";
 import type { CsvColumn } from "@/lib/csv";
 import type { Customer } from "@/modules/customers";
 
@@ -70,12 +71,6 @@ export function visibleRows(
     .filter((row) => options.status === "all" || row[options.status])
     .filter((row) => matchesQuery(row, options.query))
     .toSorted(comparators[options.sort]);
-}
-
-/** Major units of an amount in minor units, using the currency's own number of decimals (JPY has none). */
-export function majorUnits(amountMinor: number, currency: string): number {
-  const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
-  return amountMinor / 10 ** (digits ?? 2);
 }
 
 /** Columns of the exported file; headers and yes/no come from the dictionary. */

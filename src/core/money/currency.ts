@@ -13,6 +13,12 @@ export type Currency = (typeof CURRENCIES)[number];
 /** Cookie holding the business currency. Named like the `locale` cookie. */
 export const CURRENCY_COOKIE = "currency";
 
+/** Major units of an amount in minor units, using the currency's own number of decimals (JPY has none). */
+export function majorUnits(amountMinor: number, currency: string): number {
+  const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+  return amountMinor / 10 ** (digits ?? 2);
+}
+
 export function isCurrency(value: unknown): value is Currency {
   return typeof value === "string" && (CURRENCIES as readonly string[]).includes(value);
 }

@@ -1,6 +1,12 @@
 import { addDays, format, parseISO } from "date-fns";
 
-import type { Currency } from "@/core/money/client";
+import type { BusinessDetails, InvoiceTaxId } from "@/core/business";
+import type { Locale } from "@/core/i18n/client";
+import { type Currency, isCurrency, majorUnits } from "@/core/money/client";
+import type { CatalogItem } from "@/modules/catalog";
+import type { Customer } from "@/modules/customers";
+
+export type { InvoiceTaxId } from "@/core/business";
 
 export interface InvoiceLineItem {
   id: string;
@@ -9,12 +15,13 @@ export interface InvoiceLineItem {
   unitPrice: number;
 }
 
-export type InvoiceTaxId = "gst" | "vat" | "service-tax" | "none";
-
 export interface InvoiceTaxOption {
   id: InvoiceTaxId;
   rate: number;
 }
+
+/** The rate of each tax the document can apply; `none` applies none. */
+export type InvoiceTaxRates = Readonly<Record<Exclude<InvoiceTaxId, "none">, number>>;
 
 export type InvoiceDiscountType = "fixed" | "percent";
 
@@ -30,7 +37,7 @@ export interface InvoiceFromDetails {
   addressLines: string[];
   taxId: string;
   paymentAccountName: string;
-  routingNumber: string;
+  accountNumber: string;
   issuerName: string;
 }
 
@@ -44,90 +51,114 @@ export interface InvoiceToDetails {
 
 export interface InvoiceFormValues {
   referenceNumber: string;
-  /** A property of the document: it starts as the business currency and the form offers every `CURRENCIES` entry. */
+  /**
+   * A property of the document: it starts in the currency of its catalog lines (a `Money` keeps its own currency and
+   * nothing converts), or the business currency when it has none, and the form offers every `CURRENCIES` entry.
+   */
   currency: Currency;
   issuedDate: string;
   paymentDueDate: string;
   from: InvoiceFromDetails;
   to: InvoiceToDetails;
   taxId: InvoiceTaxId;
+  /** A property of the document too: it starts with the business's rates (spec 008), so the totals follow them. */
+  taxRates: InvoiceTaxRates;
   discountType: InvoiceDiscountType;
   discountValue: number;
   items: InvoiceLineItem[];
 }
 
-/** Demo line items; the descriptions are business text, so the server writes them in the request's locale. */
-export type InvoiceItemDescriptions = Readonly<Record<"hosting" | "analytics" | "support", string>>;
+/** What a new invoice starts from: the business day, the currency, the business settings and the session's data. */
+export interface InvoiceSeed {
+  readonly today: string;
+  readonly currency: Currency;
+  readonly business: BusinessDetails;
+  /** The clients the form offers, the first one billed; the customers of the session. */
+  readonly clients: readonly InvoiceToDetails[];
+  /** The lines it starts with; items of the session's catalog. */
+  readonly items: readonly InvoiceLineItem[];
+  /** Who issues it: the person signed in. */
+  readonly issuerName: string;
+}
+
+const NO_CLIENT: InvoiceToDetails = { id: "", name: "", email: "", addressLines: [], taxId: "" };
 
 /**
  * The form's starting values. Dates are `yyyy-MM-dd`; `today` is the business day from `clock.get` (the business time
- * zone, never the server's), so the document is dated the same wherever the server runs.
+ * zone, never the server's), so the document is dated the same wherever the server runs. The issuer, the payment
+ * details, the tax and the terms are the business settings (spec 008); the reference is a draft's, written from the
+ * day, since no capability numbers invoices (spec 002, AC-C).
  */
-export function createDefaultInvoice(
-  today: string,
-  currency: Currency,
-  descriptions: InvoiceItemDescriptions,
-): InvoiceFormValues {
+export function createDefaultInvoice(seed: InvoiceSeed): InvoiceFormValues {
+  const profile = seed.business["business.profile"];
+  const payment = seed.business["business.payment"];
+  const invoicing = seed.business["business.invoicing"];
   return {
-    referenceNumber: "FL-0425",
-    currency,
-    issuedDate: today,
-    paymentDueDate: format(addDays(parseISO(today), 14), "yyyy-MM-dd"),
+    referenceNumber: `${seed.today.replaceAll("-", "")}-001`,
+    currency: seed.currency,
+    issuedDate: seed.today,
+    paymentDueDate: format(addDays(parseISO(seed.today), invoicing.paymentTermsDays), "yyyy-MM-dd"),
     from: {
-      name: "Weblabs Studio",
-      email: "hello@weblabs.studio",
-      phone: "+1-512-555-0184",
-      website: "weblabs.studio",
-      addressLines: ["214 Pixel Avenue", "Austin, TX 78701"],
-      taxId: "WS-1029384756",
-      paymentAccountName: "Mercury Business",
-      routingNumber: "084009519",
-      issuerName: "Alex Morgan",
+      name: profile.legalName === "" ? profile.tradeName : profile.legalName,
+      email: profile.email,
+      phone: profile.phone,
+      website: profile.website,
+      addressLines: [...profile.addressLines],
+      taxId: profile.taxId,
+      paymentAccountName: payment.bank === "" ? payment.accountHolder : payment.bank,
+      accountNumber: payment.accountNumber,
+      issuerName: seed.issuerName,
     },
-    to: defaultInvoiceClient,
-    taxId: "vat",
+    to: seed.clients[0] ?? NO_CLIENT,
+    taxId: invoicing.defaultTax,
+    taxRates: { ...invoicing.taxRates },
     discountType: "fixed",
-    discountValue: 40,
-    items: [
-      { id: "hosting", description: descriptions.hosting, quantity: 1, unitPrice: 3500 },
-      { id: "analytics", description: descriptions.analytics, quantity: 2, unitPrice: 750 },
-      { id: "support", description: descriptions.support, quantity: 1, unitPrice: 400 },
-    ],
+    discountValue: 0,
+    items: seed.items.map((line) => ({ ...line })),
   };
 }
 
-/** Rates only; the names are in the route dictionary, keyed by `id`. */
-export const invoiceTaxOptions: InvoiceTaxOption[] = [
-  { id: "gst", rate: 18 },
-  { id: "vat", rate: 12 },
-  { id: "service-tax", rate: 10 },
+/** A customer of the directory as an invoice bills them; the directory keeps no address or tax ID. */
+export const clientOf = (customer: Pick<Customer, "id" | "name" | "email">): InvoiceToDetails => ({
+  id: customer.id,
+  name: customer.name,
+  email: customer.email ?? "",
+  addressLines: [],
+  taxId: "",
+});
+
+/** A catalog item as one line: its name in the request's language and its price in its currency's major units. */
+export const lineItemOf = (item: Pick<CatalogItem, "id" | "name" | "price">, locale: Locale): InvoiceLineItem => ({
+  id: item.id,
+  description: item.name.translations[locale] ?? item.name.source,
+  quantity: 1,
+  unitPrice: majorUnits(item.price.amountMinor, item.price.currency),
+});
+
+/**
+ * The currency a new invoice starts in and its lines. A line's amount is a plain number in the document's currency, so
+ * the document starts in the currency of the first item, when the kit offers it, and leaves out the items priced in
+ * another; with none it keeps `preferred`. Nothing converts: there are no exchange rates (`src/core/money`).
+ */
+export function startingLines(
+  items: readonly Pick<CatalogItem, "id" | "name" | "price">[],
+  preferred: Currency,
+  locale: Locale,
+): { currency: Currency; items: InvoiceLineItem[] } {
+  const first = items[0]?.price.currency;
+  const currency = isCurrency(first) ? first : preferred;
+  return {
+    currency,
+    items: items.filter((item) => item.price.currency === currency).map((item) => lineItemOf(item, locale)),
+  };
+}
+
+/** The taxes the document offers, with its own rates; the names are in the route dictionary, keyed by `id`. */
+export const invoiceTaxOptionsOf = (rates: InvoiceTaxRates): InvoiceTaxOption[] => [
+  { id: "gst", rate: rates.gst },
+  { id: "vat", rate: rates.vat },
+  { id: "service-tax", rate: rates["service-tax"] },
   { id: "none", rate: 0 },
-];
-
-const defaultInvoiceClient: InvoiceToDetails = {
-  id: "aiy-cap",
-  name: "AIY Cap",
-  email: "finance@aiycap.com",
-  addressLines: ["One BKC, Bandra Kurla Complex", "Mumbai, Maharashtra 400051"],
-  taxId: "GSTIN-27AAICA9102K1Z7",
-};
-
-export const invoiceClients: InvoiceToDetails[] = [
-  {
-    id: "bright-enterprises",
-    name: "Bright Enterprises",
-    email: "billing@brightenterprises.com",
-    addressLines: ["450 Park Avenue South", "New York, NY 10016", "United States"],
-    taxId: "US-EIN-84-2938475",
-  },
-  defaultInvoiceClient,
-  {
-    id: "northline-gmbh",
-    name: "Northline GmbH",
-    email: "ap@northline.de",
-    addressLines: ["Kastanienallee 32", "10435 Berlin", "Germany"],
-    taxId: "DE-VAT-219384756",
-  },
 ];
 
 export function getLineAmount(item?: InvoiceLineItem) {
@@ -147,8 +178,9 @@ export function getInvoiceSubtotal(invoice: InvoiceFormValues) {
   return getInvoiceItems(invoice).reduce((subtotal, item) => subtotal + getLineAmount(item), 0);
 }
 
-export function getInvoiceTaxOption(invoice: InvoiceFormValues) {
-  return invoiceTaxOptions.find((taxOption) => taxOption.id === invoice.taxId) ?? invoiceTaxOptions[0];
+export function getInvoiceTaxOption(invoice: InvoiceFormValues): InvoiceTaxOption {
+  const options = invoiceTaxOptionsOf(invoice.taxRates);
+  return options.find((taxOption) => taxOption.id === invoice.taxId) ?? { id: "none", rate: 0 };
 }
 
 export function getInvoiceTax(invoice: InvoiceFormValues) {

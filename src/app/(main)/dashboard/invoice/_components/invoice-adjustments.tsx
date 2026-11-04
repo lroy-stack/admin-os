@@ -5,7 +5,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currencySymbol, format, formatPercent, useLocale, useMessages } from "@/core/i18n/client";
 
-import { type InvoiceFormValues, invoiceTaxOptions } from "./data";
+import { type InvoiceFormValues, invoiceTaxOptionsOf } from "./data";
 import { invoiceMessageKey } from "./messages";
 
 export function InvoiceAdjustments() {
@@ -16,7 +16,7 @@ export function InvoiceAdjustments() {
     register,
     formState: { errors },
   } = useFormContext<InvoiceFormValues>();
-  const [discountType, currency] = useWatch({ control, name: ["discountType", "currency"] });
+  const [discountType, currency, taxRates] = useWatch({ control, name: ["discountType", "currency", "taxRates"] });
 
   return (
     <section className="flex flex-col gap-4">
@@ -35,7 +35,7 @@ export function InvoiceAdjustments() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {invoiceTaxOptions.map((taxOption) => (
+                    {invoiceTaxOptionsOf(taxRates).map((taxOption) => (
                       <SelectItem key={taxOption.id} value={taxOption.id}>
                         {format(text.paper.taxLine, locale, {
                           tax: text.taxes[taxOption.id],

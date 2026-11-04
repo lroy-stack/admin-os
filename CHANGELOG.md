@@ -17,6 +17,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The invoice (`/dashboard/invoice`) starts from the business settings instead of a fixed company: the issuer, the
+  payment details, the default tax, its rates and the payment terms; its clients are the session's customers and its
+  lines the first catalog items, in the request's language and in their own currency. It stays a printable draft
+  that no capability numbers or stores, and its payment block names the account number instead of a routing number.
 - The documentation is split by purpose: a short README, guides in `docs/guides` (development, architecture,
   building on the template, deployment, MCP) under an index in `docs/README.md`, a rewritten `CONTRIBUTING.md` and a
   new `SECURITY.md`. `package.json` declares Node.js 24 in `engines`.
