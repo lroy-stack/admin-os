@@ -11,7 +11,7 @@ import { type FaultMap, parseFaults } from "@/core/mock";
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
 import { getAdapter, settingsFor } from "./data.server";
-import { DEMO_SESSION_COOKIE } from "./demo-session.server";
+import { DEMO_SESSION_COOKIE, verifiedDemoSession } from "./demo-session.server";
 import { getLocale } from "./locale.server";
 import { getVertical } from "./vertical.server";
 
@@ -47,7 +47,7 @@ export const getRuntime = cache(async () => {
   const correlationId = crypto.randomUUID();
   const adapter = getAdapter({
     vertical: vertical.id,
-    sessionId: jar.get(DEMO_SESSION_COOKIE)?.value,
+    sessionId: await verifiedDemoSession(jar.get(DEMO_SESSION_COOKIE)?.value),
     faults: faultsFrom(process.env.MOCK_FAULTS, jar.get(MOCK_FAULTS_COOKIE)?.value),
   });
   return {

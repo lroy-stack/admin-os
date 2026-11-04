@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy:store": "wrangler deploy -c workers/demo-store/wrangler.jsonc",
+    "deploy": "npm run deploy:store && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "lint": "biome lint",

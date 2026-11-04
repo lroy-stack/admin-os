@@ -7,6 +7,7 @@ import { fixedClock, liveClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type FaultMap, type SessionStore } from "@/core/mock";
 
 import { DEMO, type DemoSeed, MOCK_HANDLERS, settingsFor } from "./demo-kernel";
+import { durableAdapter } from "./durable-adapter.server";
 import type { VerticalId } from "./vertical";
 
 export { MOCK_HANDLERS, settingsFor };
@@ -29,7 +30,8 @@ export const isDemoAdapter = (): boolean => adapterKindSchema.safeParse(process.
 
 /**
  * The adapter for this request. `DATA_ADAPTER` selects it (only `mock` ships with the kit; a real backend adds its
- * own here), `MOCK_CLOCK=live` swaps the seeded moment for real time.
+ * own here), `MOCK_CLOCK=live` swaps the seeded moment for real time. With `DATA_STORE=durable` a request that has
+ * a demo session goes to that session's Durable Object; one without a session reads the seed in process.
  */
 export function getAdapter(options: {
   readonly vertical: VerticalId;
@@ -43,14 +45,25 @@ export function getAdapter(options: {
     );
   }
   const { clock } = DEMO[options.vertical];
-  return createMockAdapter({
+  const clockLive = process.env.MOCK_CLOCK === "live";
+  const inProcess = createMockAdapter({
     handlers: MOCK_HANDLERS,
     store: storeFor(options.vertical),
     sessionId: options.sessionId,
-    clock: process.env.MOCK_CLOCK === "live" ? liveClock(clock, new Date()) : fixedClock(clock),
+    clock: clockLive ? liveClock(clock, new Date()) : fixedClock(clock),
     settings: settingsFor(options.vertical),
     faults: options.faults,
   });
+  if (process.env.DATA_STORE === "durable" && options.sessionId !== undefined) {
+    return durableAdapter({
+      vertical: options.vertical,
+      sessionId: options.sessionId,
+      faults: options.faults,
+      clockLive,
+      inProcess,
+    });
+  }
+  return inProcess;
 }
 
 /** Drops one demo session's copy, so its next read sees the seed again (ADR 0005). */

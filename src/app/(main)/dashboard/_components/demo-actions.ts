@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 
 import { isDemoAdapter } from "@/config/data.server";
+import { demoCookieScope } from "@/config/demo-cookie";
 import { resetDemoSession } from "@/config/demo-session.server";
 import { DEMO_ROLE_COOKIE } from "@/config/runtime";
 import { verticalIdSchema } from "@/config/vertical";
@@ -23,7 +24,7 @@ function assertDemo(): void {
 
 export async function setDemoRole(role: unknown): Promise<void> {
   assertDemo();
-  await writeCookie(DEMO_ROLE_COOKIE, roleIdSchema.parse(role), COOKIE_OPTIONS);
+  await writeCookie(DEMO_ROLE_COOKIE, roleIdSchema.parse(role), { ...COOKIE_OPTIONS, ...demoCookieScope(process.env) });
 }
 
 export async function setDemoPreset(preset: unknown): Promise<void> {

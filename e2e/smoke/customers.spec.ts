@@ -196,13 +196,13 @@ test.describe("new contact window", () => {
   });
 
   test("the first write of a visitor with no session cookie starts the demo session", async ({ page, context }) => {
-    expect((await context.cookies()).map((cookie) => cookie.name)).not.toContain("demo_session");
+    expect((await context.cookies()).map((cookie) => cookie.name)).not.toContain("demo_sid");
 
     await windowOf(page).getByRole("textbox", { name: "Name" }).fill("First Writer");
     await windowOf(page).getByRole("button", { name: "Add contact" }).click();
 
     await expect(page.getByRole("heading", { level: 3, name: "First Writer" })).toBeVisible();
-    expect((await context.cookies()).map((cookie) => cookie.name)).toContain("demo_session");
+    expect((await context.cookies()).map((cookie) => cookie.name)).toContain("demo_sid");
   });
 });
 

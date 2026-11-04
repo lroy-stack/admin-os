@@ -38,6 +38,9 @@ const SETTING_KEYS = [lateAfterMinutes.key, walkInStayMinutes.key, serviceWindow
 const settingsSchema = z.object({ values: z.record(z.string(), z.unknown()) });
 const bookingsPage = pageOutput(bookingSchema);
 const resourcesPage = pageOutput(resourceSchema);
+const customersPage = pageOutput(customerSchema);
+
+const withCursor = (cursor: string | undefined) => (cursor === undefined ? {} : { cursor });
 
 /** The answer of a read as a typed result: a held or malformed answer is an invalid output, never a value. */
 function answerOf<T>(answer: CallResult<unknown>, schema: z.ZodType<T>): Result<T> {
@@ -82,7 +85,6 @@ export async function loadBookings(dayParam: string | undefined): Promise<Loaded
     walkInStayMin: walkInStayMinutes.schema.parse(values[walkInStayMinutes.key]),
   };
 
-  const withCursor = (cursor: string | undefined) => (cursor === undefined ? {} : { cursor });
   const [bookings, resources] = await Promise.all([
     readAllPages(async (cursor) =>
       answerOf(
@@ -108,16 +110,23 @@ export async function loadBookings(dayParam: string | undefined): Promise<Loaded
   return { state: readStateOf(ok(reservations), (list) => list.length === 0), service, reservations };
 }
 
-/** The customer records of the guests a day's bookings name, each read once. */
+/**
+ * The customer records of the guests a day's bookings name, from one list read instead of one read per guest. A
+ * booking whose guest is not in the directory fails the day with `customers.not_found`, as a single read would.
+ */
 async function readGuests(ids: readonly string[]): Promise<Result<Map<string, Customer>>> {
-  const { client } = await getRuntime();
-  const answers = await Promise.all(
-    ids.map(async (id) => answerOf(await client.call("customers.get", { id }), customerSchema)),
-  );
   const guests = new Map<string, Customer>();
-  for (const answer of answers) {
-    if (!answer.ok) return answer;
-    guests.set(answer.value.id, answer.value);
+  if (ids.length === 0) return ok(guests);
+  const { client } = await getRuntime();
+  const directory = await readAllPages(async (cursor) =>
+    answerOf(await client.call("customers.list", { limit: PAGE_LIMIT, ...withCursor(cursor) }), customersPage),
+  );
+  if (!directory.ok) return directory;
+  const byId = new Map(directory.value.map((customer) => [customer.id, customer]));
+  for (const id of ids) {
+    const customer = byId.get(id);
+    if (customer === undefined) return err("customers.not_found", `Customer ${id} is not in the directory`);
+    guests.set(id, customer);
   }
   return ok(guests);
 }

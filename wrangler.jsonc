@@ -27,6 +27,17 @@
       "service": "admin-os"
     }
   ],
+  // The demo keeps each visitor's session in a Durable Object. DEMO_SESSION_SECRET (a secret, not a var) must be set:
+  //   openssl rand -base64 32 | npx wrangler secret put DEMO_SESSION_SECRET
+  "vars": {
+    "DATA_STORE": "durable",
+    // Shares the demo cookies with the subdomains of the custom domain (replace it with your own, or remove it).
+    "DEMO_COOKIE_DOMAIN": "admin-os.lr0y.dev"
+  },
+  // The store lives in its own Worker (workers/demo-store), deployed first; the class is reached by script_name.
+  "durable_objects": {
+    "bindings": [{ "name": "DEMO_STORE", "class_name": "DemoStore", "script_name": "admin-os-demo-store" }]
+  },
   "observability": {
     "enabled": true
   }

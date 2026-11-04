@@ -6,6 +6,8 @@ export interface CookieWriteOptions {
   readonly maxAge: number;
   readonly sameSite?: "lax" | "strict";
   readonly httpOnly?: boolean;
+  /** Shares the cookie with the subdomains of this host; unset keeps it host-only. */
+  readonly domain?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export async function writeCookie(name: string, value: string, options: CookieWr
     maxAge: options.maxAge,
     ...(options.sameSite ? { sameSite: options.sameSite } : {}),
     ...(options.httpOnly ? { httpOnly: true } : {}),
+    ...(options.domain ? { domain: options.domain } : {}),
     ...(process.env.NODE_ENV === "production" ? { secure: true } : {}),
   });
 }

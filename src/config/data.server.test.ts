@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { describeAdapterContract } from "./adapter-contract.testkit";
 import { CATALOG } from "./catalog";
 import { getAdapter, MOCK_HANDLERS } from "./data.server";
-import { DEMO_SESSION_COOKIE, ensureDemoSession } from "./demo-session.server";
+import { durableAdapter } from "./durable-adapter.server";
 import { DEMO_ROLE_COOKIE, getRuntime, MOCK_FAULTS_COOKIE } from "./runtime";
 
 /** An in-memory stand-in for `cookies()`; `set` is observed so tests can check the attributes. */
@@ -21,9 +21,16 @@ vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "accept-language": "en" }),
 }));
 
+vi.mock("./durable-adapter.server", () => ({ durableAdapter: vi.fn(() => ({ dispatch: vi.fn() })) }));
+
 beforeEach(() => {
   jar.values.clear();
   jar.set.mockClear();
+  vi.mocked(durableAdapter).mockClear();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 it.each(Object.keys(CATALOG))("%s has a mock handler", (id) => {
@@ -32,20 +39,22 @@ it.each(Object.keys(CATALOG))("%s has a mock handler", (id) => {
 
 describeAdapterContract("in-memory", (vertical, sessionId) => getAdapter({ vertical, sessionId }));
 
-describe("ensureDemoSession", () => {
-  it("starts an httpOnly session cookie on the first write", async () => {
-    const sessionId = await ensureDemoSession();
-    expect(jar.set).toHaveBeenCalledWith(DEMO_SESSION_COOKIE, sessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 7200,
-    });
+describe("getAdapter and DATA_STORE", () => {
+  it("keeps a visitor's session in memory when DATA_STORE is unset", () => {
+    getAdapter({ vertical: "hospitality", sessionId: "s-1" });
+    expect(durableAdapter).not.toHaveBeenCalled();
   });
 
-  it("keeps the session the visitor already has", async () => {
-    jar.values.set(DEMO_SESSION_COOKIE, "existing");
-    expect([await ensureDemoSession(), jar.set.mock.calls.length]).toEqual(["existing", 0]);
+  it("sends a visitor with a session to the store when DATA_STORE is durable", () => {
+    vi.stubEnv("DATA_STORE", "durable");
+    getAdapter({ vertical: "salon", sessionId: "s-1" });
+    expect(durableAdapter).toHaveBeenCalledWith(expect.objectContaining({ vertical: "salon", sessionId: "s-1" }));
+  });
+
+  it("serves a visitor without a session from the seed in process when DATA_STORE is durable", () => {
+    vi.stubEnv("DATA_STORE", "durable");
+    getAdapter({ vertical: "salon" });
+    expect(durableAdapter).not.toHaveBeenCalled();
   });
 });
 

@@ -48,6 +48,7 @@ describe("setPreference", () => {
 
   it.each([
     ["demo_session"],
+    ["demo_sid"],
     ["demo_role"],
     ["demo_preset"],
     ["mock_faults"],

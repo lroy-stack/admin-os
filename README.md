@@ -156,7 +156,7 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run check` | Lint, format and layer boundaries (Biome, dependency-cruiser) |
 | `npm run media` | Rebuilds the screenshots and recordings in `media/` |
 | `npm run preview` | Cloudflare Workers build, served locally on workerd |
-| `npm run deploy` | Cloudflare Workers build and deploy |
+| `npm run deploy` | Deploys the demo store Worker, then the Cloudflare Workers build |
 | `npm run mcp:stdio` | MCP server over stdio |
 
 ## Deploy
@@ -168,15 +168,24 @@ deploy your own:
    replace the custom domain with a hostname on one of your Cloudflare zones. Without a zone, remove `routes` and set
    `workers_dev` to `true` to serve it on your workers.dev subdomain.
 2. Log in once with `npx wrangler login`.
-3. Build and deploy with your public URL, which the build writes into canonical and Open Graph links:
+3. Visitors' demo data lives in a Durable Object of its own Worker (`workers/demo-store`), which `npm run deploy`
+   deploys first. Give the web Worker the key that signs the demo session cookie (at least 32 characters; wrangler
+   offers to create the Worker if it does not exist yet):
+
+   ```bash
+   openssl rand -base64 32 | npx wrangler secret put DEMO_SESSION_SECRET
+   ```
+
+   To keep a visitor's data in the memory of each instance instead, remove `DATA_STORE`, `durable_objects` and
+   `DEMO_SESSION_SECRET`; it then resets when Cloudflare recycles the instance.
+4. Build and deploy with your public URL, which the build writes into canonical and Open Graph links:
 
    ```bash
    NEXT_PUBLIC_SITE_URL=https://admin-os.example.com npm run deploy
    ```
 
 On the mock adapter the MCP endpoint accepts the public demo tokens; set your own with
-`npx wrangler secret put MCP_TOKENS`. Data an assistant changes through MCP lives in the worker's memory and resets
-when Cloudflare recycles the instance. Any Node.js host works too: `npm run build && npm run start`.
+`npx wrangler secret put MCP_TOKENS`. Any Node.js host works too: `npm run build && npm run start`.
 
 ## MCP
 

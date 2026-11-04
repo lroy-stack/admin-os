@@ -175,13 +175,13 @@ test.describe("walk-in window in a fresh browser", () => {
     const problems = watch(page);
     await page.goto("/dashboard/bookings");
     await expect(plate(page, "S3", "Seated")).toBeVisible({ timeout: 30_000 });
-    expect((await context.cookies()).map((cookie) => cookie.name)).not.toContain("demo_session");
+    expect((await context.cookies()).map((cookie) => cookie.name)).not.toContain("demo_sid");
 
     const dialog = await openFromHeader(page);
     await dialog.getByRole("button", { name: "Seat 2" }).click();
 
     await expect(page.getByRole("dialog", { name: "Seat walk-in" })).toHaveCount(0);
-    await expect.poll(async () => (await context.cookies()).map((cookie) => cookie.name)).toContain("demo_session");
+    await expect.poll(async () => (await context.cookies()).map((cookie) => cookie.name)).toContain("demo_sid");
     expect(problems).toEqual([]);
     await context.close();
   });

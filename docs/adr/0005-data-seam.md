@@ -168,6 +168,17 @@ Every list capability paginates.
   sessions with a 2-hour TTL.
 - A "Reset demo data" action drops the copy.
 - One visitor never sees another's edits, which also protects the public demo from defacement.
+- **Durable store** (`DATA_STORE=durable`, the public demo's setting). The copy lives in a SQLite-backed Durable Object
+  of its own Worker (`workers/demo-store`), one per `vertical:sessionId`, so every isolate and the MCP door see the
+  same state. The mock kernel runs inside the object; the caller sends `dispatch(capabilityId, input, ctx)`. The
+  object resets to the seed when its `schemaVersion` changes, refuses a caller whose catalogue differs from its own,
+  keeps at most 200 replay records and 50 pending approvals, and deletes itself two hours after its last write.
+  `clock.get` and `settings.values.get` do not depend on the session and are served in process; a visitor without a
+  session never touches the object. The `demo_sid` cookie is `<uuid>.<HMAC-SHA-256>` signed with
+  `DEMO_SESSION_SECRET` (the older unsigned `demo_session` is ignored), so an id this server did not issue never names an object; "Reset demo data" deletes the
+  cookie and the next write starts a new object (the old one expires on its alarm). Without the variable the in-memory
+  store is unchanged. With `DEMO_COOKIE_DOMAIN` set, `demo_sid` and `demo_role` carry that `Domain`, so a
+  subdomain reads the same visitor; unset, they stay host-only.
 
 **Every state is reachable.**
 
@@ -251,7 +262,7 @@ Every list capability paginates.
   `mockHandler(capability, run)` so the handler's input is the capability's parsed input. `src/config/data.server.ts`
   merges them with `kernelMockHandlers`, and a contract test fails when a catalogue capability has no handler or its
   output breaks the schema for any preset.
-- **Cookies** (no `studio_` prefix): `demo_session` (httpOnly; started by `ensureDemoSession()` in a Server
+- **Cookies** (no `studio_` prefix): `demo_sid` (httpOnly, signed; started by `ensureDemoSession()` in a Server
   Action before the first write; the cookie functions live in `src/config/demo-session.server.ts` so the adapter
   wiring has no `next/headers` import, ADR 0009), `demo_role` (role switch; an unknown value falls back to `owner`) and
   `mock_faults` (a visitor's faults in the `MOCK_FAULTS` grammar; a malformed cookie is ignored, while a malformed

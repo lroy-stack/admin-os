@@ -1,3 +1,8 @@
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+// `next dev` reaches the Durable Object store (a binding) through getPlatformProxy; only the durable mode needs it.
+if (process.env.DATA_STORE === "durable") await initOpenNextCloudflareForDev();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
