@@ -132,10 +132,46 @@ export const visibleCapabilities = (catalog: Catalog, manifest: McpManifest, act
   return exposedCapabilities(catalog, manifest).filter((capability) => held.has(capability.permission));
 };
 
-export const toolOf = (capability: AnyCapability, entry: ExposedEntry): Tool => ({
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A summary names other capabilities by id (`customers.create`); an agent calls them by tool name, so each id of a
+ * listed tool is written as its tool name. A longer dotted name (`bookings.walk_in.undo_seconds`, a setting) is left
+ * alone.
+ */
+const withToolNames = (text: string, toolIds: ReadonlySet<string>): string => {
+  if (toolIds.size === 0) return text;
+  const alternatives = [...toolIds].sort((a, b) => b.length - a.length).map(escapeRegExp);
+  const mention = new RegExp(`(?<![\\w.])(?:${alternatives.join("|")})(?![\\w]|\\.\\w)`, "g");
+  return text.replace(mention, toolNameOf);
+};
+
+/**
+ * "customerId with customers_list or customers_duplicates_check": where each id field's valid values come from,
+ * naming only tools in `toolIds`, and only the `fields` asked for when given.
+ */
+const idSourcesOf = (entry: ExposedEntry, toolIds: ReadonlySet<string>, fields?: readonly string[]): string[] =>
+  Object.entries(entry.ids ?? {})
+    .filter(([field]) => fields === undefined || fields.includes(field))
+    .map(([field, ids]) => [field, ids.filter((id) => toolIds.has(id))] as const)
+    .filter(([, ids]) => ids.length > 0)
+    .map(([field, ids]) => `${field} with ${ids.map(toolNameOf).join(" or ")}`);
+
+const descriptionOf = (capability: AnyCapability, entry: ExposedEntry, toolIds: ReadonlySet<string>): string => {
+  const summary = withToolNames(capability.summary, toolIds);
+  const sources = idSourcesOf(entry, toolIds);
+  return sources.length === 0 ? summary : `${summary} Find valid ids: ${sources.join("; ")}.`;
+};
+
+/** `toolIds` are the capabilities listed as tools, so the description can name them by tool name. */
+export const toolOf = (
+  capability: AnyCapability,
+  entry: ExposedEntry,
+  toolIds: ReadonlySet<string> = new Set(),
+): Tool => ({
   name: toolNameOf(capability.id),
   title: entry.title,
-  description: capability.summary,
+  description: descriptionOf(capability, entry, toolIds),
   inputSchema: inputSchemaOf(capability),
   outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
   annotations: annotationsOf(capability),
@@ -169,8 +205,10 @@ const versions = new WeakMap<Catalog, WeakMap<McpManifest, string>>();
 export const toolListVersion = (catalog: Catalog, manifest: McpManifest): string => {
   const known = versions.get(catalog)?.get(manifest);
   if (known !== undefined) return known;
-  const tools = exposedCapabilities(catalog, manifest)
-    .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry))
+  const exposed = exposedCapabilities(catalog, manifest);
+  const toolIds = new Set(exposed.map((capability) => capability.id));
+  const tools = exposed
+    .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry, toolIds))
     .sort(byName);
   const version = hashOf(JSON.stringify({ manifest, tools }));
   const forCatalog = versions.get(catalog) ?? new WeakMap<McpManifest, string>();
@@ -242,8 +280,12 @@ type PreparedCall =
   | { readonly ok: true; readonly input: ToolArguments; readonly key?: string }
   | { readonly ok: false; readonly error: CallToolResult };
 
+const KEY_ADVICE = "send a new UUID for this operation, and the same one if you retry it";
+
 const keyIssue = (where: string) =>
-  toolError(ErrorCodes.invalidInput, `${where} must be a string of 1 to 128 characters`, { paths: [where] });
+  toolError(ErrorCodes.invalidInput, `${where} must be a string of 1 to 128 characters: ${KEY_ADVICE}.`, {
+    paths: [where],
+  });
 
 /**
  * Splits the key from the arguments (spec 004 D6). A create or add takes `idempotencyKey` as an argument; a host may
@@ -282,15 +324,56 @@ const prepareCall = (capability: AnyCapability, args: ToolArguments, meta: Serve
       ok: false,
       error: toolError(
         ErrorCodes.idempotencyRequired,
-        `${toolNameOf(capability.id)} needs the ${IDEMPOTENCY_ARGUMENT} argument`,
-        {
-          paths: [IDEMPOTENCY_ARGUMENT],
-        },
+        `${toolNameOf(capability.id)} needs the ${IDEMPOTENCY_ARGUMENT} argument, a string of 1 to 128 characters: ${KEY_ADVICE}. Nothing was changed.`,
+        { paths: [IDEMPOTENCY_ARGUMENT] },
       ),
     } satisfies PreparedCall;
   }
   return { ok: true, input, ...(key === undefined ? {} : { key }) } satisfies PreparedCall;
 };
+
+/**
+ * The client's `schema.invalid_input` names the failing paths; an agent also needs what is wrong with each and where a
+ * valid id comes from. The arguments are parsed again here, on the error path only, for the issue messages.
+ */
+const explainInvalidInput = (
+  capability: AnyCapability,
+  entry: ExposedEntry,
+  toolIds: ReadonlySet<string>,
+  input: ToolArguments,
+  details: Readonly<Record<string, unknown>> | undefined,
+): CallToolResult | undefined => {
+  const parsed = capability.input.safeParse(input);
+  if (parsed.success) return undefined;
+  const issues = parsed.error.issues.map((issue) => `${issue.path.join(".") || "(arguments)"}: ${issue.message}`);
+  const fields = parsed.error.issues.map((issue) => String(issue.path[0] ?? ""));
+  const sources = idSourcesOf(entry, toolIds, fields);
+  const message = [
+    `${toolNameOf(capability.id)} rejected its arguments: ${issues.join("; ")}.`,
+    "Fix these fields to match the tool's inputSchema in tools/list and call again; nothing was changed.",
+    ...(sources.length === 0 ? [] : [`Find valid ids: ${sources.join("; ")}.`]),
+  ].join(" ");
+  return toolError(ErrorCodes.invalidInput, message, details);
+};
+
+/** A `<module>.not_found` answer points to the tools that list valid ids, when the manifest names them. */
+const explainNotFound = (
+  entry: ExposedEntry,
+  toolIds: ReadonlySet<string>,
+  error: { readonly code: string; readonly message: string; readonly details?: Readonly<Record<string, unknown>> },
+): CallToolResult | undefined => {
+  const sources = idSourcesOf(entry, toolIds);
+  if (!error.code.endsWith(".not_found") || sources.length === 0) return undefined;
+  return toolError(error.code, `${error.message}. Find valid ids: ${sources.join("; ")}.`, error.details);
+};
+
+/** Result `_meta` key with the call's correlation id, the one in the server's call log line (spec 004 U3). */
+export const CORRELATION_META_KEY = "admin-os/correlationId";
+
+const withCorrelation = (result: CallToolResult, correlationId: string): CallToolResult => ({
+  ...result,
+  _meta: { ...result._meta, [CORRELATION_META_KEY]: correlationId },
+});
 
 /**
  * A low-level MCP `Server` for one actor, transport-agnostic: the transports (ADR 0009, T8b) resolve the actor and
@@ -306,8 +389,11 @@ export function projectCatalog(options: ProjectionOptions): Server {
           .map((capability) => toolNameOf(capability.id))
       : [],
   );
+  // Descriptions name only tools this actor is offered: another role's tool, or a write on a read-only server, would
+  // be a name the agent cannot call.
+  const toolIds = new Set([...index.values()].map((capability) => capability.id));
   const tools = [...index.values()]
-    .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry))
+    .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry, toolIds))
     .sort(byName);
   const outputSchemas = new Map(tools.map((tool) => [tool.name, tool.outputSchema]));
 
@@ -324,19 +410,37 @@ export function projectCatalog(options: ProjectionOptions): Server {
 
   server.setRequestHandler("tools/list", () => ({ tools }));
 
+  /** The client's answer as an MCP result; an input or not-found error also says how to fix the call. */
+  const resultOf = (capability: AnyCapability, input: ToolArguments, result: CallResult<unknown>): CallToolResult => {
+    if (isAwaitingApproval(result) || result.ok) return toCallToolResult(result);
+    const entry = manifest[capability.id] as ExposedEntry;
+    const explained =
+      result.error.code === ErrorCodes.invalidInput
+        ? explainInvalidInput(capability, entry, toolIds, input, result.error.details)
+        : explainNotFound(entry, toolIds, result.error);
+    return explained ?? toCallToolResult(result);
+  };
+
   server.setRequestHandler("tools/call", async (request, ctx) => {
     const { name } = request.params;
+    const correlationId = crypto.randomUUID();
     const capability = index.get(name);
-    if (capability === undefined) return withheldWrites.has(name) ? readOnlyRefusal(name) : forbidden(name);
+    if (capability === undefined) {
+      return withCorrelation(withheldWrites.has(name) ? readOnlyRefusal(name) : forbidden(name), correlationId);
+    }
     const prepared: PreparedCall = prepareCall(capability, request.params.arguments ?? {}, ctx.mcpReq._meta);
-    if (!prepared.ok) return prepared.error;
-    const client = createClient(actor, crypto.randomUUID());
+    if (!prepared.ok) return withCorrelation(prepared.error, correlationId);
+    const client = createClient(actor, correlationId);
     // The client validates the arguments itself, so a bad input is `schema.invalid_input` exactly as in the UI.
     const result = await client.call(capability.id, prepared.input, {
       signal: ctx.mcpReq.signal,
       ...(prepared.key === undefined ? {} : { idempotencyKey: prepared.key }),
     });
-    return server.projectCallToolResult(toCallToolResult(result), outputSchemas.get(name));
+    const projected = server.projectCallToolResult(
+      resultOf(capability, prepared.input, result),
+      outputSchemas.get(name),
+    );
+    return withCorrelation(projected, correlationId);
   });
 
   return server;

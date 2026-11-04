@@ -4,13 +4,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { type AnyCapability, defineCapability } from "@/core/capability";
-import { type Actor, createClient } from "@/core/client";
+import { type Actor, type CallLogLine, createClient } from "@/core/client";
 import type { BusinessClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type MockHandler, mockHandler } from "@/core/mock";
-import { ok } from "@/core/result";
+import { err, ok } from "@/core/result";
 
 import {
   annotationsOf,
+  CORRELATION_META_KEY,
   IDEMPOTENCY_META_KEY,
   type McpManifest,
   projectCatalog,
@@ -62,7 +63,8 @@ const notesClear = defineCapability({
 
 const notesCreate = defineCapability({
   id: "notes.create",
-  summary: "Create a note; retrying with the same key creates it once.",
+  summary:
+    "Create a note, then read it with notes.list (up to notes.list_limit). Retrying with the same key creates it once.",
   input: z.strictObject({ text: z.string().min(1) }),
   output: notesOutput,
   permission: "create:notes",
@@ -71,6 +73,16 @@ const notesCreate = defineCapability({
   change: "add",
   idempotency: "key",
   requiresIdempotencyKey: true,
+});
+
+const notesGet = defineCapability({
+  id: "notes.get",
+  summary: "Get one note by its text. Fails with notes.not_found when there is none.",
+  input: z.strictObject({ id: z.string().min(1) }),
+  output: notesOutput,
+  permission: "read:notes",
+  effect: "read",
+  riskTier: 0,
 });
 
 const notesExport = defineCapability({
@@ -88,6 +100,7 @@ const catalog = {
   "notes.add": notesAdd,
   "notes.clear": notesClear,
   "notes.create": notesCreate,
+  "notes.get": notesGet,
   "notes.export": notesExport,
 };
 
@@ -96,6 +109,7 @@ const manifest: McpManifest = {
   "notes.add": { expose: true, title: "Add a note" },
   "notes.clear": { expose: true, title: "Clear the notes" },
   "notes.create": { expose: true, title: "Create a note" },
+  "notes.get": { expose: true, title: "Get a note", ids: { id: ["notes.list"] } },
   "notes.export": { uiOnly: "A browser download; an agent reads the same notes with notes_list" },
 };
 
@@ -113,6 +127,9 @@ const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
     data.notes.push(input.text);
     return ok({ items: [...data.notes] });
   }),
+  ...mockHandler(notesGet, ({ id }, { data }: { data: Notes }) =>
+    data.notes.includes(id) ? ok({ items: [id] }) : err("notes.not_found", `No note "${id}"`, { id }),
+  ),
   ...mockHandler(notesExport, (_input, { data }: { data: Notes }) => ok({ items: [...data.notes] })),
 };
 
@@ -138,15 +155,16 @@ afterEach(async () => {
   await Promise.all(open.splice(0).map((client) => client.close()));
 });
 
+interface ConnectOptions {
+  readonly manifest?: McpManifest;
+  readonly instructions?: string;
+  readonly logger?: (line: CallLogLine) => void;
+}
+
 /**
  * A real MCP client talking to the projection over the SDK's in-memory transport pair. It lists first, as real
  * clients do, so every later `callTool` validates `structuredContent` against the advertised output schema.
  */
-interface ConnectOptions {
-  readonly manifest?: McpManifest;
-  readonly instructions?: string;
-}
-
 const connect = async (actor: Actor, readOnly = false, options: ConnectOptions = {}) => {
   const adapter = createMockAdapter({
     handlers,
@@ -165,7 +183,7 @@ const connect = async (actor: Actor, readOnly = false, options: ConnectOptions =
         actor: callingActor,
         correlationId,
         retryDelayMs: 0,
-        logger: () => undefined,
+        logger: options.logger ?? (() => undefined),
         mode: "production",
       }),
   });
@@ -191,8 +209,8 @@ describe("tool names", () => {
 
 describe("listing", () => {
   it.each([
-    ["the owner", owner, ["notes_add", "notes_clear", "notes_create", "notes_list"]],
-    ["a reader", reader, ["notes_list"]],
+    ["the owner", owner, ["notes_add", "notes_clear", "notes_create", "notes_get", "notes_list"]],
+    ["a reader", reader, ["notes_get", "notes_list"]],
     ["an actor without permissions", nobody, []],
   ] as const)("%s lists exactly the tools its permissions reach, in name order", async (_label, actor, expected) => {
     expect(await toolNames(actor)).toEqual(expected);
@@ -200,7 +218,7 @@ describe("listing", () => {
 
   it("lists only read tools on a read-only server, even for the owner", async () => {
     const { tools } = await (await connect(owner, true)).listTools();
-    expect(tools.map((tool) => tool.name)).toEqual(["notes_list"]);
+    expect(tools.map((tool) => tool.name)).toEqual(["notes_get", "notes_list"]);
   });
 
   it("never lists a UI-only capability, even for an actor that holds its permission", async () => {
@@ -278,6 +296,89 @@ describe("listing", () => {
   });
 });
 
+describe("descriptions and errors that say how to fix the call (spec 004 U3)", () => {
+  const descriptionOf = async (name: string) =>
+    (await (await connect(owner)).listTools()).tools.find((tool) => tool.name === name)?.description;
+
+  it("names the tool that lists valid ids", async () => {
+    expect(await descriptionOf("notes_get")).toBe(
+      "Get one note by its text. Fails with notes.not_found when there is none. Find valid ids: id with notes_list.",
+    );
+  });
+
+  it("writes the capabilities a summary names as tool names, and leaves a longer dotted name alone", async () => {
+    expect(await descriptionOf("notes_create")).toBe(
+      "Create a note, then read it with notes_list (up to notes.list_limit). Retrying with the same key creates it once.",
+    );
+  });
+
+  it("explains schema.invalid_input field by field and keeps the failing paths", async () => {
+    const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "", extra: 1 } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "schema.invalid_input",
+        message: expect.stringMatching(
+          /^notes_add rejected its arguments: text: .+; \(arguments\): .+extra.+ Fix these fields/,
+        ),
+        details: { paths: ["text", ""] },
+      },
+    });
+  });
+
+  it("points a bad id to the tool that lists valid ones", async () => {
+    const result = await (await connect(owner)).callTool({ name: "notes_get", arguments: { id: 42 } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "schema.invalid_input",
+        message: expect.stringMatching(
+          /^notes_get rejected its arguments: id: .+ Find valid ids: id with notes_list\.$/,
+        ),
+      },
+    });
+  });
+
+  it("points a not-found id to the tool that lists valid ones, and keeps the code and details", async () => {
+    const result = await (await connect(owner)).callTool({ name: "notes_get", arguments: { id: "missing" } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "notes.not_found",
+        message: 'No note "missing". Find valid ids: id with notes_list.',
+        details: { id: "missing" },
+      },
+    });
+  });
+
+  it("says how to send the key when a create has none", async () => {
+    const result = await (await connect(owner)).callTool({ name: "notes_create", arguments: { text: "no key" } });
+    expect(result).toMatchObject({
+      structuredContent: {
+        code: "client.idempotency_required",
+        message: expect.stringMatching(/needs the idempotencyKey argument.+new UUID.+same one if you retry/),
+      },
+    });
+  });
+
+  it.each([
+    ["a success", "notes_list", {}],
+    ["a domain error", "notes_get", { id: "missing" }],
+    ["a refusal before dispatch", "notes_create", { text: "no key" }],
+    ["an unknown tool", "billing_export", {}],
+  ] as const)("returns a correlation id in _meta on %s", async (_label, name, args) => {
+    const result = await (await connect(owner)).callTool({ name, arguments: args });
+    expect(result._meta?.[CORRELATION_META_KEY]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("returns the correlation id of the server's call log line", async () => {
+    const lines: CallLogLine[] = [];
+    const client = await connect(owner, false, { logger: (line) => lines.push(line) });
+    const result = await client.callTool({ name: "notes_list", arguments: {} });
+    expect(result._meta?.[CORRELATION_META_KEY]).toBe(lines[0]?.correlationId);
+  });
+});
+
 describe("server metadata (spec 004 D8)", () => {
   it("reports the tool-list version as serverInfo.version", async () => {
     const client = await connect(owner);
@@ -314,6 +415,12 @@ describe("the manifest", () => {
     ["an entry for no capability", { "notes.list": notesList }, manifest, /entries for no capability: notes\.add/],
     ["an empty title", catalog, { ...manifest, "notes.list": { expose: true, title: " " } }, /notes\.list/],
     ["an empty reason", catalog, { ...manifest, "notes.export": { uiOnly: "" } }, /notes\.export/],
+    [
+      "an id hint that names no tool",
+      catalog,
+      { ...manifest, "notes.get": { expose: true, title: "Get a note", ids: { id: ["notes.export"] } } },
+      /id hints that name no exposed tool: notes\.get/,
+    ],
   ] as const)("refuses %s", (_label, testCatalog, testManifest, message) => {
     expect(() =>
       projectCatalog({

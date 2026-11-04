@@ -252,7 +252,68 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       name: "bookings_walk_in_seat",
       arguments: { partySize: 2, resourceIds: ["S8"] },
     });
-    expect(result).toMatchObject({ isError: true, structuredContent: { code: "client.idempotency_required" } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "client.idempotency_required",
+        message: expect.stringContaining("bookings_walk_in_seat needs the idempotencyKey argument"),
+        details: { paths: ["idempotencyKey"] },
+      },
+    });
+  });
+
+  it.each([
+    ["bookings_create", "customerId with customers_list or customers_duplicates_check"],
+    ["bookings_create", "resourceIds with bookings_availability_get or resources_list"],
+    ["bookings_cancel", "id with bookings_list"],
+    ["customers_notes_add", "id with customers_list or customers_duplicates_check"],
+    ["notifications_read", "ids with notifications_list"],
+  ] as const)("describes %s with where to find %s (spec 004 U3)", async (name, source) => {
+    const { tools } = await connect(owner);
+    expect(tools.find((tool) => tool.name === name)?.description).toMatch(
+      new RegExp(`Find valid ids: (?:[^.]+; )?${source}[;.]`),
+    );
+  });
+
+  it("names tools, not capability ids, in a description", async () => {
+    const { tools } = await connect(owner);
+    expect(tools.find((tool) => tool.name === "customers_duplicates_check")?.description).toContain(
+      "Use it before customers_create.",
+    );
+  });
+
+  it("answers a bookings_cancel without an id with the field and the tool that lists booking ids", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const result = await client.callTool({ name: "bookings_cancel", arguments: { reason: "Guest called" } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "schema.invalid_input",
+        message: expect.stringMatching(
+          /^bookings_cancel rejected its arguments: id: .+ Find valid ids: id with bookings_list\.$/,
+        ),
+        details: { paths: ["id"] },
+      },
+    });
+  });
+
+  it("answers an unknown customer with customers.not_found and the tools that list customer ids", async () => {
+    const { client } = await connect(owner, undefined, crypto.randomUUID());
+    const result = await client.callTool({ name: "customers_get", arguments: { id: "C-404" } });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: "customers.not_found",
+        message: expect.stringMatching(/Find valid ids: id with customers_list or customers_duplicates_check\.$/),
+      },
+    });
+  });
+
+  it("returns the call's correlation id in _meta, as in the call log line", async () => {
+    const lines: CallLogLine[] = [];
+    const { client } = await connect(staff, (line) => lines.push(line));
+    const result = await client.callTool({ name: "bookings_list", arguments: { limit: 1 } });
+    expect(result._meta?.["admin-os/correlationId"]).toBe(lines[0]?.correlationId);
   });
 
   it("answers a tool the actor was not offered with access.forbidden, as the UI does", async () => {

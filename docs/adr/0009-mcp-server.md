@@ -302,7 +302,7 @@ and unlisted names answering `access.forbidden`.
 - **Logs.** The Worker writes one line per call, with the correlation id, client id, tool, status and duration.
 
 
-## Amendment 2026-11-04: phase 3 as built (spec 004 T1, U1, U2)
+## Amendment 2026-11-04: phase 3 as built (spec 004 T1, U1, U2, U3)
 
 - **Manifest.** `src/config/mcp-manifest.ts` satisfies `ToolManifest<CatalogById>`; `bookings.status.undo` and
   `bookings.walk_in.undo` are UI-only (ADR 0016, resolution 3). The projection also throws at construction on an
@@ -316,3 +316,9 @@ and unlisted names answering `access.forbidden`.
 - **Protocol metadata.** Tools are sorted by name; `instructions` say where ids come from and what a held write means;
   `serverInfo.version` is a 14-hex-digit hash of the manifest and every exposed tool definition; `tools/list` carries
   `ttlMs: 300000, cacheScope: "private"` on the 2026-07-28 revision (the 2025 era has no cache fields).
+- **Errors and descriptions that say how to fix the call.** A manifest entry's `ids` names, per id field, the tools
+  that list valid values; the description appends them ("Find valid ids: id with bookings_list") and writes the
+  capability ids a summary mentions as the tool names this actor is offered. `schema.invalid_input` keeps its `paths`
+  and its message names each failing field, what is wrong with it and where a valid id comes from; a `*.not_found`
+  answer and `client.idempotency_required` say what to send. Every `tools/call` result carries
+  `_meta["admin-os/correlationId"]`, the id of the server's call log line.

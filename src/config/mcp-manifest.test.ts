@@ -19,6 +19,24 @@ describe("the MCP manifest (spec 004 D5)", () => {
     expect(Object.keys(incomplete)).not.toContain("staff.list");
   });
 
+  it("does not compile when an id hint names a field the capability has no input for", () => {
+    const misnamed: ToolManifest<CatalogById> = {
+      ...MCP_MANIFEST,
+      // @ts-expect-error `bookingId` is not an input field of `bookings.cancel`.
+      "bookings.cancel": { expose: true, title: "Cancel a booking", ids: { bookingId: ["bookings.list"] } },
+    };
+    expect(misnamed["bookings.cancel"]).toHaveProperty("ids");
+  });
+
+  it("does not compile when an id hint names no capability", () => {
+    const misnamed: ToolManifest<CatalogById> = {
+      ...MCP_MANIFEST,
+      // @ts-expect-error `bookings.search` is not a capability of the catalogue.
+      "bookings.cancel": { expose: true, title: "Cancel a booking", ids: { id: ["bookings.search"] } },
+    };
+    expect(misnamed["bookings.cancel"]).toHaveProperty("ids");
+  });
+
   it.each(["bookings.status.undo", "bookings.walk_in.undo"] as const)(
     "keeps %s UI-only: the undo belongs to the person who just acted (ADR 0016, resolution 3)",
     (id) => {

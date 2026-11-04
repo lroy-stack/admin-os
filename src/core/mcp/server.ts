@@ -13,6 +13,7 @@ export {
   annotationsOf,
   awaitingApprovalSchema,
   type ClientFactory,
+  CORRELATION_META_KEY,
   IDEMPOTENCY_META_KEY,
   type ProjectionOptions,
   projectCatalog,
