@@ -124,7 +124,10 @@ export function describeAdapterContract(
             actor: ownerOf(vertical),
             mode: "production",
           });
-          await client.call(id, await inputBeforeCall(client, id, vertical), { idempotencyKey: crypto.randomUUID() });
+          const written = await client.call(id, await inputBeforeCall(client, id, vertical), {
+            idempotencyKey: crypto.randomUUID(),
+          });
+          expect(written).toMatchObject({ ok: true });
           const before = await stateOf(client, readIds, vertical);
 
           await evict();
