@@ -9,9 +9,16 @@ import type { CatalogById } from "./catalog";
  */
 export const MCP_MANIFEST = {
   "access.me.get": { expose: true, title: "Who am I" },
+  "approvals.get": { expose: true, title: "Check a held write" },
   "clock.get": { expose: true, title: "Business clock" },
   "settings.values.get": { expose: true, title: "Read settings" },
   "bookings.list": { expose: true, title: "List the day's bookings" },
+  "bookings.get": { expose: true, title: "Get a booking", ids: { id: ["bookings.list", "bookings.search"] } },
+  "bookings.search": {
+    expose: true,
+    title: "Search bookings",
+    ids: { customerId: ["customers.search", "customers.duplicates.check"] },
+  },
   "bookings.availability.get": { expose: true, title: "Find free times and resources" },
   "bookings.create": {
     expose: true,
@@ -50,6 +57,7 @@ export const MCP_MANIFEST = {
   },
   "catalog.list": { expose: true, title: "List catalog items" },
   "customers.list": { expose: true, title: "List customers" },
+  "customers.search": { expose: true, title: "Search customers" },
   "customers.get": {
     expose: true,
     title: "Get a customer",

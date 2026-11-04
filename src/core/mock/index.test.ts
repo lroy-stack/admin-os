@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { accessCapabilities } from "@/core/access";
+import { approvalsCapabilities } from "@/core/approvals";
 import { type ApprovalContext, defineCapability } from "@/core/capability";
 import { type Actor, createClient } from "@/core/client";
 import { type BusinessClock, clockCapabilities } from "@/core/clock";
@@ -61,6 +62,7 @@ const catalog = {
   "notes.share": notesShare,
   ...clockCapabilities,
   ...accessCapabilities,
+  ...approvalsCapabilities,
 };
 
 const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
@@ -85,7 +87,7 @@ const owner: Actor = {
   actorId: "demo-owner",
   displayName: "Alex Morgan",
   roleId: "owner",
-  permissions: ["read:notes", "create:notes", "read:clock", "read:access"],
+  permissions: ["read:notes", "create:notes", "read:clock", "read:access", "read:approvals"],
 };
 
 const reader: Actor = { actorId: "demo-staff", roleId: "staff", permissions: ["read:notes"] };
@@ -234,6 +236,54 @@ describe("createMockAdapter", () => {
     expect(store.session("visitor-a")).toMatchObject({
       data: { notes: ["seeded"] },
       approvals: [{ capabilityId: "notes.add", actorId: "demo-owner", input: { text: "!delete all" } }],
+    });
+  });
+
+  it("reports a held write's capability and status, and that the caller asked for it", async () => {
+    const { clientFor } = setup();
+    const visitor = clientFor("visitor-a");
+    const held = (await visitor.call("notes.add", { text: "!delete all" })) as { approvalId: string };
+    expect(await visitor.call("approvals.get", { approvalId: held.approvalId })).toEqual({
+      ok: true,
+      value: { approvalId: held.approvalId, capabilityId: "notes.add", status: "pending", requestedByYou: true },
+    });
+  });
+
+  it("never returns the held input", async () => {
+    const { clientFor } = setup();
+    const visitor = clientFor("visitor-a");
+    const held = (await visitor.call("notes.add", { text: "!secret" })) as { approvalId: string };
+    expect(JSON.stringify(await visitor.call("approvals.get", { approvalId: held.approvalId }))).not.toContain(
+      "secret",
+    );
+  });
+
+  it("tells another actor of the session that the write is not theirs", async () => {
+    const { clientFor } = setup();
+    const held = (await clientFor("visitor-a").call("notes.add", { text: "!x" })) as { approvalId: string };
+    const colleague: Actor = { ...owner, actorId: "demo-manager" };
+    expect(
+      await clientFor("visitor-a", colleague).call("approvals.get", { approvalId: held.approvalId }),
+    ).toMatchObject({ ok: true, value: { requestedByYou: false } });
+  });
+
+  it.each([
+    ["an id that was never issued", "visitor-a", "nope"],
+    ["a session that holds nothing", undefined, "nope"],
+  ])("answers approvals.not_found for %s", async (_label, sessionId, approvalId) => {
+    const { clientFor } = setup();
+    expect(await clientFor(sessionId).call("approvals.get", { approvalId })).toMatchObject({
+      ok: false,
+      error: { code: "approvals.not_found" },
+    });
+  });
+
+  it("does not show one visitor's approval to another session", async () => {
+    const { clientFor } = setup();
+    const held = (await clientFor("visitor-a").call("notes.add", { text: "!x" })) as { approvalId: string };
+    expect(await clientFor("visitor-b").call("approvals.get", { approvalId: held.approvalId })).toMatchObject({
+      ok: false,
+      error: { code: "approvals.not_found" },
     });
   });
 

@@ -10,9 +10,10 @@ import {
   customersGet,
   customersList,
   customersNotesAdd,
+  customersSearch,
   customersUnblock,
 } from "./capabilities";
-import { type ContactQuery, matchedFields } from "./contact";
+import { type ContactQuery, matchedFields, normalisePhone } from "./contact";
 import type { Customer, CustomerContactUpdateInput } from "./schema";
 
 /** Writes change the session copy in place (ADR 0005), so the collection is mutable here. */
@@ -62,6 +63,27 @@ const replace = (data: CustomersData, next: Customer): Customer => {
 /** Mock answers for the customers module (ADR 0005); `src/config/data.server.ts` wires them with the preset seed. */
 export const customersMockHandlers = {
   ...mockHandler(customersList, (input, { data }: Context) => paginate(data.customers, input)),
+
+  ...mockHandler(customersSearch, ({ text, ...page }, { data }: Context) => {
+    const needle = text.toLowerCase();
+    const digits = normalisePhone(text);
+    const found = data.customers
+      .filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(needle) ||
+          customer.email?.toLowerCase().includes(needle) === true ||
+          (digits.length >= 2 && customer.phone !== undefined && normalisePhone(customer.phone).includes(digits)),
+      )
+      .map(({ id, name, email, phone, vip, blocked }) => ({
+        id,
+        name,
+        ...(email === undefined ? {} : { email }),
+        ...(phone === undefined ? {} : { phone }),
+        vip,
+        blocked,
+      }));
+    return paginate(found, page);
+  }),
 
   ...mockHandler(customersGet, ({ id }, { data }: Context) => {
     const customer = data.customers.find((candidate) => candidate.id === id);

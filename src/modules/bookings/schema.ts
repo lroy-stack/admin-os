@@ -3,6 +3,7 @@ import { z } from "zod";
 import { channelSchema } from "@/core/channels";
 import { businessDaySchema, endAfterStart, endAfterStartIssue, minuteOfDaySchema } from "@/core/clock";
 import { moneySchema } from "@/core/money";
+import { pageInput } from "@/core/pagination";
 
 export const bookingStatuses = [
   "pending",
@@ -129,6 +130,25 @@ export const bookingRescheduleInput = z.strictObject({
 export const bookingTableAssignInput = z.strictObject({ id: idInput, resourceIds: resourceIdsInput });
 
 export const bookingStaffNoteAddInput = z.strictObject({ id: idInput, text: noteInput.min(1) });
+
+/** Most bookings one search page returns; the full record of each is long. */
+export const BOOKING_SEARCH_MAX_LIMIT = 50;
+
+/**
+ * Finds bookings across days: by guest (`customerId`), by an inclusive range of business days and by free text over
+ * the name, notes and tags. Every filter is optional; without one it pages through all bookings.
+ */
+export const bookingSearchInput = pageInput({ defaultLimit: 20, maxLimit: BOOKING_SEARCH_MAX_LIMIT })
+  .extend({
+    customerId: idInput.optional(),
+    from: businessDaySchema.optional(),
+    to: businessDaySchema.optional(),
+    text: z.string().trim().min(1).max(100).optional(),
+  })
+  .refine((input) => input.from === undefined || input.to === undefined || input.from <= input.to, {
+    message: "from must not be after to",
+    path: ["from"],
+  });
 
 /** `cancelled` and `no_show` are listed so they fail with a domain error that names the right capability. */
 export const bookingStatusAdvanceInput = z.strictObject({ id: idInput, to: z.enum(bookingStatuses) });

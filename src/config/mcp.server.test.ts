@@ -35,12 +35,15 @@ const staffTools = capabilities
  */
 const PINNED = [
   ["access_me_get", true, false, true, 1, false],
+  ["approvals_get", true, false, true, 1, false],
   ["bookings_availability_get", true, false, true, 0, false],
   ["bookings_cancel", false, true, true, 2, false],
   ["bookings_create", false, false, true, 2, true],
+  ["bookings_get", true, false, true, 1, false],
   ["bookings_list", true, false, true, 1, false],
   ["bookings_no_show_mark", false, true, true, 2, false],
   ["bookings_reschedule", false, true, true, 2, false],
+  ["bookings_search", true, false, true, 1, false],
   ["bookings_staff_note_add", false, false, true, 2, true],
   ["bookings_status_advance", false, false, true, 2, false],
   ["bookings_table_assign", false, true, true, 2, false],
@@ -54,6 +57,7 @@ const PINNED = [
   ["customers_get", true, false, true, 1, false],
   ["customers_list", true, false, true, 1, false],
   ["customers_notes_add", false, false, true, 2, true],
+  ["customers_search", true, false, true, 1, false],
   ["customers_unblock", false, true, true, 2, false],
   ["notifications_list", true, false, true, 1, false],
   ["notifications_read", false, false, true, 1, false],

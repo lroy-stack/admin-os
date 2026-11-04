@@ -8,13 +8,15 @@ import { type CallResult, err, ok, type Result } from "@/core/result";
 import { createSettingsReader, type SettingsReader } from "@/core/settings";
 
 import type { FaultMap } from "./faults";
-import type { SessionStore } from "./session-store";
+import type { PendingApproval, SessionStore } from "./session-store";
 
 export interface MockContext<Data> {
   readonly actor: Actor;
   readonly clock: BusinessClock;
   /** The business settings in effect for the session's preset (defaults plus the preset's overrides). */
   readonly settings: SettingsReader;
+  /** The writes held for a person in the visitor's session, for reads about them (`approvals.get`). */
+  readonly approvals: readonly PendingApproval[];
   /** A read sees the seed or the session copy; a write gets the session copy and may change it. */
   readonly data: Data;
 }
@@ -92,7 +94,13 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
       if (fault?.code) return err(fault.code, `${capability.id} forced to ${fault.code} by MOCK_FAULTS`);
 
       if (capability.effect === "read") {
-        return handler(input, { actor: context.actor, clock, settings, data: store.read(sessionId) });
+        return handler(input, {
+          actor: context.actor,
+          clock,
+          settings,
+          approvals: store.approvals(sessionId),
+          data: store.read(sessionId),
+        });
       }
 
       if (sessionId === undefined) {
@@ -113,7 +121,13 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
 
       const result: CallResult<unknown> = capability.approval?.(input, { via: context.via })
         ? approve(session.approvals, capability.id, context.actor.actorId, input)
-        : await handler(input, { actor: context.actor, clock, settings, data: session.data });
+        : await handler(input, {
+            actor: context.actor,
+            clock,
+            settings,
+            approvals: session.approvals,
+            data: session.data,
+          });
       if (replayKey !== undefined) session.replays.set(replayKey, { fingerprint, result });
       return result;
     },
@@ -137,6 +151,18 @@ export const kernelMockHandlers: Readonly<Record<string, MockHandler<unknown>>> 
   "settings.values.get": (input, { settings }) => {
     const result = settings.values((input as { keys?: readonly string[] }).keys);
     return result.ok ? ok({ values: result.value }) : result;
+  },
+  "approvals.get": (input, { actor, approvals }) => {
+    const { approvalId } = input as { approvalId: string };
+    const held = approvals.find((candidate) => candidate.approvalId === approvalId);
+    return held === undefined
+      ? err("approvals.not_found", `No pending approval with id ${approvalId}`, { approvalId })
+      : ok({
+          approvalId: held.approvalId,
+          capabilityId: held.capabilityId,
+          status: "pending",
+          requestedByYou: held.actorId === actor.actorId,
+        });
   },
   "access.me.get": (_input, { actor }) =>
     ok({

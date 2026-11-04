@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { businessDaySchema, minuteOfDaySchema } from "@/core/clock";
 import { moneySchema } from "@/core/money";
+import { pageInput } from "@/core/pagination";
 
 /** What the customer agreed to receive. The whole object is absent when consent is unknown. */
 export const consentSchema = z.object({ marketing: z.boolean() });
@@ -42,6 +43,26 @@ export const customerSchema = z.object({
   ext: z.record(z.string(), z.unknown()).optional(),
 });
 
+/**
+ * A customer as a search shows them: enough to recognise the person and pick the right id. No notes, no `ext`, no
+ * consent and no figures (spec 004, AC8); `customers.get` has the whole record.
+ */
+export const customerSummarySchema = customerSchema.pick({
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  vip: true,
+  blocked: true,
+});
+
+/** Most customers one search page returns. */
+export const CUSTOMER_SEARCH_MAX_LIMIT = 50;
+
+export const customerSearchInput = pageInput({ defaultLimit: 20, maxLimit: CUSTOMER_SEARCH_MAX_LIMIT }).extend({
+  text: z.string().trim().min(2).max(100),
+});
+
 /** Something a customer brings to the business and that bookings concern: a vehicle, a pet, a device. */
 export const assetSchema = z.object({
   id: z.string().min(1),
@@ -51,6 +72,7 @@ export const assetSchema = z.object({
   ext: z.record(z.string(), z.unknown()).optional(),
 });
 
+export type CustomerSummary = z.infer<typeof customerSummarySchema>;
 export type Customer = z.infer<typeof customerSchema>;
 export type CustomerNote = z.infer<typeof customerNoteSchema>;
 export type Asset = z.infer<typeof assetSchema>;

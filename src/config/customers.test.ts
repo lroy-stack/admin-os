@@ -159,6 +159,73 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
     });
   });
 
+  describe("search", () => {
+    const rowsOf = (result: CallResult<unknown>) =>
+      (successOf(result) as { items: Record<string, unknown>[]; nextCursor: string | null }).items;
+
+    const created = async (client: ReturnType<typeof session>) => {
+      const made = customerOf(
+        await client.call(
+          "customers.create",
+          { name: "Zelda Quillfeather", phone: "+34677001122", email: "Zelda.Q@Example.com", marketingConsent: true },
+          key(),
+        ),
+      );
+      await client.call("customers.notes.add", { id: made.id, text: "Allergic to nuts" }, key());
+      return made;
+    };
+
+    it.each([
+      ["a name fragment in another case", "quillFEATHER"],
+      ["an email fragment", "zelda.q@example"],
+      ["a phone typed with separators", "+34 677 001"],
+    ])("finds a customer by %s", async (_label, text) => {
+      const client = session(vertical);
+      const made = await created(client);
+      expect(rowsOf(await client.call("customers.search", { text })).map((row) => row.id)).toEqual([made.id]);
+    });
+
+    it("returns concise rows with no notes, consent, figures, tags or ext (AC8)", async () => {
+      const client = session(vertical);
+      await created(client);
+      const [row] = rowsOf(await client.call("customers.search", { text: "quillfeather" }));
+      expect(Object.keys(row ?? {}).sort()).toEqual(["blocked", "email", "id", "name", "phone", "vip"]);
+    });
+
+    it("finds nothing for text that matches no customer", async () => {
+      expect(rowsOf(await session(vertical).call("customers.search", { text: "no such person" }))).toEqual([]);
+    });
+
+    it("pages with a cursor and says when there is more", async () => {
+      const client = session(vertical);
+      await client.call("customers.create", { name: "Pagey One" }, key());
+      await client.call("customers.create", { name: "Pagey Two" }, key());
+      const first = successOf(await client.call("customers.search", { text: "pagey", limit: 1 })) as {
+        nextCursor: string;
+      };
+      const second = await client.call("customers.search", { text: "pagey", limit: 1, cursor: first.nextCursor });
+      expect(rowsOf(second).map((row) => row.name)).toEqual(["Pagey Two"]);
+    });
+
+    it.each([
+      ["a limit above 50", { text: "ab", limit: 51 }],
+      ["a one-character text", { text: "a" }],
+      ["a missing text", {}],
+    ])("refuses %s", async (_label, input) => {
+      expect(await session(vertical).call("customers.search", input as never)).toMatchObject({
+        ok: false,
+        error: { code: "schema.invalid_input" },
+      });
+    });
+
+    it("is forbidden without read:customers", async () => {
+      expect(await session(vertical, ["read:bookings"]).call("customers.search", { text: "ab" })).toMatchObject({
+        ok: false,
+        error: { code: "access.forbidden" },
+      });
+    });
+  });
+
   it("signs a note with the acting staff member", async () => {
     const result = await session(vertical).call(
       "customers.notes.add",

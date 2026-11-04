@@ -959,3 +959,79 @@ describe("booking permissions by role", () => {
     expect(permissions(1)).toContain(permission);
   });
 });
+
+describe("booking reads: get and search", () => {
+  const customer = hospitalitySeed.customers[0];
+  const stored = (id: string, extra: Partial<BookingInput>): BookingInput => ({
+    ...booking("confirmed", id),
+    ...extra,
+  });
+  const seeded = [
+    stored("s1", { businessDay: "2026-11-01", startMin: 600, contactName: "Alice Ray", guestNote: "Birthday cake" }),
+    stored("s2", { businessDay: "2026-11-01", startMin: 700, contactName: "Bob", staffNote: "Needs HIGHCHAIR" }),
+    stored("s3", {
+      businessDay: "2026-11-03",
+      startMin: 600,
+      contactName: undefined,
+      customerId: customer?.id,
+      tags: ["vip"],
+    }),
+  ];
+  const reader = () => world("hospitality", hospitalityWith(seeded)).client;
+  const idsOf = (result: CallResult<unknown>) =>
+    (successValue(result) as { items: { id: string }[] }).items.map((item) => item.id);
+
+  it("gets one booking by id", async () => {
+    expect(bookingOf(await reader().call("bookings.get", { id: "s2" })).staffNote).toBe("Needs HIGHCHAIR");
+  });
+
+  it("answers bookings.not_found for an unknown id", async () => {
+    expect(await reader().call("bookings.get", { id: "ghost" })).toMatchObject({
+      ok: false,
+      error: { code: "bookings.not_found" },
+    });
+  });
+
+  it.each([
+    ["customer", { customerId: customer?.id }, ["s3"]],
+    ["a range starting on a day", { from: "2026-11-02" }, ["s3"]],
+    ["a range ending on a day", { to: "2026-11-01" }, ["s1", "s2"]],
+    ["a range of one day", { from: "2026-11-01", to: "2026-11-01" }, ["s1", "s2"]],
+    ["text in a contact name, in any case", { text: "ALICE" }, ["s1"]],
+    ["text in a guest note", { text: "birthday" }, ["s1"]],
+    ["text in a staff note", { text: "highchair" }, ["s2"]],
+    ["text in a tag", { text: "vip" }, ["s3"]],
+    ["text in the customer's name", { text: customer?.name ?? "" }, ["s3"]],
+    ["text and range together", { text: "bob", from: "2026-11-03" }, []],
+    ["no filter, ordered by day then start", {}, ["s1", "s2", "s3"]],
+  ])("searches by %s", async (_label, input, expected) => {
+    expect(idsOf(await reader().call("bookings.search", input))).toEqual(expected);
+  });
+
+  it("pages with a cursor and says when there is more", async () => {
+    const client = reader();
+    const first = successValue(await client.call("bookings.search", { limit: 2 })) as { nextCursor: string };
+    const second = await client.call("bookings.search", { limit: 2, cursor: first.nextCursor });
+    expect(idsOf(second)).toEqual(["s3"]);
+  });
+
+  it.each([
+    ["a limit above 50", { limit: 51 }],
+    ["a range that ends before it starts", { from: "2026-11-03", to: "2026-11-01" }],
+    ["blank text", { text: "  " }],
+    ["an unknown filter", { status: "confirmed" }],
+  ])("refuses %s", async (_label, input) => {
+    expect(await reader().call("bookings.search", input as never)).toMatchObject({
+      ok: false,
+      error: { code: "schema.invalid_input" },
+    });
+  });
+
+  it.each([
+    ["bookings.get", { id: "s1" }],
+    ["bookings.search", {}],
+  ] as const)("is forbidden to call %s without read:bookings", async (id, input) => {
+    const client = world("hospitality", hospitalityWith(seeded)).clientAt(CLOCKS.hospitality.nowMin, []);
+    expect(await client.call(id, input)).toMatchObject({ ok: false, error: { code: "access.forbidden" } });
+  });
+});

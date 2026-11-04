@@ -31,8 +31,8 @@ describe("the MCP manifest (spec 004 D5)", () => {
   it("does not compile when an id hint names no capability", () => {
     const misnamed: ToolManifest<CatalogById> = {
       ...MCP_MANIFEST,
-      // @ts-expect-error `bookings.search` is not a capability of the catalogue.
-      "bookings.cancel": { expose: true, title: "Cancel a booking", ids: { id: ["bookings.search"] } },
+      // @ts-expect-error `bookings.find` is not a capability of the catalogue.
+      "bookings.cancel": { expose: true, title: "Cancel a booking", ids: { id: ["bookings.find"] } },
     };
     expect(misnamed["bookings.cancel"]).toHaveProperty("ids");
   });

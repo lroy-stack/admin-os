@@ -3,7 +3,13 @@ import { z } from "zod";
 import { defineCapability } from "@/core/capability";
 import { pageInput, pageOutput } from "@/core/pagination";
 
-import { customerContactUpdateInput, customerCreateInput, customerSchema } from "./schema";
+import {
+  customerContactUpdateInput,
+  customerCreateInput,
+  customerSchema,
+  customerSearchInput,
+  customerSummarySchema,
+} from "./schema";
 
 const idInput = z.strictObject({ id: z.string().min(1) });
 
@@ -22,6 +28,17 @@ export const customersGet = defineCapability({
   summary: "Get one customer by id. Fails with customers.not_found when there is none.",
   input: idInput,
   output: customerSchema,
+  permission: "read:customers",
+  effect: "read",
+  riskTier: 1,
+});
+
+export const customersSearch = defineCapability({
+  id: "customers.search",
+  summary:
+    "Find customers by text in their name, phone or email, one page of at most 50 at a time. Returns concise rows (id, name, phone, email, vip, blocked) without notes or consent; use customers.get for the whole record. Phones match after dropping spaces, dashes, dots and parentheses.",
+  input: customerSearchInput,
+  output: pageOutput(customerSummarySchema),
   permission: "read:customers",
   effect: "read",
   riskTier: 1,
@@ -111,6 +128,7 @@ export const customersUnblock = defineCapability({
 export const customersCapabilities = {
   "customers.list": customersList,
   "customers.get": customersGet,
+  "customers.search": customersSearch,
   "customers.duplicates.check": customersDuplicatesCheck,
   "customers.create": customersCreate,
   "customers.contact.update": customersContactUpdate,

@@ -22,6 +22,8 @@ export interface DemoSession<T> {
 export interface SessionStore<T> {
   /** What a read sees: the session's copy when it exists, otherwise the immutable seed. */
   read(sessionId: string | undefined): T;
+  /** The writes held for a person in this session; none without a session. */
+  approvals(sessionId: string | undefined): readonly PendingApproval[];
   /** The session a write acts on, created from the seed on first use. */
   session(sessionId: string): DemoSession<T>;
   /** "Reset demo data": drops the copy, so the next read sees the seed again. */
@@ -69,6 +71,7 @@ export function createSessionStore<T>(seed: T, options: StoreOptions = {}): Sess
 
   return {
     read: (sessionId) => live(sessionId)?.data ?? base,
+    approvals: (sessionId) => live(sessionId)?.approvals ?? [],
     session: (sessionId) => {
       const existing = live(sessionId);
       if (existing) return existing;

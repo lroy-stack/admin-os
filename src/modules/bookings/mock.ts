@@ -7,9 +7,11 @@ import {
   bookingsAvailabilityGet,
   bookingsCancel,
   bookingsCreate,
+  bookingsGet,
   bookingsList,
   bookingsNoShowMark,
   bookingsReschedule,
+  bookingsSearch,
   bookingsStaffNoteAdd,
   bookingsStatusAdvance,
   bookingsStatusUndo,
@@ -39,7 +41,7 @@ import { lateAfterMinutes, serviceWindow, slotMinutes, walkInStayMinutes, walkIn
 interface BookingsData {
   readonly bookings: BookingInput[];
   readonly resources: readonly Pick<Resource, "id" | "capacity" | "active">[];
-  readonly customers: readonly { readonly id: string }[];
+  readonly customers: readonly { readonly id: string; readonly name: string }[];
 }
 
 type Context = MockContext<BookingsData>;
@@ -155,6 +157,20 @@ function moveBooking(context: Context, id: string, change: BookingChange): Resul
   );
 }
 
+/** The text a search looks in: who booked, what was written about the booking and its tags. */
+const searchableText = (data: BookingsData, booking: BookingInput): string =>
+  [
+    booking.id,
+    booking.contactName,
+    data.customers.find((customer) => customer.id === booking.customerId)?.name,
+    booking.guestNote,
+    booking.staffNote,
+    ...booking.tags,
+  ]
+    .filter((part) => part !== undefined)
+    .join("\n")
+    .toLowerCase();
+
 /** Whether a booking of `businessDay` starting at `startMin` counts as late on the clock. */
 const isLate = (context: Context, booking: BookingInput): boolean => {
   const { clock, settings } = context;
@@ -180,6 +196,24 @@ export const bookingsMockHandlers = {
       input,
     ),
   ),
+
+  ...mockHandler(bookingsGet, ({ id }, { data }: Context) => {
+    const booking = bookingOf(data, id);
+    return booking === undefined ? notFound("booking", [id]) : ok(booking);
+  }),
+
+  ...mockHandler(bookingsSearch, ({ customerId, from, to, text, ...page }, { data }: Context) => {
+    const needle = text?.toLowerCase();
+    const found = data.bookings
+      .filter((booking) => customerId === undefined || booking.customerId === customerId)
+      .filter((booking) => from === undefined || booking.businessDay >= from)
+      .filter((booking) => to === undefined || booking.businessDay <= to)
+      .filter((booking) => needle === undefined || searchableText(data, booking).includes(needle))
+      .sort(
+        (a, b) => a.businessDay.localeCompare(b.businessDay) || a.startMin - b.startMin || a.id.localeCompare(b.id),
+      );
+    return paginate(found, page);
+  }),
 
   /**
    * Offers single resources only: each free resource that seats the whole party. `bookings.create` also accepts

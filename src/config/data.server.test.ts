@@ -48,6 +48,9 @@ const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => 
   const { booking, resource, startMin } = bookable[vertical];
   const inputs: Record<string, Record<string, unknown>> = {
     "customers.get": customer,
+    "customers.search": { text: "ab" },
+    "approvals.get": { approvalId: "held" },
+    "bookings.get": { id: booking },
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
     "customers.contact.update": { ...customer, name: "Contract Test" },
     "customers.notes.add": { ...customer, text: "Called back" },

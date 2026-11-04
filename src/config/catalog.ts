@@ -1,4 +1,5 @@
 import { accessCapabilities } from "@/core/access";
+import { approvalsCapabilities } from "@/core/approvals";
 import { mergeCatalogs } from "@/core/capability";
 import { clockCapabilities } from "@/core/clock";
 import { settingsCapabilities } from "@/core/settings";
@@ -12,6 +13,7 @@ import { staffCapabilities } from "@/modules/staff";
 /** The catalogues the kit merges, kept with their literal ids and effects (`mergeCatalogs` returns a wide `Catalog`). */
 export const SOURCE_CATALOGS = [
   accessCapabilities,
+  approvalsCapabilities,
   clockCapabilities,
   settingsCapabilities,
   bookingsCapabilities,

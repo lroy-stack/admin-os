@@ -11,6 +11,7 @@ import {
   bookingNoShowInput,
   bookingRescheduleInput,
   bookingSchema,
+  bookingSearchInput,
   bookingStaffNoteAddInput,
   bookingStatusAdvanceInput,
   bookingTableAssignInput,
@@ -23,6 +24,27 @@ export const bookingsList = defineCapability({
   summary:
     "List the bookings of one business day, one page at a time. Without businessDay it lists the current business day.",
   input: pageInput({ defaultLimit: 50, maxLimit: 200 }).extend({ businessDay: businessDaySchema.optional() }),
+  output: pageOutput(bookingSchema),
+  permission: "read:bookings",
+  effect: "read",
+  riskTier: 1,
+});
+
+export const bookingsGet = defineCapability({
+  id: "bookings.get",
+  summary: "Get one booking by id. Fails with bookings.not_found when there is none.",
+  input: bookingIdInput,
+  output: bookingSchema,
+  permission: "read:bookings",
+  effect: "read",
+  riskTier: 1,
+});
+
+export const bookingsSearch = defineCapability({
+  id: "bookings.search",
+  summary:
+    "Find bookings across days, one page of at most 50 at a time, by customerId, by an inclusive range of business days (from, to) and by text matched against the guest's name, notes, tags and the booking id. Filters combine; results are ordered by day and start. Use bookings.list for one day.",
+  input: bookingSearchInput,
   output: pageOutput(bookingSchema),
   permission: "read:bookings",
   effect: "read",
@@ -177,6 +199,8 @@ export const bookingsWalkInUndo = defineCapability({
 
 export const bookingsCapabilities = {
   "bookings.list": bookingsList,
+  "bookings.get": bookingsGet,
+  "bookings.search": bookingsSearch,
   "bookings.availability.get": bookingsAvailabilityGet,
   "bookings.create": bookingsCreate,
   "bookings.reschedule": bookingsReschedule,
