@@ -70,6 +70,23 @@ Keep feature code close to the route that owns it.
 
 Keep a component inside its route until it is reused by another feature. Do not move screen-specific code into a shared directory preemptively.
 
+## Design rules are settled
+
+The design system is decided. Build only from what exists; do not introduce a new window type, component pattern,
+layout behaviour, token, material or design rule. The sources, in this order:
+
+- `docs/adr/0015-window-rules.md`: which window a job uses, from the kit in `src/ds/overlays`, `src/ds/forms` and
+  `src/ds/feedback`.
+- `docs/design/liquid-glass-themes.md` and `docs/adr/0002-liquid-glass-refraction.md`: the material, the themes and the
+  tokens in `src/ds/styles`.
+- `src/components/ui/` (shadcn `radix-nova`) and the shared components in `src/ds/components`, `src/ds/data-table` and
+  `src/ds/shell`.
+- The closest finished screen (step 1 below) for density, spacing, radius and responsive behaviour.
+- `docs/adr/0007-i18n-typed-dictionaries.md` and `docs/i18n/glossary.md` for every visible word.
+
+A window opens above the page and never narrows, pushes or reflows it. When a need does not fit the existing rules,
+stop and ask the owner before building anything new.
+
 ## Creating or extending a screen
 
 1. Inspect the closest current screen before writing code. Finance, Infrastructure, CRM, and Analytics are useful references. Do not use routes under `(legacy)` as references for new screens unless maintaining a legacy route.
