@@ -9,7 +9,7 @@ import type { BusinessClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type MockHandler, mockHandler } from "@/core/mock";
 import { ok } from "@/core/result";
 
-import { IDEMPOTENCY_META_KEY, projectCatalog, toolNameOf, toolOf } from "./server";
+import { IDEMPOTENCY_META_KEY, type McpManifest, projectCatalog, toolNameOf, toolOf } from "./server";
 
 interface Notes {
   readonly notes: string[];
@@ -49,7 +49,29 @@ const notesClear = defineCapability({
   riskTier: 3,
 });
 
-const catalog = { "notes.list": notesList, "notes.add": notesAdd, "notes.clear": notesClear };
+const notesExport = defineCapability({
+  id: "notes.export",
+  summary: "Export every note as a file the browser downloads.",
+  input: z.strictObject({}),
+  output: notesOutput,
+  permission: "read:notes",
+  effect: "read",
+  riskTier: 0,
+});
+
+const catalog = {
+  "notes.list": notesList,
+  "notes.add": notesAdd,
+  "notes.clear": notesClear,
+  "notes.export": notesExport,
+};
+
+const manifest: McpManifest = {
+  "notes.list": { expose: true, title: "List notes" },
+  "notes.add": { expose: true, title: "Add a note" },
+  "notes.clear": { expose: true, title: "Clear the notes" },
+  "notes.export": { uiOnly: "A browser download; an agent reads the same notes with notes_list" },
+};
 
 const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
   ...mockHandler(notesList, (_input, { data }: { data: Notes }) => ok({ items: [...data.notes] })),
@@ -61,6 +83,7 @@ const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
     data.notes.splice(0);
     return ok({ items: [] });
   }),
+  ...mockHandler(notesExport, (_input, { data }: { data: Notes }) => ok({ items: [...data.notes] })),
 };
 
 const clock: BusinessClock = {
@@ -98,6 +121,7 @@ const connect = async (actor: Actor, readOnly = false) => {
   });
   const server = projectCatalog({
     catalog,
+    manifest,
     actor,
     readOnly,
     createClient: (callingActor, correlationId) =>
@@ -143,10 +167,26 @@ describe("listing", () => {
     expect(tools.map((tool) => tool.name)).toEqual(["notes_list"]);
   });
 
-  it.each(Object.values(catalog) as AnyCapability[])("$id is described by its summary", async (capability) => {
-    const { tools } = await (await connect(owner)).listTools();
-    expect(tools.find((tool) => tool.name === toolNameOf(capability.id))?.description).toBe(capability.summary);
+  it("never lists a UI-only capability, even for an actor that holds its permission", async () => {
+    expect(await toolNames(owner)).not.toContain("notes_export");
   });
+
+  it.each([
+    ["notes.list", "List notes"],
+    ["notes.add", "Add a note"],
+    ["notes.clear", "Clear the notes"],
+  ] as const)("%s carries its manifest title", async (id, title) => {
+    const { tools } = await (await connect(owner)).listTools();
+    expect(tools.find((tool) => tool.name === toolNameOf(id))?.title).toBe(title);
+  });
+
+  it.each([notesList, notesAdd, notesClear] as AnyCapability[])(
+    "$id is described by its summary",
+    async (capability) => {
+      const { tools } = await (await connect(owner)).listTools();
+      expect(tools.find((tool) => tool.name === toolNameOf(capability.id))?.description).toBe(capability.summary);
+    },
+  );
 
   it.each([
     ["notes.list", { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
@@ -168,7 +208,10 @@ describe("listing", () => {
 
   it("advertises in _meta that a capability needs an idempotency key", () => {
     const pay = defineCapability({ ...notesAdd, id: "notes.pay", requiresIdempotencyKey: true });
-    expect(toolOf(pay)._meta).toEqual({ "admin-os/riskTier": 2, "admin-os/requiresIdempotencyKey": true });
+    expect(toolOf(pay, { expose: true, title: "Pay" })._meta).toEqual({
+      "admin-os/riskTier": 2,
+      "admin-os/requiresIdempotencyKey": true,
+    });
   });
 
   it("throws when two capabilities project to the same tool name", () => {
@@ -176,12 +219,35 @@ describe("listing", () => {
     expect(() =>
       projectCatalog({
         catalog: { "notes.list": notesList, notes_list: clash },
+        manifest: { "notes.list": manifest["notes.list"], notes_list: { expose: true, title: "Clash" } },
         actor: owner,
         createClient: () => {
           throw new Error("not called");
         },
       }),
     ).toThrow(/both project to tool "notes_list"/);
+  });
+});
+
+describe("the manifest", () => {
+  const { "notes.export": _omitted, ...unclassified } = manifest;
+
+  it.each([
+    ["a capability without an entry", catalog, unclassified, /without an MCP manifest entry: notes\.export/],
+    ["an entry for no capability", { "notes.list": notesList }, manifest, /entries for no capability: notes\.add/],
+    ["an empty title", catalog, { ...manifest, "notes.list": { expose: true, title: " " } }, /notes\.list/],
+    ["an empty reason", catalog, { ...manifest, "notes.export": { uiOnly: "" } }, /notes\.export/],
+  ] as const)("refuses %s", (_label, testCatalog, testManifest, message) => {
+    expect(() =>
+      projectCatalog({
+        catalog: testCatalog,
+        manifest: testManifest,
+        actor: owner,
+        createClient: () => {
+          throw new Error("not called");
+        },
+      }),
+    ).toThrow(message);
   });
 });
 
@@ -205,6 +271,7 @@ describe("calls", () => {
     ["a tool outside the actor's permissions", "notes_add"],
     ["a destructive tool for a reader", "notes_clear"],
     ["a name that is no tool at all", "billing_export"],
+    ["a UI-only capability", "notes_export"],
   ])("answers %s with access.forbidden", async (_label, name) => {
     const result = await (await connect(reader)).callTool({ name, arguments: { text: "x" } });
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "access.forbidden" } });

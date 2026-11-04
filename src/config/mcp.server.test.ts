@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AnyCapability } from "@/core/capability";
 import type { Actor, CallLogLine } from "@/core/client";
-import { toolNameOf, toolOf } from "@/core/mcp/server";
+import { type ExposedEntry, toolNameOf, toolOf } from "@/core/mcp/server";
 import { bookingSchema, bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
 import { notificationsList, notificationsRead } from "@/modules/notifications";
@@ -12,6 +12,7 @@ import { notificationsList, notificationsRead } from "@/modules/notifications";
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
 import { createMcpServer } from "./mcp.server";
+import { MCP_MANIFEST } from "./mcp-manifest";
 import { VERTICALS } from "./vertical";
 
 vi.mock("next/headers", () => ({
@@ -51,8 +52,10 @@ const connect = async (actor: Actor, logger?: (line: CallLogLine) => void, sessi
 
 describe("the MCP projection of the catalogue (ADR 0009)", () => {
   it.each(capabilities)("projects $id to one tool with JSON Schemas", (capability) => {
-    expect(toolOf(capability)).toMatchObject({
+    const entry = MCP_MANIFEST[capability.id as keyof typeof MCP_MANIFEST] as ExposedEntry;
+    expect(toolOf(capability, entry)).toMatchObject({
       name: toolNameOf(capability.id),
+      title: entry.title,
       inputSchema: { type: "object" },
       outputSchema: { type: "object" },
     });

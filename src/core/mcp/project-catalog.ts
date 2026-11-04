@@ -12,9 +12,12 @@ import { type Actor, type DataClient, idempotencyKeySchema } from "@/core/client
 import { ErrorCodes } from "@/core/errors";
 import { type CallResult, isAwaitingApproval } from "@/core/result";
 
+import { type ExposedEntry, exposedCapabilities, type McpManifest } from "./manifest";
+
 /**
- * The MCP projection of the catalogue (ADR 0009): one tool per capability the actor may call, dispatched through the
- * same client as the UI, so permissions, approval, validation and error codes match by construction (spec D4).
+ * The MCP projection of the catalogue (ADR 0009): one tool per capability the manifest exposes and the actor may
+ * call, dispatched through the same client as the UI, so permissions, approval, validation and error codes match by
+ * construction (spec D4).
  */
 
 /** `_meta` key a client may set on `tools/call` to make a write safe to retry (ADR 0005 idempotency). */
@@ -31,6 +34,8 @@ export type ClientFactory = (actor: Actor, correlationId: string) => DataClient<
 
 export interface ProjectionOptions {
   readonly catalog: Catalog;
+  /** Which capabilities are tools, and their titles (spec 004 D5); every capability of `catalog` has an entry. */
+  readonly manifest: McpManifest;
   readonly actor: Actor;
   readonly createClient: ClientFactory;
   readonly serverInfo?: { readonly name: string; readonly version: string };
@@ -73,14 +78,18 @@ const jsonSchemaOf = (schema: z.ZodType, io: "input" | "output"): JsonObjectSche
   return { ...json, type: "object" };
 };
 
-/** The capabilities the actor holds the permission for: a tool the actor cannot call is never offered (ADR 0006). */
-export const visibleCapabilities = (catalog: Catalog, actor: Actor): AnyCapability[] => {
+/**
+ * The exposed capabilities the actor holds the permission for: a tool the actor cannot call is never offered
+ * (ADR 0006), and a UI-only capability is never a tool.
+ */
+export const visibleCapabilities = (catalog: Catalog, manifest: McpManifest, actor: Actor): AnyCapability[] => {
   const held = new Set(actor.permissions);
-  return Object.values(catalog).filter((capability) => held.has(capability.permission));
+  return exposedCapabilities(catalog, manifest).filter((capability) => held.has(capability.permission));
 };
 
-export const toolOf = (capability: AnyCapability): Tool => ({
+export const toolOf = (capability: AnyCapability, entry: ExposedEntry): Tool => ({
   name: toolNameOf(capability.id),
+  title: entry.title,
   description: capability.summary,
   inputSchema: jsonSchemaOf(capability.input, "input"),
   outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
@@ -92,9 +101,16 @@ export const toolOf = (capability: AnyCapability): Tool => ({
 });
 
 /** Tool name → capability for the actor; two ids that project to the same name are a catalogue bug and throw. */
-const toolIndex = (catalog: Catalog, actor: Actor, readOnly: boolean): ReadonlyMap<string, AnyCapability> => {
+const toolIndex = (
+  catalog: Catalog,
+  manifest: McpManifest,
+  actor: Actor,
+  readOnly: boolean,
+): ReadonlyMap<string, AnyCapability> => {
   const index = new Map<string, AnyCapability>();
-  const listed = visibleCapabilities(catalog, actor).filter((capability) => !readOnly || capability.effect === "read");
+  const listed = visibleCapabilities(catalog, manifest, actor).filter(
+    (capability) => !readOnly || capability.effect === "read",
+  );
   for (const capability of listed) {
     const name = toolNameOf(capability.id);
     const clash = index.get(name);
@@ -156,16 +172,16 @@ const idempotencyKeyOf = (
  * connect it. It lists only the actor's tools and answers unlisted names with `access.forbidden`, like the UI.
  */
 export function projectCatalog(options: ProjectionOptions): Server {
-  const { catalog, actor, createClient, serverInfo = DEFAULT_SERVER_INFO, readOnly = false } = options;
-  const index = toolIndex(catalog, actor, readOnly);
+  const { catalog, manifest, actor, createClient, serverInfo = DEFAULT_SERVER_INFO, readOnly = false } = options;
+  const index = toolIndex(catalog, manifest, actor, readOnly);
   const withheldWrites = new Set(
     readOnly
-      ? visibleCapabilities(catalog, actor)
+      ? visibleCapabilities(catalog, manifest, actor)
           .filter((capability) => capability.effect !== "read")
           .map((capability) => toolNameOf(capability.id))
       : [],
   );
-  const tools = [...index.values()].map(toolOf);
+  const tools = [...index.values()].map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry));
   const outputSchemas = new Map(tools.map((tool) => [tool.name, tool.outputSchema]));
 
   // The list is fixed for this instance (one actor), so no list-changed notifications are ever sent.

@@ -1,6 +1,15 @@
 import "server-only";
 
 export {
+  type ExposedEntry,
+  exposedCapabilities,
+  isExposed,
+  type ManifestEntry,
+  type McpManifest,
+  type ToolManifest,
+  type UiOnlyEntry,
+} from "./manifest";
+export {
   annotationsOf,
   awaitingApprovalSchema,
   type ClientFactory,

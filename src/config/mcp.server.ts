@@ -9,6 +9,7 @@ import { parseFaults } from "@/core/mock";
 
 import { CATALOG } from "./catalog";
 import { getAdapter } from "./data.server";
+import { MCP_MANIFEST } from "./mcp-manifest";
 import type { VerticalId } from "./vertical";
 
 export interface McpServerOptions {
@@ -23,7 +24,10 @@ export interface McpServerOptions {
   readonly readOnly?: boolean;
 }
 
-/** The MCP server for one actor: the merged catalogue through the same client and adapter as the UI (spec D4). */
+/**
+ * The MCP server for one actor: the merged catalogue, as the manifest presents it, through the same client and
+ * adapter as the UI (spec D4).
+ */
 export function createMcpServer(options: McpServerOptions): Server {
   const adapter = getAdapter({
     vertical: options.vertical,
@@ -32,6 +36,7 @@ export function createMcpServer(options: McpServerOptions): Server {
   });
   return projectCatalog({
     catalog: CATALOG,
+    manifest: MCP_MANIFEST,
     actor: options.actor,
     readOnly: options.readOnly === true,
     createClient: (actor, correlationId) =>
