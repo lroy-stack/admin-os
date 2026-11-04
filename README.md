@@ -119,8 +119,9 @@ Every image is generated from the running app by `npm run media`
 
 ## Architecture
 
-Code is organised in package-shaped layers with one dependency direction, enforced by lint. Extracting a layer into
-its own package is a move, not a rewrite.
+Code is organised in package-shaped layers with one dependency direction, checked by `npm run check`
+(dependency-cruiser). Extracting a layer into its own package is a move, not a rewrite
+([ADR 0003](docs/adr/0003-package-shaped-layers.md)).
 
 ```text
 core ← ds ← engines ← modules ← verticals ← config ← app
@@ -128,17 +129,97 @@ core ← ds ← engines ← modules ← verticals ← config ← app
 
 | Folder | Holds |
 | --- | --- |
-| `src/core` | Contracts: results and errors, capabilities, money, i18n, clock, channels |
-| `src/ds` | Design system: tokens, glass styles, presets, shared components, shell, preferences |
-| `src/modules` | Generic domains: bookings, customers, catalog, staff, resources |
+| `src/core` | Contracts: results and errors, capabilities, the data client, access, approvals, settings, money, i18n, clock, the mock kernel, the MCP projection |
+| `src/ds` | Design system: tokens and glass, the window kit (`overlays`, `forms`, `feedback`), shared components, data table, shell, preferences |
+| `src/engines` | Mechanisms two screens share (a board, a calendar with layers). None yet: an engine is created on its second consumer |
+| `src/modules` | Generic domains: bookings, customers, catalog, notifications, resources, staff |
 | `src/verticals` | Presets: hospitality (reference), salon, workshop |
-| `src/app` | Thin routes |
+| `src/config` | The composition root: the catalogue, the mock handlers, the adapter, the runtime, the MCP manifest |
+| `src/app` | Thin routes; each screen composes its own `_components/` |
+| `workers/` | The Cloudflare Workers beside the app: `demo-store` (the durable demo store) and `mcp` (the MCP server) |
 
-Every dialog, sheet, panel and confirmation comes from one window kit (`src/ds/overlays`, `src/ds/forms`,
-`src/ds/feedback`), chosen by the job as [ADR 0015](docs/adr/0015-window-rules.md) says, and the e2e fails on any control
-that does nothing (`e2e/smoke/dead-clicks.spec.ts`).
+`src/components/ui` is shadcn (`radix-nova`), never edited; `src/lib` and `src/hooks` hold small shared utilities.
 
-Architecture decisions live in [`docs/adr`](docs/adr).
+### Who owns a control
+
+Every control on a screen does something, and its action lives in the lowest layer that owns the job; the route only
+composes. The e2e fails on any control that does nothing (`e2e/smoke/dead-clicks.spec.ts`).
+
+| The control… | Its owner |
+| --- | --- |
+| reads or changes business data | a capability of a module in `src/modules`, called through `client.call` |
+| runs a mechanism two screens share | an engine in `src/engines`, fed by a module through a data contract |
+| opens a window, confirms, undoes, guards leaving | the window kit, chosen by the job ([ADR 0015](docs/adr/0015-window-rules.md)) |
+| belongs to a showcase-only screen | the screen, with local demo state and kit windows; no capability, no MCP tool |
+| has no owner yet | nobody: it is removed, never left dead |
+
+### Building on the template
+
+Each path names the files to touch, in order, and the decision record behind it. In a fresh clone, run
+`npx next typegen` once (or `npm run dev`): it writes the git-ignored `next-env.d.ts` that `tsc` needs. Then
+`npx tsc --noEmit`, `npm test` and `npm run check` tell you what is still missing; `npm run check:fix` sorts imports.
+
+**Add a module** ([ADR 0004](docs/adr/0004-vertical-presets-and-generic-domains.md),
+[0005](docs/adr/0005-data-seam.md), [0006](docs/adr/0006-registries-permissions-navigation.md)). The smallest
+complete example is `src/modules/notifications`.
+
+1. `src/modules/<domain>/schema.ts`: zod schemas for the records, inputs and outputs. Money is integer minor units
+   (`moneySchema`), phones are E.164.
+2. `capabilities.ts`: one `defineCapability` per operation, with an id `<domain>.<verb>`, a `summary` an agent can act
+   on, `input`, `output`, a `permission` such as `read:<domain>`, an `effect` (`read`, `write` or `destructive`) and a
+   `riskTier`; writes also declare `change` and `idempotency`. Collect them in one `<domain>Capabilities` record;
+   `index.ts` re-exports the capabilities and the schemas.
+3. `mock.ts`: a `mockHandler` per capability over the demo data, exported from `server.ts` with `messages.ts` (its
+   error and label texts in en, es, de and fr).
+4. Register a new module in `src/config`: its `<domain>Capabilities` in `SOURCE_CATALOGS` (`catalog.ts`) and its
+   handlers in `MOCK_HANDLERS` (`demo-kernel.ts`). A capability added to an existing module needs neither, since the
+   module's record is already there; a capability that takes required input also gives its smallest valid input to
+   `inputFor` (`src/config/adapter-contract.testkit.ts`), so the adapter contract can call it.
+5. Classify every capability for MCP, as the "Expose a capability to MCP" path below says. Until you do, the
+   catalogue does not compile.
+6. Turn it on: add the module id to the `modules` of each preset that offers it. Roles get its permissions from their
+   rule; a module that is off grants nothing.
+7. Test it at two levels. In the module (`<domain>.test.ts`), test the schemas and handlers on an inline fixture and
+   run `assertDictionaryParity` over its messages; a module sits below the presets and cannot import their seeds. On a
+   preset's seed, test it in `src/config/<domain>.test.ts`, which builds a client with
+   `createClient(CATALOG, getAdapter({ vertical, sessionId }), …)` as `src/config/customers.test.ts` does.
+
+**Add a preset** ([ADR 0004](docs/adr/0004-vertical-presets-and-generic-domains.md)). Copy `src/verticals/salon`:
+`index.ts` lists the modules, the nav, the roles, the typed `ext` slots, the setting defaults and the `leakTerms`
+that must never reach the generic layers; `server.ts` and `seed.ts` hold the vocabulary and the demo data. Add it to
+`VERTICALS` (`src/config/vertical.ts`) and `DEMO` (`src/config/demo-kernel.ts`); the leak test and the seed tests
+check it.
+
+**Wire a control** ([ADR 0005](docs/adr/0005-data-seam.md), [0007](docs/adr/0007-i18n-typed-dictionaries.md),
+[0015](docs/adr/0015-window-rules.md)). A read happens on the server: `const { client } = await getRuntime()`, then
+`client.call("<capability>", input)`, and the screen shows the outcome through `ReadState` (an error is never an
+empty list). A write is a Server Action that calls `runWrite("<capability>", input, attemptKey)`
+(`src/config/write-action.server.ts`), run from the client with `useCapabilityAction` inside the window the job calls
+for; add the action to the inventory in `src/config/server-actions.test.ts`. Hide what the actor cannot do with
+`can()`, and take every word from the screen's dictionary. `src/app/(main)/dashboard/customers` is the reference.
+
+**Swap the adapter** ([ADR 0005](docs/adr/0005-data-seam.md)). The app reaches data only through the `Adapter`
+interface (`src/core/client/index.ts`), one `dispatch` per capability call. Implement it for your backend, select it
+by `DATA_ADAPTER` in `getAdapter` (`src/config/data.server.ts`), and run the shared contract against it with
+`describeAdapterContract` (`src/config/adapter-contract.testkit.ts`), as `src/config/data.server.test.ts` does for the
+in-memory one.
+
+**Expose a capability to MCP** ([ADR 0009](docs/adr/0009-mcp-server.md),
+[0016](docs/adr/0016-mcp-server-as-its-own-product.md)).
+
+1. Classify it in `MCP_MANIFEST` (`src/config/mcp-manifest.ts`): `expose: true` with the `title` clients show, or
+   `uiOnly` with the reason. A small read needs nothing else. A list tool returns `concise` rows, `ids` names the tools
+   that list valid values for an id field, and `untrusted` marks free text people typed.
+2. Pin what an agent will see, its annotations, tier and key requirement, in the `PINNED` table of
+   `src/config/mcp.server.test.ts`; the test lists every tool in name order and fails on a tool it does not know.
+3. Run `npm run mcp:reference` to regenerate [`docs/mcp/reference.md`](docs/mcp/reference.md) before `npm test`:
+   the reference test fails while the file is stale.
+
+The tool's input, output and permission are the capability's own, and a write the policy holds waits for a person in
+the bell. The MCP Worker (`workers/mcp`) serves it over Streamable HTTP and `npm run mcp:stdio` over stdio.
+
+Testing follows [ADR 0008](docs/adr/0008-testing-contracts-and-smoke.md); every decision record is in
+[`docs/adr`](docs/adr).
 
 ## Getting started
 
