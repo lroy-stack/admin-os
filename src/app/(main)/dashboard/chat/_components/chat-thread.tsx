@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import { cn } from "cn";
 import {
@@ -17,8 +17,10 @@ import {
 } from "lucide-react";
 
 import { Avatar, AvatarBadge, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Bubble, BubbleContent, BubbleGroup, BubbleReactions } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/components/ui/message";
@@ -43,11 +46,30 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
+import { useCopy, useToastWithUndo } from "@/ds/feedback";
+import { ConfirmAction, PopoverOrSheet } from "@/ds/overlays";
 import { getInitials } from "@/lib/utils";
 
-import { updateChat } from "./chat-session";
-import { appendMessage } from "./chat-state";
-import { type Message as ChatMessage, type Conversation, currentUser } from "./data";
+import { getChatState, updateChat } from "./chat-session";
+import {
+  appendMessage,
+  blockContact,
+  entryOf,
+  restoreEntry,
+  snoozeConversation,
+  togglePriority,
+  toggleTag,
+  wakeConversation,
+} from "./chat-state";
+import { telHref } from "./contact-links";
+import {
+  CHAT_TAG_IDS,
+  type Message as ChatMessage,
+  type Conversation,
+  currentUser,
+  SNOOZE_IDS,
+  type SnoozeId,
+} from "./data";
 import { chatMessageKey } from "./messages";
 
 interface ChatThreadProps {
@@ -90,6 +112,26 @@ function ThreadBody({
   const text = useMessages(chatMessageKey);
   const locale = useLocale();
   const { contact, dayLabel, messages } = conversation;
+  const copy = useCopy();
+  const withUndo = useToastWithUndo();
+  const moreTrigger = useRef<HTMLButtonElement>(null);
+  const [blocking, setBlocking] = useState(false);
+  const phoneLink = telHref(contact.phone);
+
+  /** Runs a change and offers to take it back: undo restores what the conversation had before. */
+  function changeWithUndo(message: string, transition: Parameters<typeof updateChat>[0]) {
+    const before = entryOf(getChatState(), conversation.id);
+    updateChat(transition);
+    withUndo({ message, undo: () => updateChat((state) => restoreEntry(state, conversation.id, before)) });
+  }
+
+  function snooze(preset: SnoozeId) {
+    changeWithUndo(text.thread.snoozedToast[preset], (state) => snoozeConversation(state, conversation.id, preset));
+  }
+
+  function wake() {
+    changeWithUndo(text.thread.wokeToast, (state) => wakeConversation(state, conversation.id));
+  }
 
   return (
     <div className={cn("flex h-full flex-col py-3", className)}>
@@ -112,7 +154,19 @@ function ThreadBody({
               <AvatarBadge className="bg-green-600 dark:bg-green-800" />
             </Avatar>
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{contact.name}</div>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-sm font-medium">{contact.name}</span>
+                {conversation.status === "snoozed" && conversation.snooze ? (
+                  <Badge variant="secondary" className="shrink-0">
+                    {text.thread.snoozedUntil[conversation.snooze]}
+                  </Badge>
+                ) : null}
+                {conversation.isBlocked ? (
+                  <Badge variant="destructive" className="shrink-0">
+                    {text.thread.blocked}
+                  </Badge>
+                ) : null}
+              </div>
               <div className="text-muted-foreground truncate text-xs leading-4" title={contact.role}>
                 {contact.role}
               </div>
@@ -122,52 +176,118 @@ function ThreadBody({
           <div className="flex shrink-0 items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label={text.thread.call}>
-                  <PhoneCall />
-                </Button>
+                {phoneLink ? (
+                  <Button variant="ghost" size="icon-sm" aria-label={text.thread.call} asChild>
+                    <a href={phoneLink}>
+                      <PhoneCall />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button variant="ghost" size="icon-sm" aria-label={text.thread.call} disabled>
+                    <PhoneCall />
+                  </Button>
+                )}
               </TooltipTrigger>
               <TooltipContent>{text.thread.call}</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <PopoverOrSheet
+              title={text.thread.tagTitle}
+              align="end"
+              trigger={
                 <Button variant="ghost" size="icon-sm" aria-label={text.thread.tag}>
                   <Tag />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{text.thread.tag}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
+              }
+            >
+              <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+                {CHAT_TAG_IDS.map((tag) => (
+                  <Field key={tag} orientation="horizontal">
+                    <Checkbox
+                      id={`chat-tag-${tag}`}
+                      checked={conversation.tagIds.includes(tag)}
+                      onCheckedChange={() => updateChat((state) => toggleTag(state, conversation, tag))}
+                    />
+                    <FieldLabel htmlFor={`chat-tag-${tag}`} className="font-normal">
+                      {text.tags[tag]}
+                    </FieldLabel>
+                  </Field>
+                ))}
+              </div>
+            </PopoverOrSheet>
+            <PopoverOrSheet
+              title={text.thread.snoozeTitle}
+              align="end"
+              trigger={
                 <Button variant="ghost" size="icon-sm" aria-label={text.thread.snooze}>
                   <AlarmClock />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{text.thread.snooze}</TooltipContent>
-            </Tooltip>
+              }
+            >
+              {({ close }) => (
+                <div className="flex flex-col gap-2">
+                  {SNOOZE_IDS.map((preset) => (
+                    <Button
+                      key={preset}
+                      type="button"
+                      variant="outline"
+                      className="justify-start"
+                      onClick={() => {
+                        snooze(preset);
+                        close();
+                      }}
+                    >
+                      {text.thread.snoozePresets[preset]}
+                    </Button>
+                  ))}
+                  {conversation.status === "snoozed" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        wake();
+                        close();
+                      }}
+                    >
+                      {text.thread.wake}
+                    </Button>
+                  ) : null}
+                </div>
+              )}
+            </PopoverOrSheet>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label={text.thread.moreActions}>
+                <Button ref={moreTrigger} variant="ghost" size="icon-sm" aria-label={text.thread.moreActions}>
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuGroup>
                   <DropdownMenuItem onSelect={onOpenContact}>
                     <UserRound />
                     {text.thread.viewProfile}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={contact.email === ""}
+                    onSelect={() => void copy(contact.email, text.profile.fields.email)}
+                  >
                     <Copy />
                     {text.thread.copyEmail}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => updateChat((state) => togglePriority(state, conversation))}>
                     <Flag />
-                    {text.thread.markPriority}
+                    {conversation.isPriority ? text.thread.removePriority : text.thread.markPriority}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem variant="destructive">{text.thread.blockContact}</DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={conversation.isBlocked}
+                    onSelect={() => setBlocking(true)}
+                  >
+                    {text.thread.blockContact}
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -261,6 +381,22 @@ function ThreadBody({
           </TabsContent>
         </Tabs>
       </div>
+
+      <ConfirmAction
+        destructive
+        open={blocking}
+        onOpenChange={setBlocking}
+        returnFocus={moreTrigger}
+        verb={text.thread.block.verb}
+        title={format(text.thread.block.title, locale, { name: contact.name })}
+        consequence={text.thread.block.consequence}
+        onConfirm={async () => {
+          changeWithUndo(format(text.thread.block.toast, locale, { name: contact.name }), (state) =>
+            blockContact(state, conversation.id),
+          );
+          return { status: "ok" };
+        }}
+      />
     </div>
   );
 }

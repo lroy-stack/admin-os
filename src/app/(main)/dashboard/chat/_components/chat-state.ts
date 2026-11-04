@@ -30,6 +30,7 @@ export interface ConversationEntry {
   readonly status?: ConversationStatus;
   readonly snooze?: SnoozeId;
   readonly isPriority?: boolean;
+  readonly isBlocked?: true;
   readonly tagIds?: readonly ChatTagId[];
   /** Opened in the session: the unread badge is gone. */
   readonly read?: true;
@@ -84,6 +85,7 @@ export function applyEntry(conversation: Conversation, entry: ConversationEntry 
     status: entry.status ?? conversation.status,
     snooze: entry.status === undefined ? conversation.snooze : entry.snooze,
     isPriority: entry.isPriority ?? conversation.isPriority,
+    isBlocked: entry.isBlocked ?? conversation.isBlocked,
     tagIds: entry.tagIds ? [...entry.tagIds] : conversation.tagIds,
     isUnread: entry.read ? false : conversation.isUnread,
     unreadCount: entry.read ? 0 : conversation.unreadCount,
@@ -262,7 +264,6 @@ export function createConversation(state: ChatState, fields: NewConversation): C
     timezone: "",
     status: fields.words.status,
     qualifiedAt: "",
-    tags: [],
   };
   const conversation: Conversation = {
     id,
@@ -270,6 +271,7 @@ export function createConversation(state: ChatState, fields: NewConversation): C
     channel: fields.channel,
     status: "open",
     isPriority: false,
+    isBlocked: false,
     tagIds: [],
     name: fields.name,
     subject: fields.subject,
@@ -298,4 +300,35 @@ export function createConversation(state: ChatState, fields: NewConversation): C
 /** Undo: puts back what `entryOf` returned before the action (`undefined` clears the conversation's entry). */
 export function restoreEntry(state: ChatState, id: number, entry: ConversationEntry | undefined): ChatState {
   return withEntry(state, id, entry);
+}
+
+/** Marks a conversation as priority, or takes the mark off. */
+export function togglePriority(state: ChatState, conversation: Conversation): ChatState {
+  return withEntry(state, conversation.id, {
+    ...entryOf(state, conversation.id),
+    isPriority: !conversation.isPriority,
+  });
+}
+
+/** Adds a tag to the contact, or removes it when it is there. */
+export function toggleTag(state: ChatState, conversation: Conversation, tag: ChatTagId): ChatState {
+  const tagIds = conversation.tagIds.includes(tag)
+    ? conversation.tagIds.filter((id) => id !== tag)
+    : [...conversation.tagIds, tag];
+  return withEntry(state, conversation.id, { ...entryOf(state, conversation.id), tagIds });
+}
+
+/** Sets the conversation aside until the preset: it leaves Open and shows under Snoozed. */
+export function snoozeConversation(state: ChatState, id: number, preset: SnoozeId): ChatState {
+  return withEntry(state, id, { ...entryOf(state, id), status: "snoozed", snooze: preset });
+}
+
+/** Brings a snoozed conversation back to Open. */
+export function wakeConversation(state: ChatState, id: number): ChatState {
+  return withEntry(state, id, { ...entryOf(state, id), status: "open", snooze: undefined });
+}
+
+/** Blocks the contact: the conversation closes and is marked blocked. */
+export function blockContact(state: ChatState, id: number): ChatState {
+  return withEntry(state, id, { ...entryOf(state, id), status: "closed", snooze: undefined, isBlocked: true });
 }

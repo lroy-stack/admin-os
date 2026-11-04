@@ -21,50 +21,53 @@ export type SnoozeId = (typeof SNOOZE_IDS)[number];
 
 export type ContactStatus = "lead" | "qualified" | "customer" | "atRisk";
 
-export type ChatTagId =
-  | "devops"
-  | "enterprise"
-  | "p0"
-  | "billing"
-  | "iam"
-  | "highValue"
-  | "sustainability"
-  | "finserv"
-  | "data"
-  | "performance"
-  | "smb"
-  | "onboarding"
-  | "platform"
-  | "npsPromoter"
-  | "churnRisk"
-  | "downgrade"
-  | "api"
-  | "scaling"
-  | "urgent"
-  | "ssl"
-  | "upgrade"
-  | "media"
-  | "bug"
-  | "reports"
-  | "integrations"
-  | "zapier"
-  | "rbac"
-  | "featureRequest"
-  | "mobile"
-  | "android"
-  | "partnership"
-  | "latam"
-  | "reseller"
-  | "compliance"
-  | "audit"
-  | "whiteLabel"
-  | "security"
-  | "mfa"
-  | "export"
-  | "demo"
-  | "sso"
-  | "azure"
-  | "account";
+export const CHAT_TAG_IDS = [
+  "devops",
+  "enterprise",
+  "p0",
+  "billing",
+  "iam",
+  "highValue",
+  "sustainability",
+  "finserv",
+  "data",
+  "performance",
+  "smb",
+  "onboarding",
+  "platform",
+  "npsPromoter",
+  "churnRisk",
+  "downgrade",
+  "api",
+  "scaling",
+  "urgent",
+  "ssl",
+  "upgrade",
+  "media",
+  "bug",
+  "reports",
+  "integrations",
+  "zapier",
+  "rbac",
+  "featureRequest",
+  "mobile",
+  "android",
+  "partnership",
+  "latam",
+  "reseller",
+  "compliance",
+  "audit",
+  "whiteLabel",
+  "security",
+  "mfa",
+  "export",
+  "demo",
+  "sso",
+  "azure",
+  "account",
+] as const;
+
+export type ChatTagId = (typeof CHAT_TAG_IDS)[number];
 
 /** A conversation as the client components see it: every text already in the request's language. */
 export type Conversation = {
@@ -77,7 +80,9 @@ export type Conversation = {
   /** Set while the conversation is snoozed: the preset it was snoozed with. */
   snooze?: SnoozeId;
   isPriority: boolean;
-  /** The contact's tag ids; `contact.tags` has them in the active language. */
+  /** The contact was blocked in the session: the conversation is closed. */
+  isBlocked: boolean;
+  /** The contact's tag ids; the dictionary names them. */
   tagIds: ChatTagId[];
   name: string;
   subject: string;
@@ -114,7 +119,6 @@ export type Contact = {
   timezone: string;
   status: string;
   qualifiedAt: string;
-  tags: string[];
 };
 
 export type ChatNavId = "inbox" | "snoozed" | "sent" | "all";
@@ -878,6 +882,7 @@ export function createConversations(text: ChatMessages, locale: Locale): Convers
       channel: seed.channel,
       status: "open",
       isPriority: false,
+      isBlocked: false,
       tagIds: [...seed.contact.tags],
       name: seed.name,
       subject: words.subject,
@@ -898,7 +903,6 @@ export function createConversations(text: ChatMessages, locale: Locale): Convers
         timezone: seed.contact.timezone,
         status: text.status[seed.contact.status],
         qualifiedAt: formatCalendarDate(seed.contact.qualifiedOn, locale, { dateStyle: "medium" }),
-        tags: seed.contact.tags.map((tag) => text.tags[tag]),
       },
       messages: seed.messages.map((message, index) => ({
         id: message.id,

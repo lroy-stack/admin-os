@@ -63,7 +63,7 @@ export function Chat() {
               showContact ? "translate-x-0 opacity-100" : "translate-x-full opacity-0",
             )}
           >
-            {active ? <ChatProfileDetails contact={active.contact} onClose={() => setShowContact(false)} /> : null}
+            {active ? <ChatProfileDetails conversation={active} onClose={() => setShowContact(false)} /> : null}
           </div>
         </div>
       </div>
@@ -74,7 +74,7 @@ export function Chat() {
           <SheetContent side="right" className="w-80 p-0" showCloseButton={false}>
             <SheetTitle className="sr-only">{text.profile.sheetTitle}</SheetTitle>
             <SheetDescription className="sr-only">{text.profile.sheetDescription}</SheetDescription>
-            {active ? <ChatProfileDetails contact={active.contact} onClose={() => setShowContact(false)} /> : null}
+            {active ? <ChatProfileDetails conversation={active} onClose={() => setShowContact(false)} /> : null}
           </SheetContent>
         </Sheet>
       )}

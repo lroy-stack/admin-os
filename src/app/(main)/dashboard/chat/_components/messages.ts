@@ -8,6 +8,7 @@ import type {
   ContactStatus,
   ConversationGroup,
   ConversationId,
+  SnoozeId,
 } from "./data";
 
 /** The words of one demo conversation, written in each language. People, companies and addresses stay in the data. */
@@ -66,6 +67,24 @@ export interface ChatMessages {
     readonly copyEmail: string;
     readonly markPriority: string;
     readonly blockContact: string;
+    readonly tagTitle: string;
+    readonly snoozeTitle: string;
+    readonly snoozePresets: Readonly<Record<SnoozeId, string>>;
+    /** Beside the contact's name while the conversation is snoozed. */
+    readonly snoozedUntil: Readonly<Record<SnoozeId, string>>;
+    readonly snoozedToast: Readonly<Record<SnoozeId, string>>;
+    readonly wake: string;
+    readonly wokeToast: string;
+    readonly removePriority: string;
+    readonly blocked: string;
+    readonly block: {
+      readonly verb: string;
+      /** Placeholders: `{name}`. */
+      readonly title: string;
+      readonly consequence: string;
+      /** Placeholders: `{name}`. */
+      readonly toast: string;
+    };
     readonly reply: string;
     readonly internalNote: string;
     readonly replyPlaceholder: string;
@@ -88,10 +107,7 @@ export interface ChatMessages {
     readonly close: string;
     readonly email: string;
     readonly call: string;
-    readonly schedule: string;
     readonly copyLink: string;
-    readonly more: string;
-    readonly tabs: { readonly details: string; readonly files: string; readonly activity: string };
     readonly fields: {
       readonly email: string;
       readonly phone: string;

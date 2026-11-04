@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeConversation,
   appendMessage,
+  blockContact,
   createConversation,
   entryOf,
   INITIAL_CHAT_STATE,
@@ -14,9 +15,13 @@ import {
   setQuery,
   setScope,
   setTab,
+  snoozeConversation,
   tabCounts,
+  togglePriority,
+  toggleTag,
   unreadIn,
   visibleConversations,
+  wakeConversation,
 } from "./chat-state";
 import { createConversations } from "./data";
 import { chatMessages } from "./messages.server";
@@ -219,5 +224,76 @@ describe("undo", () => {
     const changed = appendMessage(INITIAL_CHAT_STATE, 1, { kind: "reply", text: "Hi", time: "Just now" });
 
     expect(restoreEntry(changed, 1, before).entries).toEqual({});
+  });
+});
+
+const first = () => resolveConversations(base, INITIAL_CHAT_STATE)[0];
+const firstOf = (state: Parameters<typeof resolveConversations>[1]) => resolveConversations(base, state)[0];
+
+describe("priority and tags", () => {
+  it("marks a conversation as priority and takes the mark off", () => {
+    const marked = togglePriority(INITIAL_CHAT_STATE, base[0] ?? first());
+    const unmarked = togglePriority(marked, firstOf(marked) ?? first());
+
+    expect([firstOf(marked)?.isPriority, firstOf(unmarked)?.isPriority]).toEqual([true, false]);
+  });
+
+  it("lists a priority conversation under the priority filter", () => {
+    const marked = togglePriority(INITIAL_CHAT_STATE, base[0] ?? first());
+
+    expect(ids(visible(setFilter(marked, { unread: false, priority: true })))).toEqual([1]);
+  });
+
+  it("adds a tag and removes it again", () => {
+    const added = toggleTag(INITIAL_CHAT_STATE, base[0] ?? first(), "bug");
+    const removed = toggleTag(added, firstOf(added) ?? first(), "bug");
+
+    expect(firstOf(added)?.tagIds).toEqual(["devops", "enterprise", "p0", "bug"]);
+    expect(firstOf(removed)?.tagIds).toEqual(["devops", "enterprise", "p0"]);
+  });
+
+  it("puts a conversation in a view once it carries one of its tags", () => {
+    const state = setScope(toggleTag(INITIAL_CHAT_STATE, base[0] ?? first(), "billing"), {
+      kind: "view",
+      id: "orders",
+    });
+
+    expect(ids(visible(state))).toContain(1);
+  });
+});
+
+describe("snooze and block", () => {
+  it("moves a snoozed conversation from Open to Snoozed with its preset", () => {
+    const state = snoozeConversation(INITIAL_CHAT_STATE, 1, "tomorrow");
+
+    expect(ids(visible(setTab(state, "open")))).not.toContain(1);
+    expect(ids(visible(setScope(state, { kind: "nav", id: "snoozed" })))).toEqual([1]);
+    expect([firstOf(state)?.status, firstOf(state)?.snooze]).toEqual(["snoozed", "tomorrow"]);
+  });
+
+  it("brings a woken conversation back to Open", () => {
+    const woken = wakeConversation(snoozeConversation(INITIAL_CHAT_STATE, 1, "later"), 1);
+
+    expect([firstOf(woken)?.status, firstOf(woken)?.snooze]).toEqual(["open", undefined]);
+  });
+
+  it("counts the snoozed conversation in its tab", () => {
+    const state = snoozeConversation(INITIAL_CHAT_STATE, 1, "later");
+
+    expect(tabCounts(resolveConversations(base, state), state)).toMatchObject({ open: base.length - 1, snoozed: 1 });
+  });
+
+  it("closes a blocked conversation and marks it blocked", () => {
+    const state = blockContact(INITIAL_CHAT_STATE, 1);
+
+    expect([firstOf(state)?.status, firstOf(state)?.isBlocked]).toEqual(["closed", true]);
+    expect(ids(visible(state))).not.toContain(1);
+  });
+
+  it("restores the conversation when a block is undone", () => {
+    const before = entryOf(INITIAL_CHAT_STATE, 1);
+    const blocked = blockContact(INITIAL_CHAT_STATE, 1);
+
+    expect(firstOf(restoreEntry(blocked, 1, before))?.isBlocked).toBe(false);
   });
 });
