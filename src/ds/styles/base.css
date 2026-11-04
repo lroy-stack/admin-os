@@ -199,8 +199,9 @@ html:has([data-landing-page]) {
 
 /*
  * Touch targets: on any coarse pointer, every interactive primitive offers at least 44 × 44 px (WCAG 2.5.5, Apple
- * HIG). Rows, pills and fields grow to 44 px. Glyph controls (checkbox, radio, switch, slider thumb) keep their drawn
- * size and extend an invisible hit area instead, so dense forms keep their layout. Selected by `data-slot`, so the
+ * HIG). Rows, pills and fields grow to 44 px. Glyph controls (checkbox, radio, switch, slider thumb) and the segments of
+ * a glass capsule keep their drawn size and extend an invisible hit area instead, so dense forms keep their layout and
+ * the sliding thumb stays inside its capsule. Selected by `data-slot`, so the
  * shadcn primitives stay untouched.
  */
 @layer base {
@@ -236,12 +237,18 @@ html:has([data-landing-page]) {
       min-width: 44px;
     }
 
+    /* A glass capsule keeps its drawn height: its segments use the invisible hit area below, so the thumb stays inside. */
+    :where(.liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"]) {
+      min-height: 0;
+    }
+
     :where(
         [data-slot="checkbox"],
         [data-slot="radio-group-item"],
         [data-slot="switch"],
         [data-slot="slider-thumb"],
-        [data-slot="breadcrumb-link"]
+        [data-slot="breadcrumb-link"],
+        .liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"]
       ) {
       position: relative;
     }
@@ -251,7 +258,8 @@ html:has([data-landing-page]) {
         [data-slot="radio-group-item"],
         [data-slot="switch"],
         [data-slot="slider-thumb"],
-        [data-slot="breadcrumb-link"]
+        [data-slot="breadcrumb-link"],
+        .liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"]
       )::after {
       content: "";
       position: absolute;
