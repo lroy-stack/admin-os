@@ -228,12 +228,23 @@ html:has([data-landing-page]) {
         [data-slot="context-menu-item"],
         [data-slot="menubar-item"],
         [data-slot="command-item"],
-        [data-slot="select-item"]
+        [data-slot="select-item"],
+        [data-slot="filter-chip"],
+        /* A Button rendered as a Radix trigger (asChild) carries the trigger's slot instead of "button". */
+        [data-slot="tooltip-trigger"][data-size],
+        [data-slot="dropdown-menu-trigger"][data-size],
+        [data-slot="popover-trigger"][data-size]
       ) {
       min-height: 44px;
     }
 
-    :where([data-slot="button"], [data-slot="input-group-button"])[data-size^="icon"] {
+    :where(
+        [data-slot="button"],
+        [data-slot="input-group-button"],
+        [data-slot="tooltip-trigger"],
+        [data-slot="dropdown-menu-trigger"],
+        [data-slot="popover-trigger"]
+      )[data-size^="icon"] {
       min-width: 44px;
     }
 
@@ -242,13 +253,24 @@ html:has([data-landing-page]) {
       min-height: 0;
     }
 
+    /* The rail keeps its drawn size, as on the desktop: its trigger buttons use the hit area below, so it fits a phone. */
+    :where(
+        [data-slot="app-rail"]
+          > :is([data-slot="tooltip-trigger"], [data-slot="popover-trigger"], [data-slot="dropdown-menu-trigger"])
+      )[data-size] {
+      min-height: 0;
+      min-width: 0;
+    }
+
     :where(
         [data-slot="checkbox"],
         [data-slot="radio-group-item"],
         [data-slot="switch"],
         [data-slot="slider-thumb"],
         [data-slot="breadcrumb-link"],
-        .liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"]
+        .liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"],
+        [data-slot="app-rail"]
+          > :is([data-slot="tooltip-trigger"], [data-slot="popover-trigger"], [data-slot="dropdown-menu-trigger"])
       ) {
       position: relative;
     }
@@ -259,7 +281,9 @@ html:has([data-landing-page]) {
         [data-slot="switch"],
         [data-slot="slider-thumb"],
         [data-slot="breadcrumb-link"],
-        .liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"]
+        .liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"],
+        [data-slot="app-rail"]
+          > :is([data-slot="tooltip-trigger"], [data-slot="popover-trigger"], [data-slot="dropdown-menu-trigger"])
       )::after {
       content: "";
       position: absolute;

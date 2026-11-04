@@ -13,8 +13,10 @@ export function ReservationTags({ tags }: { tags: readonly string[] }) {
     <ul className="flex min-w-0 flex-wrap gap-1" aria-label={text.tagsLabel}>
       {tags.map((tag) => (
         <li key={tag} className="min-w-0">
-          <TonePill tone="neutral" className="h-auto max-w-full px-1.5 text-[11px] whitespace-normal">
-            {tag}
+          <TonePill tone="neutral" className="max-w-full px-1.5 text-[11px]">
+            <span className="truncate" title={tag}>
+              {tag}
+            </span>
           </TonePill>
         </li>
       ))}

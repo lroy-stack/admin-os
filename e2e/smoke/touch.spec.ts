@@ -18,10 +18,14 @@ const ROWS = [
   "input-group-button",
   "pagination-link",
   "accordion-trigger",
+  "filter-chip",
 ];
 const GLYPHS = ["checkbox", "radio-group-item", "switch", "slider-thumb"];
 /** The segments of a glass capsule (`SegmentedControl`): a hit area, like the glyphs, not a row. */
 const GLASS_SEGMENT = '.liquid-glass[data-slot="toggle-group"] > [data-slot="toggle-group-item"]';
+/** The rail's trigger buttons keep their drawn size on touch, as on the desktop, and offer the hit area instead. */
+const RAIL_TRIGGER =
+  '[data-slot="app-rail"] > :is([data-slot="tooltip-trigger"], [data-slot="popover-trigger"], [data-slot="dropdown-menu-trigger"])';
 const ROUTES = ["/", "/dashboard/default", "/dashboard/invoice", "/dashboard/bookings", "/dashboard/customers"];
 const CAPSULE_ROUTES = [
   "/dashboard/default",
@@ -35,7 +39,7 @@ const CAPSULE_ROUTES = [
 /** Smallest target among visible elements: own box for rows, ::after box for glyphs and glass segments. */
 const smallestTarget = (page: Page, rows: string[], glyphs: string[]) =>
   page.evaluate(
-    ({ rows, glyphs, glassSegment }) => {
+    ({ rows, glyphs, glassSegment, railTrigger }) => {
       const visible = (element: Element) => (element as HTMLElement).checkVisibility?.() ?? true;
       const measure = (selectors: string[], pseudo: boolean) =>
         selectors.flatMap((selector) =>
@@ -52,14 +56,14 @@ const smallestTarget = (page: Page, rows: string[], glyphs: string[]) =>
       const slots = (names: string[]) => names.map((name) => `[data-slot="${name}"]`);
       const all = [
         ...measure(slots(rows), false),
-        ...measure([...slots(glyphs), ...(glyphs.length > 0 ? [glassSegment] : [])], true),
+        ...measure([...slots(glyphs), ...(glyphs.length > 0 ? [glassSegment, railTrigger] : [])], true),
       ];
       return {
         count: all.length,
         smallest: all.reduce((min, item) => (item.height < min.height ? item : min), all[0]),
       };
     },
-    { rows, glyphs, glassSegment: GLASS_SEGMENT },
+    { rows, glyphs, glassSegment: GLASS_SEGMENT, railTrigger: RAIL_TRIGGER },
   );
 
 /** Every sliding thumb whose box leaves its capsule, with both boxes, and how many thumbs were checked. */
@@ -105,6 +109,36 @@ test.describe("glass capsules on a coarse pointer", () => {
       expect(outside).toEqual([]);
     });
   }
+});
+
+test.describe("the rail on a coarse pointer", () => {
+  test.use({ hasTouch: true, isMobile: true });
+
+  test("fits a phone's width without scrolling", async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+    await page.goto("/dashboard/default");
+    const rail = page.getByRole("complementary", { name: "Quick access" }).locator(".liquid-glass");
+    await expect(rail).toBeVisible();
+    const { scrollWidth, clientWidth } = await rail.evaluate((element) => ({
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+});
+
+test.describe("pills on a coarse pointer", () => {
+  test.use({ hasTouch: true, isMobile: true });
+
+  test("booking tags stay on one line in the list", async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+    await page.goto("/dashboard/bookings");
+    await page.getByRole("radiogroup", { name: "Reservations view" }).getByRole("radio", { name: "List" }).click();
+    const tags = page.getByRole("list", { name: "Notes" }).locator('[data-slot="badge"]');
+    await expect(tags.first()).toBeVisible();
+    const heights = await tags.evaluateAll((badges) => badges.map((badge) => badge.getBoundingClientRect().height));
+    expect(Math.max(...heights)).toBeLessThanOrEqual(24);
+  });
 });
 
 test.describe("compact controls on a fine pointer", () => {

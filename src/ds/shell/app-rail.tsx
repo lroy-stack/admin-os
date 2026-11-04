@@ -34,7 +34,10 @@ export function AppRail({
       aria-label={landmarks.quickAccess}
       className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center md:pointer-events-auto md:sticky md:top-24 md:bottom-auto md:block md:self-start"
     >
-      <div className="liquid-glass liquid-glass-solid pointer-events-auto flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto rounded-full p-1 md:flex-col md:gap-1 md:overflow-visible md:p-1.5">
+      <div
+        data-slot="app-rail"
+        className="liquid-glass liquid-glass-solid pointer-events-auto flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto rounded-full p-1 md:flex-col md:gap-1 md:overflow-visible md:p-1.5"
+      >
         <SearchDialog groups={searchGroups} />
         {items.map((item) => {
           const active = isActiveLink(pathname, item.url);
