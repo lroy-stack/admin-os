@@ -189,6 +189,11 @@ throwaway shared secret and needs no `.dev.vars`): an agent's held `bookings_can
 the booking is cancelled in both doors. It is not part of `npm run test:e2e` or of CI; set `E2E_WEB_PORT` and
 `E2E_MCP_PORT` when 8788 and 8789 are taken.
 
+`npm run probe:consistency -- consent` checks that the web and MCP Workers sign with the same
+`DEMO_SESSION_SECRET`, a trailing newline included: a web write yields a `demo_sid`, a client registers and opens
+`/authorize` with it, and the renewed cookie must carry the same session id. Against the deployed demo:
+`BASE_URL=https://admin-os.lr0y.dev MCP_URL=https://mcp.admin-os.lr0y.dev/mcp npm run probe:consistency -- consent`.
+
 ## Deploy
 
 The live demo runs on Cloudflare Workers through the [OpenNext adapter](https://opennext.js.org/cloudflare). To

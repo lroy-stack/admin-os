@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  consentOutcome,
   countSeen,
   exitCodeOf,
   formatOutcome,
   type ProbeOutcome,
   parseConfig,
   parseModes,
+  sessionIdOf,
   sessionLabel,
+  setCookieValue,
 } from "./probe-consistency-report";
 
 /** The pure half of `npm run probe:consistency` (spec 004, AC6): what counts as seen, and what the probe prints. */
@@ -126,5 +129,102 @@ describe("parseModes", () => {
 
   it("refuses a mode it does not know", () => {
     expect(() => parseModes(["both"])).toThrow(/Unknown mode "both"/);
+  });
+
+  it("reads consent as a mode of its own", () => {
+    expect(parseModes(["consent"])).toEqual(["consent"]);
+  });
+
+  it("keeps the fixed order whatever the command line says", () => {
+    expect(parseModes(["consent", "web"])).toEqual(["web", "consent"]);
+  });
+
+  it("leaves consent out when no mode is named, as it registers a client", () => {
+    expect(parseModes([])).toEqual(["web", "mcp"]);
+  });
+});
+
+/** The consent probe (plan 005-D3): the cookie the web app signed against the one the consent page renewed. */
+
+const WEB_SESSION = "3f9a1c7e-0b2d-4c55-9d1a-aaaaaaaaaaaa";
+const OTHER_SESSION = "9b2e41d0-0000-4000-8000-000000000000";
+const WEB_COOKIE = `${WEB_SESSION}.1793800000.c2lnbmF0dXJl`;
+const renewedLine = (sessionId: string): string =>
+  `demo_sid=${encodeURIComponent(`${sessionId}.1793800100.b3RoZXI`)}; Path=/; Max-Age=7200; HttpOnly; SameSite=Lax`;
+
+describe("sessionIdOf", () => {
+  it("is the part of a signed demo_sid before the first dot", () => {
+    expect(sessionIdOf(WEB_COOKIE)).toBe(WEB_SESSION);
+  });
+});
+
+describe("setCookieValue", () => {
+  it("reads the value of the named cookie and drops its attributes", () => {
+    expect(setCookieValue(["demo_role=owner; Path=/", renewedLine(WEB_SESSION)], "demo_sid")).toBe(
+      `${WEB_SESSION}.1793800100.b3RoZXI`,
+    );
+  });
+
+  it("keeps the last of two cookies with the same name, as a browser does", () => {
+    expect(setCookieValue(["demo_sid=first; Path=/", "demo_sid=second; Path=/"], "demo_sid")).toBe("second");
+  });
+
+  it("is undefined when no line sets the cookie", () => {
+    expect(setCookieValue(["demo_role=owner; Path=/"], "demo_sid")).toBeUndefined();
+  });
+
+  it("does not take a cookie whose name only ends like the one it looks for", () => {
+    expect(setCookieValue(["x_demo_sid=nope; Path=/"], "demo_sid")).toBeUndefined();
+  });
+});
+
+describe("consentOutcome", () => {
+  it("keeps the web session and the renewed one apart", () => {
+    expect(consentOutcome(WEB_COOKIE, [renewedLine(OTHER_SESSION)])).toEqual({
+      mode: "consent",
+      status: "ran",
+      webSession: WEB_SESSION,
+      renewedSession: OTHER_SESSION,
+    });
+  });
+
+  it("leaves the renewed session undefined when the consent page set no demo_sid", () => {
+    expect(consentOutcome(WEB_COOKIE, [])).toMatchObject({ webSession: WEB_SESSION, renewedSession: undefined });
+  });
+});
+
+describe("the consent probe's verdict", () => {
+  const same = consentOutcome(WEB_COOKIE, [renewedLine(WEB_SESSION)]);
+  const other = consentOutcome(WEB_COOKIE, [renewedLine(OTHER_SESSION)]);
+  const none = consentOutcome(WEB_COOKIE, []);
+
+  it("prints a pass when the renewed cookie carries the same session id", () => {
+    expect(formatOutcome(same)).toBe("consent: the renewed cookie carries the web app's session (session 3f9a1c7e)");
+  });
+
+  it("exits 0 when the renewed cookie carries the same session id", () => {
+    expect(exitCodeOf([same])).toBe(0);
+  });
+
+  it("names both sessions and the trailing newline when the consent page started another session", () => {
+    expect(formatOutcome(other)).toMatch(
+      /^consent: MISMATCH, the web app's session 3f9a1c7e came back as 9b2e41d0\. .*trailing newline included\.$/,
+    );
+  });
+
+  it("exits 1 when the consent page started another session", () => {
+    expect(exitCodeOf([other])).toBe(1);
+  });
+
+  it("says no cookie came back when the consent page set none", () => {
+    expect(formatOutcome(none)).toMatch(/^consent: MISMATCH, .* came back with no demo_sid cookie\. /);
+  });
+
+  it("exits 1 when the consent page set no cookie", () => {
+    expect(exitCodeOf([none])).toBe(1);
+  });
+
+  it("fails the whole run when only consent is wrong", () => {
+    expect(exitCodeOf([ran("web", 12), ran("mcp", 12), other])).toBe(1);
   });
 });
