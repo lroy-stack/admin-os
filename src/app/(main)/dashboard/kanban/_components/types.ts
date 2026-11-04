@@ -57,7 +57,8 @@ export type TaskText = {
 
 /** What does not depend on the language. `dueDate` is a calendar day (YYYY-MM-DD). */
 export type TaskFacts = {
-  id: TaskId;
+  /** A demo task's `TaskId`, or `new-N` for a task created in the session. */
+  id: string;
   priority: TaskPriority;
   dueDate: string;
   progress: number;
@@ -68,6 +69,9 @@ export type TaskFacts = {
 
 export type Task = TaskFacts & TaskText;
 
-export type BoardLayout = Record<ColumnId, TaskFacts[]>;
+/** A task of the demo seed: its id keys the dictionary's title and description. */
+export type SeedTaskFacts = TaskFacts & { id: TaskId };
+
+export type BoardLayout = Record<ColumnId, SeedTaskFacts[]>;
 
 export type BoardState = Record<ColumnId, Task[]>;

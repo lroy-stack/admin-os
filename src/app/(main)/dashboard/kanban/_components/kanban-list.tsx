@@ -1,18 +1,20 @@
 "use client";
 
 import { cn } from "cn";
-import { FileText, Flame, type LucideIcon, MessageSquare, MoreVertical, Paperclip, Plus } from "lucide-react";
+import { FileText, Flame, type LucideIcon, MessageSquare, Paperclip } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
+import { AddTaskToColumn, ColumnMenu } from "./column-menu";
 import { tagTones } from "./data";
 import { KanbanListDropGroup, SortableListTask } from "./kanban-list-dnd";
 import { kanbanMessageKey } from "./messages";
+import { useTaskBoard } from "./task-board-context";
+import { TaskMenu } from "./task-menu";
 import { priorityBadgeConfig } from "./task-priority";
 import { statusIcons } from "./task-status";
 import type { BoardState, Column, TaskInsightLabel } from "./types";
@@ -27,12 +29,13 @@ const insightIcons: Record<TaskInsightLabel, LucideIcon> = {
 export function KanbanList({ board, columns }: { board: BoardState; columns: readonly Column[] }) {
   const text = useMessages(kanbanMessageKey);
   const locale = useLocale();
+  const taskBoard = useTaskBoard();
 
   return (
     <div className="min-w-0 pb-4">
       {columns.map((column) => {
         const tasks = board[column.id];
-        const columnTitle = text.columns[column.id];
+        const columnTitle = taskBoard.columnName(column.id);
         const StatusIcon = statusIcons[column.id];
         const highPriorityCount = tasks.filter((task) => task.priority === "High").length;
 
@@ -58,22 +61,13 @@ export function KanbanList({ board, columns }: { board: BoardState; columns: rea
                     )}
                   </CollapsibleTrigger>
                 </h2>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground"
-                  aria-label={format(text.column.addTask, locale, { column: columnTitle })}
-                >
-                  <Plus />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground"
-                  aria-label={format(text.list.groupActions, locale, { column: columnTitle })}
-                >
-                  <MoreVertical />
-                </Button>
+                <span className="text-muted-foreground flex items-center">
+                  <AddTaskToColumn columnId={column.id} />
+                  <ColumnMenu
+                    columnId={column.id}
+                    label={format(text.list.groupActions, locale, { column: columnTitle })}
+                  />
+                </span>
               </div>
               <CollapsibleContent>
                 <ul aria-label={format(text.list.tasksOf, locale, { column: columnTitle })}>
@@ -141,6 +135,7 @@ export function KanbanList({ board, columns }: { board: BoardState; columns: rea
                             </AvatarFallback>
                           </Avatar>
                         </div>
+                        <TaskMenu task={task} columnId={column.id} className="text-muted-foreground -mr-2" />
                       </SortableListTask>
                     );
                   })}

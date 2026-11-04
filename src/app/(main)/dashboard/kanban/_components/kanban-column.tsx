@@ -4,13 +4,15 @@ import { CollisionPriority } from "@dnd-kit/abstract";
 import { useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { cn } from "cn";
-import { GripVertical, MoreVertical, Plus } from "lucide-react";
+import { GripVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 
+import { AddTaskToColumn, ColumnMenu } from "./column-menu";
 import { kanbanMessageKey } from "./messages";
 import { SortableTaskCard } from "./sortable-task-card";
+import { useTaskBoard } from "./task-board-context";
 import type { Column, Task } from "./types";
 
 interface KanbanColumnProps {
@@ -22,7 +24,8 @@ interface KanbanColumnProps {
 export function KanbanColumn({ column, index, tasks }: KanbanColumnProps) {
   const text = useMessages(kanbanMessageKey);
   const locale = useLocale();
-  const title = text.columns[column.id];
+  const board = useTaskBoard();
+  const title = board.columnName(column.id);
   const columnSortable = useSortable({
     id: `column:${column.id}`,
     index,
@@ -42,6 +45,9 @@ export function KanbanColumn({ column, index, tasks }: KanbanColumnProps) {
   return (
     <section
       ref={columnSortable.ref}
+      aria-label={title}
+      data-task-region=""
+      tabIndex={-1}
       className={cn(
         "bg-muted/50 flex min-h-0 flex-col rounded-t-xl border transition-colors",
         (columnSortable.isDropTarget || taskDropTarget.isDropTarget) && "bg-muted/70",
@@ -69,12 +75,8 @@ export function KanbanColumn({ column, index, tasks }: KanbanColumnProps) {
           </p>
         </div>
         <div className="text-muted-foreground -mr-2 flex items-center gap-0.5">
-          <Button variant="ghost" size="icon-sm" aria-label={format(text.column.addTask, locale, { column: title })}>
-            <Plus />
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label={format(text.column.actions, locale, { column: title })}>
-            <MoreVertical />
-          </Button>
+          <AddTaskToColumn columnId={column.id} />
+          <ColumnMenu columnId={column.id} label={format(text.column.actions, locale, { column: title })} />
         </div>
       </div>
 

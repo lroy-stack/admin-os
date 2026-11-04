@@ -1,5 +1,6 @@
 import { type MessageKey, messageKey, type PageMeta, type Plural } from "@/core/i18n/client";
 
+import type { TaskFormErrors } from "./task-form";
 import type { ColumnId, TaskId, TaskInsightLabel, TaskPriority, TaskTeam, TaskText } from "./types";
 
 /** Text of /dashboard/kanban: the board, list and table views, and the demo tasks' titles and descriptions. */
@@ -12,10 +13,79 @@ export interface KanbanMessages {
     readonly filter: string;
     readonly sort: string;
     readonly addTask: string;
-    readonly addMenu: string;
-    readonly importCsv: string;
-    readonly addFromTemplate: string;
-    readonly createAutomation: string;
+    /** Placeholders: `{count}`, the filters other than the search. */
+    readonly filterActive: string;
+  };
+  readonly filter: {
+    readonly title: string;
+    readonly description: string;
+    readonly owner: string;
+    readonly team: string;
+    readonly priority: string;
+    readonly dueBefore: string;
+    readonly any: string;
+    readonly clear: string;
+    readonly noMatchTitle: string;
+    readonly noMatchDescription: string;
+  };
+  readonly sort: {
+    readonly title: string;
+    readonly manual: string;
+    readonly due: string;
+    readonly priority: string;
+    readonly name: string;
+  };
+  readonly task: {
+    /** Placeholders: `{title}`. */
+    readonly moreActions: string;
+    readonly menu: {
+      readonly open: string;
+      readonly edit: string;
+      readonly moveTo: string;
+      readonly delete: string;
+    };
+    readonly panel: {
+      /** Placeholders: `{column}`. */
+      readonly description: string;
+      readonly status: string;
+      readonly priority: string;
+      readonly team: string;
+      readonly owner: string;
+      readonly dueDate: string;
+      readonly progress: string;
+      readonly moveTo: string;
+      readonly edit: string;
+      readonly delete: string;
+    };
+    readonly form: {
+      readonly createTitle: string;
+      readonly createVerb: string;
+      readonly editTitle: string;
+      readonly editVerb: string;
+      readonly description: string;
+      readonly title: string;
+      readonly details: string;
+      readonly status: string;
+      readonly team: string;
+      readonly priority: string;
+      readonly owner: string;
+      readonly ownerPlaceholder: string;
+      readonly dueDate: string;
+      readonly errors: TaskFormErrors;
+    };
+    readonly confirm: {
+      readonly title: string;
+      readonly verb: string;
+      /** Placeholders: `{title}`. Says the data is the demo's. */
+      readonly consequence: string;
+    };
+    /** Each confirmation of a change a person can undo. Placeholders: `{title}`, `{column}` (moved only). */
+    readonly toast: {
+      readonly created: string;
+      readonly saved: string;
+      readonly moved: string;
+      readonly deleted: string;
+    };
   };
   /** The column (status) names, keyed by the stable column ids. */
   readonly columns: Readonly<Record<ColumnId, string>>;
@@ -32,6 +102,22 @@ export interface KanbanMessages {
     readonly actions: string;
     /** Placeholders: `{count}`. */
     readonly taskCount: Plural;
+    readonly menu: { readonly rename: string; readonly delete: string };
+    readonly rename: {
+      readonly title: string;
+      readonly verb: string;
+      readonly description: string;
+      readonly label: string;
+      readonly nameRequired: string;
+    };
+    readonly confirm: {
+      readonly title: string;
+      readonly verb: string;
+      /** Placeholders: `{column}`, `{count}`. Says the data is the demo's. */
+      readonly consequence: Plural;
+    };
+    /** Placeholders: `{column}`. */
+    readonly toast: { readonly renamed: string; readonly deleted: string };
   };
   readonly card: {
     readonly progress: string;

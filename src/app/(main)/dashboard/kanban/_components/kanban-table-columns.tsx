@@ -13,6 +13,7 @@ import { getInitials } from "@/lib/utils";
 
 import { tagTones } from "./data";
 import type { KanbanMessages } from "./messages";
+import { TaskMenu } from "./task-menu";
 import { priorityBadgeConfig } from "./task-priority";
 import { statusIcons } from "./task-status";
 import type { Column, ColumnId, Task, TaskInsightLabel } from "./types";
@@ -29,6 +30,8 @@ const insightIcons: Record<TaskInsightLabel, LucideIcon> = {
 export function createTaskTableColumns(
   columns: readonly Column[],
   onStatusChange: (taskId: string, status: ColumnId) => void,
+  onOpen: (task: Task, opener: Element) => void,
+  columnName: (id: ColumnId) => string,
   text: KanbanMessages,
   locale: Locale,
 ): ColumnDef<DataTableFeatures, TaskTableRow>[] {
@@ -47,9 +50,14 @@ export function createTaskTableColumns(
       size: 360,
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-4">
-          <span className="min-w-0 flex-1 truncate" title={row.original.description}>
+          <button
+            type="button"
+            className="focus-visible:ring-ring min-w-0 flex-1 cursor-pointer truncate rounded-sm text-left outline-none hover:underline focus-visible:ring-2"
+            title={row.original.description}
+            onClick={(event) => onOpen(row.original, event.currentTarget)}
+          >
             {row.original.title}
-          </span>
+          </button>
           <span className="text-muted-foreground flex shrink-0 items-center gap-2.5 text-xs tabular-nums">
             {row.original.insights
               .filter((insight) => insight.count > 0)
@@ -76,7 +84,7 @@ export function createTaskTableColumns(
     },
     {
       id: "status",
-      accessorFn: (task) => text.columns[task.status.id],
+      accessorFn: (task) => columnName(task.status.id),
       header: text.table.headers.status,
       size: 140,
       cell: ({ row }) => {
@@ -104,7 +112,7 @@ export function createTaskTableColumns(
               <SelectGroup>
                 {columns.map((column) => (
                   <SelectItem key={column.id} value={column.id}>
-                    {text.columns[column.id]}
+                    {columnName(column.id)}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -161,6 +169,14 @@ export function createTaskTableColumns(
       size: 160,
       cell: ({ row }) => (
         <span className="text-muted-foreground tabular-nums">{formatDueDate(row.original.dueDate, locale)}</span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "",
+      size: 56,
+      cell: ({ row }) => (
+        <TaskMenu task={row.original} columnId={row.original.status.id} className="text-muted-foreground" />
       ),
     },
   ];

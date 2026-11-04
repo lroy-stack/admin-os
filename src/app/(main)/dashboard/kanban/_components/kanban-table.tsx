@@ -1,6 +1,6 @@
 "use client";
 
-import { type Dispatch, type SetStateAction, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import { useTable } from "@tanstack/react-table";
 import { cn } from "cn";
@@ -13,10 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
 
-import { columnIds } from "./data";
+import { compareTasks, type TaskSort } from "./board-view";
 import { createTaskTableColumns } from "./kanban-table-columns";
 import { SortableTaskTableRow } from "./kanban-table-dnd";
 import { kanbanMessageKey } from "./messages";
+import { useTaskBoard } from "./task-board-context";
 import type { BoardState, Column, ColumnId } from "./types";
 
 const headerIcons: Record<string, typeof ListTodo> = {
@@ -31,48 +32,44 @@ const headerIcons: Record<string, typeof ListTodo> = {
 export function KanbanTable({
   board,
   columns,
-  setBoard,
   order,
+  sort,
+  filtered,
 }: {
+  /** The board as the toolbar's search, filters and sort leave it. */
   board: BoardState;
   columns: readonly Column[];
-  setBoard: Dispatch<SetStateAction<BoardState>>;
-  order: string[];
+  order: readonly string[];
+  sort: TaskSort;
+  /** True while a search or filter narrows the rows: an empty table then says nothing matches. */
+  filtered: boolean;
 }) {
   const text = useMessages(kanbanMessageKey);
   const locale = useLocale();
+  const taskBoard = useTaskBoard();
+  const { columnName, move, openPanel } = taskBoard;
   const changeStatus = useCallback(
     (taskId: string, status: ColumnId) => {
-      setBoard((current) => {
-        const source = columnIds.find((id) => current[id].some((task) => task.id === taskId));
-        if (!source || source === status) {
-          return current;
-        }
-
-        const task = current[source].find((item) => item.id === taskId);
-        if (!task) {
-          return current;
-        }
-
-        return {
-          ...current,
-          [source]: current[source].filter((item) => item.id !== taskId),
-          [status]: [...current[status], task],
-        };
-      });
+      const task = columns.flatMap((column) => board[column.id]).find((item) => item.id === taskId);
+      if (task) move(task, status, null);
     },
-    [setBoard],
+    [board, columns, move],
   );
   const tableColumns = useMemo(
-    () => createTaskTableColumns(columns, changeStatus, text, locale),
-    [columns, changeStatus, text, locale],
+    () => createTaskTableColumns(columns, changeStatus, openPanel, columnName, text, locale),
+    [columns, changeStatus, openPanel, columnName, text, locale],
   );
   const data = useMemo(() => {
     const positions = new Map(order.map((id, index) => [id, index]));
+    const compare = compareTasks(sort, locale);
     return columns
       .flatMap((column) => board[column.id].map((task) => ({ ...task, status: column })))
-      .sort((a, b) => (positions.get(a.id) ?? order.length) - (positions.get(b.id) ?? order.length));
-  }, [board, columns, order]);
+      .sort(
+        (a, b) =>
+          (sort === "manual" ? 0 : compare(a, b)) ||
+          (positions.get(a.id) ?? order.length) - (positions.get(b.id) ?? order.length),
+      );
+  }, [board, columns, order, sort, locale]);
   const table = useTable({
     features: dataTableFeatures,
     data,
@@ -125,8 +122,10 @@ export function KanbanTable({
               <TableCell colSpan={tableColumns.length}>
                 <Empty>
                   <EmptyHeader>
-                    <EmptyTitle>{text.table.emptyTitle}</EmptyTitle>
-                    <EmptyDescription>{text.table.emptyDescription}</EmptyDescription>
+                    <EmptyTitle>{filtered ? text.filter.noMatchTitle : text.table.emptyTitle}</EmptyTitle>
+                    <EmptyDescription>
+                      {filtered ? text.filter.noMatchDescription : text.table.emptyDescription}
+                    </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               </TableCell>

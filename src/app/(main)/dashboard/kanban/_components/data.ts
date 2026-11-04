@@ -2,10 +2,11 @@ import type {
   BoardLayout,
   BoardState,
   Column,
+  SeedTaskFacts,
   Task,
-  TaskFacts,
   TaskId,
   TaskOwnerProfile,
+  TaskPriority,
   TaskTeam,
   TaskText,
 } from "./types";
@@ -19,6 +20,20 @@ export const columns = [
 ] as const satisfies readonly Column[];
 
 export const columnIds = columns.map((column) => column.id);
+
+export const taskTeams = [
+  "Backend",
+  "Data",
+  "Design",
+  "Docs",
+  "Finance Ops",
+  "Platform",
+  "Product",
+  "QA",
+  "Security",
+] as const satisfies readonly TaskTeam[];
+
+export const taskPriorities = ["High", "Medium", "Low"] as const satisfies readonly TaskPriority[];
 
 export const tagTones: Record<TaskTeam, string> = {
   Backend: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
@@ -62,6 +77,9 @@ const taskOwners = {
     tone: "[&_[data-slot=avatar-fallback]]:bg-sky-100 [&_[data-slot=avatar-fallback]]:text-sky-700 after:border-sky-200 dark:[&_[data-slot=avatar-fallback]]:bg-sky-500/15 dark:[&_[data-slot=avatar-fallback]]:text-sky-300 dark:after:border-sky-500/20",
   },
 } satisfies Record<string, TaskOwnerProfile>;
+
+/** The people a task can be assigned to; a person's name identifies them. */
+export const taskOwnerProfiles: readonly TaskOwnerProfile[] = Object.values(taskOwners);
 
 /** The tasks and where they sit. Titles and descriptions live in the dictionary, keyed by task id. */
 export const initialBoard: BoardLayout = {
@@ -285,7 +303,7 @@ export const initialBoard: BoardLayout = {
 
 /** Gives every task of the layout its title and description in one language (the dictionary's `tasks`). */
 export function localizeBoard(layout: BoardLayout, tasks: Readonly<Record<TaskId, TaskText>>): BoardState {
-  const localize = (facts: TaskFacts[]): Task[] => facts.map((item) => ({ ...item, ...tasks[item.id] }));
+  const localize = (facts: SeedTaskFacts[]): Task[] => facts.map((item) => ({ ...item, ...tasks[item.id] }));
   return {
     ideas: localize(layout.ideas),
     planned: localize(layout.planned),

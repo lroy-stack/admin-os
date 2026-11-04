@@ -12,6 +12,7 @@ import { getInitials } from "@/lib/utils";
 
 import { tagTones } from "./data";
 import { kanbanMessageKey } from "./messages";
+import { TaskMenu } from "./task-menu";
 import { priorityBadgeConfig } from "./task-priority";
 import type { ColumnId, Task, TaskInsightLabel } from "./types";
 import { formatDueDate } from "./utils";
@@ -54,16 +55,21 @@ export function TaskCard({
           >
             {task.title}
           </h3>
-          <Badge
-            variant={priorityBadgeConfig[task.priority].variant}
-            className={cn(
-              "shrink-0 rounded-md border-transparent px-2 font-medium",
-              priorityBadgeConfig[task.priority].className,
+          <div className="-mt-1 -mr-2 flex shrink-0 items-center gap-1">
+            <Badge
+              variant={priorityBadgeConfig[task.priority].variant}
+              className={cn(
+                "shrink-0 rounded-md border-transparent px-2 font-medium",
+                priorityBadgeConfig[task.priority].className,
+              )}
+            >
+              <PriorityIcon data-icon="inline-start" />
+              {text.priorities[task.priority]}
+            </Badge>
+            {isOverlay || !columnId ? null : (
+              <TaskMenu task={task} columnId={columnId} className="text-muted-foreground" />
             )}
-          >
-            <PriorityIcon data-icon="inline-start" />
-            {text.priorities[task.priority]}
-          </Badge>
+          </div>
         </div>
         <p className="text-muted-foreground line-clamp-2 text-sm leading-5">{task.description}</p>
       </div>
