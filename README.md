@@ -134,6 +134,10 @@ core ← ds ← engines ← modules ← verticals ← config ← app
 | `src/verticals` | Presets: hospitality (reference), salon, workshop |
 | `src/app` | Thin routes |
 
+Every dialog, sheet, panel and confirmation comes from one window kit (`src/ds/overlays`, `src/ds/forms`,
+`src/ds/feedback`), chosen by the job as [ADR 0015](docs/adr/0015-window-rules.md) says, and the e2e fails on any control
+that does nothing (`e2e/smoke/dead-clicks.spec.ts`).
+
 Architecture decisions live in [`docs/adr`](docs/adr).
 
 ## Getting started

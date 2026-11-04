@@ -48,7 +48,8 @@ npm run format
 npm run check        # Biome and layer boundaries (dependency-cruiser)
 npm run check:fix
 npm test             # unit and contract tests (Vitest)
-npm run test:e2e     # shell smoke on a production build (Playwright)
+npm run test:e2e     # shell smoke on a production build (Playwright); fails on any dead control
+npm run test:dead-clicks  # report every control that does nothing, per route
 npm run media        # rebuilds the README and landing images in media/ (Playwright)
 npm run mcp:stdio    # MCP server over stdio
 npm run generate:presets

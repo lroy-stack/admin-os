@@ -12,8 +12,9 @@ import path from "node:path";
  * (tooltips aside), a scroll, a focus move, a popup, an alert, a copy or a download. A link with a real `href`
  * to an existing route counts as working without being clicked. Controls under `data-inert-reason` are skipped.
  *
- * Report mode (default): the test passes and writes `test-results/dead-clicks.json`, one entry per dead control, plus
- * a per-route count on stdout. `DEAD_CLICKS=enforce` makes each route fail while it has a dead control.
+ * The gate (plan 003, G1): by default each route fails while it has a dead control, so a new dead control fails the
+ * build. Report mode (`DEAD_CLICKS=report`, `npm run test:dead-clicks`) passes and writes
+ * `test-results/dead-clicks.json`, one entry per dead control, plus a per-route count on stdout.
  *
  * Scope notes: the shell (header, sidebar, quick access) is the same on every dashboard page, so it is scanned once,
  * on `/dashboard/default`; the other dashboard routes scan what is outside it. Controls that are already selected
@@ -21,7 +22,7 @@ import path from "node:path";
  * first-level and are not reached.
  */
 
-const ENFORCE = process.env.DEAD_CLICKS === "enforce";
+const ENFORCE = process.env.DEAD_CLICKS !== "report";
 const SHELL_ROUTE = "/dashboard/default";
 /** How long a click has to show a reaction; dead controls are retried once with the longer window. */
 const OBSERVE_MS = 450;
@@ -709,8 +710,52 @@ for (const route of PAGE_ROUTES) {
     publish(report, total);
     await testInfo.attach("dead-clicks", { body: JSON.stringify(report, null, 2), contentType: "application/json" });
 
-    // Report mode only measures; enforce mode (a later task) turns every dead control into a failure.
+    // The gate turns every dead control into a failure; report mode only measures.
     const fails = ENFORCE ? report.dead : [];
     expect(fails.map((finding) => `${finding.role} "${finding.name}" (${finding.locator})`)).toEqual([]);
   });
 }
+
+/**
+ * The only controls the sweep may skip, each with the reason it cannot be observed (plan 003, G1). A new
+ * `data-inert-reason` fails here until it is reviewed and listed.
+ */
+const INERT_EXCEPTIONS = [
+  [
+    "src/app/(main)/dashboard/(examples)/patient-monitoring/_components/monitoring-provider.tsx",
+    "A tooltip target: the status opens on hover and focus, not on press.",
+  ],
+  [
+    "src/app/(main)/dashboard/(examples)/patient-monitoring/_components/monitoring-provider.tsx",
+    "Opens the browser print dialog, which the dead-click sweep cannot observe.",
+  ],
+  [
+    "src/app/(main)/dashboard/academy/_components/performance-highlights.tsx",
+    "A tooltip target: the student's details open on hover and focus, not on press.",
+  ],
+  [
+    "src/app/(main)/dashboard/invoice/_components/invoice-preview.tsx",
+    "Opens the browser print dialog, which the dead-click sweep cannot observe.",
+  ],
+] as const;
+
+const sourceFiles = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(full);
+    return entry.name.endsWith(".tsx") ? [full] : [];
+  });
+
+const inertReasonsInSource = () =>
+  sourceFiles(path.join(process.cwd(), "src"))
+    .flatMap((file) =>
+      [...readFileSync(file, "utf8").matchAll(/data-inert-reason="([^"]+)"/g)].map(
+        (match) => `${path.relative(process.cwd(), file)} | ${match[1]}`,
+      ),
+    )
+    .filter((entry, index, all) => all.indexOf(entry) === index)
+    .sort();
+
+test("every control the sweep skips is a listed exception", () => {
+  expect(inertReasonsInSource()).toEqual(INERT_EXCEPTIONS.map(([file, reason]) => `${file} | ${reason}`).sort());
+});
