@@ -1,6 +1,7 @@
 import {
   ExternalTokenError,
   OAuthProvider,
+  type OAuthResourceAuth,
   type OAuthResourceContext,
   type ResolveExternalTokenInput,
   type ResolveExternalTokenResult,
@@ -13,16 +14,18 @@ import { DEMO_SESSION_MAX_AGE_S } from "@/config/demo-session";
 import { createMcpServerFor, type McpCaller, type McpEnv } from "@/config/mcp.server";
 import { callerOfToken } from "@/config/mcp-auth";
 import { MCP_PATH } from "@/config/mcp-endpoint";
-import { mcpReadOnlyFrom, usesPublicDemoTokens } from "@/config/mcp-env";
+import { grantReadOnlyFrom, mcpReadOnlyFrom, usesPublicDemoTokens } from "@/config/mcp-env";
 import { MCP_MANIFEST } from "@/config/mcp-manifest";
 import { roleIdSchema } from "@/core/access";
-import { SERVER_NAME, toolListVersion } from "@/core/mcp/server";
+import { SCOPES, SERVER_NAME, scopesOf, toolListVersion } from "@/core/mcp/server";
 
 import { serveAuthorize } from "./consent";
 import { type McpWorkerEnv, rateLimitPeriodOf, variablesOf } from "./env";
+import { GRANTS_PATH, serveGrants } from "./grants";
 import { allowedOriginsFor, jsonRpcError, preflightResponse, withCors } from "./http";
 import { clientIpOf, oauthRefusal, overLimit, type Refusal } from "./limits";
 import { callLineOf } from "./log";
+import { scopeChallenge } from "./scope-gate";
 
 /** Tool arguments are small; a body past this is refused with `413` before anything is parsed. */
 const MAX_REQUEST_BODY_BYTES = 256 * 1024;
@@ -32,9 +35,9 @@ const AUTHORIZE_PATH = "/authorize";
 const TOKEN_PATH = "/token";
 const REGISTER_PATH = "/register";
 /** The Worker's own HTML pages: their forms post to themselves, so they accept only the Worker's own Origin. */
-const PAGE_PATHS: ReadonlySet<string> = new Set([AUTHORIZE_PATH]);
+const PAGE_PATHS: ReadonlySet<string> = new Set([AUTHORIZE_PATH, GRANTS_PATH]);
 /** The pages a person's browser opens and the registration endpoint: tight per-IP limits (`limitBefore`). */
-const OAUTH_PATHS: ReadonlySet<string> = new Set([AUTHORIZE_PATH, REGISTER_PATH]);
+const OAUTH_PATHS: ReadonlySet<string> = new Set([AUTHORIZE_PATH, REGISTER_PATH, GRANTS_PATH]);
 
 /** What every request with a grant or a static token carries (`ctx.props`), parsed before the server is built. */
 const propsSchema = z.object({ sessionId: z.string().min(1).max(128), role: roleIdSchema });
@@ -73,20 +76,34 @@ const limitKeyOf = (request: Request, variables: McpEnv, caller: McpCaller): str
 };
 
 /**
+ * Who calls: a grant (the provider names its client) acts with the scopes the person consented to, under
+ * `MCP_READ_ONLY` only; a static token holds both scopes, under the server's read-only default.
+ */
+const callerOf = (auth: OAuthResourceAuth, props: unknown, variables: McpEnv) => {
+  const { sessionId, role } = propsSchema.parse(props);
+  if (auth.clientId === undefined) {
+    return {
+      caller: { roleId: role, sessionId, scopes: SCOPES } satisfies McpCaller,
+      readOnly: mcpReadOnlyFrom(variables),
+    };
+  }
+  return {
+    caller: { roleId: role, sessionId, scopes: scopesOf(auth.scope), clientId: auth.clientId } satisfies McpCaller,
+    readOnly: grantReadOnlyFrom(variables),
+  };
+};
+
+/**
  * Streamable HTTP at `/mcp` (ADR 0016, request path), after the provider has verified the bearer for this resource:
- * the rate limit, then the SDK's stateless handler over the composition root. `legacy: "stateless"` keeps 2025-era
- * clients (most clients today) working from the same factory; `reject` would refuse them.
+ * the rate limit, the step-up gate for a grant, then the SDK's stateless handler over the composition root.
+ * `legacy: "stateless"` keeps 2025-era clients (most clients today) working from the same factory; `reject` would
+ * refuse them.
  */
 async function serveMcp(request: Request, env: McpWorkerEnv, ctx: ExecutionContext): Promise<Response> {
   // OAuthProvider sets `ctx.auth` beside `ctx.props` for its API handler (docs/resource-servers.md).
   const { auth, props } = ctx as OAuthResourceContext<unknown>;
   const variables = variablesOf(env);
-  const { sessionId, role } = propsSchema.parse(props);
-  const caller: McpCaller = {
-    roleId: role,
-    sessionId,
-    ...(auth.clientId === undefined ? {} : { clientId: auth.clientId }),
-  };
+  const { caller, readOnly } = callerOf(auth, props, variables);
   const refused = await overLimit(
     env.MCP_LIMITER,
     limitKeyOf(request, variables, caller),
@@ -95,11 +112,28 @@ async function serveMcp(request: Request, env: McpWorkerEnv, ctx: ExecutionConte
   );
   if (refused !== undefined) return refused;
   const clientId = caller.clientId ?? `demo-${caller.roleId}`;
+  // Under MCP_READ_ONLY no scope helps, so a write keeps its read-only answer; a static token cannot step up.
+  if (!readOnly && caller.clientId !== undefined) {
+    const challenge = await scopeChallenge(request, caller, variables, auth, MAX_REQUEST_BODY_BYTES);
+    if (challenge !== undefined) {
+      // A challenged call is audited like the projection's refusals: one line, no arguments.
+      const refusal = {
+        event: "mcp.refused",
+        tool: challenge.tool,
+        status: "insufficient_scope",
+        correlationId: crypto.randomUUID(),
+        actorRole: caller.roleId,
+        via: "mcp",
+      } as const;
+      console.log(JSON.stringify(callLineOf(refusal, clientId)));
+      return challenge.response;
+    }
+  }
   const handler = createMcpHandler(
     () =>
       createMcpServerFor(caller, {
         env: variables,
-        readOnly: mcpReadOnlyFrom(variables),
+        readOnly,
         store: () => env.DEMO_STORE,
         logger: (line) => console.log(JSON.stringify(callLineOf(line, clientId))),
       }),
@@ -112,21 +146,21 @@ async function serveMcp(request: Request, env: McpWorkerEnv, ctx: ExecutionConte
   return handler.fetch(request);
 }
 
-/** `GET /`: what this is and where to connect. */
+/** `GET /`: what this is, the tool-list version an OAuth client is served, and where to connect. */
 const health = (url: URL, env: McpWorkerEnv): Response =>
   Response.json({
     name: SERVER_NAME,
-    version: toolListVersion(CATALOG, MCP_MANIFEST, mcpReadOnlyFrom(variablesOf(env))),
+    version: toolListVersion(CATALOG, MCP_MANIFEST, grantReadOnlyFrom(variablesOf(env))),
     mcp: new URL(MCP_PATH, url).href,
   });
 
-/** Everything the provider does not own: the consent page, the health answer, and a pointer to `/mcp`. */
+/** Everything the provider does not own: the consent and grants pages, the health answer, a pointer to `/mcp`. */
 const serveDefault = async (request: Request, env: McpWorkerEnv): Promise<Response> => {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
-  if (path === AUTHORIZE_PATH && (request.method === "GET" || request.method === "POST")) {
-    return serveAuthorize(request, env);
-  }
+  const page = request.method === "GET" || request.method === "POST";
+  if (page && path === AUTHORIZE_PATH) return serveAuthorize(request, env);
+  if (page && path === GRANTS_PATH) return serveGrants(request, env);
   if (request.method === "GET" && path === "/") return health(url, env);
   return jsonRpcError(404, `Nothing here; MCP is served at ${new URL(MCP_PATH, url).href}.`);
 };
@@ -164,17 +198,24 @@ const providerFor = (origin: string): OAuthProvider<McpWorkerEnv> => {
 
 /**
  * The per-IP limit a request meets before the provider reads KV for it, or undefined for routes without one:
- * - `/authorize` and `/register` are a person's browser and a client's one-time registration, and each registration
- *   writes KV, so they share the tight `OAUTH_LIMITER`;
+ * - `/authorize`, `/grants` and `/register` are a person's browser and a client's one-time registration, and each
+ *   registration writes KV, so they share the tight `OAUTH_LIMITER`;
  * - `/token` and `/mcp` are what a client does all day, and a hosted client (claude.ai) calls them for all its users
  *   from a few egress IPs, so they take the wide `EDGE_LIMITER`. It bounds the KV reads an unauthenticated bearer
  *   costs; a valid grant then meets its own bucket in `serveMcp`. A CIMD client's id is shared by every installation,
  *   so keying `/token` by client would be no narrower than by IP.
  */
-const limitBefore = (path: string, env: McpWorkerEnv): { limiter: RateLimit; refuse: Refusal } | undefined => {
-  if (OAUTH_PATHS.has(path)) return { limiter: env.OAUTH_LIMITER, refuse: oauthRefusal };
-  if (path === TOKEN_PATH) return { limiter: env.EDGE_LIMITER, refuse: oauthRefusal };
-  if (path === MCP_PATH) return { limiter: env.EDGE_LIMITER, refuse: jsonRpcError };
+const limitBefore = (
+  path: string,
+  env: McpWorkerEnv,
+): { limiter: RateLimit; bucket: string; refuse: Refusal } | undefined => {
+  if (OAUTH_PATHS.has(path)) return { limiter: env.OAUTH_LIMITER, bucket: path, refuse: oauthRefusal };
+  if (path === TOKEN_PATH) return { limiter: env.EDGE_LIMITER, bucket: path, refuse: oauthRefusal };
+  // The provider routes the resource's path-boundary descendants to the API handler too (`/mcp/…`), so they share
+  // `/mcp`'s rule and its one bucket: a sub-path never buys a fresh window or an unlimited KV read.
+  if (path === MCP_PATH || path.startsWith(`${MCP_PATH}/`)) {
+    return { limiter: env.EDGE_LIMITER, bucket: MCP_PATH, refuse: jsonRpcError };
+  }
   return undefined;
 };
 
@@ -183,7 +224,7 @@ const route = async (request: Request, env: McpWorkerEnv, ctx: ExecutionContext,
   const path = url.pathname.replace(/\/+$/, "");
   const limit = limitBefore(path, env);
   if (limit !== undefined) {
-    const key = `${path}:${clientIpOf(request)}`;
+    const key = `${limit.bucket}:${clientIpOf(request)}`;
     const refused = await overLimit(limit.limiter, key, rateLimitPeriodOf(variablesOf(env)), limit.refuse);
     if (refused !== undefined) return refused;
   }

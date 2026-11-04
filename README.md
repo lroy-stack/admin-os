@@ -229,11 +229,14 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
   Workers locally"), with **OAuth**: the Worker is its own authorization server. A client that connects without a
   token is sent to a consent page on the Worker, which shows who asks and what it may do; the grant acts on **your
   own demo data**, the session the web demo keeps in your browser (or a new one), as the role you picked there
-  (owner by default), and holds the `read` scope. The connection also accepts bearer tokens: `MCP_TOKENS` maps tokens
+  (owner by default). **Reading and changing are separate grants**: `read` is the default and lists read tools only;
+  when the agent calls a write, it gets `403 insufficient_scope` and the client asks you again, and the page then
+  offers changes as a choice of its own. `https://mcp.admin-os.lr0y.dev/grants` lists the apps connected to your
+  browser's demo data and revokes any of them. The connection also accepts bearer tokens: `MCP_TOKENS` maps tokens
   to roles (see [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens
-  `demo-owner-token`, `demo-manager-token` and `demo-staff-token` work, each on demo data of its own. With those
-  public tokens the server is **read-only**: anyone holds them, so they list and run read tools only. Your own
-  `MCP_TOKENS` keep the writes; `MCP_READ_ONLY=true` or `false` overrides either default. Requests are rate-limited
+  `demo-owner-token`, `demo-manager-token` and `demo-staff-token` work, each on demo data of its own. Those public
+  tokens are **read-only**: anyone holds them, so they list and run read tools only. Your own `MCP_TOKENS` keep the
+  writes; `MCP_READ_ONLY=true` makes every connection read-only, grants included. Requests are rate-limited
   per grant, per token and client IP for the public tokens, and per client IP on the OAuth endpoints and before a
   token is checked (`429` with `Retry-After`), and a browser page may call it only from the demo's own origin or
   `claude.ai`.
@@ -251,7 +254,8 @@ showing an old list after an update, reconnect it (in Claude Code, `/mcp`, then 
 
 Claude Code: add the server, then run `/mcp` in a session and authenticate `admin-os`; the consent page opens in your
 browser. Open the demo at `https://admin-os.lr0y.dev` in the same browser first if the agent should act on the data
-you see there.
+you see there. Asking again after a `403 insufficient_scope` is the client's part of the protocol; a client that does
+not keeps its `read` grant.
 
 ```bash
 claude mcp add --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp

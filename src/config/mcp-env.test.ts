@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { DEMO_MCP_TOKENS, mcpReadOnlyFrom, mcpRoleFrom, mcpTokensFrom, parseMcpTokens, parseReadOnly } from "./mcp-env";
+import {
+  DEMO_MCP_TOKENS,
+  grantReadOnlyFrom,
+  mcpReadOnlyFrom,
+  mcpRoleFrom,
+  mcpTokensFrom,
+  parseMcpTokens,
+  parseReadOnly,
+} from "./mcp-env";
 
 describe("MCP_TOKENS (ADR 0009)", () => {
   it("maps each token to its role", () => {
@@ -70,6 +78,13 @@ describe("MCP_READ_ONLY (spec 004, hotfix)", () => {
     ["the demo tokens with MCP_READ_ONLY=false", { MCP_READ_ONLY: "false" }, false],
   ])("is read-only for %s → %s", (_case, env, readOnly) => {
     expect(mcpReadOnlyFrom(env)).toBe(readOnly);
+  });
+
+  it.each([
+    ["while the public demo tokens are in force", {}, false],
+    ["with MCP_READ_ONLY=true", { MCP_READ_ONLY: "true" }, true],
+  ])("lets an OAuth grant write %s → read-only %s", (_case, env, readOnly) => {
+    expect(grantReadOnlyFrom(env)).toBe(readOnly);
   });
 
   it.each([

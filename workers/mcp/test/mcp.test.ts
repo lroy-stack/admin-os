@@ -51,12 +51,12 @@ afterEach(() => {
 });
 
 describe("GET / (health)", () => {
-  it("names the server, its tool-list version and the MCP URL", async () => {
+  it("names the server, the tool-list version an OAuth grant is served, and the MCP URL", async () => {
     const response = await selfFetch("https://mcp.admin-os.lr0y.dev/");
 
     expect(await response.json()).toEqual({
       name: "admin-os",
-      version: toolListVersion(CATALOG, MCP_MANIFEST, true),
+      version: toolListVersion(CATALOG, MCP_MANIFEST, false),
       mcp: ENDPOINT,
     });
   });

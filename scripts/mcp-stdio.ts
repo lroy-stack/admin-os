@@ -16,6 +16,7 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { createMcpServerFor } from "@/config/mcp.server";
 import { mcpRoleFrom, parseReadOnly } from "@/config/mcp-env";
 import { resolveVertical } from "@/config/vertical";
+import { SCOPES } from "@/core/mcp/server";
 
 const toStderr = (...values: unknown[]) => console.error(...values);
 console.log = toStderr;
@@ -24,7 +25,11 @@ console.debug = toStderr;
 
 const log = (line: object) => process.stderr.write(`${JSON.stringify(line)}\n`);
 
-const caller = { roleId: mcpRoleFrom(process.env.MCP_ROLE), sessionId: `stdio-${crypto.randomUUID()}` };
+const caller = {
+  roleId: mcpRoleFrom(process.env.MCP_ROLE),
+  sessionId: `stdio-${crypto.randomUUID()}`,
+  scopes: SCOPES,
+};
 // A stdio process is the developer's own session, so it writes unless MCP_READ_ONLY=true.
 const readOnly = parseReadOnly(process.env.MCP_READ_ONLY) ?? false;
 

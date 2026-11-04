@@ -763,6 +763,22 @@ These are places where the first draft found a decision incomplete. Each came wi
     nowhere; it cannot forge the HMAC, but it can plant a `demo_sid` it obtained itself and have the victim's grant act
     on the attacker's session. For a demo whose data is fake and per visitor this is accepted; a real deployment keeps
     the cookie host-only and consent in the web app (open question 2, option b).
+- **A1b.** `effectivePermissions(catalog, rolePermissions, scopes)` and `needsWriteScope` live in
+  `src/core/mcp/access.ts`; a permission counts as a read only when no write carries it. `createMcpServerFor` acts
+  with the role ∩ the caller's scopes, so `tools/list` and dispatch follow the grant. The gate
+  (`workers/mcp/src/scope-gate.ts`) reads a bounded clone of the body and answers a write the role holds with
+  `insufficientScope(auth, ["read", "write"])`: the challenge names every scope the call needs, `scope="read write"`,
+  as `workers-oauth-provider` and the step-up rule (clients request the union) expect, where D3 wrote
+  `scope="write"`. The consent page offers `write` only when the client asks for it, as its own section and button
+  beside "Allow reading only", and grants it only when the stored request asked. `/grants` lists the session's grants
+  (`listUserGrants(sessionId)`) and revokes one (`revokeGrant`); a grant is revoked whole, so AC2's "revoking `write`
+  leaves `read` working" holds as: the client connects again and gets `read` by default. Revocation deletes the
+  grant's KV records, and KV is eventually consistent: another Cloudflare location may still accept the grant's
+  access token for about 60 seconds. `/grants` takes `OAUTH_LIMITER` per IP, accepts only the Worker's own Origin and
+  sends the consent page's frame headers. `EDGE_LIMITER` covers every path the provider routes to the resource
+  (`/mcp` and `/mcp/…`, one bucket per IP), so no sub-path reaches a KV read unlimited. `MCP_READ_ONLY` no longer
+  defaults on for grants (`grantReadOnlyFrom`); the static tokens keep `mcpReadOnlyFrom`, so the public demo tokens stay
+  read-only and are never challenged.
 
 ## Sources
 

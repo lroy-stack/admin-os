@@ -1,4 +1,5 @@
 import type { RoleId } from "@/core/access";
+import { SCOPES } from "@/core/mcp/server";
 
 import type { McpCaller, McpEnv } from "./mcp.server";
 import { mcpTokensFrom } from "./mcp-env";
@@ -26,10 +27,12 @@ const rolesByDigest = async (env: McpEnv): Promise<ReadonlyMap<string, RoleId>> 
 
 /**
  * The caller a token stands for, or undefined when the token is not one of `MCP_TOKENS` (or the demo tokens). A
- * malformed `MCP_TOKENS` throws; its message never carries a token.
+ * static token is an operator's credential, not a person's consent, so it holds both scopes; the server's read-only
+ * switch (`mcpReadOnlyFrom`, on while the public demo tokens are in force) is what keeps it from writing. A malformed
+ * `MCP_TOKENS` throws; its message never carries a token.
  */
 export async function callerOfToken(token: string, env: McpEnv): Promise<McpCaller | undefined> {
   const digest = await digestOf(token);
   const roleId = (await rolesByDigest(env)).get(digest);
-  return roleId === undefined ? undefined : { roleId, sessionId: `mcp-${digest.slice(0, 32)}` };
+  return roleId === undefined ? undefined : { roleId, sessionId: `mcp-${digest.slice(0, 32)}`, scopes: SCOPES };
 }

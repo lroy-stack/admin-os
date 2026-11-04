@@ -80,6 +80,15 @@ export function mcpReadOnlyFrom(env: Env): boolean {
   return parseReadOnly(env.MCP_READ_ONLY) ?? usesPublicDemoTokens(env);
 }
 
+/**
+ * Whether the server of an OAuth grant offers read tools only: `MCP_READ_ONLY` when set, otherwise not. A grant is one
+ * person's consent on their own demo session, and its scopes already keep writes out until that person grants
+ * `write` (spec 004 D3), so the public tokens' default does not apply to it.
+ */
+export function grantReadOnlyFrom(env: Env): boolean {
+  return parseReadOnly(env.MCP_READ_ONLY) ?? false;
+}
+
 const stdioRoleSchema = z.enum(ROLE_IDS).default("staff");
 
 /** The stdio actor's role: `MCP_ROLE`, `staff` (the least privilege) when unset. */

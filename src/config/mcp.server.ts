@@ -5,7 +5,7 @@ import type { Server } from "@modelcontextprotocol/server";
 import type { RoleId } from "@/core/access";
 import type { Actor, CallLogLine } from "@/core/client";
 import { createClient } from "@/core/client";
-import { projectCatalog, type RefusalLogLine } from "@/core/mcp/server";
+import { effectivePermissions, projectCatalog, type RefusalLogLine, type Scope } from "@/core/mcp/server";
 import { parseFaults } from "@/core/mock";
 
 import { demoActor } from "./actor";
@@ -84,18 +84,24 @@ export function createMcpServer(options: McpServerOptions): Server {
 export interface McpCaller {
   readonly roleId: RoleId;
   readonly sessionId: string;
+  /** What the caller was granted (spec 004 D3): `read`, or `read` and `write`. */
+  readonly scopes: readonly Scope[];
   /** The OAuth client a grant was issued to; a write held for a person records it as who asked. */
   readonly clientId?: string;
 }
 
-/** The server a door hands its caller: the deployment's preset (`VERTICAL`) and the demo actor of the caller's role. */
+/**
+ * The server a door hands its caller: the deployment's preset (`VERTICAL`) and the demo actor of the caller's role,
+ * acting with the role's permissions ∩ the caller's scopes, so a caller without `write` is never offered a write.
+ */
 export function createMcpServerFor(
   caller: McpCaller,
   door: Omit<McpServerOptions, "actor" | "vertical" | "sessionId"> & { readonly env: McpEnv },
 ): Server {
   // MCP clients carry no demo cookies, so the preset is the deployment's (VERTICAL).
   const vertical = resolveVertical(door.env.VERTICAL);
-  const actor = demoActor(caller.roleId, vertical);
+  const role = demoActor(caller.roleId, vertical);
+  const actor = { ...role, permissions: effectivePermissions(CATALOG, role.permissions, caller.scopes) };
   return createMcpServer({
     ...door,
     actor: caller.clientId === undefined ? actor : { ...actor, clientId: caller.clientId },

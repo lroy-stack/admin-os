@@ -4,8 +4,8 @@ import {
   CimdFetchError,
   type ConsentDescription,
 } from "@cloudflare/workers-oauth-provider";
+import { z } from "zod";
 
-import { APP_CONFIG } from "@/config/app-config";
 import { demoCookieScope } from "@/config/demo-cookie";
 import {
   DEMO_ROLE_COOKIE,
@@ -20,13 +20,15 @@ import {
 import type { McpEnv } from "@/config/mcp.server";
 import { type RoleId, roleIdSchema } from "@/core/access";
 import { accessMessages } from "@/core/access/server";
-import { format, LOCALE_COOKIE, type Locale, resolveLocale } from "@/core/i18n";
+import { format, type Locale } from "@/core/i18n";
+import { SCOPES, type Scope } from "@/core/mcp/server";
 
 import { type ConsentMessages, consentMessages } from "./consent-messages";
 import { cookieOf, sessionCookieHeader } from "./cookies";
 import { type McpWorkerEnv, rateLimitPeriodOf, variablesOf } from "./env";
+import { GRANTS_PATH } from "./grants";
 import { clientIpOf, oauthRefusal, overLimit } from "./limits";
-import { escapeHtml, htmlPage, pageHeaders } from "./page";
+import { escapeHtml, htmlPage, localeOf, pageHeaders } from "./page";
 
 /**
  * The consent page at `/authorize` (ADR 0016 D4, resolution 2), in the provider's documented pattern
@@ -48,12 +50,10 @@ export interface GrantMetadata {
 /** The scope every grant holds; `write` is never granted by default (spec 004 D3). */
 export const DEFAULT_SCOPE = ["read"] as const;
 
-const localeOf = (request: Request): Locale =>
-  resolveLocale({
-    cookie: cookieOf(request, LOCALE_COOKIE),
-    acceptLanguage: request.headers.get("accept-language"),
-    defaultLocale: APP_CONFIG.i18n.defaultLocale,
-  });
+/** The visitor's answer on the form; anything else is a denial. */
+const decisionSchema = z.enum(["allow", "allow_write", "deny"]).catch("deny");
+
+type Decision = z.infer<typeof decisionSchema>;
 
 interface VisitorSession {
   readonly sessionId: string;
@@ -132,8 +132,21 @@ const shownOf = async (form: FormData, handle: string, variables: McpEnv): Promi
   return (await verifyDemoValue(shownParts(handle, shown), signature, variables)) ? shown : undefined;
 };
 
-/** The consent form: who asks (escaped: every client string is the client's choice), where access goes, what it is. */
-const consentPage = (locale: Locale, details: ConsentDescription, fields: string, role: RoleId): string => {
+const button = (decision: Decision, label: string, primary = false): string =>
+  `<button${primary ? ' class="primary"' : ""} name="decision" value="${decision}">${escapeHtml(label)}</button>`;
+
+/**
+ * The consent form: who asks (escaped: every client string is the client's choice), where access goes, and what it
+ * may do. A request for `write` gets its own section, warning and button beside reading only, so changing data is
+ * always a separate, explicit choice (spec 004 D3).
+ */
+const consentPage = (
+  locale: Locale,
+  details: ConsentDescription,
+  fields: string,
+  role: RoleId,
+  asksWrite: boolean,
+): string => {
   const text = consentMessages[locale];
   const client = escapeHtml(details.clientName);
   const origin =
@@ -148,9 +161,15 @@ const consentPage = (locale: Locale, details: ConsentDescription, fields: string
     details.redirectIsLoopback ? `<p class="warning">${escapeHtml(text.loopback)}</p>` : "",
     `<p class="muted">${escapeHtml(format(text.actsAs, locale, { role: accessMessages[locale].roles[role] }))}</p>`,
     `<h2>${escapeHtml(text.read.title)}</h2><p>${escapeHtml(text.read.body)}</p>`,
-    `<form method="post">${fields}`,
-    `<div class="actions"><button class="primary" name="decision" value="allow">${escapeHtml(text.allow)}</button>`,
-    `<button name="decision" value="deny">${escapeHtml(text.deny)}</button></div></form>`,
+    asksWrite
+      ? `<h2>${escapeHtml(text.write.title)}</h2><p>${escapeHtml(text.write.body)}</p><p class="warning">${escapeHtml(text.write.warning)}</p>`
+      : "",
+    `<form method="post">${fields}<div class="actions">`,
+    asksWrite
+      ? `${button("allow", text.allowRead, true)}${button("allow_write", text.allowWrite)}`
+      : button("allow", text.allow, true),
+    `${button("deny", text.deny)}</div></form>`,
+    `<p class="muted"><a href="${GRANTS_PATH}">${escapeHtml(text.manage)}</a></p>`,
   ].join("\n");
   return htmlPage(locale, format(escapeHtml(text.title), locale, { client }), body);
 };
@@ -182,17 +201,26 @@ async function showConsent(request: Request, env: McpWorkerEnv, locale: Locale):
   const headers = pageHeaders(consent.headers);
   headers.append("Set-Cookie", session.setCookie);
   const role = demoRoleOf(cookieOf(request, DEMO_ROLE_COOKIE));
+  const asksWrite = authRequest.scope.includes("write");
   const fields = await shownFields(consent.handle, { role, clientName: details.clientName }, variables);
-  return new Response(consentPage(locale, details, fields, role), { headers });
+  return new Response(consentPage(locale, details, fields, role, asksWrite), { headers });
 }
+
+/**
+ * What the visitor granted: `read`, or `read` and `write` when they chose changes for a request that asked for them.
+ * The request comes from storage, so a form cannot add a scope the client never asked for.
+ */
+const grantedScope = (decision: Decision, request: AuthRequest): Scope[] =>
+  decision === "allow_write" && request.scope.includes("write") ? [...SCOPES] : [...DEFAULT_SCOPE];
 
 async function decide(request: Request, env: McpWorkerEnv, locale: Locale): Promise<Response> {
   const oauth = env.OAUTH_PROVIDER;
   const variables = variablesOf(env);
   const form = await request.formData();
   const handle = String(form.get("handle") ?? "");
+  const decision: Decision = decisionSchema.parse(form.get("decision"));
   try {
-    if (form.get("decision") !== "allow") {
+    if (decision === "deny") {
       const denied = await oauth.denyConsent(request, handle);
       return new Response(null, { status: 302, headers: denied.headers });
     }
@@ -201,7 +229,8 @@ async function decide(request: Request, env: McpWorkerEnv, locale: Locale): Prom
     if (shown === undefined) return errorPage(locale, "expired");
     const session = await visitorSession(request, env, variables);
     if (session instanceof Response) return session;
-    const approved = await oauth.approveConsent(request, handle, { scope: [...DEFAULT_SCOPE] });
+    const approved = await oauth.approveConsent(request, handle);
+    const scope = grantedScope(decision, approved.request);
     const props: GrantProps = { sessionId: session.sessionId, role: shown.role };
     const metadata: GrantMetadata = { clientName: shown.clientName };
     const { redirectTo } = await oauth.completeAuthorization({
@@ -209,7 +238,7 @@ async function decide(request: Request, env: McpWorkerEnv, locale: Locale): Prom
       request: approved.request,
       userId: session.sessionId,
       metadata,
-      scope: [...DEFAULT_SCOPE],
+      scope,
       props,
     });
     approved.headers.set("Location", redirectTo);

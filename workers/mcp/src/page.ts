@@ -1,9 +1,20 @@
-import type { Locale } from "@/core/i18n";
+import { APP_CONFIG } from "@/config/app-config";
+import { LOCALE_COOKIE, type Locale, resolveLocale } from "@/core/i18n";
+
+import { cookieOf } from "./cookies";
 
 /**
- * The MCP Worker's own pages (the consent page): plain server-rendered HTML, no React (the Worker bundle rule, ADR
+ * The MCP Worker's own pages (consent and grants): plain server-rendered HTML, no React (the Worker bundle rule, ADR
  * 0016 AC1). System colours follow the visitor's light or dark scheme, so no colour is written here.
  */
+
+/** The visitor's locale, as the web app resolves it: the locale cookie, then `Accept-Language`, then the default. */
+export const localeOf = (request: Request): Locale =>
+  resolveLocale({
+    cookie: cookieOf(request, LOCALE_COOKIE),
+    acceptLanguage: request.headers.get("accept-language"),
+    defaultLocale: APP_CONFIG.i18n.defaultLocale,
+  });
 
 /** Every string that came from a client (its name, domain, redirect host) or a visitor is escaped before rendering. */
 export const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -25,6 +36,8 @@ button { font: inherit; font-size: 0.875rem; padding: 0.5rem 1rem; border-radius
 button.primary { background: CanvasText; color: Canvas; border-color: CanvasText; }
 button:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; }
 ul { padding-left: 1.25rem; }
+a { color: inherit; }
+a:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; }
 `;
 
 /** A whole page: `title` is already escaped, `body` is trusted markup built from escaped parts. */

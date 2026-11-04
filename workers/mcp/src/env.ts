@@ -13,7 +13,7 @@ export interface McpWorkerEnv {
   readonly DEMO_STORE: StoreNamespace;
   /** Requests to `/mcp`, per grant, or per token and client IP for the public demo tokens. */
   readonly MCP_LIMITER: RateLimit;
-  /** `/authorize` and `/register` (no bearer) and new demo sessions, per client IP: tight, they write KV. */
+  /** `/authorize`, `/register`, `/grants` (no bearer) and new demo sessions, per client IP: tight, they write KV. */
   readonly OAUTH_LIMITER: RateLimit;
   /** `/token` and `/mcp` per client IP before the provider reads KV: wide, a hosted client shares a few IPs. */
   readonly EDGE_LIMITER: RateLimit;

@@ -27,9 +27,8 @@ import {
 } from "./oauth-support";
 import { baseEnv, connect, ENDPOINT, fetchWith, recordingStore, TEST_RATE_LIMIT } from "./support";
 
-/** The test Worker as clients reach it; writes stay off unless a test lifts `MCP_READ_ONLY`. */
+/** The test Worker as clients reach it, with the deployed defaults (`MCP_READ_ONLY` unset). */
 const fetch = fetchWith();
-const writable = (overrides: Record<string, unknown> = {}) => fetchWith({ MCP_READ_ONLY: "false", ...overrides });
 
 const VISITOR = "6f1c2a9e-3b0d-4c1e-8f6a-1d2e3f4a5b6c";
 /** A seeded hospitality booking that can still be cancelled (as in src/config/approvals.test.ts). */
@@ -345,9 +344,10 @@ describe("a grant", () => {
   it("acts on the visitor's own session, which the web app reads (AC6 across doors)", async () => {
     const session = crypto.randomUUID();
     const { store, names } = recordingStore(baseEnv.DEMO_STORE);
-    const fetchStore = writable({ DEMO_STORE: store });
+    const fetchStore = fetchWith({ DEMO_STORE: store });
     const browser = browserAt("198.51.100.31", await demoCookies(session));
-    const granted = await authorize(fetchStore, browser, await registeredClientId(fetchStore, browser.ip));
+    const clientId = await registeredClientId(fetchStore, browser.ip);
+    const granted = await authorize(fetchStore, browser, clientId, "read write", "allow_write");
     const agent = await connect(granted.accessToken, fetchStore);
     await agent.listTools();
 
@@ -366,10 +366,10 @@ describe("a grant", () => {
 
   it("records the client that asked for a held write, for the person who approves it", async () => {
     const session = crypto.randomUUID();
-    const fetchStore = writable();
     const browser = browserAt("198.51.100.32", await demoCookies(session, "owner"));
-    const clientId = await registeredClientId(fetchStore, browser.ip);
-    const agent = await connect((await authorize(fetchStore, browser, clientId)).accessToken, fetchStore);
+    const clientId = await registeredClientId(fetch, browser.ip);
+    const granted = await authorize(fetch, browser, clientId, "read write", "allow_write");
+    const agent = await connect(granted.accessToken, fetch);
     await agent.listTools();
 
     const held = await agent.callTool({
@@ -444,6 +444,7 @@ describe("rate limits on the authorization server (AC12)", () => {
   it.each([
     ["/register", "POST", "OAUTH_LIMITER"],
     ["/authorize", "GET", "OAUTH_LIMITER"],
+    ["/grants", "GET", "OAUTH_LIMITER"],
     ["/token", "POST", "EDGE_LIMITER"],
   ])("limits %s per client IP with %s", async (path, method, binding) => {
     const { keys, limiter } = limiterRefusing(/.*/);
@@ -477,6 +478,24 @@ describe("rate limits on the authorization server (AC12)", () => {
       kvReads,
       ((await response.json()) as { error: { code: number } }).error.code,
     ]).toEqual([429, ["/mcp:198.51.100.53"], [], -32000]);
+  });
+
+  it("limits a path under /mcp in the same bucket, before any KV read", async () => {
+    const { keys, limiter } = limiterRefusing(/.*/);
+    const kvReads: string[] = [];
+    const kv = {
+      get: async (key: string) => {
+        kvReads.push(key);
+        return null;
+      },
+    };
+
+    const response = await fetchWith({ EDGE_LIMITER: limiter, OAUTH_KV: kv })(`${ENDPOINT}/x`, {
+      method: "POST",
+      headers: { authorization: "Bearer a:b:c", "cf-connecting-ip": "198.51.100.54" },
+    });
+
+    expect([response.status, keys, kvReads]).toEqual([429, ["/mcp:198.51.100.54"], []]);
   });
 
   it("keys an IPv6 client by its /64", async () => {
@@ -514,6 +533,8 @@ describe("Origin on the authorization server (AC12)", () => {
     ["/token", "POST"],
     ["/authorize", "GET"],
     ["/authorize", "POST"],
+    ["/grants", "GET"],
+    ["/grants", "POST"],
     ["/.well-known/oauth-authorization-server", "GET"],
     ["/.well-known/oauth-protected-resource/mcp", "GET"],
   ])("answers 403 to a foreign Origin on %s (%s)", async (path, method) => {

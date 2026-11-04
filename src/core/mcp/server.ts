@@ -1,5 +1,6 @@
 import "server-only";
 
+export { effectivePermissions, needsWriteScope, SCOPES, type Scope, scopesOf } from "./access";
 export {
   type ExposedEntry,
   exposedCapabilities,

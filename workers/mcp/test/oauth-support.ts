@@ -186,6 +186,40 @@ export const exchangeCode = async (
     }).toString(),
   });
 
+/** A `tools/call` POST in the 2025 stateless form, one HTTP request with no client in between. */
+export const toolCallRequest = (token: string, name: string, args: Record<string, unknown> = {}): RequestInit => ({
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${token}`,
+    "content-type": "application/json",
+    accept: "application/json, text/event-stream",
+    "mcp-protocol-version": "2025-11-25",
+  },
+  body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
+});
+
+/** `GET /grants` in the browser, with the ids of the grants it lists. */
+export const openGrants = async (fetch: WorkerFetch, browser: Browser) => {
+  const response = await fetch(`${ISSUER}/grants`, {
+    headers: { cookie: cookieHeaderOf(browser), "cf-connecting-ip": browser.ip },
+  });
+  const html = await response.text();
+  return { response, html, grantIds: [...html.matchAll(/name="grantId" value="([^"]+)"/g)].map((match) => match[1]) };
+};
+
+/** The "Revoke" button of one grant on `/grants`. */
+export const revokeOnPage = (fetch: WorkerFetch, browser: Browser, grantId: string): Promise<Response> =>
+  fetch(`${ISSUER}/grants`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      cookie: cookieHeaderOf(browser),
+      origin: ISSUER,
+      "cf-connecting-ip": browser.ip,
+    },
+    body: new URLSearchParams({ grantId, revoke: "1" }).toString(),
+  });
+
 export interface Authorized {
   readonly clientId: string;
   readonly accessToken: string;
