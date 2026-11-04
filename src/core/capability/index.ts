@@ -8,6 +8,18 @@ export type Effect = "read" | "write" | "destructive";
 /** 0 non-personal read · 1 personal read or self-scoped write · 2 business write · 3 irreversible, money or legal. */
 export type RiskTier = 0 | 1 | 2 | 3;
 
+/**
+ * What a write does to the records it touches: `add` creates a record; `set` moves a record to a target state, so a
+ * repeat changes nothing; `overwrite` replaces or clears values a person wrote; `remove` deletes a record.
+ */
+export type Change = "add" | "set" | "overwrite" | "remove";
+
+/**
+ * How a retried write is made safe (ADR 0016, D6): `key` replays the first result for the same idempotency key;
+ * `target-state` needs nothing, because repeating the call with the same input reaches the same state.
+ */
+export type IdempotencyMode = "key" | "target-state";
+
 /** Who is calling, for the approval rule: the same capability may be held for a person only when an assistant asks. */
 export interface ApprovalContext {
   readonly via: "ui" | "mcp" | "system";
@@ -25,6 +37,10 @@ export interface Capability<Id extends string, I extends z.ZodType, O extends z.
   /** Reserved for owners: roles other than `owner` never hold the permission (ADR 0006). Absent means not elevated. */
   readonly elevated?: boolean;
   readonly riskTier: RiskTier;
+  /** Every write declares its change and a read never does; MCP derives `destructiveHint` from it. */
+  readonly change?: Change;
+  /** Every write declares its idempotency mode and a read never does; `key` goes with `requiresIdempotencyKey`. */
+  readonly idempotency?: IdempotencyMode;
   /** Declares that `approval` is defined; the descriptor invariants check the two agree (`descriptorViolations`). */
   readonly mayRequireApproval?: boolean;
   /** The client refuses the call without a key (payments, sends). */
@@ -64,11 +80,15 @@ export type DescriptorRule =
   | "tier3-destructive"
   | "destructive-tier"
   | "approval-flag"
-  | "key-on-read";
+  | "key-on-read"
+  | "write-change"
+  | "write-idempotency"
+  | "idempotency-key"
+  | "add-key";
 
 type DescribedCapability = Pick<
   AnyCapability,
-  "effect" | "riskTier" | "approval" | "mayRequireApproval" | "requiresIdempotencyKey"
+  "effect" | "riskTier" | "approval" | "mayRequireApproval" | "requiresIdempotencyKey" | "change" | "idempotency"
 >;
 
 /** The descriptor rules a capability breaks (ADR 0005, descriptor v2); the catalogue contract test expects `[]`. */
@@ -81,6 +101,11 @@ export const descriptorViolations = (capability: DescribedCapability): readonly 
     ["destructive-tier", capability.effect === "destructive" && capability.riskTier < 2],
     ["approval-flag", (capability.approval !== undefined) !== (capability.mayRequireApproval === true)],
     ["key-on-read", isRead && capability.requiresIdempotencyKey === true],
+    ["write-change", isRead === (capability.change !== undefined)],
+    ["write-idempotency", isRead === (capability.idempotency !== undefined)],
+    ["idempotency-key", !isRead && (capability.idempotency === "key") !== (capability.requiresIdempotencyKey === true)],
+    // A create applied twice creates twice: only a key makes its retry safe (ADR 0016, D6).
+    ["add-key", capability.change === "add" && capability.idempotency !== "key"],
   ];
   return rules.filter(([, broken]) => broken).map(([rule]) => rule);
 };

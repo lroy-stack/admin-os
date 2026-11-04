@@ -44,14 +44,29 @@ describe("defineCapability", () => {
 
 describe("descriptorViolations", () => {
   const approve = () => true;
+  const setState = { change: "set", idempotency: "target-state" } as const;
+  const keyedSet = {
+    effect: "write",
+    riskTier: 2,
+    change: "set",
+    idempotency: "key",
+    requiresIdempotencyKey: true,
+  } as const;
 
   it.each([
     ["read-tier", { effect: "read", riskTier: 2 }],
     ["read-approval", { effect: "read", riskTier: 1, approval: approve, mayRequireApproval: true }],
-    ["tier3-destructive", { effect: "write", riskTier: 3 }],
-    ["destructive-tier", { effect: "destructive", riskTier: 1 }],
-    ["approval-flag", { effect: "write", riskTier: 2, approval: approve }],
+    ["tier3-destructive", { effect: "write", riskTier: 3, ...setState }],
+    ["destructive-tier", { effect: "destructive", riskTier: 1, ...setState }],
+    ["approval-flag", { effect: "write", riskTier: 2, ...setState, approval: approve }],
     ["key-on-read", { effect: "read", riskTier: 0, requiresIdempotencyKey: true }],
+    ["write-change", { effect: "write", riskTier: 2, idempotency: "target-state" }],
+    ["write-change", { effect: "read", riskTier: 0, change: "set" }],
+    ["write-idempotency", { effect: "write", riskTier: 2, change: "set" }],
+    ["write-idempotency", { effect: "read", riskTier: 0, idempotency: "target-state" }],
+    ["idempotency-key", { effect: "write", riskTier: 2, change: "set", idempotency: "key" }],
+    ["idempotency-key", { ...keyedSet, idempotency: "target-state" }],
+    ["add-key", { effect: "write", riskTier: 2, change: "add", idempotency: "target-state" }],
   ] as const)("reports %s", (rule, fixture) => {
     expect(descriptorViolations(fixture)).toEqual([rule]);
   });
@@ -59,10 +74,20 @@ describe("descriptorViolations", () => {
   it.each([
     ["a non-personal read", { effect: "read", riskTier: 0 }],
     ["a personal read", { effect: "read", riskTier: 1 }],
-    ["a business write", { effect: "write", riskTier: 2 }],
-    ["a keyed write", { effect: "write", riskTier: 2, requiresIdempotencyKey: true }],
-    ["a write that may need approval", { effect: "write", riskTier: 2, approval: approve, mayRequireApproval: true }],
-    ["an irreversible destructive write", { effect: "destructive", riskTier: 3 }],
+    ["a business write", { effect: "write", riskTier: 2, change: "overwrite", idempotency: "target-state" }],
+    [
+      "a keyed create",
+      { effect: "write", riskTier: 2, change: "add", idempotency: "key", requiresIdempotencyKey: true },
+    ],
+    ["a keyed set-state write", keyedSet],
+    [
+      "a write that may need approval",
+      { effect: "write", riskTier: 2, ...setState, approval: approve, mayRequireApproval: true },
+    ],
+    [
+      "an irreversible destructive write",
+      { effect: "destructive", riskTier: 3, change: "remove", idempotency: "target-state" },
+    ],
   ] as const)("accepts %s", (_label, fixture) => {
     expect(descriptorViolations(fixture)).toEqual([]);
   });

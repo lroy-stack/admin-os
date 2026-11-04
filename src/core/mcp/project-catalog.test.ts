@@ -9,7 +9,15 @@ import type { BusinessClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type MockHandler, mockHandler } from "@/core/mock";
 import { ok } from "@/core/result";
 
-import { IDEMPOTENCY_META_KEY, type McpManifest, projectCatalog, toolNameOf, toolOf } from "./server";
+import {
+  annotationsOf,
+  IDEMPOTENCY_META_KEY,
+  type McpManifest,
+  projectCatalog,
+  toolListVersion,
+  toolNameOf,
+  toolOf,
+} from "./server";
 
 interface Notes {
   readonly notes: string[];
@@ -35,6 +43,7 @@ const notesAdd = defineCapability({
   permission: "create:notes",
   effect: "write",
   riskTier: 2,
+  change: "add",
   mayRequireApproval: true,
   approval: (input) => input.text.startsWith("!"),
 });
@@ -47,6 +56,8 @@ const notesClear = defineCapability({
   permission: "delete:notes",
   effect: "destructive",
   riskTier: 3,
+  change: "remove",
+  idempotency: "target-state",
 });
 
 const notesCreate = defineCapability({
@@ -57,6 +68,8 @@ const notesCreate = defineCapability({
   permission: "create:notes",
   effect: "write",
   riskTier: 2,
+  change: "add",
+  idempotency: "key",
   requiresIdempotencyKey: true,
 });
 
@@ -129,7 +142,12 @@ afterEach(async () => {
  * A real MCP client talking to the projection over the SDK's in-memory transport pair. It lists first, as real
  * clients do, so every later `callTool` validates `structuredContent` against the advertised output schema.
  */
-const connect = async (actor: Actor, readOnly = false) => {
+interface ConnectOptions {
+  readonly manifest?: McpManifest;
+  readonly instructions?: string;
+}
+
+const connect = async (actor: Actor, readOnly = false, options: ConnectOptions = {}) => {
   const adapter = createMockAdapter({
     handlers,
     store: createSessionStore<Notes>({ notes: ["seeded"] }),
@@ -138,9 +156,10 @@ const connect = async (actor: Actor, readOnly = false) => {
   });
   const server = projectCatalog({
     catalog,
-    manifest,
+    manifest: options.manifest ?? manifest,
     actor,
     readOnly,
+    ...(options.instructions === undefined ? {} : { instructions: options.instructions }),
     createClient: (callingActor, correlationId) =>
       createClient(catalog, adapter, {
         actor: callingActor,
@@ -172,10 +191,10 @@ describe("tool names", () => {
 
 describe("listing", () => {
   it.each([
-    ["the owner", owner, ["notes_list", "notes_add", "notes_clear", "notes_create"]],
+    ["the owner", owner, ["notes_add", "notes_clear", "notes_create", "notes_list"]],
     ["a reader", reader, ["notes_list"]],
     ["an actor without permissions", nobody, []],
-  ] as const)("%s lists exactly the tools its permissions reach", async (_label, actor, expected) => {
+  ] as const)("%s lists exactly the tools its permissions reach, in name order", async (_label, actor, expected) => {
     expect(await toolNames(actor)).toEqual(expected);
   });
 
@@ -208,10 +227,27 @@ describe("listing", () => {
   it.each([
     ["notes.list", { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
     ["notes.add", { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }],
-    ["notes.clear", { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }],
-  ] as const)("%s is annotated from its effect", async (id, expected) => {
+    ["notes.clear", { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }],
+    ["notes.create", { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  ] as const)("%s is annotated from its effect, change and key", async (id, expected) => {
     const { tools } = await (await connect(owner)).listTools();
     expect(tools.find((tool) => tool.name === toolNameOf(id))?.annotations).toEqual(expected);
+  });
+
+  it.each([
+    ["set", "target-state", { destructiveHint: false, idempotentHint: true }],
+    ["overwrite", "target-state", { destructiveHint: true, idempotentHint: true }],
+    ["remove", "target-state", { destructiveHint: true, idempotentHint: true }],
+    ["add", undefined, { destructiveHint: false, idempotentHint: false }],
+    [undefined, undefined, { destructiveHint: true, idempotentHint: false }],
+  ] as const)("annotates a write whose change is %s and idempotency %s", (change, idempotency, expected) => {
+    const write = defineCapability({ ...notesCreate, requiresIdempotencyKey: false, change, idempotency });
+    expect(annotationsOf(write)).toMatchObject(expected);
+  });
+
+  it("annotates a set-state destructive write as destructive", () => {
+    const cancel = defineCapability({ ...notesClear, change: "set" });
+    expect(annotationsOf(cancel)).toMatchObject({ destructiveHint: true, idempotentHint: true });
   });
 
   it.each([
@@ -223,12 +259,8 @@ describe("listing", () => {
     expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toEqual({ "admin-os/riskTier": riskTier });
   });
 
-  it("advertises in _meta that a capability needs an idempotency key", () => {
-    const pay = defineCapability({ ...notesAdd, id: "notes.pay", requiresIdempotencyKey: true });
-    expect(toolOf(pay, { expose: true, title: "Pay" })._meta).toEqual({
-      "admin-os/riskTier": 2,
-      "admin-os/requiresIdempotencyKey": true,
-    });
+  it("keeps only the risk tier in a keyed tool's _meta: the required argument states the key (ADR 0016)", () => {
+    expect(toolOf(notesCreate, { expose: true, title: "Create a note" })._meta).toEqual({ "admin-os/riskTier": 2 });
   });
 
   it("throws when two capabilities project to the same tool name", () => {
@@ -243,6 +275,34 @@ describe("listing", () => {
         },
       }),
     ).toThrow(/both project to tool "notes_list"/);
+  });
+});
+
+describe("server metadata (spec 004 D8)", () => {
+  it("reports the tool-list version as serverInfo.version", async () => {
+    const client = await connect(owner);
+    expect(client.getServerVersion()).toEqual({ name: "admin-os", version: toolListVersion(catalog, manifest) });
+  });
+
+  it("reports the same version to every actor of one deployment", async () => {
+    const [ownerClient, readerClient] = await Promise.all([connect(owner), connect(reader, true)]);
+    expect(readerClient.getServerVersion()?.version).toBe(ownerClient.getServerVersion()?.version);
+  });
+
+  it.each([
+    ["a title changes", { ...manifest, "notes.list": { expose: true, title: "All notes" } }],
+    ["a tool becomes UI-only", { ...manifest, "notes.clear": { uiOnly: "Only a person clears every note" } }],
+  ] as const)("changes the version when %s", (_label, changed) => {
+    expect(toolListVersion(catalog, changed)).not.toBe(toolListVersion(catalog, manifest));
+  });
+
+  it("keeps the version stable for an equal manifest", () => {
+    expect(toolListVersion(catalog, { ...manifest })).toBe(toolListVersion(catalog, manifest));
+  });
+
+  it("serves the instructions it was given", async () => {
+    const client = await connect(owner, false, { instructions: "Find ids with notes_list." });
+    expect(client.getInstructions()).toBe("Find ids with notes_list.");
   });
 });
 

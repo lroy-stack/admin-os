@@ -85,13 +85,16 @@ describe("booking capabilities", () => {
     ["bookings.walk_in.seat", true],
     ["bookings.update", undefined],
     ["bookings.status.advance", undefined],
-    ["bookings.status.undo", undefined],
+    ["bookings.status.undo", true],
     ["bookings.cancel", undefined],
     ["bookings.no_show.mark", undefined],
-    ["bookings.walk_in.undo", undefined],
-  ] as const)("%s requires an idempotency key only when it creates (spec 004 D6): %s", (id, required) => {
-    expect(bookingsCapabilities[id].requiresIdempotencyKey).toBe(required);
-  });
+    ["bookings.walk_in.undo", true],
+  ] as const)(
+    "%s requires an idempotency key unless it is idempotent by target state (ADR 0016 D6): %s",
+    (id, required) => {
+      expect(bookingsCapabilities[id].requiresIdempotencyKey).toBe(required);
+    },
+  );
 
   it.each(["bookings.cancel", "bookings.no_show.mark"] as const)("%s is destructive", (id) => {
     expect(bookingsCapabilities[id].effect).toBe("destructive");

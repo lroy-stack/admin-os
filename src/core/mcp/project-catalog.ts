@@ -33,9 +33,6 @@ export const IDEMPOTENCY_META_KEY = "admin-os/idempotencyKey";
 /** Tool `_meta` key with the capability's risk tier (0 to 3). */
 export const RISK_TIER_META_KEY = "admin-os/riskTier";
 
-/** Tool `_meta` key, present and true when the tool requires the `IDEMPOTENCY_ARGUMENT` argument. */
-export const REQUIRES_KEY_META_KEY = "admin-os/requiresIdempotencyKey";
-
 const IDEMPOTENCY_ARGUMENT_DESCRIPTION =
   "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict.";
 
@@ -48,13 +45,20 @@ export interface ProjectionOptions {
   readonly manifest: McpManifest;
   readonly actor: Actor;
   readonly createClient: ClientFactory;
-  readonly serverInfo?: { readonly name: string; readonly version: string };
   /** Lists and runs read tools only; a write the actor could otherwise call answers `access.forbidden`. */
   readonly readOnly?: boolean;
+  /** The server's `instructions`: how an agent finds ids and what a held write means. */
+  readonly instructions?: string;
 }
 
-const DEFAULT_SERVER_INFO = { name: "admin-os", version: "0.1.0" } as const;
+const SERVER_NAME = "admin-os";
 const JSON_SCHEMA_TARGET = "draft-2020-12";
+
+/**
+ * `tools/list` cache hint (protocol 2026-07-28). The list is fixed for a deployment and a token, and a deploy that
+ * changes it changes `serverInfo.version`; `private` because the list depends on who asks.
+ */
+export const TOOL_LIST_CACHE_HINT = { ttlMs: 5 * 60 * 1000, cacheScope: "private" } as const;
 
 /** What a write held for a human returns: a pending state, not an error (ADR 0005). */
 export const awaitingApprovalSchema = z.strictObject({
@@ -65,13 +69,23 @@ export const awaitingApprovalSchema = z.strictObject({
 /** `bookings.list` → `bookings_list`: MCP clients and models handle underscores in tool names best. */
 export const toolNameOf = (capabilityId: string): string => capabilityId.replaceAll(".", "_");
 
-export const annotationsOf = (capability: AnyCapability): ToolAnnotations => ({
-  readOnlyHint: capability.effect === "read",
-  destructiveHint: capability.effect === "destructive",
-  idempotentHint: capability.effect === "read",
-  // Capabilities act on this business's own data, never on an open world of external entities.
-  openWorldHint: false,
-});
+/**
+ * The hints from the descriptor (spec 004 U2). A write is destructive unless its `change` only adds or moves a
+ * state; it is idempotent when it declares an idempotency mode (`target-state`: a repeat reaches the same state;
+ * `key`: a retry with the same key replays) or requires a key. A write that declares neither keeps the MCP defaults:
+ * destructive and not idempotent.
+ */
+export const annotationsOf = (capability: AnyCapability): ToolAnnotations => {
+  const isRead = capability.effect === "read";
+  const { change } = capability;
+  return {
+    readOnlyHint: isRead,
+    destructiveHint: !isRead && (capability.effect === "destructive" || (change !== "add" && change !== "set")),
+    idempotentHint: isRead || capability.idempotency !== undefined || capability.requiresIdempotencyKey === true,
+    // Capabilities act on this business's own data, never on an open world of external entities.
+    openWorldHint: false,
+  };
+};
 
 /** A write may answer with its value or with `awaiting_approval`, so its advertised output covers both. */
 const resultSchemaOf = (capability: AnyCapability): z.ZodType =>
@@ -125,11 +139,45 @@ export const toolOf = (capability: AnyCapability, entry: ExposedEntry): Tool => 
   inputSchema: inputSchemaOf(capability),
   outputSchema: jsonSchemaOf(resultSchemaOf(capability), "output"),
   annotations: annotationsOf(capability),
-  _meta: {
-    [RISK_TIER_META_KEY]: capability.riskTier,
-    ...(capability.requiresIdempotencyKey === true ? { [REQUIRES_KEY_META_KEY]: true } : {}),
-  },
+  // The key requirement is the required `idempotencyKey` argument itself, so `_meta` carries the tier only.
+  _meta: { [RISK_TIER_META_KEY]: capability.riskTier },
 });
+
+/** Tools in name order, so the list does not depend on how the catalogue was merged (spec 004 D8). */
+const byName = (a: Tool, b: Tool): number => Number(a.name > b.name) - Number(a.name < b.name);
+
+/** cyrb53: a fast, stable 53-bit string hash, as 14 hex digits. A fingerprint, not a security boundary. */
+const hashOf = (text: string): string => {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, "0");
+};
+
+const versions = new WeakMap<Catalog, WeakMap<McpManifest, string>>();
+
+/**
+ * `serverInfo.version`: a hash of the manifest and of every tool it exposes, whoever asks (spec 004 D8), so a client
+ * that caches the tool list sees a new version whenever a title, schema, annotation or classification changes.
+ */
+export const toolListVersion = (catalog: Catalog, manifest: McpManifest): string => {
+  const known = versions.get(catalog)?.get(manifest);
+  if (known !== undefined) return known;
+  const tools = exposedCapabilities(catalog, manifest)
+    .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry))
+    .sort(byName);
+  const version = hashOf(JSON.stringify({ manifest, tools }));
+  const forCatalog = versions.get(catalog) ?? new WeakMap<McpManifest, string>();
+  forCatalog.set(manifest, version);
+  versions.set(catalog, forCatalog);
+  return version;
+};
 
 /** Tool name → capability for the actor; two ids that project to the same name are a catalogue bug and throw. */
 const toolIndex = (
@@ -249,7 +297,7 @@ const prepareCall = (capability: AnyCapability, args: ToolArguments, meta: Serve
  * connect it. It lists only the actor's tools and answers unlisted names with `access.forbidden`, like the UI.
  */
 export function projectCatalog(options: ProjectionOptions): Server {
-  const { catalog, manifest, actor, createClient, serverInfo = DEFAULT_SERVER_INFO, readOnly = false } = options;
+  const { catalog, manifest, actor, createClient, readOnly = false, instructions } = options;
   const index = toolIndex(catalog, manifest, actor, readOnly);
   const withheldWrites = new Set(
     readOnly
@@ -258,11 +306,21 @@ export function projectCatalog(options: ProjectionOptions): Server {
           .map((capability) => toolNameOf(capability.id))
       : [],
   );
-  const tools = [...index.values()].map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry));
+  const tools = [...index.values()]
+    .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry))
+    .sort(byName);
   const outputSchemas = new Map(tools.map((tool) => [tool.name, tool.outputSchema]));
 
-  // The list is fixed for this instance (one actor), so no list-changed notifications are ever sent.
-  const server = new Server({ ...serverInfo }, { capabilities: { tools: { listChanged: false } } });
+  // The list is fixed for this instance (one actor), so no list-changed notifications are ever sent; a client learns
+  // of a new list from the version and the cache hint.
+  const server = new Server(
+    { name: SERVER_NAME, version: toolListVersion(catalog, manifest) },
+    {
+      capabilities: { tools: { listChanged: false } },
+      cacheHints: { "tools/list": TOOL_LIST_CACHE_HINT },
+      ...(instructions === undefined ? {} : { instructions }),
+    },
+  );
 
   server.setRequestHandler("tools/list", () => ({ tools }));
 

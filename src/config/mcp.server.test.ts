@@ -2,9 +2,8 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AnyCapability } from "@/core/capability";
 import type { Actor, CallLogLine } from "@/core/client";
-import { type ExposedEntry, toolNameOf, toolOf } from "@/core/mcp/server";
+import { type ExposedEntry, exposedCapabilities, toolNameOf, toolOf } from "@/core/mcp/server";
 import { bookingSchema, bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
 import { notificationsList, notificationsRead } from "@/modules/notifications";
@@ -24,10 +23,44 @@ const hospitality = VERTICALS.hospitality;
 const owner = demoActor("owner", hospitality);
 const staff = demoActor("staff", hospitality);
 const nobody: Actor = { actorId: "anonymous", roleId: "anonymous", permissions: [] };
-const capabilities = Object.values(CATALOG) as AnyCapability[];
+const capabilities = exposedCapabilities(CATALOG, MCP_MANIFEST);
 const staffTools = capabilities
   .filter((capability) => staff.permissions.includes(capability.permission))
-  .map((capability) => toolNameOf(capability.id));
+  .map((capability) => toolNameOf(capability.id))
+  .sort();
+
+/**
+ * The surface an agent sees, pinned per tool (spec 004 AC7): name, readOnlyHint, destructiveHint, idempotentHint,
+ * risk tier, and whether the tool requires the idempotencyKey argument. A change here is a change of requirement.
+ */
+const PINNED = [
+  ["access_me_get", true, false, true, 1, false],
+  ["bookings_availability_get", true, false, true, 0, false],
+  ["bookings_cancel", false, true, true, 2, false],
+  ["bookings_create", false, false, true, 2, true],
+  ["bookings_list", true, false, true, 1, false],
+  ["bookings_no_show_mark", false, true, true, 2, false],
+  ["bookings_status_advance", false, false, true, 2, false],
+  ["bookings_update", false, true, true, 2, false],
+  ["bookings_walk_in_seat", false, false, true, 2, true],
+  ["catalog_list", true, false, true, 0, false],
+  ["clock_get", true, false, true, 0, false],
+  ["customers_block", false, true, true, 2, false],
+  ["customers_create", false, false, true, 2, true],
+  ["customers_duplicates_check", true, false, true, 1, false],
+  ["customers_get", true, false, true, 1, false],
+  ["customers_list", true, false, true, 1, false],
+  ["customers_notes_add", false, false, true, 2, true],
+  ["customers_unblock", false, true, true, 2, false],
+  ["customers_update", false, true, true, 2, false],
+  ["notifications_list", true, false, true, 1, false],
+  ["notifications_read", false, false, true, 1, false],
+  ["notifications_read_all", false, false, true, 1, false],
+  ["notifications_unread_count", true, false, true, 1, false],
+  ["resources_list", true, false, true, 0, false],
+  ["settings_values_get", true, false, true, 0, false],
+  ["staff_list", true, false, true, 1, false],
+] as const;
 
 const open: Client[] = [];
 
@@ -61,64 +94,34 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     });
   });
 
-  it("lists every capability the hospitality owner reaches", async () => {
+  it("lists every capability the hospitality owner reaches, in name order", async () => {
     const { tools } = await connect(owner);
-    expect(tools.map((tool) => tool.name)).toEqual([
-      "access_me_get",
-      "clock_get",
-      "settings_values_get",
-      "bookings_list",
-      "bookings_availability_get",
-      "bookings_create",
-      "bookings_update",
-      "bookings_status_advance",
-      "bookings_status_undo",
-      "bookings_cancel",
-      "bookings_no_show_mark",
-      "bookings_walk_in_seat",
-      "bookings_walk_in_undo",
-      "catalog_list",
-      "customers_list",
-      "customers_get",
-      "customers_duplicates_check",
-      "customers_create",
-      "customers_update",
-      "customers_notes_add",
-      "customers_block",
-      "customers_unblock",
-      "notifications_list",
-      "notifications_unread_count",
-      "notifications_read",
-      "notifications_read_all",
-      "resources_list",
-      "staff_list",
-    ]);
+    expect(tools.map((tool) => tool.name)).toEqual(PINNED.map(([name]) => name));
   });
 
-  it.each([
-    ["bookings.availability.get", 0],
-    ["bookings.create", 2],
-    ["bookings.update", 2],
-    ["bookings.status.advance", 2],
-    ["bookings.status.undo", 2],
-    ["bookings.cancel", 2],
-    ["bookings.no_show.mark", 2],
-    ["bookings.walk_in.seat", 2],
-    ["bookings.walk_in.undo", 2],
-    ["customers.get", 1],
-    ["customers.duplicates.check", 1],
-    ["customers.create", 2],
-    ["customers.update", 2],
-    ["customers.notes.add", 2],
-    ["customers.block", 2],
-    ["customers.unblock", 2],
-    ["notifications.list", 1],
-    ["notifications.read", 1],
-    ["notifications.read_all", 1],
-  ] as const)("lists %s as a tool with risk tier %s", async (id, riskTier) => {
-    const { tools } = await connect(owner);
-    expect(tools.find((tool) => tool.name === toolNameOf(id))?._meta).toMatchObject({ "admin-os/riskTier": riskTier });
-  });
+  it.each(PINNED)(
+    "pins %s: readOnly %s, destructive %s, idempotent %s, tier %s, key %s (AC7)",
+    async (name, readOnlyHint, destructiveHint, idempotentHint, riskTier, key) => {
+      const { tools } = await connect(owner);
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect([tool?.annotations, tool?._meta, tool?.inputSchema.required?.includes("idempotencyKey") === true]).toEqual(
+        [
+          { readOnlyHint, destructiveHint, idempotentHint, openWorldHint: false },
+          { "admin-os/riskTier": riskTier },
+          key,
+        ],
+      );
+    },
+  );
+
+  it.each(["bookings_status_undo", "bookings_walk_in_undo"])(
+    "answers the UI-only %s with access.forbidden (ADR 0016, resolution 3)",
+    async (name) => {
+      const { client } = await connect(owner, undefined, crypto.randomUUID());
+      const result = await client.callTool({ name, arguments: { id: "R-1046" } });
+      expect(result).toMatchObject({ isError: true, structuredContent: { code: "access.forbidden" } });
+    },
+  );
 
   it("lists for staff only the tools its permissions reach", async () => {
     const { tools } = await connect(staff);
@@ -130,14 +133,19 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     expect(tools).toEqual([]);
   });
 
-  it.each(capabilities)("annotates $id from its effect", async (capability) => {
-    const { tools } = await connect(owner);
-    expect(tools.find((tool) => tool.name === toolNameOf(capability.id))?.annotations).toEqual({
-      readOnlyHint: capability.effect === "read",
-      destructiveHint: capability.effect === "destructive",
-      idempotentHint: capability.effect === "read",
-      openWorldHint: false,
-    });
+  it.each([
+    ["a writable server", false, /idempotencyKey/],
+    ["a read-only server", true, /read-only/],
+  ] as const)("tells the agent how to find ids on %s", async (_label, readOnly, rest) => {
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "admin-os-test", version: "0.0.0" });
+    await createMcpServer({ actor: owner, vertical: "hospitality", readOnly }).connect(serverSide);
+    await client.connect(clientSide);
+    open.push(client);
+    expect([client.getInstructions(), client.getInstructions()]).toEqual([
+      expect.stringContaining("booking ids with bookings_list"),
+      expect.stringMatching(rest),
+    ]);
   });
 
   it.each([
@@ -155,16 +163,6 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     await client.callTool({ name: "bookings_list", arguments: {} });
     expect(lines).toMatchObject([{ capability: "bookings.list", riskTier: 1, via: "mcp" }]);
   });
-
-  it.each(capabilities.filter((capability) => capability.requiresIdempotencyKey === true))(
-    "marks the write tool $id as needing an idempotency key",
-    async (capability) => {
-      const { tools } = await connect(owner);
-      expect(tools.find((tool) => tool.name === toolNameOf(capability.id))?._meta).toMatchObject({
-        "admin-os/requiresIdempotencyKey": true,
-      });
-    },
-  );
 
   it("seats a walk-in with arguments only and shows it in bookings_list (AC4)", async () => {
     const { client } = await connect(owner, undefined, crypto.randomUUID());

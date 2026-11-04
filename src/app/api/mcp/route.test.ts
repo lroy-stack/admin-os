@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { demoActor } from "@/config/actor";
 import { CATALOG } from "@/config/catalog";
+import { MCP_MANIFEST } from "@/config/mcp-manifest";
 import { VERTICALS } from "@/config/vertical";
-import { toolNameOf } from "@/core/mcp/server";
+import { exposedCapabilities, TOOL_LIST_CACHE_HINT, toolListVersion, toolNameOf } from "@/core/mcp/server";
 
 import { GET as metadata } from "../../.well-known/oauth-protected-resource/api/mcp/route";
 import { DELETE, GET, POST } from "./route";
@@ -27,9 +28,10 @@ const quiet = vi.spyOn(console, "info").mockImplementation(() => undefined);
 
 const toolsOf = (roleId: "owner" | "staff") => {
   const { permissions } = demoActor(roleId, VERTICALS.hospitality);
-  return Object.values(CATALOG)
+  return exposedCapabilities(CATALOG, MCP_MANIFEST)
     .filter((capability) => permissions.includes(capability.permission))
-    .map((capability) => toolNameOf(capability.id));
+    .map((capability) => toolNameOf(capability.id))
+    .sort();
 };
 
 const ERAS = [
@@ -118,6 +120,17 @@ describe("MCP over the route (AC5)", () => {
     const client = await connect(token, negotiation);
     const { tools } = await client.listTools();
     expect([client.getProtocolEra(), tools.map((tool) => tool.name)]).toEqual([era, toolsOf(roleId)]);
+  });
+
+  it("carries the tool-list cache hint over the modern era (spec 004 D8)", async () => {
+    const client = await connect("token-staff", ERAS[1][1]);
+    const listed = await client.listTools();
+    expect([listed.ttlMs, listed.cacheScope]).toEqual([TOOL_LIST_CACHE_HINT.ttlMs, TOOL_LIST_CACHE_HINT.cacheScope]);
+  });
+
+  it.each(ERAS)("reports the manifest's tool-list version over the %s era", async (_era, negotiation) => {
+    const client = await connect("token-staff", negotiation);
+    expect(client.getServerVersion()?.version).toBe(toolListVersion(CATALOG, MCP_MANIFEST));
   });
 
   it.each(ERAS)("reads bookings over the %s era", async (_era, negotiation) => {

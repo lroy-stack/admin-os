@@ -9,7 +9,7 @@ import { parseFaults } from "@/core/mock";
 
 import { CATALOG } from "./catalog";
 import { getAdapter } from "./data.server";
-import { MCP_MANIFEST } from "./mcp-manifest";
+import { MCP_MANIFEST, mcpInstructions } from "./mcp-manifest";
 import type { VerticalId } from "./vertical";
 
 export interface McpServerOptions {
@@ -39,6 +39,7 @@ export function createMcpServer(options: McpServerOptions): Server {
     manifest: MCP_MANIFEST,
     actor: options.actor,
     readOnly: options.readOnly === true,
+    instructions: mcpInstructions(options.readOnly === true),
     createClient: (actor, correlationId) =>
       createClient(CATALOG, adapter, {
         actor,

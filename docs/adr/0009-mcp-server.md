@@ -301,3 +301,18 @@ and unlisted names answering `access.forbidden`.
   - Workers rate limits guard `/register`, `/authorize`, `/token`, each grant, and new demo sessions per IP.
 - **Logs.** The Worker writes one line per call, with the correlation id, client id, tool, status and duration.
 
+
+## Amendment 2026-11-04: phase 3 as built (spec 004 T1, U1, U2)
+
+- **Manifest.** `src/config/mcp-manifest.ts` satisfies `ToolManifest<CatalogById>`; `bookings.status.undo` and
+  `bookings.walk_in.undo` are UI-only (ADR 0016, resolution 3). The projection also throws at construction on an
+  unclassified capability, an entry for no capability, or an empty title or reason.
+- **Keys.** `bookings_create`, `bookings_walk_in_seat`, `customers_create` and `customers_notes_add` require the
+  `idempotencyKey` argument; a host may still send `_meta["admin-os/idempotencyKey"]`, and a different key in each is
+  `schema.invalid_input`. The tool `_meta` flag `admin-os/requiresIdempotencyKey` is removed; `_meta` carries the tier.
+- **Annotations.** From the descriptor's `change` and `idempotency` (ADR 0005, amended 2026-11-04):
+  `destructiveHint` for destructive writes and for `overwrite` and `remove`; `idempotentHint` for reads and every write
+  with a mode. `src/config/mcp.server.test.ts` pins them per tool with the tier and the key (AC7).
+- **Protocol metadata.** Tools are sorted by name; `instructions` say where ids come from and what a held write means;
+  `serverInfo.version` is a 14-hex-digit hash of the manifest and every exposed tool definition; `tools/list` carries
+  `ttlMs: 300000, cacheScope: "private"` on the 2026-07-28 revision (the 2025 era has no cache fields).

@@ -274,6 +274,10 @@ Every list capability paginates.
 - **Invariants** (contract test over `CATALOG`, `src/config/contracts.test.ts`): a read has tier 0 or 1 and no approval
   rule · tier 3 implies destructive · destructive implies tier 2 or 3 · `approval` is defined exactly when
   `mayRequireApproval` is true · `requiresIdempotencyKey` implies not a read.
+- **Amended 2026-11-04 (spec 004 U1, U2).** Every write declares `change` (`add`, `set`, `overwrite` or `remove`) and
+  `idempotency` (`key` or `target-state`), and a read declares neither. `key` goes exactly with
+  `requiresIdempotencyKey`, and an `add` is `key` (ADR 0016, D6). Set-state writes no longer require a key; the UI
+  still sends its attempt key, which replays as before.
 
 ## Amendment 2026-11-04: the demo store moves into a Durable Object; approvals become a policy (ADR 0016)
 

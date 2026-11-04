@@ -53,6 +53,8 @@ export const customersCreate = defineCapability({
   permission: "create:customers",
   effect: "write",
   riskTier: 2,
+  change: "add",
+  idempotency: "key",
   requiresIdempotencyKey: true,
 });
 
@@ -65,6 +67,8 @@ export const customersUpdate = defineCapability({
   permission: "update:customers",
   effect: "write",
   riskTier: 2,
+  change: "overwrite",
+  idempotency: "target-state",
 });
 
 export const customersNotesAdd = defineCapability({
@@ -75,6 +79,8 @@ export const customersNotesAdd = defineCapability({
   permission: "update:customers",
   effect: "write",
   riskTier: 2,
+  change: "add",
+  idempotency: "key",
   requiresIdempotencyKey: true,
 });
 
@@ -86,6 +92,8 @@ export const customersBlock = defineCapability({
   permission: "block:customers",
   effect: "write",
   riskTier: 2,
+  change: "overwrite",
+  idempotency: "target-state",
 });
 
 export const customersUnblock = defineCapability({
@@ -96,6 +104,8 @@ export const customersUnblock = defineCapability({
   permission: "block:customers",
   effect: "write",
   riskTier: 2,
+  change: "overwrite",
+  idempotency: "target-state",
 });
 
 export const customersCapabilities = {

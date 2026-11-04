@@ -16,11 +16,17 @@ export const MCP_MANIFEST = {
   "bookings.create": { expose: true, title: "Create a booking" },
   "bookings.update": { expose: true, title: "Change a booking" },
   "bookings.status.advance": { expose: true, title: "Advance a booking's status" },
-  "bookings.status.undo": { expose: true, title: "Undo a status step" },
+  "bookings.status.undo": {
+    uiOnly:
+      "The undo affordance of the person who just advanced a status; agents use the forward capabilities (ADR 0016, resolution 3)",
+  },
   "bookings.cancel": { expose: true, title: "Cancel a booking" },
   "bookings.no_show.mark": { expose: true, title: "Mark a no-show" },
   "bookings.walk_in.seat": { expose: true, title: "Seat a walk-in" },
-  "bookings.walk_in.undo": { expose: true, title: "Undo a walk-in" },
+  "bookings.walk_in.undo": {
+    uiOnly:
+      "The undo affordance of the person who just seated a walk-in; agents use the forward capabilities (ADR 0016, resolution 3)",
+  },
   "catalog.list": { expose: true, title: "List catalog items" },
   "customers.list": { expose: true, title: "List customers" },
   "customers.get": { expose: true, title: "Get a customer" },
@@ -37,3 +43,14 @@ export const MCP_MANIFEST = {
   "resources.list": { expose: true, title: "List resources" },
   "staff.list": { expose: true, title: "List staff" },
 } as const satisfies ToolManifest<CatalogById>;
+
+const FIND_IDS =
+  "admin-OS runs one small business: bookings, customers, resources (tables, chairs or bays), staff, catalog items and notifications. Never guess an id: find booking ids with bookings_list, customer ids with customers_list or customers_duplicates_check, resource ids with resources_list or bookings_availability_get, and notification ids with notifications_list; clock_get gives today's business day.";
+
+const WRITES =
+  "Create and add tools require an idempotencyKey argument: a new UUID for each operation, the same one when you retry it. A write may answer awaiting_approval: a person must approve it first, so do not retry it. An error names the field to fix and the tool that finds a valid value.";
+
+const READ_ONLY = "This server is read-only: it lists and runs read tools only.";
+
+/** The server's `instructions` (spec 004 U2): where ids come from and what a held write means. */
+export const mcpInstructions = (readOnly: boolean): string => `${FIND_IDS} ${readOnly ? READ_ONLY : WRITES}`;

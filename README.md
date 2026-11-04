@@ -192,7 +192,11 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
 
 Create and add tools take a required `idempotencyKey` argument: a new UUID for each operation, the same one to retry
-it safely. Other writes take no key and are safe to repeat.
+it safely. Other writes take no key and are safe to repeat. Each tool's annotations say whether it only reads,
+whether it can overwrite or remove data, and whether a repeat is safe.
+
+The server's `serverInfo.version` is a hash of its tool list, so it changes whenever a tool does. If a client keeps
+showing an old list after an update, reconnect it (in Claude Code, `/mcp`, then reconnect `admin-os`).
 
 Claude Code, from the repository root:
 
