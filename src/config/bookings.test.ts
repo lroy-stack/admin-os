@@ -370,6 +370,14 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
       });
     });
 
+    it("answers the booking as it is when the same reschedule is repeated", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput(), key()));
+      const change = { id: created.id, startMin: p.freeAt - 60 };
+      const first = await client.call("bookings.reschedule", change);
+      expect(await client.call("bookings.reschedule", change)).toEqual(first);
+    });
+
     it("answers bookings.not_found for an unknown booking", async () => {
       expect(await world(vertical).client.call("bookings.reschedule", { id: "ghost", partySize: 1 })).toMatchObject({
         ok: false,
@@ -405,6 +413,14 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
         created.endMin,
         created.partySize,
       ]);
+    });
+
+    it("answers the booking as it is when the same assignment is repeated", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput({ resourceIds: [] }), key()));
+      const change = { id: created.id, resourceIds: [p.free] };
+      const first = await client.call("bookings.table.assign", change);
+      expect(await client.call("bookings.table.assign", change)).toEqual(first);
     });
 
     it("answers bookings.not_found for an unknown booking", async () => {
@@ -770,9 +786,7 @@ describe("booking status transitions", () => {
     ["pending", "completed"],
     ["pending", "cancelled"],
     ["pending", "no_show"],
-    ["pending", "pending"],
     ["awaiting_payment", "in_progress"],
-    ["confirmed", "confirmed"],
     ["confirmed", "completed"],
     ["confirmed", "cancelled"],
     ["confirmed", "no_show"],
@@ -781,6 +795,8 @@ describe("booking status transitions", () => {
     ["completed", "in_progress"],
     ["cancelled", "confirmed"],
     ["no_show", "confirmed"],
+    ["cancelled", "cancelled"],
+    ["no_show", "no_show"],
   ] as const;
 
   const everyStatus = bookingStatuses.map((status) => booking(status));
@@ -793,6 +809,23 @@ describe("booking status transitions", () => {
 
   it.each(allowed)("moves %s to %s", async (from, to) => {
     expect(bookingOf(await advance(from, to)).status).toBe(to);
+  });
+
+  it.each(["pending", "awaiting_payment", "confirmed", "in_progress", "completed"] as const)(
+    "answers the booking as it is when it is already %s",
+    async (status) => {
+      const { client } = world("hospitality", hospitalityWith(everyStatus));
+      const answer = bookingOf(await client.call("bookings.status.advance", { id: `b-${status}`, to: status }, key()));
+      expect([answer.id, answer.status, "lastStep" in answer]).toEqual([`b-${status}`, status, false]);
+    },
+  );
+
+  it("keeps the step to take back when an advance is repeated", async () => {
+    const { client } = world("hospitality", hospitalityWith(everyStatus));
+    const input = { id: "b-confirmed", to: "in_progress" } as const;
+    const first = bookingOf(await client.call("bookings.status.advance", input, key()));
+    const repeated = bookingOf(await client.call("bookings.status.advance", input, key()));
+    expect(repeated).toEqual(first);
   });
 
   it.each(refused)("refuses %s to %s with bookings.invalid_transition", async (from, to) => {
@@ -825,18 +858,35 @@ describe("booking status transitions", () => {
     );
   });
 
-  it.each(["in_progress", "completed", "cancelled", "no_show"] as const)(
-    "refuses to cancel a %s booking",
-    async (status) => {
-      const { client } = world("hospitality", hospitalityWith(everyStatus));
-      expect(await client.call("bookings.cancel", { id: `b-${status}`, reason: "r" }, key())).toMatchObject({
-        ok: false,
-        error: { code: "bookings.invalid_transition" },
-      });
-    },
-  );
+  it("answers the cancelled booking as it is when cancelling again", async () => {
+    const { client } = world("hospitality", hospitalityWith(everyStatus));
+    const first = bookingOf(await client.call("bookings.cancel", { id: "b-confirmed", reason: "r" }, key()));
+    const again = await client.call("bookings.cancel", { id: "b-confirmed", reason: "r" }, key());
+    expect(bookingOf(again)).toEqual(first);
+  });
 
-  it.each(["pending", "awaiting_payment", "in_progress", "completed", "cancelled", "no_show"] as const)(
+  it("keeps the first reason when a cancel is repeated with another", async () => {
+    const { client } = world("hospitality", hospitalityWith(everyStatus));
+    await client.call("bookings.cancel", { id: "b-confirmed", reason: "first" }, key());
+    const again = await client.call("bookings.cancel", { id: "b-confirmed", reason: "second" }, key());
+    expect(bookingOf(again).cancelReason).toBe("first");
+  });
+
+  it.each(["in_progress", "completed", "no_show"] as const)("refuses to cancel a %s booking", async (status) => {
+    const { client } = world("hospitality", hospitalityWith(everyStatus));
+    expect(await client.call("bookings.cancel", { id: `b-${status}`, reason: "r" }, key())).toMatchObject({
+      ok: false,
+      error: { code: "bookings.invalid_transition" },
+    });
+  });
+
+  it("answers the no-show booking as it is when marking it again", async () => {
+    const { client } = world("hospitality", hospitalityWith(everyStatus));
+    const again = await client.call("bookings.no_show.mark", { id: "b-no_show" }, key());
+    expect(bookingOf(again)).toMatchObject({ id: "b-no_show", status: "no_show" });
+  });
+
+  it.each(["pending", "awaiting_payment", "in_progress", "completed", "cancelled"] as const)(
     "refuses a no-show from %s",
     async (status) => {
       const { client } = world("hospitality", hospitalityWith(everyStatus));

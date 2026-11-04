@@ -50,6 +50,8 @@ const notFound = (kind: "booking" | "resource" | "customer", ids: readonly strin
 const invalidTransition = (from: string, to: string) =>
   err("bookings.invalid_transition", `A ${from} booking cannot become ${to}`, { from, to });
 
+const LEAVES_THE_FLOW: readonly string[] = ["cancelled", "no_show"];
+
 const bookingOf = (data: BookingsData, id: string) => data.bookings.find((booking) => booking.id === id);
 
 /** Replaces the stored booking so a later read sees the change, and returns the new value. */
@@ -247,6 +249,8 @@ export const bookingsMockHandlers = {
   ...mockHandler(bookingsStatusAdvance, ({ id, to }, { data, clock }: Context) => {
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
+    // A retry of a step that already landed answers the booking as it is; cancel and no-show have their own capabilities.
+    if (booking.status === to && !LEAVES_THE_FLOW.includes(to)) return ok(booking);
     return NEXT_STATUS[booking.status] === to
       ? ok(
           replace(data, {
@@ -276,6 +280,7 @@ export const bookingsMockHandlers = {
   ...mockHandler(bookingsCancel, ({ id, reason }, { data }: Context) => {
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
+    if (booking.status === "cancelled") return ok(booking);
     if (!CANCELLABLE_STATUSES.includes(booking.status)) return invalidTransition(booking.status, "cancelled");
     return ok(replace(data, { ...booking, status: "cancelled", cancelReason: reason, resourceIds: [] }));
   }),
@@ -284,6 +289,7 @@ export const bookingsMockHandlers = {
     const { data } = context;
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
+    if (booking.status === "no_show") return ok(booking);
     if (booking.status !== "confirmed") return invalidTransition(booking.status, "no_show");
     if (!isLate(context, booking)) {
       return err("bookings.too_early", "The booking has not started long enough ago to be a no-show", {

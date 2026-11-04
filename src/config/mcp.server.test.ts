@@ -235,16 +235,16 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     expect([retry.id, walkIns.map((booking) => booking.id)]).toEqual([first.id, [first.id]]);
   });
 
-  it("advances a booking's status without a key, and a repeated advance changes nothing (AC4)", async () => {
+  it("advances a booking's status without a key, and a repeated advance answers the booking as it is (AC4)", async () => {
     const { client } = await connect(owner, undefined, crypto.randomUUID());
     const call = { name: "bookings_status_advance", arguments: { id: "R-1046", to: "in_progress" } };
     const advanced = await client.callTool(call);
     const repeated = await client.callTool(call);
     const listed = await client.callTool({ name: "bookings_list", arguments: { limit: 200 } });
     const found = bookingsList.output.parse(listed.structuredContent).items.find((booking) => booking.id === "R-1046");
-    expect([advanced.structuredContent, repeated, found?.status]).toMatchObject([
+    expect([advanced.structuredContent, repeated.structuredContent, found?.status]).toMatchObject([
       { status: "in_progress" },
-      { isError: true, structuredContent: { code: "bookings.invalid_transition" } },
+      { status: "in_progress" },
       "in_progress",
     ]);
   });
