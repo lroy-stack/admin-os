@@ -1,10 +1,11 @@
 "use client";
 
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Controller, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -14,7 +15,7 @@ import { CHANNELS } from "@/core/channels";
 import { format, formatCalendarDate, useLocale, useMessages } from "@/core/i18n/client";
 import { SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { type CapabilityActionOptions, FormField, FormFooter, useCapabilityAction, useWindowForm } from "@/ds/forms";
-import { DockedPanel } from "@/ds/overlays";
+import { DockedPanel, type PanelPick } from "@/ds/overlays";
 import { ContactFields, type ContactFieldsProps, contactFieldsMessageKey, toCreateInput } from "@/modules/customers/ui";
 
 import { createGuest, createReservation, findAvailability } from "../actions";
@@ -56,7 +57,13 @@ interface ReservationContext {
   readonly errors: CapabilityActionOptions["errors"];
   /** Shows another business day, for the toast of a booking made on a day the screen is not showing. */
   readonly onShowDay: (day: string) => void;
+  /** The floor's pick: the panel asks it for a table, the floor answers with the table clicked. */
+  readonly pick: PanelPick<string>;
+  /** Tells the floor which tables fit the slot picked, so it can light them while the panel is picking. */
+  readonly onFitChange: (tableIds: ReadonlySet<string>) => void;
 }
+
+const NO_TABLES: ReadonlySet<string> = new Set();
 
 /** The value of the "Automatic" choice; the form holds a blank table for it. */
 const AUTOMATIC = "automatic";
@@ -74,7 +81,7 @@ function ReservationWindow({
   const copy = text.newReservation;
   const fieldText = useMessages(contactFieldsMessageKey);
   const locale = useLocale();
-  const { locations, service, errors, onShowDay } = context;
+  const { locations, service, errors, onShowDay, pick, onFitChange } = context;
   const withErrors = errors === undefined ? {} : { errors };
   const makeGuest = useCapabilityAction(createGuest, withErrors);
   const book = useCapabilityAction(createReservation, withErrors);
@@ -155,6 +162,19 @@ function ReservationWindow({
   );
   const slot = options.find((option) => String(option.startMin) === startMin) ?? null;
   const fit = fittingTables(slot, locations);
+  const fitKey = fit.map(({ table }) => table.id).join(",");
+
+  // The floor lights these tables while the panel is picking; none once the slot or the panel goes.
+  useEffect(() => {
+    onFitChange(fitKey === "" ? NO_TABLES : new Set(fitKey.split(",")));
+    return () => onFitChange(NO_TABLES);
+  }, [fitKey, onFitChange]);
+
+  /** Asks the floor for a table; a click on a lit table answers, Escape or Stop picking gives up. */
+  const pickOnFloor = async () => {
+    const tableId = await pick.request("table");
+    if (tableId !== null) form.setValue("tableId", tableId, { shouldDirty: true });
+  };
 
   const modes: SegmentedOption<GuestMode>[] = [
     { value: "existing", label: copy.guest.existing },
@@ -182,153 +202,245 @@ function ReservationWindow({
           onCancel={close}
         />
       )}
+      pick={pick}
     >
-      <form {...windowForm.formProps} className="flex flex-col gap-4">
-        <Controller
-          control={form.control}
-          name="mode"
-          render={({ field }) => (
-            <SegmentedControl
-              label={copy.guest.label}
-              value={field.value}
-              options={modes}
-              onValueChange={(next) => {
-                field.onChange(next);
-                form.clearErrors();
-              }}
-              className="w-fit"
+      {({ docked }) => (
+        <form {...windowForm.formProps} className="flex flex-col gap-4 pt-1">
+          <Controller
+            control={form.control}
+            name="mode"
+            render={({ field }) => (
+              <SegmentedControl
+                label={copy.guest.label}
+                value={field.value}
+                options={modes}
+                onValueChange={(next) => {
+                  field.onChange(next);
+                  form.clearErrors();
+                }}
+                className="w-fit"
+              />
+            )}
+          />
+          {mode === "existing" ? (
+            <FormField
+              control={form.control}
+              name="customerId"
+              label={copy.guest.searchLabel}
+              readOnly={windowForm.awaiting}
+            >
+              {({ id, onChange, "aria-invalid": invalid, "aria-describedby": describedBy }) => (
+                <GuestPicker
+                  id={id}
+                  aria-invalid={invalid}
+                  aria-describedby={describedBy}
+                  picked={picked}
+                  onPick={(row) => {
+                    setPicked(row);
+                    onChange(row.id);
+                  }}
+                  onClear={() => {
+                    setPicked(null);
+                    onChange("");
+                  }}
+                />
+              )}
+            </FormField>
+          ) : (
+            <ContactFields
+              // The form's values extend the contact's three text fields, which is all ContactFields reads.
+              control={form.control as unknown as ContactFieldsProps["control"]}
+              readOnly={windowForm.awaiting}
             />
           )}
-        />
-        {mode === "existing" ? (
-          <FormField
-            control={form.control}
-            name="customerId"
-            label={copy.guest.searchLabel}
-            readOnly={windowForm.awaiting}
-          >
-            {({ id, onChange, "aria-invalid": invalid, "aria-describedby": describedBy }) => (
-              <GuestPicker
-                id={id}
-                aria-invalid={invalid}
-                aria-describedby={describedBy}
-                picked={picked}
-                onPick={(row) => {
-                  setPicked(row);
-                  onChange(row.id);
-                }}
-                onClear={() => {
-                  setPicked(null);
-                  onChange("");
+
+          <FormField control={form.control} name="date" label={copy.date.label} readOnly={windowForm.awaiting}>
+            {(field) => (
+              <Input
+                {...field}
+                type="date"
+                onChange={(event) => {
+                  field.onChange(event);
+                  clearSlot();
                 }}
               />
             )}
           </FormField>
-        ) : (
-          <ContactFields
-            // The form's values extend the contact's three text fields, which is all ContactFields reads.
-            control={form.control as unknown as ContactFieldsProps["control"]}
-            readOnly={windowForm.awaiting}
-          />
-        )}
 
-        <FormField control={form.control} name="date" label={copy.date.label} readOnly={windowForm.awaiting}>
-          {(field) => (
-            <Input
-              {...field}
-              type="date"
-              onChange={(event) => {
-                field.onChange(event);
-                clearSlot();
-              }}
+          <div className="flex flex-col gap-1.5">
+            <span id={coversLabel} className="text-sm font-medium">
+              {copy.covers.label}
+            </span>
+            <Controller
+              control={form.control}
+              name="covers"
+              render={({ field }) => (
+                <CoversStepper
+                  value={field.value}
+                  onChange={(next) => {
+                    field.onChange(next);
+                    clearSlot();
+                  }}
+                  max={MAX_RESERVATION_COVERS}
+                  labelledBy={coversLabel}
+                />
+              )}
             />
-          )}
-        </FormField>
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span id={coversLabel} className="text-sm font-medium">
-            {copy.covers.label}
-          </span>
-          <Controller
-            control={form.control}
-            name="covers"
-            render={({ field }) => (
-              <CoversStepper
-                value={field.value}
+          <FormField control={form.control} name="startMin" label={copy.slot.label} readOnly={windowForm.awaiting}>
+            {({ id, value, onChange, "aria-invalid": invalid, "aria-describedby": describedBy }) => (
+              <SlotField
+                id={id}
+                aria-invalid={invalid}
+                aria-describedby={describedBy}
+                availability={availability}
+                options={options}
+                value={value}
                 onChange={(next) => {
-                  field.onChange(next);
-                  clearSlot();
+                  onChange(next);
+                  form.setValue("tableId", "", { shouldDirty: true });
+                  // The floor is beside the panel: light the tables that fit and wait for a click.
+                  const chosen = options.find((option) => String(option.startMin) === next) ?? null;
+                  if (docked && fittingTables(chosen, locations).length > 0) void pickOnFloor();
                 }}
-                max={MAX_RESERVATION_COVERS}
-                labelledBy={coversLabel}
+                onRetry={availability.retry}
+                party={format(text.party, locale, { count: covers })}
               />
             )}
-          />
-        </div>
+          </FormField>
 
-        <FormField control={form.control} name="startMin" label={copy.slot.label} readOnly={windowForm.awaiting}>
-          {({ id, value, onChange, "aria-invalid": invalid, "aria-describedby": describedBy }) => (
-            <SlotField
-              id={id}
-              aria-invalid={invalid}
-              aria-describedby={describedBy}
-              availability={availability}
-              options={options}
-              value={value}
-              onChange={(next) => {
-                onChange(next);
-                form.setValue("tableId", "", { shouldDirty: true });
-              }}
-              onRetry={availability.retry}
-              party={format(text.party, locale, { count: covers })}
-            />
-          )}
-        </FormField>
+          <FormField control={form.control} name="tableId" label={copy.table.label} readOnly={windowForm.awaiting}>
+            {({ onChange, "aria-invalid": invalid, "aria-describedby": describedBy }) =>
+              docked ? (
+                <TableOnFloor
+                  slotPicked={slot !== null}
+                  tables={fit}
+                  value={tableId}
+                  onChange={onChange}
+                  onPick={() => void pickOnFloor()}
+                  picking={pick.picking !== null}
+                  invalid={invalid}
+                  describedBy={describedBy}
+                />
+              ) : (
+                <TableChoices
+                  slotPicked={slot !== null}
+                  tables={fit}
+                  value={tableId}
+                  onChange={onChange}
+                  invalid={invalid}
+                  describedBy={describedBy}
+                />
+              )
+            }
+          </FormField>
 
-        <FormField control={form.control} name="tableId" label={copy.table.label} readOnly={windowForm.awaiting}>
-          {({ onChange, "aria-invalid": invalid, "aria-describedby": describedBy }) => (
-            <TableChoices
-              slotPicked={slot !== null}
-              tables={fit}
-              value={tableId}
-              onChange={onChange}
-              invalid={invalid}
-              describedBy={describedBy}
-            />
-          )}
-        </FormField>
+          <FormField control={form.control} name="channel" label={copy.channel.label} readOnly={windowForm.awaiting}>
+            {({ readOnly, ...field }) => (
+              <NativeSelect {...field} disabled={readOnly} className="w-full">
+                {CHANNELS.map((channel) => (
+                  <option key={channel} value={channel}>
+                    {text.channels[channel]}
+                  </option>
+                ))}
+              </NativeSelect>
+            )}
+          </FormField>
 
-        <FormField control={form.control} name="channel" label={copy.channel.label} readOnly={windowForm.awaiting}>
-          {({ readOnly, ...field }) => (
-            <NativeSelect {...field} disabled={readOnly} className="w-full">
-              {CHANNELS.map((channel) => (
-                <option key={channel} value={channel}>
-                  {text.channels[channel]}
-                </option>
-              ))}
-            </NativeSelect>
-          )}
-        </FormField>
+          <FormField control={form.control} name="note" label={copy.note.label} readOnly={windowForm.awaiting}>
+            {(field) => <Textarea {...field} />}
+          </FormField>
 
-        <FormField control={form.control} name="note" label={copy.note.label} readOnly={windowForm.awaiting}>
-          {(field) => <Textarea {...field} />}
-        </FormField>
-
-        <FormField
-          control={form.control}
-          name="tags"
-          label={copy.tags.label}
-          description={copy.tags.hint}
-          readOnly={windowForm.awaiting}
-        >
-          {(field) => <Input {...field} autoComplete="off" />}
-        </FormField>
-      </form>
+          <FormField
+            control={form.control}
+            name="tags"
+            label={copy.tags.label}
+            description={copy.tags.hint}
+            readOnly={windowForm.awaiting}
+          >
+            {(field) => <Input {...field} autoComplete="off" />}
+          </FormField>
+        </form>
+      )}
     </DockedPanel>
   );
 }
 
-/** "Automatic" or one of the tables that fit the slot, closest fit first. */
+/**
+ * Beside the floor the table is picked there: the field says what is chosen and starts a pick; the tables that fit
+ * light up and a click on one fills it. "Automatic" takes the choice back.
+ */
+function TableOnFloor({
+  slotPicked,
+  tables,
+  value,
+  onChange,
+  onPick,
+  picking,
+  invalid,
+  describedBy,
+}: {
+  slotPicked: boolean;
+  tables: readonly TableLocation[];
+  value: string;
+  onChange: (tableId: string) => void;
+  onPick: () => void;
+  picking: boolean;
+  invalid: boolean;
+  describedBy: string | undefined;
+}) {
+  const text = useMessages(bookingsMessageKey);
+  const locale = useLocale();
+  if (!slotPicked) return <p className="text-muted-foreground text-sm">{text.newReservation.table.needSlot}</p>;
+  const chosen = tables.find(({ table }) => table.id === value);
+  return (
+    <fieldset className="flex min-w-0 flex-col gap-2">
+      <legend className="sr-only">{text.newReservation.table.label}</legend>
+      <p className="text-sm">
+        {chosen === undefined ? (
+          <>
+            <span className="font-medium">{text.newReservation.table.automatic}</span>
+            <span className="text-muted-foreground block">{text.newReservation.table.automaticHint}</span>
+          </>
+        ) : (
+          <>
+            <span className="font-medium">{chosen.table.label}</span>
+            <span className="text-muted-foreground block">
+              {format(text.callout.seatsInZone, locale, {
+                seats: format(text.seats, locale, { count: chosen.table.capacity }),
+                zone: zoneName(chosen.zone, text.venue),
+              })}
+            </span>
+          </>
+        )}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={tables.length === 0 || picking}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          onClick={onPick}
+        >
+          {text.newReservation.table.pickOnFloor}
+        </Button>
+        {chosen === undefined ? null : (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")}>
+            {text.newReservation.table.automatic}
+          </Button>
+        )}
+      </div>
+      {tables.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{text.newReservation.table.noneFree}</p>
+      ) : null}
+    </fieldset>
+  );
+}
+
+/** "Automatic" or one of the tables that fit the slot, closest fit first: the list a phone uses instead of the floor. */
 function TableChoices({
   slotPicked,
   tables,

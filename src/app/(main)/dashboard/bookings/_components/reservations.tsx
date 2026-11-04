@@ -45,7 +45,7 @@ import {
 } from "@/ds/components";
 import { ReadState } from "@/ds/feedback";
 import type { CapabilityActionOptions } from "@/ds/forms";
-import { DockedPanelLayout, ResponsivePanel, useViewport } from "@/ds/overlays";
+import { DockedPanelLayout, ResponsivePanel, usePanelPick, useViewport } from "@/ds/overlays";
 
 import type { BookingAbilities } from "./abilities";
 import { BookingWritesProvider, useStatusWrites } from "./booking-writes";
@@ -216,6 +216,8 @@ function ServiceScreen({
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>(SHEET_PEEK);
   const [walkIn, setWalkIn] = useState<WalkInRequest | null>(null);
   const [reservation, setReservation] = useState<ReservationRequest | null>(null);
+  const pick = usePanelPick<string>();
+  const [reservationFit, setReservationFit] = useState<ReadonlySet<string>>(NO_TABLES);
 
   // Folding the rail is a per-browser preference.
   useEffect(() => {
@@ -286,10 +288,13 @@ function ServiceScreen({
     () => (assigning ? fittingTables(locations, assigning, dayReservations, service.nowMin) : []),
     [assigning, locations, dayReservations, service.nowMin],
   );
-  const candidateTableIds = useMemo(
+  const assignableTableIds = useMemo(
     () => (candidates.length > 0 ? new Set(candidates.map(({ table }) => table.id)) : NO_TABLES),
     [candidates],
   );
+  // While the New reservation panel asks for a table, the tables that fit its slot are the ones to light and click.
+  const pickingTable = pick.picking === "table";
+  const candidateTableIds = pickingTable ? reservationFit : assignableTableIds;
 
   const seatedGuests = active
     .filter((reservation) => reservation.status === "seated")
@@ -313,7 +318,8 @@ function ServiceScreen({
   }
 
   function selectTable(tableId: string | null) {
-    if (tableId && assigning && candidateTableIds.has(tableId)) {
+    if (tableId && pickingTable && reservationFit.has(tableId) && pick.answer(tableId)) return;
+    if (tableId && assigning && assignableTableIds.has(tableId)) {
       updateReservation(assigning.id, {
         tableIds: [tableId],
         tableLabels: [findTable(venue, tableId)?.table.label ?? tableId],
@@ -839,6 +845,8 @@ function ServiceScreen({
             service={service}
             errors={errors}
             onShowDay={goToDay}
+            pick={pick}
+            onFitChange={setReservationFit}
           />
 
           <ReservationDrawer

@@ -82,7 +82,11 @@ export function SlotField({ id, availability, options, value, onChange, onRetry,
       className="w-full flex-wrap"
     >
       {options.map((slot) => (
-        <ToggleGroupItem key={slot.startMin} value={String(slot.startMin)} className="min-h-9 px-3 tabular-nums">
+        <ToggleGroupItem
+          key={slot.startMin}
+          value={String(slot.startMin)}
+          className="data-[state=on]:border-primary data-[state=on]:bg-primary/10 min-h-9 px-3 tabular-nums"
+        >
           {formatClock(slot.startMin, locale)}
         </ToggleGroupItem>
       ))}

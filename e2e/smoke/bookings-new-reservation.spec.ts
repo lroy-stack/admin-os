@@ -141,4 +141,60 @@ test.describe("new reservation panel", () => {
 
     await expect(page.getByRole("alertdialog")).toBeVisible();
   });
+
+  test.describe("on a desktop, the table is picked on the floor", () => {
+    test.skip(({ viewport }) => (viewport?.width ?? 0) < 1024, "The panel docks beside the floor from 1024 px");
+
+    const plate = (page: Page, label: string) =>
+      page.getByRole("button", { name: new RegExp(`^${label}, \\d+ seats`) });
+
+    test("choosing a time lights the tables that fit, and a click fills the Table field", async ({ page }) => {
+      const panel = await openPanel(page);
+      await pickGuest(panel, "Ortega", "Ortega +34600000102");
+
+      await panel.getByRole("radio", { name: "9:15 PM" }).click();
+
+      await expect(page.getByText("Choose on the page. Press Escape to cancel.")).toBeVisible();
+      await expect(plate(page, "B2")).toHaveAttribute("data-candidate", "true");
+      await expect(plate(page, "S1")).toHaveAttribute("data-candidate", "false");
+
+      await plate(page, "B2").click();
+
+      await expect(panel.getByText("B2", { exact: true })).toBeVisible();
+      await expect(page.getByText("Choose on the page. Press Escape to cancel.")).toHaveCount(0);
+      await panel.getByRole("button", { name: "Create reservation" }).click();
+      await expect(toastOf(page, "Booked Ortega · 2 guests · 9:15 PM")).toBeVisible();
+      await view(page, "List").click();
+      await expect(page.getByRole("row", { name: /9:15 PM.*Ortega.*B2/ })).toBeVisible();
+    });
+
+    test("Escape leaves pick mode and keeps the panel open", async ({ page }) => {
+      const panel = await openPanel(page);
+      await panel.getByRole("radio", { name: "9:15 PM" }).click();
+      await expect(plate(page, "B2")).toHaveAttribute("data-candidate", "true");
+
+      await page.keyboard.press("Escape");
+
+      await expect(plate(page, "B2")).toHaveAttribute("data-candidate", "false");
+      await expect(page.getByRole("region", { name: "New reservation" })).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Pick on the floor" })).toBeEnabled();
+    });
+  });
+
+  test.describe("on a phone, the table is picked from a list", () => {
+    test.skip(({ viewport }) => (viewport?.width ?? 0) >= 768, "A full-screen sheet below 1024 px");
+
+    test("lists the tables that fit the time and books the one chosen", async ({ page }) => {
+      const panel = await openPanel(page);
+      await pickGuest(panel, "Ortega", "Ortega +34600000102");
+      await panel.getByRole("radio", { name: "9:15 PM" }).click();
+
+      await panel.getByRole("radio", { name: /^B2/ }).click();
+      await panel.getByRole("button", { name: "Create reservation" }).click();
+
+      await expect(toastOf(page, "Booked Ortega · 2 guests · 9:15 PM")).toBeVisible();
+      await view(page, "List").click();
+      await expect(page.getByRole("row", { name: /9:15 PM.*Ortega.*B2/ })).toBeVisible();
+    });
+  });
 });
