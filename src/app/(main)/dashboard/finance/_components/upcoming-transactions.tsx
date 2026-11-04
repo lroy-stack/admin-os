@@ -1,20 +1,20 @@
-import { ChevronRight, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 import { siClaude, siLinear, siResend } from "simple-icons";
 
-import { SimpleIcon } from "@/components/simple-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { getCurrency, getLocale, getMessages } from "@/config/locale.server";
 import { format, formatAmount, formatCalendarDate, formatTime } from "@/core/i18n/client";
 
+import { BILLS_ID } from "./anchors";
+import { BillList } from "./bill-list";
 import { financeMessages } from "./messages.server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const upcoming = [
-  { id: "claude", inDays: 2, hour: 14, minute: 45, icon: siClaude },
-  { id: "resend", inDays: 4, hour: 7, minute: 0, icon: siResend },
-  { id: "linear", inDays: 10, hour: 7, minute: 0, icon: siLinear },
+  { id: "claude", inDays: 2, hour: 14, minute: 45, amount: 145, autopay: true, icon: siClaude },
+  { id: "resend", inDays: 4, hour: 7, minute: 0, amount: 400, autopay: false, icon: siResend },
+  { id: "linear", inDays: 10, hour: 7, minute: 0, amount: 700, autopay: false, icon: siLinear },
 ] as const;
 
 export async function UpcomingTransactions() {
@@ -23,19 +23,23 @@ export async function UpcomingTransactions() {
   const today = Date.now();
   const transactions = upcoming.map((entry) => {
     const day = new Date(today + entry.inDays * DAY_MS);
+    const date = formatCalendarDate(day.toISOString().slice(0, 10), locale, { dateStyle: "long" });
     return {
       id: entry.id,
       icon: entry.icon,
       title: labels.items[entry.id],
+      amount: formatAmount(entry.amount, currency, locale),
+      due: date,
+      autopay: entry.autopay,
       when: format(labels.when, locale, {
         time: formatTime(Date.UTC(2026, 0, 5, entry.hour, entry.minute), locale, "UTC"),
-        date: formatCalendarDate(day.toISOString().slice(0, 10), locale, { dateStyle: "long" }),
+        date,
       }),
     };
   });
 
   return (
-    <Card>
+    <Card id={BILLS_ID} tabIndex={-1} className="outline-none">
       <CardHeader>
         <CardTitle className="font-normal">{labels.title}</CardTitle>
       </CardHeader>
@@ -57,26 +61,7 @@ export async function UpcomingTransactions() {
           </div>
         </div>
 
-        <ItemGroup>
-          {transactions.map((transaction) => (
-            <Item key={transaction.id} variant="outline" size="xs">
-              <ItemMedia>
-                <div className="bg-background grid size-9 place-items-center rounded-md border">
-                  <SimpleIcon icon={transaction.icon} />
-                </div>
-              </ItemMedia>
-              <ItemContent className="min-w-0">
-                <ItemTitle className="line-clamp-2 block w-full break-words hyphens-auto" title={transaction.title}>
-                  {transaction.title}
-                </ItemTitle>
-                <ItemDescription>{transaction.when}</ItemDescription>
-              </ItemContent>
-              <ItemActions className="shrink-0">
-                <ChevronRight className="text-muted-foreground size-5" />
-              </ItemActions>
-            </Item>
-          ))}
-        </ItemGroup>
+        <BillList bills={transactions} />
       </CardContent>
     </Card>
   );

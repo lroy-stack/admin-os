@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,56 +10,18 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { formatDate, useChartFormatters, useLocale, useMessages } from "@/core/i18n/client";
 
 import { financeMessageKey } from "./messages";
+import { type SpendingPeriod, spendingSeries } from "./spending-data";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const weekStart = Date.UTC(2026, 0, 5);
+const PERIODS: readonly SpendingPeriod[] = ["weekly", "monthly", "yearly"];
 
-const chartData = [
-  { date: "2026-01-05T02:24:00Z", expense: 23, income: 38 },
-  { date: "2026-01-05T08:24:00Z", expense: 32 },
-  { date: "2026-01-05T14:52:48Z", expense: 26 },
-  { date: "2026-01-05T21:07:12Z", expense: 39 },
-  { date: "2026-01-06T03:36:00Z", expense: 37 },
-  { date: "2026-01-06T10:04:48Z", expense: 52 },
-  { date: "2026-01-06T16:19:12Z", expense: 15 },
-  { date: "2026-01-06T22:04:48Z", expense: 36 },
-  { date: "2026-01-07T03:50:24Z", expense: 31 },
-  { date: "2026-01-07T09:36:00Z", expense: 45, income: 44 },
-  { date: "2026-01-07T15:21:36Z", expense: 53 },
-  { date: "2026-01-07T21:07:12Z", expense: 40 },
-  { date: "2026-01-08T02:52:48Z", expense: 26 },
-  { date: "2026-01-08T08:24:00Z", expense: 42 },
-  { date: "2026-01-08T13:55:12Z", expense: 47 },
-  { date: "2026-01-08T19:40:48Z", expense: 50 },
-  { date: "2026-01-09T01:12:00Z", expense: 34 },
-  { date: "2026-01-09T06:43:12Z", expense: 53 },
-  { date: "2026-01-09T12:28:48Z", expense: 44 },
-  { date: "2026-01-09T18:00:00Z", expense: 70 },
-  { date: "2026-01-09T23:31:12Z", expense: 50 },
-  { date: "2026-01-10T04:48:00Z", expense: 51 },
-  { date: "2026-01-10T10:04:48Z", expense: 34, income: 54 },
-  { date: "2026-01-10T15:21:36Z", expense: 39 },
-  { date: "2026-01-10T20:38:24Z", expense: 30 },
-  { date: "2026-01-11T01:55:12Z", expense: 50 },
-  { date: "2026-01-11T07:12:00Z", expense: 48 },
-  { date: "2026-01-11T12:28:48Z", expense: 67 },
-  { date: "2026-01-11T17:45:36Z", expense: 33 },
-  { date: "2026-01-11T22:04:48Z", expense: 53, income: 58 },
-].map((item: { date: string; expense: number; income?: number }) => ({
-  date: item.date,
-  expense: item.expense,
-  income: item.income,
-  timestamp: Date.parse(item.date),
-}));
-
-const weekdayTicks = Array.from({ length: 7 }, (_, index) => weekStart + (index + 0.5) * DAY_MS);
-
-const chartDomain = [weekStart, weekStart + 7 * DAY_MS];
+const isPeriod = (value: string): value is SpendingPeriod => PERIODS.some((period) => period === value);
 
 export function TransactionsOverviewCard() {
   const text = useMessages(financeMessageKey).spending;
   const locale = useLocale();
   const fmt = useChartFormatters();
+  const [period, setPeriod] = useState<SpendingPeriod>("weekly");
+  const series = spendingSeries(period);
   const chartConfig = {
     expense: { color: "var(--chart-4)", label: text.expense },
     income: { color: "var(--chart-2)", label: text.income },
@@ -68,15 +32,17 @@ export function TransactionsOverviewCard() {
       <CardHeader>
         <CardTitle className="font-normal">{text.title}</CardTitle>
         <CardAction>
-          <Select defaultValue="weekly">
+          <Select value={period} onValueChange={(value) => isPeriod(value) && setPeriod(value)}>
             <SelectTrigger className="w-40" size="sm" aria-label={text.periodLabel}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="weekly">{text.periods.weekly}</SelectItem>
-                <SelectItem value="monthly">{text.periods.monthly}</SelectItem>
-                <SelectItem value="yearly">{text.periods.yearly}</SelectItem>
+                {PERIODS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {text.periods[value]}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -85,17 +51,17 @@ export function TransactionsOverviewCard() {
 
       <CardContent>
         <ChartContainer config={chartConfig} className="h-50 w-full">
-          <LineChart accessibilityLayer data={chartData} margin={{ bottom: 0, left: 0, right: 0, top: 0 }}>
+          <LineChart accessibilityLayer data={[...series.points]} margin={{ bottom: 0, left: 0, right: 0, top: 0 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               axisLine={false}
               dataKey="timestamp"
-              domain={chartDomain}
+              domain={[...series.domain]}
               scale="time"
-              tickFormatter={(value: number) => formatDate(value, locale, "UTC", { weekday: "short" })}
+              tickFormatter={(value: number) => formatDate(value, locale, "UTC", series.tick)}
               tickLine={false}
               tickMargin={10}
-              ticks={weekdayTicks}
+              ticks={[...series.ticks]}
               tick={{ fontSize: 12 }}
               type="number"
             />

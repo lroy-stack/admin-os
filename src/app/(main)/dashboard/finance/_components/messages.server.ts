@@ -10,9 +10,8 @@ const en: FinanceMessages = {
     description:
       "A personal finance dashboard with net worth, spending, income sources, account allocation, transactions and wallets.",
   },
-  header: { title: "Personal finances", updated: "Updated {time}", settings: "Settings", export: "Export" },
-  tabs: { dashboard: "Dashboard", accounts: "Accounts", transactions: "Transactions" },
-  comingSoon: { accounts: "Accounts view coming soon.", transactions: "Transactions view coming soon." },
+  header: { title: "Personal finances", updated: "Updated {time}", export: "Export" },
+  tabs: { dashboard: "Dashboard", transactions: "Transactions" },
   kpis: {
     netWorth: "Net worth",
     netWorthChange: "+{amount} vs last month",
@@ -73,15 +72,23 @@ const en: FinanceMessages = {
     send: "Send",
     shortcutsTitle: "Shortcuts",
     shortcuts: {
-      scanQr: "Scan QR",
-      transfer: "Transfer",
       payBills: "Pay bills",
       history: "History",
-      mobile: "Mobile",
-      electricity: "Electricity",
-      water: "Water",
-      more: "More",
     },
+  },
+  cancel: "Cancel",
+  done: "Done",
+  transactions: { caption: "Movements of the week", date: "Date", type: "Type", amount: "Amount" },
+  scoreHistory: { title: "Score history", description: "Your score at the start of each month." },
+  bill: { amount: "Amount", due: "Due date", autopay: "Autopay", open: "Open {title}" },
+  transfer: {
+    invalid: "Enter an amount above zero.",
+    title: "Review transfer",
+    description: "Check the amount before you confirm.",
+    amount: "Amount",
+    confirm: "Confirm transfer",
+    doneTitle: "Transfer reviewed",
+    doneBody: "No money moved: this is a demo.",
   },
 };
 
@@ -91,12 +98,8 @@ const es: FinanceMessages = {
     description:
       "Un panel de finanzas personales con patrimonio neto, gastos, fuentes de ingresos, distribución de cuentas, transacciones y carteras.",
   },
-  header: { title: "Finanzas personales", updated: "Actualizado {time}", settings: "Ajustes", export: "Exportar" },
-  tabs: { dashboard: "Panel", accounts: "Cuentas", transactions: "Transacciones" },
-  comingSoon: {
-    accounts: "La vista de cuentas llegará pronto.",
-    transactions: "La vista de transacciones llegará pronto.",
-  },
+  header: { title: "Finanzas personales", updated: "Actualizado {time}", export: "Exportar" },
+  tabs: { dashboard: "Panel", transactions: "Transacciones" },
   kpis: {
     netWorth: "Patrimonio neto",
     netWorthChange: "+{amount} vs. mes anterior",
@@ -160,15 +163,23 @@ const es: FinanceMessages = {
     send: "Enviar",
     shortcutsTitle: "Accesos directos",
     shortcuts: {
-      scanQr: "Escanear QR",
-      transfer: "Transferir",
       payBills: "Pagar facturas",
       history: "Historial",
-      mobile: "Móvil",
-      electricity: "Electricidad",
-      water: "Agua",
-      more: "Más",
     },
+  },
+  cancel: "Cancelar",
+  done: "Hecho",
+  transactions: { caption: "Movimientos de la semana", date: "Fecha", type: "Tipo", amount: "Importe" },
+  scoreHistory: { title: "Historial de puntuación", description: "Tu puntuación al inicio de cada mes." },
+  bill: { amount: "Importe", due: "Vencimiento", autopay: "Pago automático", open: "Abrir {title}" },
+  transfer: {
+    invalid: "Introduce un importe mayor que cero.",
+    title: "Revisar transferencia",
+    description: "Comprueba el importe antes de confirmar.",
+    amount: "Importe",
+    confirm: "Confirmar transferencia",
+    doneTitle: "Transferencia revisada",
+    doneBody: "No se ha movido dinero: es una demo.",
   },
 };
 
@@ -181,14 +192,9 @@ const de: FinanceMessages = {
   header: {
     title: "Persönliche Finanzen",
     updated: "Aktualisiert {time}",
-    settings: "Einstellungen",
     export: "Exportieren",
   },
-  tabs: { dashboard: "Dashboard", accounts: "Konten", transactions: "Transaktionen" },
-  comingSoon: {
-    accounts: "Die Kontenansicht folgt in Kürze.",
-    transactions: "Die Transaktionsansicht folgt in Kürze.",
-  },
+  tabs: { dashboard: "Dashboard", transactions: "Transaktionen" },
   kpis: {
     netWorth: "Nettovermögen",
     netWorthChange: "+{amount} ggü. Vormonat",
@@ -252,15 +258,23 @@ const de: FinanceMessages = {
     send: "Senden",
     shortcutsTitle: "Kurzbefehle",
     shortcuts: {
-      scanQr: "QR scannen",
-      transfer: "Überweisen",
       payBills: "Rechnungen zahlen",
       history: "Verlauf",
-      mobile: "Mobilfunk",
-      electricity: "Strom",
-      water: "Wasser",
-      more: "Mehr",
     },
+  },
+  cancel: "Abbrechen",
+  done: "Fertig",
+  transactions: { caption: "Bewegungen der Woche", date: "Datum", type: "Art", amount: "Betrag" },
+  scoreHistory: { title: "Score-Verlauf", description: "Dein Score zu Beginn jedes Monats." },
+  bill: { amount: "Betrag", due: "Fälligkeitsdatum", autopay: "Automatische Zahlung", open: "{title} öffnen" },
+  transfer: {
+    invalid: "Gib einen Betrag über null ein.",
+    title: "Überweisung prüfen",
+    description: "Prüfe den Betrag, bevor du bestätigst.",
+    amount: "Betrag",
+    confirm: "Überweisung bestätigen",
+    doneTitle: "Überweisung geprüft",
+    doneBody: "Es wurde kein Geld bewegt: Das ist eine Demo.",
   },
 };
 
@@ -270,12 +284,8 @@ const fr: FinanceMessages = {
     description:
       "Un tableau de bord de finances personnelles avec patrimoine net, dépenses, sources de revenus, répartition des comptes, transactions et portefeuilles.",
   },
-  header: { title: "Finances personnelles", updated: "Mis à jour {time}", settings: "Paramètres", export: "Exporter" },
-  tabs: { dashboard: "Tableau de bord", accounts: "Comptes", transactions: "Transactions" },
-  comingSoon: {
-    accounts: "La vue des comptes arrive bientôt.",
-    transactions: "La vue des transactions arrive bientôt.",
-  },
+  header: { title: "Finances personnelles", updated: "Mis à jour {time}", export: "Exporter" },
+  tabs: { dashboard: "Tableau de bord", transactions: "Transactions" },
   kpis: {
     netWorth: "Patrimoine net",
     netWorthChange: "+{amount} vs mois précédent",
@@ -339,15 +349,23 @@ const fr: FinanceMessages = {
     send: "Envoyer",
     shortcutsTitle: "Raccourcis",
     shortcuts: {
-      scanQr: "Scanner un QR",
-      transfer: "Virer",
       payBills: "Payer les factures",
       history: "Historique",
-      mobile: "Mobile",
-      electricity: "Électricité",
-      water: "Eau",
-      more: "Plus",
     },
+  },
+  cancel: "Annuler",
+  done: "Terminé",
+  transactions: { caption: "Mouvements de la semaine", date: "Date", type: "Type", amount: "Montant" },
+  scoreHistory: { title: "Historique du score", description: "Votre score au début de chaque mois." },
+  bill: { amount: "Montant", due: "Date d’échéance", autopay: "Prélèvement automatique", open: "Ouvrir {title}" },
+  transfer: {
+    invalid: "Saisissez un montant supérieur à zéro.",
+    title: "Vérifier le virement",
+    description: "Vérifiez le montant avant de confirmer.",
+    amount: "Montant",
+    confirm: "Confirmer le virement",
+    doneTitle: "Virement vérifié",
+    doneBody: "Aucun argent n’a bougé : c’est une démo.",
   },
 };
 

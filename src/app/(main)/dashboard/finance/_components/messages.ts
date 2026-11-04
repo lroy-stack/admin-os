@@ -7,11 +7,9 @@ export interface FinanceMessages {
     readonly title: string;
     /** Placeholders: `{time}`, a relative time such as "5 minutes ago". */
     readonly updated: string;
-    readonly settings: string;
     readonly export: string;
   };
-  readonly tabs: { readonly dashboard: string; readonly accounts: string; readonly transactions: string };
-  readonly comingSoon: { readonly accounts: string; readonly transactions: string };
+  readonly tabs: { readonly dashboard: string; readonly transactions: string };
   readonly kpis: {
     readonly netWorth: string;
     /** Placeholders: `{amount}`. */
@@ -80,15 +78,35 @@ export interface FinanceMessages {
     readonly send: string;
     readonly shortcutsTitle: string;
     readonly shortcuts: {
-      readonly scanQr: string;
-      readonly transfer: string;
       readonly payBills: string;
       readonly history: string;
-      readonly mobile: string;
-      readonly electricity: string;
-      readonly water: string;
-      readonly more: string;
     };
+  };
+  readonly cancel: string;
+  readonly done: string;
+  readonly transactions: {
+    readonly caption: string;
+    readonly date: string;
+    readonly type: string;
+    readonly amount: string;
+  };
+  readonly scoreHistory: { readonly title: string; readonly description: string };
+  readonly bill: {
+    readonly amount: string;
+    readonly due: string;
+    readonly autopay: string;
+    /** Placeholders: `{title}`. */
+    readonly open: string;
+  };
+  /** The quick transfer's review window. It never moves money. */
+  readonly transfer: {
+    readonly invalid: string;
+    readonly title: string;
+    readonly description: string;
+    readonly amount: string;
+    readonly confirm: string;
+    readonly doneTitle: string;
+    readonly doneBody: string;
   };
 }
 
