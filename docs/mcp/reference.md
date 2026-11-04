@@ -21,9 +21,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `1495bb99c7347e` | `191f0fbdb16fb6` |
-| salon | `1495bb99c7347e` | `191f0fbdb16fb6` |
-| workshop | `1495bb99c7347e` | `191f0fbdb16fb6` |
+| hospitality | `1049a7bd268e47` | `08bed979929fe4` |
+| salon | `1049a7bd268e47` | `08bed979929fe4` |
+| workshop | `1049a7bd268e47` | `08bed979929fe4` |
 
 ## Tools by preset
 
@@ -159,7 +159,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `approvals_get`
 
-**Check a held write.** Where a write that answered awaiting_approval stands: its capability and status, and whether you asked for it. Never returns the held input. Fails with approvals.not_found when there is no such approval in this session.
+**Check a held write.** Where a write that answered awaiting_approval stands: its capability and status, and whether you asked for it (you means the acting user, until grants are per client). Never returns the held input. Fails with approvals.not_found when there is no such approval in this session.
 
 - Capability: `approvals.get`, permission `read:approvals`, tier 1, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
@@ -212,12 +212,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_cancel`
 
-**Cancel a booking.** Cancel a pending, awaiting_payment or confirmed booking with the reason staff will see, and release its resources. Fails with bookings.invalid_transition otherwise. Find valid ids: id with bookings_list.
+**Cancel a booking.** Cancel a pending, awaiting_payment or confirmed booking with the reason staff will see, and release its resources. Cancelling a booking that is already cancelled answers it unchanged and keeps the first reason. Fails with bookings.invalid_transition otherwise. Find valid ids: id with bookings_list or bookings_search.
 
 - Capability: `bookings.cancel`, permission `cancel:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `bookings_list`
+  - `id`: `bookings_list`, `bookings_search`
 
 ```json
 {
@@ -244,12 +244,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_create`
 
-**Create a booking.** Create a confirmed booking. Send exactly one of customerId (a guest on record; create one with customers_create first) or contactName. The start must be on the slot grid inside the service window. Resources are optional; when given they must be active, free for the stay and seat the party together. Fails with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid or bookings.not_found. Find valid ids: customerId with customers_list or customers_duplicates_check; resourceIds with bookings_availability_get or resources_list.
+**Create a booking.** Create a confirmed booking. Send exactly one of customerId (a guest on record; create one with customers_create first) or contactName. The start must be on the slot grid inside the service window. Resources are optional; when given they must be active, free for the stay and seat the party together. Fails with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid or bookings.not_found. Find valid ids: customerId with customers_search or customers_duplicates_check; resourceIds with bookings_availability_get or resources_list.
 
 - Capability: `bookings.create`, permission `create:bookings`, tier 2, idempotency key.
 - Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `customerId`: `customers_list`, `customers_duplicates_check`
+  - `customerId`: `customers_search`, `customers_duplicates_check`
   - `resourceIds`: `bookings_availability_get`, `resources_list`
 
 ```json
@@ -396,12 +396,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_no_show_mark`
 
-**Mark a no-show.** Mark a confirmed booking as a no-show once it counts as late (bookings.late_after_minutes after its start), and release its resources. Fails with bookings.too_early before that and bookings.invalid_transition from any other status. Find valid ids: id with bookings_list.
+**Mark a no-show.** Mark a confirmed booking as a no-show once it counts as late (bookings.late_after_minutes after its start), and release its resources. Marking a booking that is already a no-show answers it unchanged. Fails with bookings.too_early before that and bookings.invalid_transition from any other status. Find valid ids: id with bookings_list or bookings_search.
 
 - Capability: `bookings.no_show.mark`, permission `noshow:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `bookings_list`
+  - `id`: `bookings_list`, `bookings_search`
 
 ```json
 {
@@ -427,12 +427,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_reschedule`
 
-**Reschedule a booking.** Move an open booking to another start and/or change its party size; omitted fields stay as they are and moving the start keeps the length of the stay. Same rules as bookings_create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.outside_window, bookings.off_grid or bookings.not_found. Tables are changed with bookings_table_assign. Find valid ids: id with bookings_list.
+**Reschedule a booking.** Move an open booking in time and optionally onto other tables in the same step: send startMin, partySize and/or resourceIds (at least one); omitted fields stay as they are and moving the start keeps the length of the stay. The new time and tables are checked together, so use it when both change; bookings_table_assign changes only the tables. Same rules as bookings_create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid or bookings.not_found. Find valid ids: id with bookings_list or bookings_search.
 
 - Capability: `bookings.reschedule`, permission `update:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `bookings_list`
+  - `id`: `bookings_list`, `bookings_search`
 
 ```json
 {
@@ -452,6 +452,15 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
       "type": "integer",
       "minimum": 1,
       "maximum": 200
+    },
+    "resourceIds": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
     }
   },
   "required": [
@@ -463,7 +472,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_search`
 
-**Search bookings.** Find bookings across days, one page of at most 50 at a time, by customerId, by an inclusive range of business days (from, to) and by text matched against the guest's name, notes, tags and the booking id. Filters combine; results are ordered by day and start. Use bookings_list for one day. Find valid ids: customerId with customers_search or customers_duplicates_check.
+**Search bookings.** Find bookings across days, one page of at most 50 at a time, by customerId, by an inclusive range of business days (from, to) and by text matched against the booking id, the guest's name and tags (never notes, which bookings_get returns). Rows are concise: id, day, start, party size, status, customer, name, resources and tags. Filters combine; results are ordered by day and start. Use bookings_list for one day. Find valid ids: customerId with customers_search or customers_duplicates_check.
 
 - Capability: `bookings.search`, permission `read:bookings`, tier 1, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
@@ -510,12 +519,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_staff_note_add`
 
-**Add a staff note to a booking.** Add a line to the staff note of an open booking, after what is already there. The guest's own note is not changed. Fails with bookings.closed for a completed, cancelled or no-show booking and bookings.not_found for an unknown id. Find valid ids: id with bookings_list.
+**Add a staff note to a booking.** Add a line to the staff note of an open booking, after what is already there. The guest's own note is not changed. Notes are capped at 2000 characters in all: fails with bookings.staff_note_full when the line does not fit, with bookings.closed for a completed, cancelled or no-show booking and bookings.not_found for an unknown id. Find valid ids: id with bookings_list or bookings_search.
 
 - Capability: `bookings.staff_note.add`, permission `update:bookings`, tier 2, idempotency key.
 - Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `bookings_list`
+  - `id`: `bookings_list`, `bookings_search`
 
 ```json
 {
@@ -549,12 +558,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_status_advance`
 
-**Advance a booking's status.** Move a booking one step forward: pending or awaiting_payment to confirmed, confirmed to in_progress, in_progress to completed. Cancelling and no-shows have their own capabilities. Any other move fails with bookings.invalid_transition. Find valid ids: id with bookings_list.
+**Advance a booking's status.** Move a booking one step forward: pending or awaiting_payment to confirmed, confirmed to in_progress, in_progress to completed. Cancelling and no-shows have their own capabilities. Repeating a step on a booking already in that status answers it unchanged. Any other move fails with bookings.invalid_transition. Find valid ids: id with bookings_list or bookings_search.
 
 - Capability: `bookings.status.advance`, permission `update:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `bookings_list`
+  - `id`: `bookings_list`, `bookings_search`
 
 ```json
 {
@@ -588,12 +597,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_table_assign`
 
-**Assign tables to a booking.** Set the resources (tables, chairs or bays) an open booking holds, replacing the ones it has; an empty list leaves it unassigned. They must be active, free for the stay and seat the party together. Fails with bookings.closed, bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive or bookings.not_found. Find valid ids: id with bookings_list; resourceIds with bookings_availability_get or resources_list.
+**Assign tables to a booking.** Set the resources (tables, chairs or bays) an open booking holds, replacing the ones it has, and change nothing else; an empty list leaves it unassigned. To change the time as well, use bookings_reschedule. They must be active, free for the stay and seat the party together. Fails with bookings.closed, bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive or bookings.not_found. Find valid ids: id with bookings_list or bookings_search; resourceIds with bookings_availability_get or resources_list.
 
 - Capability: `bookings.table.assign`, permission `update:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `bookings_list`
+  - `id`: `bookings_list`, `bookings_search`
   - `resourceIds`: `bookings_availability_get`, `resources_list`
 
 ```json
@@ -716,12 +725,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `customers_block`
 
-**Block a customer.** Block a customer from new bookings, with the reason staff will see. Find valid ids: id with customers_list or customers_duplicates_check.
+**Block a customer.** Block a customer from new bookings, with the reason staff will see. Find valid ids: id with customers_search or customers_duplicates_check.
 
 - Capability: `customers.block`, permission `block:customers`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `customers_list`, `customers_duplicates_check`
+  - `id`: `customers_search`, `customers_duplicates_check`
 
 ```json
 {
@@ -747,12 +756,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `customers_contact_update`
 
-**Change a customer's contact details.** Change a customer's contact data: name, phone, email or locale. Omitted fields stay as they are and a null phone or email clears it. Phone must be E.164 (+34600000101). Consent, VIP and tags are not changed here. Fails with customers.duplicate when the new phone or email belongs to another customer and customers.not_found for an unknown id. Find valid ids: id with customers_list or customers_duplicates_check.
+**Change a customer's contact details.** Change a customer's contact data: name, phone, email or locale. Omitted fields stay as they are and a null phone or email clears it. Phone must be E.164 (+34600000101). Consent, VIP and tags are not changed here. Fails with customers.duplicate when the new phone or email belongs to another customer and customers.not_found for an unknown id. Find valid ids: id with customers_search or customers_duplicates_check.
 
 - Capability: `customers.contact.update`, permission `update:customers`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `customers_list`, `customers_duplicates_check`
+  - `id`: `customers_search`, `customers_duplicates_check`
 
 ```json
 {
@@ -886,12 +895,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `customers_get`
 
-**Get a customer.** Get one customer by id. Fails with customers.not_found when there is none. Find valid ids: id with customers_list or customers_duplicates_check.
+**Get a customer.** Get one customer by id. Fails with customers.not_found when there is none. Find valid ids: id with customers_search or customers_duplicates_check.
 
 - Capability: `customers.get`, permission `read:customers`, tier 1, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `customers_list`, `customers_duplicates_check`
+  - `id`: `customers_search`, `customers_duplicates_check`
 
 ```json
 {
@@ -938,12 +947,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `customers_notes_add`
 
-**Add a customer note.** Add a dated note to a customer, signed by the acting staff member. Find valid ids: id with customers_list or customers_duplicates_check.
+**Add a customer note.** Add a dated note to a customer, signed by the acting staff member. Find valid ids: id with customers_search or customers_duplicates_check.
 
 - Capability: `customers.notes.add`, permission `update:customers`, tier 2, idempotency key.
 - Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `customers_list`, `customers_duplicates_check`
+  - `id`: `customers_search`, `customers_duplicates_check`
 
 ```json
 {
@@ -1011,12 +1020,12 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `customers_unblock`
 
-**Unblock a customer.** Lift the block on a customer and clear its reason. Find valid ids: id with customers_list or customers_duplicates_check.
+**Unblock a customer.** Lift the block on a customer and clear its reason. Find valid ids: id with customers_search or customers_duplicates_check.
 
 - Capability: `customers.unblock`, permission `block:customers`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
-  - `id`: `customers_list`, `customers_duplicates_check`
+  - `id`: `customers_search`, `customers_duplicates_check`
 
 ```json
 {

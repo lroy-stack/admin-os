@@ -184,11 +184,11 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     }).connect(serverSide);
     await client.connect(clientSide);
     open.push(client);
-    const result = await client.callTool({ name: "customers_update", arguments: { id: "C-1", patch: {} } });
+    const result = await client.callTool({ name: "customers_contact_update", arguments: { id: "C-1", name: "Ada" } });
     expect(lines).toEqual([
       {
         event: "mcp.refused",
-        tool: "customers_update",
+        tool: "customers_contact_update",
         status: "access.forbidden",
         correlationId: result._meta?.["admin-os/correlationId"],
         actorRole: "owner",
@@ -312,10 +312,10 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
   });
 
   it.each([
-    ["bookings_create", "customerId with customers_list or customers_duplicates_check"],
+    ["bookings_create", "customerId with customers_search or customers_duplicates_check"],
     ["bookings_create", "resourceIds with bookings_availability_get or resources_list"],
-    ["bookings_cancel", "id with bookings_list"],
-    ["customers_notes_add", "id with customers_list or customers_duplicates_check"],
+    ["bookings_cancel", "id with bookings_list or bookings_search"],
+    ["customers_notes_add", "id with customers_search or customers_duplicates_check"],
     ["notifications_read", "ids with notifications_list"],
   ] as const)("describes %s with where to find %s (spec 004 U3)", async (name, source) => {
     const { tools } = await connect(owner);
@@ -346,7 +346,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       structuredContent: {
         code: "schema.invalid_input",
         message: expect.stringMatching(
-          /^bookings_cancel rejected its arguments: id: .+ Find valid ids: id with bookings_list\.$/,
+          /^bookings_cancel rejected its arguments: id: .+ Find valid ids: id with bookings_list or bookings_search\.$/,
         ),
         details: { paths: ["id"] },
       },
@@ -360,7 +360,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       isError: true,
       structuredContent: {
         code: "customers.not_found",
-        message: expect.stringMatching(/Find valid ids: id with customers_list or customers_duplicates_check\.$/),
+        message: expect.stringMatching(/Find valid ids: id with customers_search or customers_duplicates_check\.$/),
       },
     });
   });
