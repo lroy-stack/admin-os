@@ -153,12 +153,12 @@ view.
    - `LATE_AFTER_MIN` becomes the setting `bookings.late_after_minutes`;
    - the clock comes from the `clock.get` capability (ADR 0005);
    - `reservations-data.ts` and `floor/venue.ts` move to `src/verticals/hospitality/server.ts` seeds.
-2. **S3b (Reservas parity):**
+2. **S3b (bookings parity):**
    - the route is renamed `bookings` and reads through the seam;
    - `bookings/_components/floor/` moves to `src/verticals/hospitality/floor/` and is registered as the `floor`
      booking view;
    - the floor plan's localStorage persistence is replaced by `resources.plan.*` capabilities.
-3. **Second consumer of the scene** (Configuración › Sala lighting preview, S10):
+3. **Second consumer of the scene** (the room lighting preview in Settings, S10):
    - `floor-scene.ts`, `camera-math.ts`, `room-meshes.ts` (without seats) and `floor-view.tsx` move to
      `src/engines/space-scene`;
    - levels, zones, openings, placements and `plan-edits.ts` become the `resources` plan contract. Generic names:
