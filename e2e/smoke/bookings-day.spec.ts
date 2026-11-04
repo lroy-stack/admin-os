@@ -36,13 +36,17 @@ test.describe("bookings day stepper", () => {
     await page.goto("/dashboard/bookings?day=2026-11-01");
     await expect(page.getByText("No reservations this day")).toBeVisible();
 
+    // Each step is a server navigation (`router.push` in a transition). Wait for the navigation itself, within the
+    // test's budget, rather than polling the URL for the 5 s expect default: on a loaded machine the server render of a
+    // day can take longer than that, which made this test fail only under load.
     await stepper(page).getByRole("button", { name: "Next day" }).click();
-    await expect(page).toHaveURL(/day=2026-11-02/);
+    await page.waitForURL((url) => url.searchParams.get("day") === "2026-11-02");
     await expect(page.getByRole("heading", { level: 2, name: /^Mon, Nov 2/ })).toBeVisible();
     await expect(page.getByText("No reservations this day")).toHaveCount(0);
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 
     await stepper(page).getByRole("button", { name: "Today" }).click();
-    await expect(page).not.toHaveURL(/day=/);
+    await page.waitForURL((url) => !url.searchParams.has("day"));
     await expect(page.getByRole("heading", { level: 2, name: /^Sat, Oct 31/ })).toBeVisible();
   });
 
