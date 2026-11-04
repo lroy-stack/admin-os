@@ -148,7 +148,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       owner,
       false,
       expect.stringContaining(
-        "bookings_create, bookings_walk_in_seat, customers_create, customers_notes_add require an idempotencyKey argument",
+        "bookings_create, bookings_staff_note_add, bookings_walk_in_seat, customers_create, customers_notes_add require an idempotencyKey argument",
       ),
     ],
     [
