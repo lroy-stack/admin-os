@@ -21,9 +21,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `0060407d11b59a` | `0300794628f0c8` |
-| salon | `0060407d11b59a` | `0300794628f0c8` |
-| workshop | `0060407d11b59a` | `0300794628f0c8` |
+| hospitality | `1495bb99c7347e` | `191f0fbdb16fb6` |
+| salon | `1495bb99c7347e` | `191f0fbdb16fb6` |
+| workshop | `1495bb99c7347e` | `191f0fbdb16fb6` |
 
 ## Tools by preset
 
@@ -32,24 +32,30 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | Tool | Title | Effect | Tier | Idempotency | destructiveHint | Permission | Roles |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [`access_me_get`](#access_me_get) | Who am I | read | 1 | n/a (read) | false | `read:access` | owner, manager, staff |
+| [`approvals_get`](#approvals_get) | Check a held write | read | 1 | n/a (read) | false | `read:approvals` | owner, manager, staff |
 | [`bookings_availability_get`](#bookings_availability_get) | Find free times and resources | read | 0 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_cancel`](#bookings_cancel) | Cancel a booking | write | 2 | target-state | true | `cancel:bookings` | owner, manager |
 | [`bookings_create`](#bookings_create) | Create a booking | write | 2 | key | false | `create:bookings` | owner, manager, staff |
+| [`bookings_get`](#bookings_get) | Get a booking | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_list`](#bookings_list) | List the day's bookings | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_no_show_mark`](#bookings_no_show_mark) | Mark a no-show | write | 2 | target-state | true | `noshow:bookings` | owner, manager |
+| [`bookings_reschedule`](#bookings_reschedule) | Reschedule a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
+| [`bookings_search`](#bookings_search) | Search bookings | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
+| [`bookings_staff_note_add`](#bookings_staff_note_add) | Add a staff note to a booking | write | 2 | key | false | `update:bookings` | owner, manager, staff |
 | [`bookings_status_advance`](#bookings_status_advance) | Advance a booking's status | write | 2 | target-state | false | `update:bookings` | owner, manager, staff |
-| [`bookings_update`](#bookings_update) | Change a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
+| [`bookings_table_assign`](#bookings_table_assign) | Assign tables to a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
 | [`bookings_walk_in_seat`](#bookings_walk_in_seat) | Seat a walk-in | write | 2 | key | false | `create:bookings` | owner, manager, staff |
 | [`catalog_list`](#catalog_list) | List catalog items | read | 0 | n/a (read) | false | `read:catalog` | owner, manager, staff |
 | [`clock_get`](#clock_get) | Business clock | read | 0 | n/a (read) | false | `read:clock` | owner, manager, staff |
 | [`customers_block`](#customers_block) | Block a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`customers_contact_update`](#customers_contact_update) | Change a customer's contact details | write | 2 | target-state | true | `update:customers` | owner, manager, staff |
 | [`customers_create`](#customers_create) | Create a customer | write | 2 | key | false | `create:customers` | owner, manager, staff |
 | [`customers_duplicates_check`](#customers_duplicates_check) | Check for duplicate customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_get`](#customers_get) | Get a customer | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_list`](#customers_list) | List customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
+| [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
-| [`customers_update`](#customers_update) | Change a customer | write | 2 | target-state | true | `update:customers` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
@@ -63,24 +69,30 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | Tool | Title | Effect | Tier | Idempotency | destructiveHint | Permission | Roles |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [`access_me_get`](#access_me_get) | Who am I | read | 1 | n/a (read) | false | `read:access` | owner, manager, staff |
+| [`approvals_get`](#approvals_get) | Check a held write | read | 1 | n/a (read) | false | `read:approvals` | owner, manager, staff |
 | [`bookings_availability_get`](#bookings_availability_get) | Find free times and resources | read | 0 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_cancel`](#bookings_cancel) | Cancel a booking | write | 2 | target-state | true | `cancel:bookings` | owner, manager |
 | [`bookings_create`](#bookings_create) | Create a booking | write | 2 | key | false | `create:bookings` | owner, manager, staff |
+| [`bookings_get`](#bookings_get) | Get a booking | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_list`](#bookings_list) | List the day's bookings | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_no_show_mark`](#bookings_no_show_mark) | Mark a no-show | write | 2 | target-state | true | `noshow:bookings` | owner, manager |
+| [`bookings_reschedule`](#bookings_reschedule) | Reschedule a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
+| [`bookings_search`](#bookings_search) | Search bookings | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
+| [`bookings_staff_note_add`](#bookings_staff_note_add) | Add a staff note to a booking | write | 2 | key | false | `update:bookings` | owner, manager, staff |
 | [`bookings_status_advance`](#bookings_status_advance) | Advance a booking's status | write | 2 | target-state | false | `update:bookings` | owner, manager, staff |
-| [`bookings_update`](#bookings_update) | Change a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
+| [`bookings_table_assign`](#bookings_table_assign) | Assign tables to a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
 | [`bookings_walk_in_seat`](#bookings_walk_in_seat) | Seat a walk-in | write | 2 | key | false | `create:bookings` | owner, manager, staff |
 | [`catalog_list`](#catalog_list) | List catalog items | read | 0 | n/a (read) | false | `read:catalog` | owner, manager, staff |
 | [`clock_get`](#clock_get) | Business clock | read | 0 | n/a (read) | false | `read:clock` | owner, manager, staff |
 | [`customers_block`](#customers_block) | Block a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`customers_contact_update`](#customers_contact_update) | Change a customer's contact details | write | 2 | target-state | true | `update:customers` | owner, manager, staff |
 | [`customers_create`](#customers_create) | Create a customer | write | 2 | key | false | `create:customers` | owner, manager, staff |
 | [`customers_duplicates_check`](#customers_duplicates_check) | Check for duplicate customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_get`](#customers_get) | Get a customer | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_list`](#customers_list) | List customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
+| [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
-| [`customers_update`](#customers_update) | Change a customer | write | 2 | target-state | true | `update:customers` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
@@ -94,24 +106,30 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | Tool | Title | Effect | Tier | Idempotency | destructiveHint | Permission | Roles |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [`access_me_get`](#access_me_get) | Who am I | read | 1 | n/a (read) | false | `read:access` | owner, manager, staff |
+| [`approvals_get`](#approvals_get) | Check a held write | read | 1 | n/a (read) | false | `read:approvals` | owner, manager, staff |
 | [`bookings_availability_get`](#bookings_availability_get) | Find free times and resources | read | 0 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_cancel`](#bookings_cancel) | Cancel a booking | write | 2 | target-state | true | `cancel:bookings` | owner, manager |
 | [`bookings_create`](#bookings_create) | Create a booking | write | 2 | key | false | `create:bookings` | owner, manager, staff |
+| [`bookings_get`](#bookings_get) | Get a booking | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_list`](#bookings_list) | List the day's bookings | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
 | [`bookings_no_show_mark`](#bookings_no_show_mark) | Mark a no-show | write | 2 | target-state | true | `noshow:bookings` | owner, manager |
+| [`bookings_reschedule`](#bookings_reschedule) | Reschedule a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
+| [`bookings_search`](#bookings_search) | Search bookings | read | 1 | n/a (read) | false | `read:bookings` | owner, manager, staff |
+| [`bookings_staff_note_add`](#bookings_staff_note_add) | Add a staff note to a booking | write | 2 | key | false | `update:bookings` | owner, manager, staff |
 | [`bookings_status_advance`](#bookings_status_advance) | Advance a booking's status | write | 2 | target-state | false | `update:bookings` | owner, manager, staff |
-| [`bookings_update`](#bookings_update) | Change a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
+| [`bookings_table_assign`](#bookings_table_assign) | Assign tables to a booking | write | 2 | target-state | true | `update:bookings` | owner, manager, staff |
 | [`bookings_walk_in_seat`](#bookings_walk_in_seat) | Seat a walk-in | write | 2 | key | false | `create:bookings` | owner, manager, staff |
 | [`catalog_list`](#catalog_list) | List catalog items | read | 0 | n/a (read) | false | `read:catalog` | owner, manager, staff |
 | [`clock_get`](#clock_get) | Business clock | read | 0 | n/a (read) | false | `read:clock` | owner, manager, staff |
 | [`customers_block`](#customers_block) | Block a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`customers_contact_update`](#customers_contact_update) | Change a customer's contact details | write | 2 | target-state | true | `update:customers` | owner, manager, staff |
 | [`customers_create`](#customers_create) | Create a customer | write | 2 | key | false | `create:customers` | owner, manager, staff |
 | [`customers_duplicates_check`](#customers_duplicates_check) | Check for duplicate customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_get`](#customers_get) | Get a customer | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_list`](#customers_list) | List customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
+| [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
-| [`customers_update`](#customers_update) | Change a customer | write | 2 | target-state | true | `update:customers` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
@@ -135,6 +153,30 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 {
   "type": "object",
   "properties": {},
+  "additionalProperties": false
+}
+```
+
+### `approvals_get`
+
+**Check a held write.** Where a write that answered awaiting_approval stands: its capability and status, and whether you asked for it. Never returns the held input. Fails with approvals.not_found when there is no such approval in this session.
+
+- Capability: `approvals.get`, permission `read:approvals`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "approvalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "required": [
+    "approvalId"
+  ],
   "additionalProperties": false
 }
 ```
@@ -295,6 +337,32 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
+### `bookings_get`
+
+**Get a booking.** Get one booking by id. Fails with bookings.not_found when there is none. Find valid ids: id with bookings_list or bookings_search.
+
+- Capability: `bookings.get`, permission `read:bookings`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `bookings_list`, `bookings_search`
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
 ### `bookings_list`
 
 **List the day's bookings.** List the bookings of one business day, one page at a time. Without businessDay it lists the current business day.
@@ -357,6 +425,128 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
+### `bookings_reschedule`
+
+**Reschedule a booking.** Move an open booking to another start and/or change its party size; omitted fields stay as they are and moving the start keeps the length of the stay. Same rules as bookings_create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.outside_window, bookings.off_grid or bookings.not_found. Tables are changed with bookings_table_assign. Find valid ids: id with bookings_list.
+
+- Capability: `bookings.reschedule`, permission `update:bookings`, tier 2, idempotency target-state.
+- Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `bookings_list`
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "startMin": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "partySize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `bookings_search`
+
+**Search bookings.** Find bookings across days, one page of at most 50 at a time, by customerId, by an inclusive range of business days (from, to) and by text matched against the guest's name, notes, tags and the booking id. Filters combine; results are ordered by day and start. Use bookings_list for one day. Find valid ids: customerId with customers_search or customers_duplicates_check.
+
+- Capability: `bookings.search`, permission `read:bookings`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `customerId`: `customers_search`, `customers_duplicates_check`
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 20,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "customerId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "from": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "to": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+### `bookings_staff_note_add`
+
+**Add a staff note to a booking.** Add a line to the staff note of an open booking, after what is already there. The guest's own note is not changed. Fails with bookings.closed for a completed, cancelled or no-show booking and bookings.not_found for an unknown id. Find valid ids: id with bookings_list.
+
+- Capability: `bookings.staff_note.add`, permission `update:bookings`, tier 2, idempotency key.
+- Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `bookings_list`
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+    }
+  },
+  "required": [
+    "id",
+    "text",
+    "idempotencyKey"
+  ],
+  "additionalProperties": false
+}
+```
+
 ### `bookings_status_advance`
 
 **Advance a booking's status.** Move a booking one step forward: pending or awaiting_payment to confirmed, confirmed to in_progress, in_progress to completed. Cancelling and no-shows have their own capabilities. Any other move fails with bookings.invalid_transition. Find valid ids: id with bookings_list.
@@ -396,14 +586,15 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
-### `bookings_update`
+### `bookings_table_assign`
 
-**Change a booking.** Change the start, party size, resources, notes or tags of an open booking; omitted fields stay as they are and moving the start keeps the length of the stay. Table moves go here. Same rules as bookings_create; fails with bookings.closed for a completed, cancelled or no-show booking. Find valid ids: id with bookings_list.
+**Assign tables to a booking.** Set the resources (tables, chairs or bays) an open booking holds, replacing the ones it has; an empty list leaves it unassigned. They must be active, free for the stay and seat the party together. Fails with bookings.closed, bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive or bookings.not_found. Find valid ids: id with bookings_list; resourceIds with bookings_availability_get or resources_list.
 
-- Capability: `bookings.update`, permission `update:bookings`, tier 2, idempotency target-state.
+- Capability: `bookings.table.assign`, permission `update:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
 - Id hints (field: tools that list valid values):
   - `id`: `bookings_list`
+  - `resourceIds`: `bookings_availability_get`, `resources_list`
 
 ```json
 {
@@ -414,52 +605,19 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
       "minLength": 1,
       "maxLength": 128
     },
-    "patch": {
-      "type": "object",
-      "properties": {
-        "startMin": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 1440
-        },
-        "partySize": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 200
-        },
-        "resourceIds": {
-          "maxItems": 10,
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          }
-        },
-        "guestNote": {
-          "type": "string",
-          "maxLength": 500
-        },
-        "staffNote": {
-          "type": "string",
-          "maxLength": 500
-        },
-        "tags": {
-          "maxItems": 20,
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 40
-          }
-        }
-      },
-      "additionalProperties": false
+    "resourceIds": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
     }
   },
   "required": [
     "id",
-    "patch"
+    "resourceIds"
   ],
   "additionalProperties": false
 }
@@ -582,6 +740,64 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
   "required": [
     "id",
     "reason"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `customers_contact_update`
+
+**Change a customer's contact details.** Change a customer's contact data: name, phone, email or locale. Omitted fields stay as they are and a null phone or email clears it. Phone must be E.164 (+34600000101). Consent, VIP and tags are not changed here. Fails with customers.duplicate when the new phone or email belongs to another customer and customers.not_found for an unknown id. Find valid ids: id with customers_list or customers_duplicates_check.
+
+- Capability: `customers.contact.update`, permission `update:customers`, tier 2, idempotency target-state.
+- Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `customers_list`, `customers_duplicates_check`
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "phone": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "e164",
+          "pattern": "^\\+[1-9]\\d{6,14}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "email": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "email",
+          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "id"
   ],
   "additionalProperties": false
 }
@@ -758,6 +974,41 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
+### `customers_search`
+
+**Search customers.** Find customers by text in their name, phone or email, one page of at most 50 at a time. Returns concise rows (id, name, phone, email, vip, blocked) without notes or consent; use customers_get for the whole record. Phones match after dropping spaces, dashes, dots and parentheses.
+
+- Capability: `customers.search`, permission `read:customers`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 20,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "text": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "additionalProperties": false
+}
+```
+
 ### `customers_unblock`
 
 **Unblock a customer.** Lift the block on a customer and clear its reason. Find valid ids: id with customers_list or customers_duplicates_check.
@@ -778,85 +1029,6 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
   },
   "required": [
     "id"
-  ],
-  "additionalProperties": false
-}
-```
-
-### `customers_update`
-
-**Change a customer.** Change some fields of a customer; omitted fields stay as they are and a null phone or email clears it. Fails with customers.duplicate when the new phone or email belongs to another customer. Find valid ids: id with customers_list or customers_duplicates_check.
-
-- Capability: `customers.update`, permission `update:customers`, tier 2, idempotency target-state.
-- Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
-- Id hints (field: tools that list valid values):
-  - `id`: `customers_list`, `customers_duplicates_check`
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "patch": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 120
-        },
-        "phone": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "e164",
-              "pattern": "^\\+[1-9]\\d{6,14}$"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "email": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "email",
-              "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "locale": {
-          "type": "string",
-          "minLength": 1
-        },
-        "marketingConsent": {
-          "type": "boolean"
-        },
-        "tags": {
-          "maxItems": 20,
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "vip": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "required": [
-    "id",
-    "patch"
   ],
   "additionalProperties": false
 }
