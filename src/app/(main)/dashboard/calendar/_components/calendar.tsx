@@ -11,6 +11,7 @@ import timeGridPlugin from "@fullcalendar/react/timegrid";
 import { cn } from "cn";
 import { differenceInCalendarDays, differenceInMinutes } from "date-fns";
 import { CalendarDays, Calendar as CalendarIcon, Clock, Plus, Target, XIcon } from "lucide-react";
+import { toast } from "sonner";
 
 import { EventCalendarViews } from "@/components/calendar/event-calendar-views";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,28 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { PageHeader, PeriodStepper, SegmentedControl, type SegmentedOption } from "@/ds/components";
+import { useToastWithUndo } from "@/ds/feedback";
+import { ConfirmAction } from "@/ds/overlays";
 
+import { EventDialog } from "./event-dialog";
+import { type EventFormInput, type EventPreset, emptyEventForm, eventToForm, presetFromNow } from "./event-form";
+import { EventFormWindow } from "./event-form-dialog";
 import { createDemoEvents, type DemoEvent } from "./events-data";
 import { fullCalendarLocale } from "./full-calendar-locale";
 import { calendarMessageKey } from "./messages";
 import { type ClosingDeal, ClosingSoon, type UpcomingEvent, UpNext } from "./schedule-sidebar";
+import {
+  createEvent,
+  EMPTY_SCHEDULE_STATE,
+  type EventFields,
+  editEvent,
+  inCalendar,
+  moveEvent,
+  removeEvent,
+  resolveEvents,
+  restoreEvent,
+  restorePatch,
+} from "./schedule-state";
 
 type ViewKey = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
@@ -68,8 +86,76 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
   React.useEffect(() => {
     setDemoEvents(createDemoEvents(text.demoEvents, locale, new Date()));
   }, [text, locale]);
+  // What the session did to the events (demo-local: a reload starts over), and the windows that do it.
+  const withUndo = useToastWithUndo();
+  const [state, setState] = React.useState(EMPTY_SCHEDULE_STATE);
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
+  const events = React.useMemo(
+    () => (demoEvents ? inCalendar(resolveEvents(demoEvents, state), selectedCalendar) : null),
+    [demoEvents, state, selectedCalendar],
+  );
+  const eventsRef = React.useRef(events);
+  eventsRef.current = events;
+  const opener = React.useRef<Element | null>(null);
+  const region = React.useRef<HTMLDivElement>(null);
+  const [shown, setShown] = React.useState<
+    | { kind: "event"; id: string; opening: number; open: boolean }
+    | { kind: "form"; id: string | null; initial: EventFormInput; opening: number; open: boolean }
+    | null
+  >(null);
+  const [deleting, setDeleting] = React.useState<{ id: string; open: boolean } | null>(null);
+  const shownEvent = shown && shown.kind === "event" ? events?.find((event) => event.id === shown.id) : undefined;
+  const deletingEvent = deleting ? events?.find((event) => event.id === deleting.id) : undefined;
+  // Where focus lands when the control that opened a window is gone (a deleted event's block).
+  const returnFocus = () => (opener.current?.isConnected ? opener.current : region.current);
+
+  function openCreate(preset: EventPreset, from: Element | null) {
+    opener.current = from;
+    setShown((current) => ({
+      kind: "form",
+      id: null,
+      initial: emptyEventForm(preset),
+      opening: (current?.opening ?? 0) + 1,
+      open: true,
+    }));
+  }
+
+  function openEvent(id: string, from: Element | null) {
+    opener.current = from;
+    setShown((current) => ({ kind: "event", id, opening: (current?.opening ?? 0) + 1, open: true }));
+  }
+
+  function saveEvent(fields: EventFields, id: string | null) {
+    if (id) setState((current) => editEvent(current, id, fields));
+    else setState((current) => createEvent(current, fields).state);
+    toast.success(id ? text.event.toast.saved : text.event.toast.created);
+  }
+
+  /** A drag or a resize on the calendar: the event takes the new dates, and the move can be undone. */
+  function reschedule(event: { id: string; title: string; start: Date | null; end: Date | null; allDay: boolean }) {
+    const { start } = event;
+    if (!start) return;
+    const before = stateRef.current.patches[event.id];
+    setState((current) => moveEvent(current, event.id, { start, end: event.end ?? undefined, allDay: event.allDay }));
+    withUndo({
+      message: format(text.event.toast.moved, locale, { title: event.title }),
+      undo: () => setState((current) => restorePatch(current, event.id, before)),
+    });
+  }
+
+  function confirmDelete(id: string, title: string) {
+    setState((current) => removeEvent(current, id));
+    setShown(null);
+    opener.current = null;
+    requestAnimationFrame(() => region.current?.focus());
+    withUndo({
+      message: format(text.event.toast.deleted, locale, { title }),
+      undo: () => setState((current) => restoreEvent(current, id)),
+    });
+  }
   // All-day items read as salmon bars; timed meetings take the default azure; focus blocks tint in the accent.
-  const scheduleEvents = (demoEvents ?? []).map((event) =>
+  const scheduleEvents = (events ?? []).map((event) =>
     isAllDay(event) ? { ...event, color: "var(--salmon)" } : event,
   );
   const views: SegmentedOption<ViewKey>[] = [
@@ -81,9 +167,7 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
   const [visible, setVisible] = React.useState<{ title: string; days: number; start: Date; end: Date } | null>(null);
   const range = React.useMemo(() => {
     const inRange =
-      demoEvents && visible
-        ? demoEvents.filter((event) => event.start >= visible.start && event.start < visible.end)
-        : [];
+      events && visible ? events.filter((event) => event.start >= visible.start && event.start < visible.end) : [];
     return {
       events: inRange.length,
       bookedMinutes: inRange
@@ -91,28 +175,28 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
         .reduce((total, event) => total + minutesBetween(event), 0),
       focusMinutes: inRange.filter(isBackground).reduce((total, event) => total + minutesBetween(event), 0),
     };
-  }, [demoEvents, visible]);
+  }, [events, visible]);
   const [upcoming, setUpcoming] = React.useState<UpcomingEvent[] | null>(null);
 
   React.useEffect(() => {
-    if (!demoEvents) {
+    if (!events) {
       return;
     }
     const now = new Date();
     setUpcoming(
-      demoEvents
+      events
         .filter((event) => !isBackground(event) && event.start >= now)
         .sort((a, b) => a.start.getTime() - b.start.getTime())
         .slice(0, 4)
-        .map((event, index) => ({
-          id: `${event.title}-${index}`,
+        .map((event) => ({
+          id: event.id,
           title: event.title,
           start: event.start,
           end: endOf(event),
           allDay: isAllDay(event),
         })),
     );
-  }, [demoEvents]);
+  }, [events]);
 
   const activeView = isViewKey(controller.view?.type) ? controller.view.type : viewKeys[0];
 
@@ -183,7 +267,10 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
             options={views}
             onValueChange={(view) => controller.changeView(view)}
           />
-          <Button className="liquid-glass-brand h-9 rounded-full px-4">
+          <Button
+            className="liquid-glass-brand h-9 rounded-full px-4"
+            onClick={(click) => openCreate(presetFromNow(new Date()), click.currentTarget)}
+          >
             <Plus data-icon="inline-start" />
             {text.addEvent}
           </Button>
@@ -191,7 +278,7 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19rem]">
-        <Card className="gap-0 overflow-hidden p-2 sm:p-3">
+        <Card ref={region} tabIndex={-1} className="gap-0 overflow-hidden p-2 outline-none sm:p-3">
           <EventCalendarViews
             controller={controller}
             initialView={viewKeys[0]}
@@ -199,6 +286,16 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
             plugins={[...plugins]}
             popoverCloseContent={() => <XIcon className="text-muted-foreground group-hover:text-foreground size-5" />}
             events={scheduleEvents}
+            eventInteractive
+            selectable
+            editable
+            eventClick={(info) => openEvent(info.event.id, info.el)}
+            select={(info) => {
+              info.view.calendar.unselect();
+              openCreate({ start: info.start, end: info.end, allDay: info.allDay }, null);
+            }}
+            eventDrop={(info) => reschedule(info.event)}
+            eventResize={(info) => reschedule(info.event)}
             nowIndicator
             eventColor="var(--azure)"
             eventContrastColor="var(--foreground)"
@@ -251,10 +348,55 @@ export function Calendar({ closingSoon }: { closingSoon: ClosingDeal[] }) {
           />
         </Card>
         <div className="flex flex-col gap-4">
-          <UpNext events={upcoming} />
+          <UpNext events={upcoming} onOpen={openEvent} />
           <ClosingSoon deals={closingSoon} />
         </div>
       </div>
+      {shown?.kind === "event" && shownEvent ? (
+        <EventDialog
+          key={shown.opening}
+          event={shownEvent}
+          open={shown.open}
+          onOpenChange={(open) => setShown((current) => (current ? { ...current, open } : current))}
+          returnFocus={returnFocus}
+          onEdit={() =>
+            setShown((current) => ({
+              kind: "form",
+              id: shownEvent.id,
+              initial: eventToForm(shownEvent),
+              opening: (current?.opening ?? 0) + 1,
+              open: true,
+            }))
+          }
+          onDelete={() => setDeleting({ id: shownEvent.id, open: true })}
+        />
+      ) : null}
+      {shown?.kind === "form" ? (
+        <EventFormWindow
+          key={shown.opening}
+          initial={shown.initial}
+          editing={shown.id !== null}
+          open={shown.open}
+          onOpenChange={(open) => setShown((current) => (current ? { ...current, open } : current))}
+          returnFocus={returnFocus}
+          onSave={(fields) => saveEvent(fields, shown.id)}
+        />
+      ) : null}
+      {deleting && deletingEvent ? (
+        <ConfirmAction
+          destructive
+          open={deleting.open}
+          onOpenChange={(open) => setDeleting({ ...deleting, open })}
+          returnFocus={returnFocus}
+          verb={text.event.confirm.verb}
+          title={text.event.confirm.title}
+          consequence={format(text.event.confirm.consequence, locale, { title: deletingEvent.title })}
+          onConfirm={async () => {
+            confirmDelete(deletingEvent.id, deletingEvent.title);
+            return { status: "ok" };
+          }}
+        />
+      ) : null}
     </div>
   );
 }

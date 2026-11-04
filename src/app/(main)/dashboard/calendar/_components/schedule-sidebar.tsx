@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ArrowUpRight } from "lucide-react";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +41,14 @@ const TIME: Intl.DateTimeFormatOptions = { timeStyle: "short" };
 const LONG_TITLE = "line-clamp-2 block w-full font-normal break-words hyphens-auto";
 
 /** Next events after "now"; `events` is null until the client clock is known, to avoid hydration drift. */
-export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
+export function UpNext({
+  events,
+  onOpen,
+}: {
+  events: UpcomingEvent[] | null;
+  /** Opens the event's window; `opener` is the item that asked, where focus returns. */
+  onOpen: (id: string, opener: Element) => void;
+}) {
   const text = useMessages(calendarMessageKey).sidebar;
   const locale = useLocale();
 
@@ -69,20 +78,24 @@ export function UpNext({ events }: { events: UpcomingEvent[] | null }) {
             ))}
           {events?.length === 0 && <p className="text-muted-foreground text-xs">{text.nothingScheduled}</p>}
           {events?.map((event) => (
-            <Item key={event.id} size="sm" className="px-0">
-              <ItemMedia>
-                <DateCapsule
-                  top={formatLocalDate(event.start, locale, { weekday: "short" })}
-                  bottom={formatLocalDate(event.start, locale, { day: "numeric" })}
-                />
-              </ItemMedia>
-              <ItemContent className="min-w-0">
-                <ItemTitle className={LONG_TITLE} title={event.title}>
-                  {event.title}
-                </ItemTitle>
-                <ItemDescription className="text-[11px]">{timeLabel(event)}</ItemDescription>
-              </ItemContent>
-            </Item>
+            <li key={event.id} className="list-none">
+              <Item asChild size="sm" className="hover:bg-muted/50 cursor-pointer px-0 text-left">
+                <button type="button" onClick={(click) => onOpen(event.id, click.currentTarget)}>
+                  <ItemMedia>
+                    <DateCapsule
+                      top={formatLocalDate(event.start, locale, { weekday: "short" })}
+                      bottom={formatLocalDate(event.start, locale, { day: "numeric" })}
+                    />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className={LONG_TITLE} title={event.title}>
+                      {event.title}
+                    </ItemTitle>
+                    <ItemDescription className="text-[11px]">{timeLabel(event)}</ItemDescription>
+                  </ItemContent>
+                </button>
+              </Item>
+            </li>
           ))}
         </ItemGroup>
       </CardContent>
@@ -107,23 +120,27 @@ export function ClosingSoon({ deals }: { deals: ClosingDeal[] }) {
       <CardContent>
         <ItemGroup className="gap-1">
           {deals.map((deal) => (
-            <Item key={deal.id} size="sm" className="px-0">
-              <ItemMedia>
-                <DateCapsule
-                  top={formatCalendarDate(deal.closeDate, locale, { month: "short" })}
-                  bottom={formatCalendarDate(deal.closeDate, locale, { day: "numeric" })}
-                />
-              </ItemMedia>
-              <ItemContent className="min-w-0">
-                <ItemTitle className={LONG_TITLE} title={deal.title}>
-                  {deal.title}
-                </ItemTitle>
-                <ItemDescription className="truncate text-[11px]">{deal.company}</ItemDescription>
-              </ItemContent>
-              <ItemActions className="shrink-0 self-start pt-0.5 text-xs tabular-nums">
-                {formatAmount(deal.value, currency, locale, { compact: true })}
-              </ItemActions>
-            </Item>
+            <li key={deal.id} className="list-none">
+              <Item asChild size="sm" className="hover:bg-muted/50 px-0">
+                <Link href="/dashboard/crm" prefetch={false}>
+                  <ItemMedia>
+                    <DateCapsule
+                      top={formatCalendarDate(deal.closeDate, locale, { month: "short" })}
+                      bottom={formatCalendarDate(deal.closeDate, locale, { day: "numeric" })}
+                    />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className={LONG_TITLE} title={deal.title}>
+                      {deal.title}
+                    </ItemTitle>
+                    <ItemDescription className="truncate text-[11px]">{deal.company}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions className="shrink-0 self-start pt-0.5 text-xs tabular-nums">
+                    {formatAmount(deal.value, currency, locale, { compact: true })}
+                  </ItemActions>
+                </Link>
+              </Item>
+            </li>
           ))}
         </ItemGroup>
       </CardContent>
