@@ -19,8 +19,8 @@ import {
 
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
+import { MCP_PUBLIC_URL, MCP_STDIO_COMMAND } from "./mcp-endpoint";
 import { DEMO_MCP_TOKENS } from "./mcp-env";
-import { MCP_PATH } from "./mcp-http.server";
 import { MCP_MANIFEST } from "./mcp-manifest";
 import { VERTICALS, type VerticalId } from "./vertical";
 
@@ -93,7 +93,7 @@ const headerSection = (): string[] => {
     "## The server",
     "",
     `- **Protocol.** Revision ${code(MODERN_PROTOCOL_REVISION)}, and the 2025 era (${SUPPORTED_PROTOCOL_VERSIONS.map(code).join(", ")}; latest ${code(LATEST_PROTOCOL_VERSION)}) through the SDK's stateless fallback, on both transports.`,
-    `- **Transports.** Streamable HTTP at ${code(MCP_PATH)} (GET, POST and DELETE), and stdio with ${code("npm run --silent mcp:stdio")}. The preset is the deployment's ${code("VERTICAL")}.`,
+    `- **Transports.** Streamable HTTP at ${code(MCP_PUBLIC_URL)}, the MCP Worker (${code("workers/mcp")}; ${code("npm run dev:mcp")} serves it at ${code("http://localhost:8789/mcp")}), and stdio with ${code(MCP_STDIO_COMMAND)}. The preset is the deployment's ${code("VERTICAL")}.`,
     `- **Auth over HTTP.** A bearer token is required and resolves the role; no token never means a role. ${code("MCP_TOKENS")} maps tokens to roles (${code("<token>:<role>,...")}). While it is unset on the mock adapter, the public demo tokens ${demoTokens.join(", ")} apply, each with its own demo session, and the server is **read-only**: anyone holds those tokens. ${code("MCP_READ_ONLY=true")} or ${code("false")} overrides either default.`,
     `- **Auth over stdio.** One actor per process: ${code("MCP_ROLE")} (default ${code("staff")}) on its own demo session; it writes unless ${code("MCP_READ_ONLY=true")}.`,
     `- **Read-only mode.** Only the tools marked ${code("read")} below are listed and run; a write answers ${code("access.forbidden")}.`,

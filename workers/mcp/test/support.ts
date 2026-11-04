@@ -66,9 +66,15 @@ export const listRequest = (headers: Record<string, string> = {}): RequestInit =
 /** `MCP_LIMITER`'s limit in test/wrangler.jsonc. */
 export const TEST_RATE_LIMIT = 20;
 
-/** Spends a token's whole rate-limit window, one request after another. */
-export const exhaustLimit = async (fetch: (input: string, init?: RequestInit) => Promise<Response>, token: string) => {
+/** Spends a token's whole rate-limit window, one request after another, and answers each request's status. */
+export const exhaustLimit = async (
+  fetch: (input: string, init?: RequestInit) => Promise<Response>,
+  token: string,
+  headers: Record<string, string> = {},
+): Promise<number[]> => {
+  const statuses: number[] = [];
   for (let sent = 0; sent < TEST_RATE_LIMIT; sent++) {
-    await fetch(ENDPOINT, listRequest({ authorization: `Bearer ${token}` }));
+    statuses.push((await fetch(ENDPOINT, listRequest({ authorization: `Bearer ${token}`, ...headers }))).status);
   }
+  return statuses;
 };

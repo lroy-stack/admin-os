@@ -727,6 +727,17 @@ These are places where the first draft found a decision incomplete. Each came wi
      one. A test runs every exposed tool for every preset and role, with the contract testkit's valid inputs at the
      largest `limit` the tool's schema allows, and asserts each result is under the bound.
 
+### As built (2026-11-04, plan W0–W3)
+
+- The composition root is `src/config/mcp.server.ts` over the Next- and React-free `catalog`, `vertical`, `actor`,
+  `data.server` and `durable-adapter.server` modules; `workers-reach-no-web-code` (dependency-cruiser) and
+  `npm run check:bundles` (the `wrangler deploy --dry-run` metafiles) prove AC1 for both Workers.
+- `workers/mcp` serves `/mcp` with `createMcpHandler` (`legacy: "stateless"`), checks `Origin` before anything else
+  (the request path above, with CORS after it), and keys `MCP_LIMITER` by the token's session until grants exist.
+- While the public demo tokens are in force, the key is `${sessionId}:${CF-Connecting-IP}`: every visitor holds those
+  tokens, so a key per token would let one client spend the whole demo's window. The trade-off: one client that
+  rotates IPs gets a window per IP, and visitors behind one NAT share one. A grant (A1a) restores a key per person.
+
 ## Sources
 
 From spec 004:

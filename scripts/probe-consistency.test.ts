@@ -69,13 +69,26 @@ describe("exitCodeOf", () => {
 });
 
 describe("parseConfig", () => {
-  it("defaults to the local wrangler dev port and 12 reads, with no MCP token", () => {
-    expect(parseConfig({})).toEqual({ baseUrl: "http://localhost:8788", reads: 12, mcpToken: undefined });
+  it("defaults to the local wrangler dev ports and 12 reads, with no MCP token", () => {
+    expect(parseConfig({})).toEqual({
+      baseUrl: "http://localhost:8788",
+      mcpUrl: "http://localhost:8789/mcp",
+      reads: 12,
+      mcpToken: undefined,
+    });
   });
 
-  it("reads the three variables and drops a trailing slash from the URL", () => {
-    expect(parseConfig({ BASE_URL: "https://admin-os.lr0y.dev/", READS: "5", MCP_TOKEN: " t0ken " })).toEqual({
+  it("reads the four variables and drops a trailing slash from the web URL", () => {
+    expect(
+      parseConfig({
+        BASE_URL: "https://admin-os.lr0y.dev/",
+        MCP_URL: "https://mcp.admin-os.lr0y.dev/mcp",
+        READS: "5",
+        MCP_TOKEN: " t0ken ",
+      }),
+    ).toEqual({
       baseUrl: "https://admin-os.lr0y.dev",
+      mcpUrl: "https://mcp.admin-os.lr0y.dev/mcp",
       reads: 5,
       mcpToken: "t0ken",
     });
@@ -91,6 +104,10 @@ describe("parseConfig", () => {
 
   it("refuses a BASE_URL without a scheme", () => {
     expect(() => parseConfig({ BASE_URL: "localhost:8788" })).toThrow(/BASE_URL must start with http/);
+  });
+
+  it("refuses an MCP_URL without a scheme", () => {
+    expect(() => parseConfig({ MCP_URL: "localhost:8789/mcp" })).toThrow(/MCP_URL must start with http/);
   });
 });
 

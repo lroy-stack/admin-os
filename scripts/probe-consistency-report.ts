@@ -7,6 +7,8 @@ export type ProbeMode = "web" | "mcp";
 
 export interface ProbeConfig {
   readonly baseUrl: string;
+  /** The MCP Worker's endpoint (ADR 0016); the web app no longer serves MCP. */
+  readonly mcpUrl: string;
   readonly reads: number;
   readonly mcpToken: string | undefined;
 }
@@ -22,11 +24,12 @@ export type ProbeOutcome =
   | { readonly mode: ProbeMode; readonly status: "skipped"; readonly reason: string };
 
 const DEFAULT_BASE_URL = "http://localhost:8788";
+const DEFAULT_MCP_URL = "http://localhost:8789/mcp";
 const DEFAULT_READS = 12;
 const MAX_READS = 500;
 const SESSION_LABEL_LENGTH = 8;
 
-/** `BASE_URL`, `READS` and `MCP_TOKEN` as written; a malformed value fails loudly and says what to write. */
+/** `BASE_URL`, `MCP_URL`, `READS` and `MCP_TOKEN` as written; a malformed value fails loudly and says what to write. */
 export function parseConfig(env: Readonly<Record<string, string | undefined>>): ProbeConfig {
   const rawReads = env.READS?.trim();
   const reads = rawReads ? Number(rawReads) : DEFAULT_READS;
@@ -37,8 +40,12 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
   if (!/^https?:\/\/[^/\s]+/.test(baseUrl)) {
     throw new Error(`BASE_URL must start with http:// or https://; got "${baseUrl}".`);
   }
+  const mcpUrl = env.MCP_URL?.trim() || DEFAULT_MCP_URL;
+  if (!/^https?:\/\/[^/\s]+/.test(mcpUrl)) {
+    throw new Error(`MCP_URL must start with http:// or https://; got "${mcpUrl}".`);
+  }
   const mcpToken = env.MCP_TOKEN?.trim() || undefined;
-  return { baseUrl, reads, mcpToken };
+  return { baseUrl, mcpUrl, reads, mcpToken };
 }
 
 /** The modes named on the command line; none named means both. */

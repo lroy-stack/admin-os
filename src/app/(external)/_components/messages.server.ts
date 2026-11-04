@@ -59,7 +59,7 @@ const en: LandingMessages = {
       mcp: {
         title: "MCP server",
         description:
-          "Any MCP-capable AI assistant can operate the dashboard with the same capabilities and permissions as the screens, over Streamable HTTP or stdio.",
+          "Any MCP-capable AI assistant can operate the dashboard with the same capabilities and permissions as the screens, over Streamable HTTP at mcp.admin-os.lr0y.dev/mcp or over stdio.",
       },
     },
   },
@@ -137,7 +137,7 @@ const es: LandingMessages = {
       mcp: {
         title: "Servidor MCP",
         description:
-          "Cualquier asistente de IA compatible con MCP puede manejar el panel con las mismas capacidades y permisos que las pantallas, por Streamable HTTP o stdio.",
+          "Cualquier asistente de IA compatible con MCP puede manejar el panel con las mismas capacidades y permisos que las pantallas, por Streamable HTTP en mcp.admin-os.lr0y.dev/mcp o por stdio.",
       },
     },
   },
@@ -216,7 +216,7 @@ const de: LandingMessages = {
       mcp: {
         title: "MCP-Server",
         description:
-          "Jeder MCP-fähige KI-Assistent kann das Dashboard mit denselben Fähigkeiten und Berechtigungen bedienen wie die Bildschirme, über Streamable HTTP oder stdio.",
+          "Jeder MCP-fähige KI-Assistent kann das Dashboard mit denselben Fähigkeiten und Berechtigungen bedienen wie die Bildschirme, über Streamable HTTP unter mcp.admin-os.lr0y.dev/mcp oder über stdio.",
       },
     },
   },
@@ -294,7 +294,7 @@ const fr: LandingMessages = {
       mcp: {
         title: "Serveur MCP",
         description:
-          "Tout assistant IA compatible MCP peut piloter le tableau de bord avec les mêmes capacités et autorisations que les écrans, en Streamable HTTP ou en stdio.",
+          "Tout assistant IA compatible MCP peut piloter le tableau de bord avec les mêmes capacités et autorisations que les écrans, en Streamable HTTP sur mcp.admin-os.lr0y.dev/mcp ou en stdio.",
       },
     },
   },

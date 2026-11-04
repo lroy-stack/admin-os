@@ -3,7 +3,8 @@
  * reads see the write. On Cloudflare Workers the demo's state once lived in isolate memory, and a write was seen by
  * 1 read in 12; with the Durable Object store every read must see it.
  *
- * Run it with `npm run probe:consistency [-- web|mcp]`; `BASE_URL` (default http://localhost:8788), `READS`
+ * Run it with `npm run probe:consistency [-- web|mcp]`; `BASE_URL` (default http://localhost:8788), `MCP_URL`
+ * (default http://localhost:8789/mcp, the MCP Worker under `npm run dev:mcp`), `READS`
  * (default 12) and `MCP_TOKEN` (optional, enables the MCP mode) come from the environment. The web mode drives the
  * real UI in Chromium, so the visitor gets a signed `demo_sid` and no Server Action id is hand-crafted.
  */
@@ -92,7 +93,7 @@ async function connectMcp(config: ProbeConfig, token: string): Promise<Client> {
     { versionNegotiation: { mode: { pin: "2026-07-28" } } },
   );
   await client.connect(
-    new StreamableHTTPClientTransport(new URL("/api/mcp", config.baseUrl), {
+    new StreamableHTTPClientTransport(new URL(config.mcpUrl), {
       fetch: freshConnectionFetch,
       authProvider: { token: async () => token },
     }),

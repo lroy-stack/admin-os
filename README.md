@@ -206,22 +206,29 @@ deploy your own:
    NEXT_PUBLIC_SITE_URL=https://admin-os.example.com npm run deploy
    ```
 
-On the mock adapter the MCP endpoint accepts the public demo tokens; set your own with
-`npx wrangler secret put MCP_TOKENS`. Any Node.js host works too: `npm run build && npm run start`.
+On the mock adapter the MCP Worker accepts the public demo tokens; set your own with
+`npx wrangler secret put MCP_TOKENS -c workers/mcp/wrangler.jsonc`. The web app alone runs on any Node.js host too
+(`npm run build && npm run start`); MCP then runs over stdio, or as the MCP Worker on Cloudflare.
 
 ## MCP
 
 The same capabilities the screens use are MCP tools, filtered by the caller's role
 ([ADR 0009](docs/adr/0009-mcp-server.md)); every tool, per preset and role, is in the generated
-[MCP reference](docs/mcp/reference.md). Two transports serve them:
+[MCP reference](docs/mcp/reference.md). The server is its own Worker, `workers/mcp`
+([ADR 0016](docs/adr/0016-mcp-server-as-its-own-product.md)), and two transports serve it:
 
-- **Streamable HTTP** at `/api/mcp`, with a bearer token. `MCP_TOKENS` maps tokens to roles (see
-  [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`,
-  `demo-manager-token` and `demo-staff-token` work. Each token has its own demo data. The live demo serves it at
-  `https://admin-os.lr0y.dev/api/mcp` with the same demo tokens, **read-only**: anyone holds those tokens, so they
-  list and run read tools only. Your own `MCP_TOKENS` keep the writes; `MCP_READ_ONLY=true` or `false` overrides
-  either default.
+- **Streamable HTTP** at `https://mcp.admin-os.lr0y.dev/mcp` (locally `http://localhost:8789/mcp`, see "The three
+  Workers locally"), with a bearer token. `MCP_TOKENS` maps tokens to roles (see [`.env.example`](.env.example)); on
+  the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`, `demo-manager-token` and
+  `demo-staff-token` work. Each token has its own demo data. With those public tokens the server is **read-only**:
+  anyone holds them, so they list and run read tools only. Your own `MCP_TOKENS` keep the writes;
+  `MCP_READ_ONLY=true` or `false` overrides either default. Requests are rate-limited per token, and per client IP
+  for the public tokens (`429` with `Retry-After`), and a browser page may call it only from the demo's own
+  origin or `claude.ai`.
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
+
+The web app's old endpoint, `https://admin-os.lr0y.dev/api/mcp`, answers `410` with the new URL; add the server again
+at `https://mcp.admin-os.lr0y.dev/mcp`.
 
 Create and add tools take a required `idempotencyKey` argument: a new UUID for each operation, the same one to retry
 it safely. Other writes take no key and are safe to repeat. Each tool's annotations say whether it only reads,
@@ -233,7 +240,7 @@ showing an old list after an update, reconnect it (in Claude Code, `/mcp`, then 
 Claude Code, from the repository root:
 
 ```bash
-claude mcp add --scope project --transport http admin-os http://localhost:3000/api/mcp \
+claude mcp add --scope project --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp \
   --header "Authorization: Bearer demo-staff-token"
 # or over stdio
 claude mcp add --scope project admin-os -e MCP_ROLE=owner -- npm run --silent mcp:stdio

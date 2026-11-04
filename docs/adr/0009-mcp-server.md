@@ -327,3 +327,9 @@ and unlisted names answering `access.forbidden`.
   correlationId, actorRole, via: "mcp"}`, so write attempts on a read-only server are audited.
 - **Reference.** The [MCP reference](../mcp/reference.md) is generated from this projection by
   `npm run mcp:reference`; `src/config/mcp-reference.test.ts` fails while it is stale (spec 004 AC10).
+
+## Amendment 2026-11-04: the transports move (spec 004 W1–W3)
+
+- **Streamable HTTP** is the MCP Worker, `workers/mcp`, at `https://mcp.admin-os.lr0y.dev/mcp` (ADR 0016); `/api/mcp`
+  answers `410` with a JSON-RPC error naming that URL. stdio runs the same composition root (`createMcpServerFor` in
+  `src/config/mcp.server.ts`), and the bearer-token check lives in `src/config/mcp-auth.ts` until plan A1a.

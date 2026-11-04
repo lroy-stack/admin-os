@@ -7,7 +7,7 @@ admin-OS serves its capability catalogue as MCP tools, through the same client a
 ## The server
 
 - **Protocol.** Revision `2026-07-28`, and the 2025 era (`2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`, `2024-10-07`; latest `2025-11-25`) through the SDK's stateless fallback, on both transports.
-- **Transports.** Streamable HTTP at `/api/mcp` (GET, POST and DELETE), and stdio with `npm run --silent mcp:stdio`. The preset is the deployment's `VERTICAL`.
+- **Transports.** Streamable HTTP at `https://mcp.admin-os.lr0y.dev/mcp`, the MCP Worker (`workers/mcp`; `npm run dev:mcp` serves it at `http://localhost:8789/mcp`), and stdio with `npm run --silent mcp:stdio`. The preset is the deployment's `VERTICAL`.
 - **Auth over HTTP.** A bearer token is required and resolves the role; no token never means a role. `MCP_TOKENS` maps tokens to roles (`<token>:<role>,...`). While it is unset on the mock adapter, the public demo tokens `demo-owner-token`, `demo-manager-token`, `demo-staff-token` apply, each with its own demo session, and the server is **read-only**: anyone holds those tokens. `MCP_READ_ONLY=true` or `false` overrides either default.
 - **Auth over stdio.** One actor per process: `MCP_ROLE` (default `staff`) on its own demo session; it writes unless `MCP_READ_ONLY=true`.
 - **Read-only mode.** Only the tools marked `read` below are listed and run; a write answers `access.forbidden`.
