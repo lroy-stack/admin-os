@@ -1,6 +1,6 @@
 # ADR 0016 — The MCP server is its own product: a separate Worker over a durable demo store, with scoped access
 
-Status: proposed · Date: 2026-11-04 · Spec: `docs/specs/004-mcp-server/spec.md` (D1–D8, AC1–AC12) · Plan: M0
+Status: accepted · Date: 2026-11-04 · Spec: `docs/specs/004-mcp-server/spec.md` (D1–D8, AC1–AC12) · Plan: M0
 · Spike: `docs/specs/004-mcp-server/spike-s0.md` (GO) · Amends: ADR 0005, 0009 · Related: ADR 0003, 0006, 0008
 
 ## Context
@@ -570,8 +570,8 @@ If the client does not step up, A1b ships the reconnect path (plan, risks) and t
 
 ## Open questions
 
-These are places where this ADR believes a decision is incomplete or should change. Each comes with a proposal. None
-is applied above: D1–D8 stand as written until the owner accepts a proposal, and then this ADR is amended.
+These are places where the first draft found a decision incomplete. Each came with a proposal; the resolutions
+(2026-11-04) close the list and bind the tasks named in them.
 
 1. **D3: challenge only when the scope is what is missing.**
    - *The problem.* D3 says a write called without `write` answers `403 insufficient_scope`. When the role does not
@@ -623,6 +623,24 @@ is applied above: D1–D8 stand as written until the owner accepts a proposal, a
    - *"`serverInfo.version` = manifest hash".* For AC9 to hold when a capability's schema or summary changes without
      the manifest changing, the hash must cover what `tools/list` returns (names, titles, descriptions, schemas,
      annotations, `_meta`), not only the manifest's source.
+
+
+### Resolutions (2026-11-04)
+
+1. **D3: accepted.** The role is checked first (`access.forbidden`); `insufficient_scope` is answered only when the role
+   holds the write. Binds A1b.
+2. **D4: (a).** The session and role cookies take `Domain` from `DEMO_COOKIE_DOMAIN` (`admin-os.lr0y.dev` in
+   production, unset locally), and the consent page lives in the MCP Worker. The signed session cookie takes a new name
+   so unsigned legacy cookies are ignored, and writing a domain-scoped cookie expires its host-only variant. Binds S1b
+   and A1a.
+3. **D6: the undos are UI-only.** `bookings.status.undo` and `bookings.walk_in.undo` are the undo affordance of the
+   person who just acted; agents use the forward capabilities, so the manifest marks both UI-only and the question of
+   their key does not reach MCP. `bookings.staff_note.add` takes a key. Every exposed write declares its idempotency
+   mode (`key` or `target-state`), and a contract test fails on one without it. Binds T1, U1 and T2a.
+4. **D7: accepted.** An approved write runs as the requester and is refused when the requester's grant or role no
+   longer holds it. Binds H1a.
+5. **D8: both readings accepted.** The per-IP limit guards new demo sessions; `serverInfo.version` hashes the projected
+   `tools/list`. Binds U2 and A1b.
 
 ## Sources
 
