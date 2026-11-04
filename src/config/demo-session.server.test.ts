@@ -51,7 +51,7 @@ describe("ensureDemoSession", () => {
     expect(jar.set).toHaveBeenCalledWith(
       DEMO_SESSION_COOKIE,
       expect.any(String),
-      expect.objectContaining({ domain: "admin-os.lr0y.dev" }),
+      expect.objectContaining({ domain: "admin-os.lr0y.dev", secure: true }),
     );
   });
 
@@ -136,6 +136,11 @@ describe("resetDemoSession", () => {
     vi.stubEnv("DEMO_COOKIE_DOMAIN", "admin-os.lr0y.dev");
     await startedCookie();
     await resetDemoSession("hospitality");
-    expect(jar.delete).toHaveBeenCalledWith({ name: DEMO_SESSION_COOKIE, path: "/", domain: "admin-os.lr0y.dev" });
+    expect(jar.delete).toHaveBeenCalledWith({
+      name: DEMO_SESSION_COOKIE,
+      path: "/",
+      domain: "admin-os.lr0y.dev",
+      secure: true,
+    });
   });
 });

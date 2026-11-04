@@ -8,6 +8,8 @@ export interface CookieWriteOptions {
   readonly httpOnly?: boolean;
   /** Shares the cookie with the subdomains of this host; unset keeps it host-only. */
   readonly domain?: string;
+  /** Forces `Secure` outside production, for a cookie that is served over https there. */
+  readonly secure?: boolean;
 }
 
 /**
@@ -30,6 +32,6 @@ export async function writeCookie(name: string, value: string, options: CookieWr
     ...(options.sameSite ? { sameSite: options.sameSite } : {}),
     ...(options.httpOnly ? { httpOnly: true } : {}),
     ...(options.domain ? { domain: options.domain } : {}),
-    ...(process.env.NODE_ENV === "production" ? { secure: true } : {}),
+    ...(options.secure || process.env.NODE_ENV === "production" ? { secure: true } : {}),
   });
 }

@@ -6,12 +6,26 @@ describe("demoCookieScope", () => {
   it.each([
     ["unset", {}],
     ["empty", { DEMO_COOKIE_DOMAIN: "" }],
-  ])("keeps the cookies host-only when the domain is %s", (_label, env) => {
+  ])("keeps the cookies host-only and plain outside production when the domain is %s", (_label, env) => {
     expect(demoCookieScope(env)).toEqual({});
   });
 
-  it("shares the cookies with the domain's subdomains when it is set", () => {
-    expect(demoCookieScope({ DEMO_COOKIE_DOMAIN: "admin-os.lr0y.dev" })).toEqual({ domain: "admin-os.lr0y.dev" });
+  it("shares the cookies with the domain's subdomains, Secure, when it is set", () => {
+    expect(demoCookieScope({ DEMO_COOKIE_DOMAIN: "admin-os.lr0y.dev" })).toEqual({
+      domain: "admin-os.lr0y.dev",
+      secure: true,
+    });
+  });
+
+  it("makes host-only cookies Secure in production", () => {
+    expect(demoCookieScope({ NODE_ENV: "production" })).toEqual({ secure: true });
+  });
+
+  it("keeps both the domain and Secure in production", () => {
+    expect(demoCookieScope({ NODE_ENV: "production", DEMO_COOKIE_DOMAIN: "admin-os.lr0y.dev" })).toEqual({
+      domain: "admin-os.lr0y.dev",
+      secure: true,
+    });
   });
 
   it.each(["https://admin-os.lr0y.dev", ".admin-os.lr0y.dev", "admin-os.lr0y.dev:443", "localhost", "a b.dev"])(
