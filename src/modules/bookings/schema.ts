@@ -119,16 +119,16 @@ export const bookingCreateInput = z
   });
 
 /** An omitted field stays as it is. Moving the start keeps the length of the stay. */
-export const bookingPatchSchema = z.strictObject({
+export const bookingRescheduleInput = z.strictObject({
+  id: idInput,
   startMin: minuteOfDaySchema.optional(),
   partySize: partySizeInput.optional(),
-  resourceIds: resourceIdsInput.optional(),
-  guestNote: noteInput.optional(),
-  staffNote: noteInput.optional(),
-  tags: tagsInput.optional(),
 });
 
-export const bookingUpdateInput = z.strictObject({ id: idInput, patch: bookingPatchSchema });
+/** The full set of resources the booking holds from now on; an empty list leaves it unassigned. */
+export const bookingTableAssignInput = z.strictObject({ id: idInput, resourceIds: resourceIdsInput });
+
+export const bookingStaffNoteAddInput = z.strictObject({ id: idInput, text: noteInput.min(1) });
 
 /** `cancelled` and `no_show` are listed so they fail with a domain error that names the right capability. */
 export const bookingStatusAdvanceInput = z.strictObject({ id: idInput, to: z.enum(bookingStatuses) });
@@ -164,4 +164,5 @@ export type Availability = z.infer<typeof availabilitySchema>;
 export type ClockReading = z.infer<typeof clockReadingSchema>;
 export type StatusStep = z.infer<typeof statusStepSchema>;
 export type BookingCreateInput = z.input<typeof bookingCreateInput>;
-export type BookingPatch = z.infer<typeof bookingPatchSchema>;
+export type BookingChange = Omit<z.infer<typeof bookingRescheduleInput>, "id"> &
+  Partial<Omit<z.infer<typeof bookingTableAssignInput>, "id">>;

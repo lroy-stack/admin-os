@@ -328,38 +328,18 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
     });
   });
 
-  describe("update", () => {
-    it("moves a booking to a free resource", async () => {
-      const { client } = world(vertical);
-      const created = bookingOf(await client.call("bookings.create", createInput({ resourceIds: [] }), key()));
-      const moved = await client.call("bookings.update", { id: created.id, patch: { resourceIds: [p.free] } }, key());
-      expect(bookingOf(moved).resourceIds).toEqual([p.free]);
-    });
-
-    it("refuses to move a booking onto a busy resource", async () => {
-      const { client } = world(vertical);
-      const created = bookingOf(await client.call("bookings.create", createInput({ resourceIds: [] }), key()));
-      const moved = await client.call(
-        "bookings.update",
-        { id: created.id, patch: { resourceIds: [p.busy.resourceId], startMin: p.busy.at } },
-        key(),
-      );
-      expect(moved).toMatchObject({ ok: false, error: { code: "bookings.resource_busy" } });
-    });
-
+  describe("reschedule", () => {
     it("does not count the booking itself as a conflict when only its party changes", async () => {
       const { client } = world(vertical);
       const created = bookingOf(await client.call("bookings.create", createInput(), key()));
-      expect(await client.call("bookings.update", { id: created.id, patch: { partySize: 1 } }, key())).toMatchObject({
-        ok: true,
-      });
+      expect(await client.call("bookings.reschedule", { id: created.id, partySize: 1 })).toMatchObject({ ok: true });
     });
 
     it("refuses a party the booking's resource cannot seat", async () => {
       const { client } = world(vertical);
       const created = bookingOf(await client.call("bookings.create", createInput(), key()));
-      const patch = { partySize: p.tooSmall.partySize + 20 };
-      expect(await client.call("bookings.update", { id: created.id, patch }, key())).toMatchObject({
+      const partySize = p.tooSmall.partySize + 20;
+      expect(await client.call("bookings.reschedule", { id: created.id, partySize })).toMatchObject({
         ok: false,
         error: { code: "bookings.not_enough_seats" },
       });
@@ -368,43 +348,103 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
     it("moves the start and keeps the length of the stay", async () => {
       const { client } = world(vertical);
       const created = bookingOf(await client.call("bookings.create", createInput(), key()));
-      const patch = { startMin: p.freeAt - 60 };
-      const moved = bookingOf(await client.call("bookings.update", { id: created.id, patch }, key()));
+      const moved = bookingOf(await client.call("bookings.reschedule", { id: created.id, startMin: p.freeAt - 60 }));
       expect([moved.startMin, moved.endMin]).toEqual([p.freeAt - 60, p.freeAt - 60 + p.stay]);
     });
 
     it("refuses a new start outside the window", async () => {
       const { client } = world(vertical);
       const created = bookingOf(await client.call("bookings.create", createInput(), key()));
-      expect(
-        await client.call("bookings.update", { id: created.id, patch: { startMin: p.outside } }, key()),
-      ).toMatchObject({ ok: false, error: { code: "bookings.outside_window" } });
+      expect(await client.call("bookings.reschedule", { id: created.id, startMin: p.outside })).toMatchObject({
+        ok: false,
+        error: { code: "bookings.outside_window" },
+      });
     });
 
     it("refuses a new start off the grid", async () => {
       const { client } = world(vertical);
       const created = bookingOf(await client.call("bookings.create", createInput(), key()));
-      expect(
-        await client.call("bookings.update", { id: created.id, patch: { startMin: p.offGrid } }, key()),
-      ).toMatchObject({ ok: false, error: { code: "bookings.off_grid" } });
-    });
-
-    it("changes notes and tags and leaves the rest as it was", async () => {
-      const { client } = world(vertical);
-      const created = bookingOf(await client.call("bookings.create", createInput(), key()));
-      const patch = { guestNote: "Window seat", staffNote: "Regular", tags: ["vip"] };
-      expect(bookingOf(await client.call("bookings.update", { id: created.id, patch }, key()))).toMatchObject({
-        ...patch,
-        startMin: p.freeAt,
-        resourceIds: [p.free],
+      expect(await client.call("bookings.reschedule", { id: created.id, startMin: p.offGrid })).toMatchObject({
+        ok: false,
+        error: { code: "bookings.off_grid" },
       });
     });
 
     it("answers bookings.not_found for an unknown booking", async () => {
-      expect(await world(vertical).client.call("bookings.update", { id: "ghost", patch: {} }, key())).toMatchObject({
+      expect(await world(vertical).client.call("bookings.reschedule", { id: "ghost", partySize: 1 })).toMatchObject({
         ok: false,
         error: { code: "bookings.not_found" },
       });
+    });
+  });
+
+  describe("table assignment", () => {
+    it("moves a booking to a free resource", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput({ resourceIds: [] }), key()));
+      const moved = await client.call("bookings.table.assign", { id: created.id, resourceIds: [p.free] });
+      expect(bookingOf(moved).resourceIds).toEqual([p.free]);
+    });
+
+    it("refuses to move a booking onto a busy resource", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(
+        await client.call("bookings.create", createInput({ resourceIds: [], startMin: p.busy.at }), key()),
+      );
+      expect(
+        await client.call("bookings.table.assign", { id: created.id, resourceIds: [p.busy.resourceId] }),
+      ).toMatchObject({ ok: false, error: { code: "bookings.resource_busy" } });
+    });
+
+    it("leaves the start and the party as they were", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput({ resourceIds: [] }), key()));
+      const moved = bookingOf(await client.call("bookings.table.assign", { id: created.id, resourceIds: [p.free] }));
+      expect([moved.startMin, moved.endMin, moved.partySize]).toEqual([
+        created.startMin,
+        created.endMin,
+        created.partySize,
+      ]);
+    });
+
+    it("answers bookings.not_found for an unknown booking", async () => {
+      expect(
+        await world(vertical).client.call("bookings.table.assign", { id: "ghost", resourceIds: [] }),
+      ).toMatchObject({ ok: false, error: { code: "bookings.not_found" } });
+    });
+  });
+
+  describe("staff notes", () => {
+    it("adds a note and leaves the guest's note and the rest as they were", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput({ guestNote: "Window" }), key()));
+      const noted = bookingOf(await client.call("bookings.staff_note.add", { id: created.id, text: "Regular" }, key()));
+      expect([noted.staffNote, noted.guestNote, noted.startMin]).toEqual(["Regular", "Window", p.freeAt]);
+    });
+
+    it("appends to the notes already there", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput(), key()));
+      await client.call("bookings.staff_note.add", { id: created.id, text: "Regular" }, key());
+      const noted = bookingOf(await client.call("bookings.staff_note.add", { id: created.id, text: "Allergy" }, key()));
+      expect(noted.staffNote).toBe("Regular\nAllergy");
+    });
+
+    it("adds the note once for a replayed key", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput(), key()));
+      const options = key();
+      await client.call("bookings.staff_note.add", { id: created.id, text: "Regular" }, options);
+      const again = bookingOf(
+        await client.call("bookings.staff_note.add", { id: created.id, text: "Regular" }, options),
+      );
+      expect(again.staffNote).toBe("Regular");
+    });
+
+    it("answers bookings.not_found for an unknown booking", async () => {
+      expect(
+        await world(vertical).client.call("bookings.staff_note.add", { id: "ghost", text: "x" }, key()),
+      ).toMatchObject({ ok: false, error: { code: "bookings.not_found" } });
     });
   });
 
@@ -665,7 +705,9 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
   describe("permissions", () => {
     const writes = [
       ["bookings.create", createInput()],
-      ["bookings.update", { id: p.lateConfirmed, patch: { staffNote: "x" } }],
+      ["bookings.reschedule", { id: p.lateConfirmed, partySize: 1 }],
+      ["bookings.table.assign", { id: p.lateConfirmed, resourceIds: [] }],
+      ["bookings.staff_note.add", { id: p.lateConfirmed, text: "x" }],
       ["bookings.status.advance", { id: p.lateConfirmed, to: "in_progress" }],
       ["bookings.status.undo", { id: p.lateConfirmed }],
       ["bookings.cancel", { id: p.lateConfirmed, reason: "r" }],
@@ -805,18 +847,21 @@ describe("booking status transitions", () => {
     },
   );
 
-  it.each(["completed", "cancelled", "no_show"] as const)(
-    "refuses to update a %s booking with bookings.closed",
-    async (status) => {
+  const closedChanges = [
+    ["bookings.reschedule", { partySize: 1 }],
+    ["bookings.table.assign", { resourceIds: [] }],
+    ["bookings.staff_note.add", { text: "x" }],
+  ] as const;
+
+  describe.each(["completed", "cancelled", "no_show"] as const)("a %s booking", (status) => {
+    it.each(closedChanges)("is refused by %s with bookings.closed", async (id, change) => {
       const { client } = world("hospitality", hospitalityWith(everyStatus));
-      expect(
-        await client.call("bookings.update", { id: `b-${status}`, patch: { staffNote: "x" } }, key()),
-      ).toMatchObject({
+      expect(await client.call(id, { id: `b-${status}`, ...change }, key())).toMatchObject({
         ok: false,
         error: { code: "bookings.closed" },
       });
-    },
-  );
+    });
+  });
 });
 
 describe("bookings with an inactive resource", () => {

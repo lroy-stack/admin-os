@@ -4,16 +4,16 @@ import { err, ok } from "@/core/result";
 
 import {
   customersBlock,
+  customersContactUpdate,
   customersCreate,
   customersDuplicatesCheck,
   customersGet,
   customersList,
   customersNotesAdd,
   customersUnblock,
-  customersUpdate,
 } from "./capabilities";
 import { type ContactQuery, matchedFields } from "./contact";
-import type { Customer, CustomerPatch } from "./schema";
+import type { Customer, CustomerContactUpdateInput } from "./schema";
 
 /** Writes change the session copy in place (ADR 0005), so the collection is mutable here. */
 interface CustomersData {
@@ -41,8 +41,8 @@ const duplicateError = (matches: ReturnType<typeof duplicatesOf>) =>
     matchedOn: [...new Set(matches.flatMap(({ matchedOn }) => matchedOn))],
   });
 
-const applyPatch = (customer: Customer, patch: CustomerPatch): Customer => {
-  const { marketingConsent, phone, email, ...fields } = patch;
+const applyContact = (customer: Customer, change: Omit<CustomerContactUpdateInput, "id">): Customer => {
+  const { phone, email, ...fields } = change;
   const defined = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
   const { phone: _phone, email: _email, ...kept } = customer;
   return {
@@ -50,7 +50,6 @@ const applyPatch = (customer: Customer, patch: CustomerPatch): Customer => {
     ...(phone === null ? {} : { phone: phone ?? customer.phone }),
     ...(email === null ? {} : { email: email ?? customer.email }),
     ...defined,
-    ...(marketingConsent === undefined ? {} : { consent: { marketing: marketingConsent } }),
   };
 };
 
@@ -93,19 +92,19 @@ export const customersMockHandlers = {
     return ok(customer);
   }),
 
-  ...mockHandler(customersUpdate, ({ id, patch }, { data }: Context) => {
+  ...mockHandler(customersContactUpdate, ({ id, ...change }, { data }: Context) => {
     const customer = data.customers.find((candidate) => candidate.id === id);
     if (customer === undefined) return notFound(id);
     const matches = duplicatesOf(
       data.customers,
       {
-        ...(patch.phone ? { phone: patch.phone } : {}),
-        ...(patch.email ? { email: patch.email } : {}),
+        ...(change.phone ? { phone: change.phone } : {}),
+        ...(change.email ? { email: change.email } : {}),
       },
       id,
     );
     if (matches.length > 0) return duplicateError(matches);
-    return ok(replace(data, applyPatch(customer, patch)));
+    return ok(replace(data, applyContact(customer, change)));
   }),
 
   ...mockHandler(customersNotesAdd, ({ id, text }, { data, actor, clock }: Context) => {

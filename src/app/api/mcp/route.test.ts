@@ -164,7 +164,7 @@ describe("MCP over the route (AC5)", () => {
     vi.stubEnv("MCP_TOKENS", "");
     const client = await connect("demo-owner-token");
     await client.listTools();
-    const result = await client.callTool({ name: "customers_update", arguments: { id: "C-1", patch: {} } });
+    const result = await client.callTool({ name: "customers_contact_update", arguments: { id: "C-1", name: "Ada" } });
     expect(result).toMatchObject({
       isError: true,
       structuredContent: { code: "access.forbidden", message: expect.stringMatching(/read-only/) },

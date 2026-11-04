@@ -5,7 +5,7 @@ import { assertDictionaryParity, errorText } from "@/core/i18n";
 import { customersCapabilities } from "./capabilities";
 import { matchedFields, normalisePhone } from "./contact";
 import { customersErrors } from "./messages";
-import { customerCreateInput, customerPatchSchema, customerSchema } from "./schema";
+import { customerContactUpdateInput, customerCreateInput, customerSchema } from "./schema";
 
 const customer = customerSchema.parse({
   id: "c1",
@@ -32,12 +32,23 @@ describe("customer write schemas", () => {
     });
   });
 
-  it("accepts null in a patch to clear the phone or the email", () => {
-    expect(customerPatchSchema.parse({ phone: null, email: null })).toEqual({ phone: null, email: null });
+  it("accepts null to clear the phone or the email", () => {
+    expect(customerContactUpdateInput.parse({ id: "c1", phone: null, email: null })).toEqual({
+      id: "c1",
+      phone: null,
+      email: null,
+    });
   });
 
-  it.each([{ phone: "600000101" }, { email: "ada" }, { name: null }])("rejects the patch %j", (patch) => {
-    expect(customerPatchSchema.safeParse(patch).success).toBe(false);
+  it.each([
+    { phone: "600000101" },
+    { email: "ada" },
+    { name: null },
+    { vip: true },
+    { marketingConsent: true },
+    { tags: ["vip"] },
+  ])("rejects the contact change %j", (change) => {
+    expect(customerContactUpdateInput.safeParse({ id: "c1", ...change }).success).toBe(false);
   });
 
   it("rejects a blank name", () => {

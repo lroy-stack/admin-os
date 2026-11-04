@@ -9,9 +9,11 @@ import {
   bookingCreateInput,
   bookingIdInput,
   bookingNoShowInput,
+  bookingRescheduleInput,
   bookingSchema,
+  bookingStaffNoteAddInput,
   bookingStatusAdvanceInput,
-  bookingUpdateInput,
+  bookingTableAssignInput,
   walkInSeatInput,
   walkInUndoOutput,
 } from "./schema";
@@ -52,17 +54,44 @@ export const bookingsCreate = defineCapability({
   requiresIdempotencyKey: true,
 });
 
-export const bookingsUpdate = defineCapability({
-  id: "bookings.update",
+export const bookingsReschedule = defineCapability({
+  id: "bookings.reschedule",
   summary:
-    "Change the start, party size, resources, notes or tags of an open booking; omitted fields stay as they are and moving the start keeps the length of the stay. Table moves go here. Same rules as bookings.create; fails with bookings.closed for a completed, cancelled or no-show booking.",
-  input: bookingUpdateInput,
+    "Move an open booking to another start and/or change its party size; omitted fields stay as they are and moving the start keeps the length of the stay. Same rules as bookings.create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.outside_window, bookings.off_grid or bookings.not_found. Tables are changed with bookings.table.assign.",
+  input: bookingRescheduleInput,
   output: bookingSchema,
   permission: "update:bookings",
   effect: "write",
   riskTier: 2,
   change: "overwrite",
   idempotency: "target-state",
+});
+
+export const bookingsTableAssign = defineCapability({
+  id: "bookings.table.assign",
+  summary:
+    "Set the resources (tables, chairs or bays) an open booking holds, replacing the ones it has; an empty list leaves it unassigned. They must be active, free for the stay and seat the party together. Fails with bookings.closed, bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive or bookings.not_found.",
+  input: bookingTableAssignInput,
+  output: bookingSchema,
+  permission: "update:bookings",
+  effect: "write",
+  riskTier: 2,
+  change: "overwrite",
+  idempotency: "target-state",
+});
+
+export const bookingsStaffNoteAdd = defineCapability({
+  id: "bookings.staff_note.add",
+  summary:
+    "Add a line to the staff note of an open booking, after what is already there. The guest's own note is not changed. Fails with bookings.closed for a completed, cancelled or no-show booking and bookings.not_found for an unknown id.",
+  input: bookingStaffNoteAddInput,
+  output: bookingSchema,
+  permission: "update:bookings",
+  effect: "write",
+  riskTier: 2,
+  change: "add",
+  idempotency: "key",
+  requiresIdempotencyKey: true,
 });
 
 export const bookingsStatusAdvance = defineCapability({
@@ -150,7 +179,9 @@ export const bookingsCapabilities = {
   "bookings.list": bookingsList,
   "bookings.availability.get": bookingsAvailabilityGet,
   "bookings.create": bookingsCreate,
-  "bookings.update": bookingsUpdate,
+  "bookings.reschedule": bookingsReschedule,
+  "bookings.table.assign": bookingsTableAssign,
+  "bookings.staff_note.add": bookingsStaffNoteAdd,
   "bookings.status.advance": bookingsStatusAdvance,
   "bookings.status.undo": bookingsStatusUndo,
   "bookings.cancel": bookingsCancel,

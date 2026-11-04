@@ -101,12 +101,23 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
     });
   });
 
-  it("updates only the patched fields", async () => {
-    const updated = await session(vertical).call("customers.update", {
-      id: existingId,
-      patch: { name: "Renamed", vip: true },
+  it("updates only the contact fields it is given", async () => {
+    const updated = await session(vertical).call("customers.contact.update", { id: existingId, name: "Renamed" });
+    expect(customerOf(updated)).toMatchObject({ name: "Renamed", phone: existingPhone });
+  });
+
+  it("leaves consent, VIP and tags as they were when contact data changes", async () => {
+    const client = session(vertical);
+    const before = customerOf(await client.call("customers.get", { id: existingId }));
+    const after = customerOf(await client.call("customers.contact.update", { id: existingId, locale: "de" }));
+    expect([after.vip, after.consent, after.tags]).toEqual([before.vip, before.consent, before.tags]);
+  });
+
+  it("answers customers.not_found when updating an unknown customer", async () => {
+    expect(await session(vertical).call("customers.contact.update", { id: "ghost", name: "X" })).toMatchObject({
+      ok: false,
+      error: { code: "customers.not_found" },
     });
-    expect(customerOf(updated)).toMatchObject({ name: "Renamed", vip: true, phone: existingPhone });
   });
 
   it("clears the phone and the email when the patch says null", async () => {
@@ -118,7 +129,7 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
     );
     const { id } = customerOf(created);
 
-    const cleared = customerOf(await client.call("customers.update", { id, patch: { phone: null, email: null } }));
+    const cleared = customerOf(await client.call("customers.contact.update", { id, phone: null, email: null }));
 
     expect(cleared).not.toHaveProperty("phone");
     expect(cleared).not.toHaveProperty("email");
@@ -133,7 +144,7 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
     );
     const { id } = customerOf(created);
 
-    const renamed = customerOf(await client.call("customers.update", { id, patch: { name: "Renamed" } }));
+    const renamed = customerOf(await client.call("customers.contact.update", { id, name: "Renamed" }));
 
     expect(renamed).toMatchObject({ phone: "+34655555556", email: "both2@example.com" });
   });
@@ -142,7 +153,7 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
     const client = session(vertical);
     const created = await client.call("customers.create", { name: "Other", phone: "+34644444444" }, key());
     const { id } = customerOf(created);
-    expect(await client.call("customers.update", { id, patch: { phone: existingPhone } })).toMatchObject({
+    expect(await client.call("customers.contact.update", { id, phone: existingPhone })).toMatchObject({
       ok: false,
       error: { code: "customers.duplicate" },
     });
@@ -183,7 +194,7 @@ describe.each(presets)("customers writes in the %s preset", (vertical, existingI
 
   it.each([
     ["customers.create", { name: "X" }],
-    ["customers.update", { id: existingId, patch: { vip: true } }],
+    ["customers.contact.update", { id: existingId, name: "X" }],
     ["customers.block", { id: existingId, reason: "r" }],
     ["customers.unblock", { id: existingId }],
   ] as const)("is forbidden to call %s with only read:customers", async (id, input) => {

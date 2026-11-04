@@ -10,8 +10,10 @@ import { overlaps, serviceMinute, slotStarts, stayEnd } from "./rules";
 import {
   bookingCancelInput,
   bookingCreateInput,
-  bookingPatchSchema,
+  bookingRescheduleInput,
+  bookingStaffNoteAddInput,
   bookingStatusAdvanceInput,
+  bookingTableAssignInput,
   walkInSeatInput,
 } from "./schema";
 import { bookingsSettings, serviceWindow } from "./settings";
@@ -59,8 +61,19 @@ describe("booking write schemas", () => {
     expect(bookingCancelInput.safeParse({ id: "b", reason: "x".repeat(501) }).success).toBe(false);
   });
 
-  it.each([{ status: "confirmed" }, { id: "b" }, { endMin: 1300 }])("refuses the patch field %j", (patch) => {
-    expect(bookingPatchSchema.safeParse(patch).success).toBe(false);
+  it.each([{ status: "confirmed" }, { endMin: 1300 }, { resourceIds: ["S1"] }, { guestNote: "x" }])(
+    "refuses the reschedule field %j",
+    (extra) => {
+      expect(bookingRescheduleInput.safeParse({ id: "b", startMin: 1200, ...extra }).success).toBe(false);
+    },
+  );
+
+  it("refuses to assign a resource twice", () => {
+    expect(bookingTableAssignInput.safeParse({ id: "b", resourceIds: ["S1", "S1"] }).success).toBe(false);
+  });
+
+  it.each(["", "   "])("refuses the blank staff note %j", (text) => {
+    expect(bookingStaffNoteAddInput.safeParse({ id: "b", text }).success).toBe(false);
   });
 
   it("refuses a status that does not exist", () => {
@@ -83,7 +96,9 @@ describe("booking capabilities", () => {
   it.each([
     ["bookings.create", true],
     ["bookings.walk_in.seat", true],
-    ["bookings.update", undefined],
+    ["bookings.reschedule", undefined],
+    ["bookings.table.assign", undefined],
+    ["bookings.staff_note.add", true],
     ["bookings.status.advance", undefined],
     ["bookings.status.undo", true],
     ["bookings.cancel", undefined],

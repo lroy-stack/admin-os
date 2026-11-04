@@ -74,16 +74,17 @@ export const customerCreateInput = z.strictObject({
   tags: contactFields.tags.default([]),
 });
 
-/** In a patch an omitted field stays as it is and `null` clears the phone or the email. */
-export const customerPatchSchema = z.strictObject({
+/**
+ * Contact data only: name, phone, email and the language they are written to in. An omitted field stays as it is and
+ * `null` clears the phone or the email. Consent, VIP and tags are not contact data and have no capability here.
+ */
+export const customerContactUpdateInput = z.strictObject({
+  id: z.string().min(1),
   name: contactFields.name.optional(),
   phone: contactFields.phone.nullable().optional(),
   email: contactFields.email.nullable().optional(),
   locale: contactFields.locale.optional(),
-  marketingConsent: contactFields.marketingConsent.optional(),
-  tags: contactFields.tags.optional(),
-  vip: z.boolean().optional(),
 });
 
 export type CustomerCreateInput = z.input<typeof customerCreateInput>;
-export type CustomerPatch = z.infer<typeof customerPatchSchema>;
+export type CustomerContactUpdateInput = z.infer<typeof customerContactUpdateInput>;

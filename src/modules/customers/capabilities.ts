@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defineCapability } from "@/core/capability";
 import { pageInput, pageOutput } from "@/core/pagination";
 
-import { customerCreateInput, customerPatchSchema, customerSchema } from "./schema";
+import { customerContactUpdateInput, customerCreateInput, customerSchema } from "./schema";
 
 const idInput = z.strictObject({ id: z.string().min(1) });
 
@@ -58,11 +58,11 @@ export const customersCreate = defineCapability({
   requiresIdempotencyKey: true,
 });
 
-export const customersUpdate = defineCapability({
-  id: "customers.update",
+export const customersContactUpdate = defineCapability({
+  id: "customers.contact.update",
   summary:
-    "Change some fields of a customer; omitted fields stay as they are and a null phone or email clears it. Fails with customers.duplicate when the new phone or email belongs to another customer.",
-  input: z.strictObject({ id: z.string().min(1), patch: customerPatchSchema }),
+    "Change a customer's contact data: name, phone, email or locale. Omitted fields stay as they are and a null phone or email clears it. Phone must be E.164 (+34600000101). Consent, VIP and tags are not changed here. Fails with customers.duplicate when the new phone or email belongs to another customer and customers.not_found for an unknown id.",
+  input: customerContactUpdateInput,
   output: customerSchema,
   permission: "update:customers",
   effect: "write",
@@ -113,7 +113,7 @@ export const customersCapabilities = {
   "customers.get": customersGet,
   "customers.duplicates.check": customersDuplicatesCheck,
   "customers.create": customersCreate,
-  "customers.update": customersUpdate,
+  "customers.contact.update": customersContactUpdate,
   "customers.notes.add": customersNotesAdd,
   "customers.block": customersBlock,
   "customers.unblock": customersUnblock,

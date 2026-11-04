@@ -21,7 +21,17 @@ export const MCP_MANIFEST = {
       resourceIds: ["bookings.availability.get", "resources.list"],
     },
   },
-  "bookings.update": { expose: true, title: "Change a booking", ids: { id: ["bookings.list"] } },
+  "bookings.reschedule": {
+    expose: true,
+    title: "Reschedule a booking",
+    ids: { id: ["bookings.list"] },
+  },
+  "bookings.table.assign": {
+    expose: true,
+    title: "Assign tables to a booking",
+    ids: { id: ["bookings.list"], resourceIds: ["bookings.availability.get", "resources.list"] },
+  },
+  "bookings.staff_note.add": { expose: true, title: "Add a staff note to a booking", ids: { id: ["bookings.list"] } },
   "bookings.status.advance": { expose: true, title: "Advance a booking's status", ids: { id: ["bookings.list"] } },
   "bookings.status.undo": {
     uiOnly:
@@ -47,9 +57,9 @@ export const MCP_MANIFEST = {
   },
   "customers.duplicates.check": { expose: true, title: "Check for duplicate customers" },
   "customers.create": { expose: true, title: "Create a customer" },
-  "customers.update": {
+  "customers.contact.update": {
     expose: true,
-    title: "Change a customer",
+    title: "Change a customer's contact details",
     ids: { id: ["customers.list", "customers.duplicates.check"] },
   },
   "customers.notes.add": {

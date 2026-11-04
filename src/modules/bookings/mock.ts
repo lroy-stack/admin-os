@@ -9,9 +9,11 @@ import {
   bookingsCreate,
   bookingsList,
   bookingsNoShowMark,
+  bookingsReschedule,
+  bookingsStaffNoteAdd,
   bookingsStatusAdvance,
   bookingsStatusUndo,
-  bookingsUpdate,
+  bookingsTableAssign,
   bookingsWalkInSeat,
   bookingsWalkInUndo,
 } from "./capabilities";
@@ -26,7 +28,7 @@ import {
   slotStarts,
   stayEnd,
 } from "./rules";
-import type { Availability, BookingInput, BookingPatch, ClockReading } from "./schema";
+import type { Availability, BookingChange, BookingInput, ClockReading } from "./schema";
 import { lateAfterMinutes, serviceWindow, slotMinutes, walkInStayMinutes, walkInUndoSeconds } from "./settings";
 
 /**
@@ -116,17 +118,39 @@ function startTimeError(context: Context, startMin: number): Result<never> | und
 
 const newId = () => `bk-${crypto.randomUUID().slice(0, 8)}`;
 
-function applyPatch(booking: BookingInput, patch: BookingPatch, endMin: number): BookingInput {
-  const { startMin, partySize, resourceIds, guestNote, staffNote, tags } = patch;
-  return {
-    ...booking,
-    ...(startMin === undefined ? {} : { startMin, endMin }),
-    ...(partySize === undefined ? {} : { partySize }),
-    ...(resourceIds === undefined ? {} : { resourceIds }),
-    ...(guestNote === undefined ? {} : { guestNote }),
-    ...(staffNote === undefined ? {} : { staffNote }),
-    ...(tags === undefined ? {} : { tags }),
-  };
+const closedError = (booking: BookingInput) =>
+  err("bookings.closed", `A ${booking.status} booking can no longer be changed`, { status: booking.status });
+
+/** Moves an open booking: the start, the party size or the resources it holds, under the rules of a new placement. */
+function moveBooking(context: Context, id: string, change: BookingChange): Result<BookingInput> {
+  const { data } = context;
+  const booking = bookingOf(data, id);
+  if (booking === undefined) return notFound("booking", [id]);
+  if (!isActive(booking.status)) return closedError(booking);
+  const { startMin: newStart, partySize, resourceIds } = change;
+  const startMin = newStart ?? booking.startMin;
+  const endMin = newStart === undefined ? booking.endMin : stayEnd(startMin, booking.endMin - booking.startMin);
+  if (newStart !== undefined) {
+    const timeError = startTimeError(context, newStart);
+    if (timeError) return timeError;
+  }
+  const placeError = placementError(data, {
+    businessDay: booking.businessDay,
+    startMin,
+    endMin,
+    partySize: partySize ?? booking.partySize ?? 1,
+    resourceIds: resourceIds ?? booking.resourceIds,
+    exceptId: id,
+  });
+  if (placeError) return placeError;
+  return ok(
+    replace(data, {
+      ...booking,
+      ...(newStart === undefined ? {} : { startMin, endMin }),
+      ...(partySize === undefined ? {} : { partySize }),
+      ...(resourceIds === undefined ? {} : { resourceIds }),
+    }),
+  );
 }
 
 /** Whether a booking of `businessDay` starting at `startMin` counts as late on the clock. */
@@ -206,32 +230,18 @@ export const bookingsMockHandlers = {
     return ok(booking);
   }),
 
-  ...mockHandler(bookingsUpdate, ({ id, patch }, context: Context) => {
-    const { data } = context;
+  ...mockHandler(bookingsReschedule, ({ id, ...change }, context: Context) => moveBooking(context, id, change)),
+
+  ...mockHandler(bookingsTableAssign, ({ id, resourceIds }, context: Context) =>
+    moveBooking(context, id, { resourceIds }),
+  ),
+
+  ...mockHandler(bookingsStaffNoteAdd, ({ id, text }, { data }: Context) => {
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
-    if (!isActive(booking.status)) {
-      return err("bookings.closed", `A ${booking.status} booking can no longer be changed`, { status: booking.status });
-    }
-    const startMin = patch.startMin ?? booking.startMin;
-    const endMin = patch.startMin === undefined ? booking.endMin : stayEnd(startMin, booking.endMin - booking.startMin);
-    if (patch.startMin !== undefined) {
-      const timeError = startTimeError(context, patch.startMin);
-      if (timeError) return timeError;
-    }
-    const moves = patch.startMin !== undefined || patch.partySize !== undefined || patch.resourceIds !== undefined;
-    if (moves) {
-      const placeError = placementError(data, {
-        businessDay: booking.businessDay,
-        startMin,
-        endMin,
-        partySize: patch.partySize ?? booking.partySize ?? 1,
-        resourceIds: patch.resourceIds ?? booking.resourceIds,
-        exceptId: id,
-      });
-      if (placeError) return placeError;
-    }
-    return ok(replace(data, applyPatch(booking, patch, endMin)));
+    if (!isActive(booking.status)) return closedError(booking);
+    const staffNote = booking.staffNote ? `${booking.staffNote}\n${text}` : text;
+    return ok(replace(data, { ...booking, staffNote }));
   }),
 
   ...mockHandler(bookingsStatusAdvance, ({ id, to }, { data, clock }: Context) => {
