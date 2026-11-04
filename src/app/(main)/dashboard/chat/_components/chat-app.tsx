@@ -5,6 +5,7 @@ import { getLocale } from "@/config/locale.server";
 import { Chat } from "./chat";
 import { ChatHeader } from "./chat-header";
 import { ChatSidebar } from "./chat-sidebar";
+import { ChatWorkspace } from "./chat-workspace";
 import { createConversations } from "./data";
 import { chatBundle, chatMessages } from "./messages.server";
 
@@ -19,13 +20,15 @@ export async function ChatApp({ standaloneHref }: { standaloneHref?: string }) {
 
   return (
     <LocaleBundles bundles={[chatBundle]}>
-      <SidebarProvider className="flex h-full min-h-0 flex-col [--header-height:calc(--spacing(14))]">
-        <ChatHeader standaloneHref={standaloneHref} />
-        <div className="relative flex min-h-0 flex-1">
-          <ChatSidebar />
-          <Chat conversations={conversations} />
-        </div>
-      </SidebarProvider>
+      <ChatWorkspace conversations={conversations}>
+        <SidebarProvider className="flex h-full min-h-0 flex-col [--header-height:calc(--spacing(14))]">
+          <ChatHeader standaloneHref={standaloneHref} />
+          <div className="relative flex min-h-0 flex-1">
+            <ChatSidebar />
+            <Chat />
+          </div>
+        </SidebarProvider>
+      </ChatWorkspace>
     </LocaleBundles>
   );
 }

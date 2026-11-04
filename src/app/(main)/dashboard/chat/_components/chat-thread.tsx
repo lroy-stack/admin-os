@@ -1,20 +1,18 @@
 "use client";
 
+import { type FormEvent, useState } from "react";
+
 import { cn } from "cn";
 import {
   AlarmClock,
   ArrowLeft,
   Copy,
   Flag,
-  Link,
+  MessageSquareDashed,
   MoreHorizontal,
-  Paperclip,
   PhoneCall,
   Send,
-  Smile,
-  Sparkles,
   Tag,
-  Type,
   UserRound,
 } from "lucide-react";
 
@@ -29,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/components/ui/message";
@@ -46,31 +45,51 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { getInitials } from "@/lib/utils";
 
-import { type Message as ChatMessage, type Contact, currentUser } from "./data";
+import { updateChat } from "./chat-session";
+import { appendMessage } from "./chat-state";
+import { type Message as ChatMessage, type Conversation, currentUser } from "./data";
 import { chatMessageKey } from "./messages";
 
 interface ChatThreadProps {
-  contact: Contact;
-  /** The day the thread started, formatted for the separator above the messages. */
-  dayLabel: string;
-  messages: ChatMessage[];
+  /** The conversation to show, or `null` when the list has none. */
+  conversation: Conversation | null;
   onOpenContact?: () => void;
   onBack?: () => void;
   showBackButton?: boolean;
   className?: string;
 }
 
-export function ChatThread({
-  contact,
-  dayLabel,
-  messages,
+export function ChatThread({ conversation, ...props }: ChatThreadProps) {
+  const text = useMessages(chatMessageKey);
+
+  if (!conversation) {
+    return (
+      <div className={cn("flex h-full flex-col py-3", props.className)}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageSquareDashed />
+            </EmptyMedia>
+            <EmptyTitle>{text.thread.empty}</EmptyTitle>
+            <EmptyDescription>{text.thread.emptyHint}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    );
+  }
+  return <ThreadBody conversation={conversation} {...props} />;
+}
+
+function ThreadBody({
+  conversation,
   onOpenContact,
   onBack,
   showBackButton,
   className,
-}: ChatThreadProps) {
+}: ChatThreadProps & { conversation: Conversation }) {
   const text = useMessages(chatMessageKey);
   const locale = useLocale();
+  const { contact, dayLabel, messages } = conversation;
 
   return (
     <div className={cn("flex h-full flex-col py-3", className)}>
@@ -168,6 +187,7 @@ export function ChatThread({
 
               {messages.map((message) => {
                 const isOutbound = message.align === "end";
+                const isNote = message.kind === "note";
                 const reactionAlign = isOutbound ? "start" : "end";
                 const senderName = isOutbound ? currentUser.name : contact.name;
 
@@ -193,7 +213,7 @@ export function ChatThread({
 
                       <MessageContent>
                         <BubbleGroup>
-                          <Bubble variant={isOutbound ? "default" : "muted"} align={message.align}>
+                          <Bubble variant={bubbleVariantOf(message)} align={message.align}>
                             <BubbleContent>{message.text}</BubbleContent>
                             {message.reaction ? (
                               <BubbleReactions
@@ -205,7 +225,9 @@ export function ChatThread({
                             ) : null}
                           </Bubble>
                         </BubbleGroup>
-                        <MessageFooter>{message.time}</MessageFooter>
+                        <MessageFooter>
+                          {isNote ? format(text.thread.noteMeta, locale, { time: message.time }) : message.time}
+                        </MessageFooter>
                       </MessageContent>
                     </Message>
                   </MessageScrollerItem>
@@ -232,10 +254,10 @@ export function ChatThread({
           </TabsList>
 
           <TabsContent value="reply" className="m-0">
-            <MessageComposer placeholder={text.thread.replyPlaceholder} />
+            <MessageComposer key={conversation.id} conversationId={conversation.id} kind="reply" />
           </TabsContent>
           <TabsContent value="note" className="m-0">
-            <MessageComposer placeholder={text.thread.notePlaceholder} />
+            <MessageComposer key={conversation.id} conversationId={conversation.id} kind="note" />
           </TabsContent>
         </Tabs>
       </div>
@@ -243,40 +265,40 @@ export function ChatThread({
   );
 }
 
-function MessageComposer({ placeholder }: { placeholder: string }) {
+/** A note is tinted, a message from the team is solid, one from the contact is muted. */
+function bubbleVariantOf(message: ChatMessage): "tinted" | "default" | "muted" {
+  if (message.kind === "note") return "tinted";
+  return message.align === "end" ? "default" : "muted";
+}
+
+/** Reply or Internal note: Send appends it to the conversation on the session's chat. */
+function MessageComposer({ conversationId, kind }: { conversationId: number; kind: "reply" | "note" }) {
   const text = useMessages(chatMessageKey);
+  const [value, setValue] = useState("");
+  const empty = value.trim() === "";
+
+  function send(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (empty) return;
+    updateChat((state) => appendMessage(state, conversationId, { kind, text: value.trim(), time: text.time.justNow }));
+    setValue("");
+  }
 
   return (
-    <form
-      className="w-full"
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
+    <form className="w-full" onSubmit={send}>
       <InputGroup className="border-0 bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-0 has-[[data-slot=input-group-control]:focus-visible]:ring-0 has-[[data-slot][aria-invalid=true]]:border-0 has-[[data-slot][aria-invalid=true]]:ring-0 dark:bg-transparent dark:has-[[data-slot][aria-invalid=true]]:ring-0">
         <InputGroupTextarea
-          placeholder={placeholder}
+          placeholder={kind === "reply" ? text.thread.replyPlaceholder : text.thread.notePlaceholder}
+          aria-label={kind === "reply" ? text.thread.reply : text.thread.internalNote}
           className="min-h-14 px-3 py-2.5 text-sm ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
         />
         <InputGroupAddon align="block-end">
-          <InputGroupButton aria-label={text.thread.format} type="button" size="icon-sm">
-            <Type />
-          </InputGroupButton>
-          <InputGroupButton aria-label={text.thread.emoji} type="button" size="icon-sm">
-            <Smile />
-          </InputGroupButton>
-          <InputGroupButton aria-label={text.thread.attach} type="button" size="icon-sm">
-            <Paperclip />
-          </InputGroupButton>
-          <InputGroupButton aria-label={text.thread.insertLink} type="button" size="icon-sm">
-            <Link />
-          </InputGroupButton>
-          <InputGroupButton aria-label={text.thread.aiAssist} type="button" size="icon-sm" variant="outline">
-            <Sparkles />
-          </InputGroupButton>
-          <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto">
+          <span className="text-muted-foreground text-xs">{text.thread.demoNote}</span>
+          <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto" disabled={empty}>
             <Send />
-            <span className="sr-only">{text.thread.send}</span>
+            <span className="sr-only">{kind === "reply" ? text.thread.send : text.thread.addNote}</span>
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>

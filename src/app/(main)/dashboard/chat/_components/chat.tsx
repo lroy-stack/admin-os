@@ -9,26 +9,19 @@ import { useMessages } from "@/core/i18n/client";
 import { useIsLg } from "@/hooks/use-lg";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { useChatBoard } from "./chat-context";
 import { ChatConversationList } from "./chat-conversation-list";
 import { ChatProfileDetails } from "./chat-profile-details";
 import { ChatThread } from "./chat-thread";
-import type { Conversation } from "./data";
 import { chatMessageKey } from "./messages";
-import { useChat } from "./use-chat";
 
-interface ChatProps {
-  conversations: Conversation[];
-}
-
-export function Chat({ conversations }: ChatProps) {
-  const [chat] = useChat();
+export function Chat() {
+  const { active } = useChatBoard();
   const text = useMessages(chatMessageKey);
   const [showContact, setShowContact] = useState(false);
   const [showThread, setShowThread] = useState(false);
   const isLg = useIsLg();
   const isMobile = useIsMobile();
-
-  const activeConversation = conversations.find((c) => c.id === chat.selected) ?? conversations[0];
 
   return (
     <>
@@ -41,7 +34,6 @@ export function Chat({ conversations }: ChatProps) {
         }
       >
         <ChatConversationList
-          conversations={conversations}
           className={cn(
             "transition-transform duration-300 ease-out will-change-transform max-md:col-start-1 max-md:row-start-1",
             showThread && "max-md:pointer-events-none max-md:-translate-x-full",
@@ -49,9 +41,7 @@ export function Chat({ conversations }: ChatProps) {
           onSelectConversation={() => setShowThread(true)}
         />
         <ChatThread
-          contact={activeConversation.contact}
-          dayLabel={activeConversation.dayLabel}
-          messages={activeConversation.messages}
+          conversation={active}
           showBackButton={isMobile}
           onBack={() => setShowThread(false)}
           onOpenContact={() => setShowContact(true)}
@@ -73,7 +63,7 @@ export function Chat({ conversations }: ChatProps) {
               showContact ? "translate-x-0 opacity-100" : "translate-x-full opacity-0",
             )}
           >
-            <ChatProfileDetails contact={activeConversation.contact} onClose={() => setShowContact(false)} />
+            {active ? <ChatProfileDetails contact={active.contact} onClose={() => setShowContact(false)} /> : null}
           </div>
         </div>
       </div>
@@ -84,7 +74,7 @@ export function Chat({ conversations }: ChatProps) {
           <SheetContent side="right" className="w-80 p-0" showCloseButton={false}>
             <SheetTitle className="sr-only">{text.profile.sheetTitle}</SheetTitle>
             <SheetDescription className="sr-only">{text.profile.sheetDescription}</SheetDescription>
-            <ChatProfileDetails contact={activeConversation.contact} onClose={() => setShowContact(false)} />
+            {active ? <ChatProfileDetails contact={active.contact} onClose={() => setShowContact(false)} /> : null}
           </SheetContent>
         </Sheet>
       )}

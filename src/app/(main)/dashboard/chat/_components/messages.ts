@@ -26,8 +26,6 @@ export interface ChatMessages {
     readonly title: string;
     readonly search: string;
     readonly newConversation: string;
-    readonly notifications: string;
-    readonly settings: string;
   };
   readonly nav: Readonly<Record<ChatNavId, string>>;
   readonly channels: Readonly<Record<ChatChannelId, string>>;
@@ -35,14 +33,15 @@ export interface ChatMessages {
   readonly sidebar: {
     readonly channels: string;
     readonly views: string;
-    readonly account: string;
-    readonly settings: string;
-    readonly logOut: string;
   };
   readonly list: {
-    readonly title: string;
     readonly toggleSidebar: string;
     readonly filter: string;
+    readonly filters: { readonly unread: string; readonly priority: string };
+    readonly noResults: string;
+    readonly noResultsHint: string;
+    readonly empty: string;
+    readonly emptyHint: string;
     readonly tabs: { readonly all: string; readonly open: string; readonly snoozed: string; readonly closed: string };
     /** The count next to a tab label. Placeholders: `{count}`. */
     readonly tabCount: string;
@@ -71,12 +70,15 @@ export interface ChatMessages {
     readonly internalNote: string;
     readonly replyPlaceholder: string;
     readonly notePlaceholder: string;
-    readonly format: string;
-    readonly emoji: string;
-    readonly attach: string;
-    readonly insertLink: string;
-    readonly aiAssist: string;
     readonly send: string;
+    readonly addNote: string;
+    /** Placeholders: `{time}`. */
+    readonly noteMeta: string;
+    readonly demoNote: string;
+    /** Names the flag on a priority conversation in the list. */
+    readonly priority: string;
+    readonly empty: string;
+    readonly emptyHint: string;
     /** Placeholders: `{emoji}`. */
     readonly reaction: string;
   };
@@ -102,6 +104,23 @@ export interface ChatMessages {
       readonly location: string;
       readonly tags: string;
     };
+  };
+  readonly newConversation: {
+    readonly title: string;
+    readonly description: string;
+    readonly verb: string;
+    readonly name: string;
+    readonly email: string;
+    readonly channel: string;
+    readonly subject: string;
+    readonly message: string;
+    readonly errors: {
+      readonly nameRequired: string;
+      readonly emailInvalid: string;
+      readonly subjectRequired: string;
+      readonly messageRequired: string;
+    };
+    readonly toast: string;
   };
   readonly status: Readonly<Record<ContactStatus, string>>;
   readonly tags: Readonly<Record<ChatTagId, string>>;

@@ -13,7 +13,6 @@ const SAME_EVERYWHERE = [
   "channels.whatsapp",
   "channels.instagram",
   "channels.facebook",
-  "thread.emoji",
   "list.tabCount",
   "tags.devops",
   "tags.enterprise",

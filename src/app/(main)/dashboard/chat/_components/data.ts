@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Clock3, Inbox, Mail, MessageCircle, Phone, Send, Star, User } from "lucide-react";
+import { Clock3, Inbox, Mail, MessageCircle, Phone, Send, Star } from "lucide-react";
 
 import { format, formatCalendarDate, formatRelative, formatTime, type Locale } from "@/core/i18n/client";
 
@@ -12,6 +12,12 @@ export const CONVERSATION_IDS = [
 export type ConversationId = (typeof CONVERSATION_IDS)[number];
 
 export type ConversationGroup = "pinned" | "today" | "yesterday";
+
+export type ConversationStatus = "open" | "snoozed" | "closed";
+
+export const SNOOZE_IDS = ["later", "tomorrow", "nextWeek"] as const;
+
+export type SnoozeId = (typeof SNOOZE_IDS)[number];
 
 export type ContactStatus = "lead" | "qualified" | "customer" | "atRisk";
 
@@ -62,8 +68,17 @@ export type ChatTagId =
 
 /** A conversation as the client components see it: every text already in the request's language. */
 export type Conversation = {
-  id: ConversationId;
+  /** A demo conversation's id is one of `CONVERSATION_IDS`; one started in the session has its own. */
+  id: number;
   group: ConversationGroup;
+  /** Where the conversation arrived from. */
+  channel: ChatChannelId;
+  status: ConversationStatus;
+  /** Set while the conversation is snoozed: the preset it was snoozed with. */
+  snooze?: SnoozeId;
+  isPriority: boolean;
+  /** The contact's tag ids; `contact.tags` has them in the active language. */
+  tagIds: ChatTagId[];
   name: string;
   subject: string;
   preview: string;
@@ -84,6 +99,8 @@ export type Message = {
   text: string;
   time: string;
   reaction?: string;
+  /** An internal note is written by the team and never reaches the contact. */
+  kind?: "note";
 };
 
 export type Contact = {
@@ -100,49 +117,47 @@ export type Contact = {
   tags: string[];
 };
 
-export type ChatNavId = "inbox" | "mentions" | "snoozed" | "sent" | "all" | "unassigned";
+export type ChatNavId = "inbox" | "snoozed" | "sent" | "all";
 export type ChatChannelId = "email" | "chat" | "whatsapp" | "instagram" | "facebook" | "phone";
 export type ChatViewId = "vip" | "orders" | "feedback";
 
 export type NavItem<Id extends string> = {
   id: Id;
-  /** Unread count shown as a badge. */
-  count?: number;
   icon: LucideIcon;
-  isActive: boolean;
 };
 
 export const navItems: NavItem<ChatNavId>[] = [
-  { id: "inbox", count: 24, icon: Inbox, isActive: true },
-  { id: "mentions", count: 3, icon: Mail, isActive: false },
-  { id: "snoozed", icon: Clock3, isActive: false },
-  { id: "sent", icon: Send, isActive: false },
-  { id: "all", icon: MessageCircle, isActive: false },
-  { id: "unassigned", count: 7, icon: User, isActive: false },
+  { id: "inbox", icon: Inbox },
+  { id: "snoozed", icon: Clock3 },
+  { id: "sent", icon: Send },
+  { id: "all", icon: MessageCircle },
 ];
 
 export const channelItems: NavItem<ChatChannelId>[] = [
-  { id: "email", count: 18, icon: Mail, isActive: false },
-  { id: "chat", count: 5, icon: MessageCircle, isActive: false },
-  { id: "whatsapp", count: 1, icon: Phone, isActive: false },
-  { id: "instagram", count: 0, icon: Phone, isActive: false },
-  { id: "facebook", count: 0, icon: Phone, isActive: false },
-  { id: "phone", count: 0, icon: Phone, isActive: false },
+  { id: "email", icon: Mail },
+  { id: "chat", icon: MessageCircle },
+  { id: "whatsapp", icon: Phone },
+  { id: "instagram", icon: Phone },
+  { id: "facebook", icon: Phone },
+  { id: "phone", icon: Phone },
 ];
 
 export const viewItems: NavItem<ChatViewId>[] = [
-  { id: "vip", count: 8, icon: Star, isActive: false },
-  { id: "orders", count: 6, icon: Inbox, isActive: false },
-  { id: "feedback", count: 2, icon: MessageCircle, isActive: false },
+  { id: "vip", icon: Star },
+  { id: "orders", icon: Inbox },
+  { id: "feedback", icon: MessageCircle },
 ];
 
-/** Counts next to the list's tabs; the closed tab shows none. */
-export const conversationTabs = [
-  { id: "all", count: 24 },
-  { id: "open", count: 18 },
-  { id: "snoozed", count: 2 },
-  { id: "closed" },
-] as const;
+/** A view is the conversations whose contact carries one of its tags. */
+export const VIEW_TAGS: Readonly<Record<ChatViewId, readonly ChatTagId[]>> = {
+  vip: ["enterprise", "highValue"],
+  orders: ["billing", "export"],
+  feedback: ["npsPromoter", "featureRequest", "bug"],
+};
+
+export const CONVERSATION_TABS = ["all", "open", "snoozed", "closed"] as const;
+
+export type ConversationTab = (typeof CONVERSATION_TABS)[number];
 
 export const currentUser = {
   name: "Alex Morgan",
@@ -158,6 +173,7 @@ const DAYS = { today: "2026-05-06", yesterday: "2026-05-05" } as const;
 type ConversationSeed = {
   id: ConversationId;
   group: ConversationGroup;
+  channel: ChatChannelId;
   /** Which demo day the messages were sent on. */
   day: keyof typeof DAYS;
   name: string;
@@ -184,6 +200,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 1,
     group: "pinned",
+    channel: "email",
     day: "today",
     name: "Olivia Rhye",
     isUnread: true,
@@ -211,6 +228,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 2,
     group: "pinned",
+    channel: "email",
     day: "today",
     name: "Phoenix Baker",
     isUnread: false,
@@ -238,6 +256,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 3,
     group: "pinned",
+    channel: "chat",
     day: "today",
     name: "Lana Steiner",
     isUnread: true,
@@ -265,6 +284,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 5,
     group: "today",
+    channel: "whatsapp",
     day: "today",
     name: "Demi Wilkinson",
     isUnread: true,
@@ -292,6 +312,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 6,
     group: "today",
+    channel: "email",
     day: "today",
     name: "Candice Wu",
     isUnread: false,
@@ -318,6 +339,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 7,
     group: "today",
+    channel: "instagram",
     day: "today",
     name: "Natali Craig",
     isUnread: true,
@@ -344,6 +366,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 8,
     group: "today",
+    channel: "chat",
     day: "today",
     name: "Drew Cano",
     isUnread: false,
@@ -370,6 +393,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 9,
     group: "today",
+    channel: "facebook",
     day: "today",
     name: "Orlando Diggs",
     isUnread: false,
@@ -396,6 +420,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 10,
     group: "today",
+    channel: "email",
     day: "today",
     name: "Andi Lane",
     isUnread: true,
@@ -422,6 +447,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 11,
     group: "today",
+    channel: "phone",
     day: "today",
     name: "Kate Morrison",
     isUnread: true,
@@ -448,6 +474,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 12,
     group: "today",
+    channel: "email",
     day: "today",
     name: "Alec Whitten",
     isUnread: false,
@@ -474,6 +501,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 13,
     group: "today",
+    channel: "chat",
     day: "today",
     name: "Ariana Decker",
     isUnread: false,
@@ -500,6 +528,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 14,
     group: "today",
+    channel: "whatsapp",
     day: "today",
     name: "Steven Tey",
     isUnread: true,
@@ -526,6 +555,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 15,
     group: "today",
+    channel: "email",
     day: "today",
     name: "Lori Bryson",
     isUnread: false,
@@ -552,6 +582,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 16,
     group: "today",
+    channel: "instagram",
     day: "today",
     name: "Koray Okumus",
     isUnread: true,
@@ -578,6 +609,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 17,
     group: "yesterday",
+    channel: "chat",
     day: "yesterday",
     name: "Josh Miller",
     isUnread: false,
@@ -604,6 +636,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 18,
     group: "yesterday",
+    channel: "email",
     day: "yesterday",
     name: "Mollie Hall",
     isUnread: false,
@@ -630,6 +663,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 19,
     group: "yesterday",
+    channel: "facebook",
     day: "yesterday",
     name: "Rene Wells",
     isUnread: true,
@@ -656,6 +690,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 20,
     group: "yesterday",
+    channel: "phone",
     day: "yesterday",
     name: "Rylee Howard",
     isUnread: false,
@@ -682,6 +717,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 21,
     group: "yesterday",
+    channel: "email",
     day: "yesterday",
     name: "Sienna Hewitt",
     isUnread: false,
@@ -708,6 +744,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 22,
     group: "yesterday",
+    channel: "chat",
     day: "yesterday",
     name: "Noah Pierre",
     isUnread: true,
@@ -734,6 +771,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 23,
     group: "yesterday",
+    channel: "whatsapp",
     day: "yesterday",
     name: "Eve Lechner",
     isUnread: false,
@@ -760,6 +798,7 @@ const conversationSeeds: ConversationSeed[] = [
   {
     id: 24,
     group: "yesterday",
+    channel: "email",
     day: "yesterday",
     name: "Zahir McClure",
     isUnread: true,
@@ -836,6 +875,10 @@ export function createConversations(text: ChatMessages, locale: Locale): Convers
     return {
       id: seed.id,
       group: seed.group,
+      channel: seed.channel,
+      status: "open",
+      isPriority: false,
+      tagIds: [...seed.contact.tags],
       name: seed.name,
       subject: words.subject,
       preview: words.preview,
