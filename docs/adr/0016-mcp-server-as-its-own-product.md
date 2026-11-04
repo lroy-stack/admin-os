@@ -337,6 +337,35 @@ same through both doors. Section "Shape" turns them into module boundaries and c
   - Pending approvals live in the session's object (D2).
   - The inbox runs through UI-only capabilities, which MCP never lists (plan H1b).
   - `approvals.get` is a read, so an agent can check a request it made.
+- **As built (plan H1a).**
+  - *Policy.* The setting `approvals.policy` (`all`, `destructive_and_sensitive`, `none`) is owned by `permission:
+    manage:approvals`, which is elevated, so only the owner holds it. A visitor's choice is kept in the session and
+    wins over the preset's value; `approvals.policy.set` writes it and `settings.values.get` reports it. The default
+    holds an assistant's write (`via: "mcp"`; the web app never waits) when its descriptor says it is hard to take
+    back: `effect: "destructive"` (`bookings.cancel`, `bookings.no_show.mark`), `change: "overwrite"` or `"remove"`
+    (`customers.block`) or `riskTier: 3`. There is no hand list: the descriptor already expresses all three named
+    writes. A sensitive write the descriptor cannot express would need a new descriptor fact, not a list.
+  - *Hook.* The kernel evaluates the policy (`holdsForApproval`, `src/core/approvals/policy.ts`). The per-capability
+    `approval` hook stays as an extra rule a capability may add; no catalogue capability uses it, so
+    `mayRequireApproval` is still its own flag and the `read-approval` and `approval-flag` rules are unchanged.
+  - *Record.* `ApprovalRecord` (`src/core/mock/session-store.ts`) adds a key-order independent input fingerprint, an
+    `expected` fingerprint and the decision fields. Times are real ISO instants: the demo's business clock is fixed,
+    so a 24 hour deadline on it would never arrive. Expiry is evaluated on read and on decide, never on a timer.
+  - *Dedupe.* A pending hold with the same `(capabilityId, actorId, input fingerprint)` answers its `approvalId`.
+    A write that cannot run now is refused at once and not queued.
+  - *Revalidation.* On hold the kernel runs the handler on a copy of the session and keeps a fingerprint of the
+    answer. On approve it runs it on a copy again: a different answer is `conflict` (`approvals.conflict`), recorded.
+    For an `add` only whether it can run is compared, because it mints a new id on every run. Then the write runs as
+    the requester with the permissions their role holds today; a role that lost the permission gets
+    `approvals.requester_forbidden`, recorded as `conflict`. A change that touches the business clock (live clock)
+    can read as a conflict; the fixed demo clock cannot.
+  - *Capabilities (all UI-only in the manifest).* `approvals.list` (`read:approvals`, pending first, paginated, with the
+    input), `approvals.approve` and `approvals.reject` (`decide:approvals`, destructive so staff never hold it;
+    owner and manager do), `approvals.policy.set` (`manage:approvals`, elevated, owner).
+  - *Bounds.* 50 records per session. A new hold first drops settled records, oldest first, and at the cap with all
+    pending answers `approvals.queue_full`; `boundSession` in the store never drops a pending record.
+  - *Notification.* The feed derives one `approval.requested` item per pending record for actors that hold
+    `decide:approvals`; it disappears when the request is decided or expires.
 - **Sources.** S11, S12, S20.
 
 ### D8 — Protocol 2026-07-28, stateless, hardened

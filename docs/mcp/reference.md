@@ -21,9 +21,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `1049a7bd268e47` | `08bed979929fe4` |
-| salon | `1049a7bd268e47` | `08bed979929fe4` |
-| workshop | `1049a7bd268e47` | `08bed979929fe4` |
+| hospitality | `01d4374cccc02b` | `1be12c4a7ffeea` |
+| salon | `01d4374cccc02b` | `1be12c4a7ffeea` |
+| workshop | `01d4374cccc02b` | `1be12c4a7ffeea` |
 
 ## Tools by preset
 
@@ -159,7 +159,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `approvals_get`
 
-**Check a held write.** Where a write that answered awaiting_approval stands: its capability and status, and whether you asked for it (you means the acting user, until grants are per client). Never returns the held input. Fails with approvals.not_found when there is no such approval in this session.
+**Check a held write.** Where a write that answered awaiting_approval stands: its capability and status (pending, approved with its result, rejected with the reason, expired after 24 hours, or conflict when the state moved), and whether you asked for it (you means the acting user, until grants are per client). Never returns the held input. Fails with approvals.not_found when there is no such approval in this session.
 
 - Capability: `approvals.get`, permission `read:approvals`, tier 1, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
@@ -1220,5 +1220,9 @@ Capabilities only the web app calls; they are never tools.
 
 | Capability | Reason |
 | --- | --- |
+| `approvals.approve` | Approving is the human step the policy exists for; an assistant must never approve its own write (D7) |
+| `approvals.list` | The queue a person decides from; it returns the held input, which an assistant has no need to read (spec 004, D7) |
+| `approvals.policy.set` | The owner's control over what assistants may do without asking; elevated and never an MCP tool (D7) |
+| `approvals.reject` | Rejecting is a person's decision, taken in the web app (D7) |
 | `bookings.status.undo` | The undo affordance of the person who just advanced a status; agents use the forward capabilities (ADR 0016, resolution 3) |
 | `bookings.walk_in.undo` | The undo affordance of the person who just seated a walk-in; agents use the forward capabilities (ADR 0016, resolution 3) |

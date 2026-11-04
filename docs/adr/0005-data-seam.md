@@ -150,7 +150,9 @@ Every list capability paginates.
 
 1. resolve the handler;
 2. check the permission against the actor (`access.forbidden`);
-3. apply the approval rule: store a pending approval and return `AwaitingApproval`;
+3. apply the approval rule: when the approval policy holds the call, store a pending approval and return
+   `AwaitingApproval` (as built: ADR 0016, D7 "As built"; the policy reads the descriptor, the session may override it,
+   and the kernel also decides, rejects and expires held writes);
 4. run the handler `(input, {actor, clock, settings, store})`;
 5. return the `Result`.
 
@@ -172,7 +174,7 @@ Every list capability paginates.
   of its own Worker (`workers/demo-store`), one per `vertical:sessionId`, so every isolate and the MCP door see the
   same state. The mock kernel runs inside the object; the caller sends `dispatch(capabilityId, input, ctx)`. The
   object resets to the seed when its `schemaVersion` changes, refuses a caller whose catalogue differs from its own,
-  keeps at most 200 replay records and 50 pending approvals, and deletes itself two hours after its last write.
+  keeps at most 200 replay records and 50 approval records (settled ones go first; a pending one is never dropped, and a new hold at the cap answers `approvals.queue_full`), and deletes itself two hours after its last write.
   `clock.get` and `settings.values.get` do not depend on the session and are served in process; a visitor without a
   session never touches the object. The `demo_sid` cookie is `<uuid>.<HMAC-SHA-256>` signed with
   `DEMO_SESSION_SECRET` (the older unsigned `demo_session` is ignored), so an id this server did not issue never names an object; "Reset demo data" deletes the
