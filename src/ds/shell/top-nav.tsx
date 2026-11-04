@@ -47,10 +47,15 @@ function NavPills({
   const activeUrl = pending?.from === pathname ? pending.url : items[currentIndex]?.url;
   const thumb = useLiquidThumb(listRef, activeUrl);
 
-  // In the scrollable phone/tablet row, keep the current section in view.
+  // In the scrollable phone/tablet row, keep the current section in view. Only the row scrolls: `scrollIntoView` would
+  // also scroll every ancestor, and on a phone it shifted the whole page sideways for a section far to the right.
   useEffect(() => {
     const current = listRef.current?.querySelector<HTMLElement>(`[data-thumb-key="${CSS.escape(activeUrl ?? "")}"]`);
-    current?.scrollIntoView({ block: "nearest", inline: "center" });
+    const row = listRef.current?.closest("nav");
+    if (!current || !row) return;
+    const item = current.getBoundingClientRect();
+    const box = row.getBoundingClientRect();
+    row.scrollBy({ left: item.left + item.width / 2 - (box.left + box.width / 2) });
   }, [activeUrl]);
 
   return (

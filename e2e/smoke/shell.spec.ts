@@ -160,3 +160,11 @@ test("the account menu resets the demo data", async ({ page, context, baseURL })
 
   await expect(page.getByText("Demo data reset.")).toBeVisible();
 });
+
+test("a section far to the right scrolls the nav row, never the page", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+  await page.goto("/dashboard/kanban");
+  await expect(page.getByRole("navigation", { name: "Sections" }).first()).toBeVisible();
+
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
+});
