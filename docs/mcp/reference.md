@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `174336366f674d` | `196402eabfdb3d` |
-| salon | `174336366f674d` | `196402eabfdb3d` |
-| workshop | `174336366f674d` | `196402eabfdb3d` |
+| hospitality | `0d8e574caf0d3d` | `0b73371ac008ac` |
+| salon | `0d8e574caf0d3d` | `0b73371ac008ac` |
+| workshop | `0d8e574caf0d3d` | `0b73371ac008ac` |
 
 ## Tools by preset
 
@@ -702,7 +702,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `catalog_list`
 
-**List catalog items.** List catalog items, one page at a time.
+**List catalog items.** List catalog items, one page at a time, in catalog order. Send categoryIds to keep only the items of those categories; each item's categoryId names its category.
 
 - Capability: `catalog.list`, permission `read:catalog`, tier 0, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
@@ -721,6 +721,16 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
       "type": "integer",
       "minimum": 1,
       "maximum": 200
+    },
+    "categoryIds": {
+      "minItems": 1,
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
     }
   },
   "additionalProperties": false

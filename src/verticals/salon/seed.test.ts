@@ -40,6 +40,17 @@ describe("salon seed", () => {
     ).toHaveLength(1);
   });
 
+  it("gives each service a required skill and each retail product none", () => {
+    expect(salonSeed.catalog.map((item) => [item.kind, Object.hasOwn(item.ext ?? {}, "requiredSkill")])).toEqual([
+      ["service", true],
+      ["service", true],
+      ["service", true],
+      ["product", false],
+      ["product", false],
+      ["product", false],
+    ]);
+  });
+
   it("books the walk-in without recording a channel", () => {
     expect(
       salonSeed.bookings.filter((booking) => booking.origin === "walk_in").map((booking) => booking.channel),

@@ -36,6 +36,12 @@ describe("workshop seed", () => {
   });
 
   it("has parts and labour as catalog items", () => {
-    expect(workshopSeed.catalog.map((item) => item.kind)).toEqual(["product", "service"]);
+    expect(workshopSeed.catalog.map((item) => item.kind)).toEqual([
+      "product",
+      "service",
+      "product",
+      "product",
+      "product",
+    ]);
   });
 });
