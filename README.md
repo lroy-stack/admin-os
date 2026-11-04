@@ -197,18 +197,20 @@ deploy your own:
 2. Log in once with `npx wrangler login`.
 3. Visitors' demo data lives in a Durable Object of its own Worker (`workers/demo-store`), which `npm run deploy`
    deploys right after the build, then the MCP Worker (`workers/mcp`), which binds the same store, then the app; a
-   failed build never leaves the store ahead of the app. Give the web Worker the key
-   that signs the demo session cookie first (at least 32 characters; `npm run deploy` stops when it is missing, and
-   wrangler offers to create the Worker if it does not exist yet):
+   failed build never leaves the store ahead of the app. First give the key that signs the demo session cookie to the
+   web Worker and to the MCP Worker, whose consent page verifies the same cookie, so both take one value (at least 32
+   characters; `npm run deploy` stops when either Worker lacks it, and wrangler offers to create a Worker that does not
+   exist yet):
 
    ```bash
-   openssl rand -base64 32 | npx wrangler secret put DEMO_SESSION_SECRET
+   value="$(openssl rand -base64 32)"
+   printf %s "$value" | npx wrangler secret put DEMO_SESSION_SECRET -c wrangler.jsonc
+   printf %s "$value" | npx wrangler secret put DEMO_SESSION_SECRET -c workers/mcp/wrangler.jsonc
    ```
 
-   The MCP Worker's consent page verifies the same cookie, so give it the same value
-   (`npx wrangler secret put DEMO_SESSION_SECRET -c workers/mcp/wrangler.jsonc`). It keeps OAuth clients and grants in
-   a KV namespace bound as `OAUTH_KV`: create it with `npx wrangler kv namespace create OAUTH_KV` and put its `id` in
-   [`workers/mcp/wrangler.jsonc`](workers/mcp/wrangler.jsonc), or let `wrangler deploy` provision it.
+   Cloudflare never shows a secret again, so run the three lines together. The MCP Worker keeps OAuth clients and
+   grants in a KV namespace bound as `OAUTH_KV`: create it with `npx wrangler kv namespace create OAUTH_KV` and put
+   its `id` in [`workers/mcp/wrangler.jsonc`](workers/mcp/wrangler.jsonc), or let `wrangler deploy` provision it.
 
    To keep a visitor's data in the memory of each instance instead, remove `DATA_STORE`, `durable_objects` and
    `DEMO_SESSION_SECRET`; it then resets when Cloudflare recycles the instance.
