@@ -1,4 +1,4 @@
-import { Archive, CircleHelp, File, Inbox, Keyboard, type LucideIcon, Send, Star, Trash2 } from "lucide-react";
+import { Archive, File, Inbox, type LucideIcon, Send, Star, Trash2 } from "lucide-react";
 import { siFigma, siGoogledocs, siGooglephotos } from "simple-icons";
 
 import { format, type Locale } from "@/core/i18n/client";
@@ -59,8 +59,14 @@ export type Attachment = {
   icon: typeof siFigma;
 };
 
+/** The labels a message can carry; the dictionary names each one. */
+export const MAIL_LABELS = ["meeting", "work", "important", "personal", "budget", "conference", "travel"] as const;
+
+export type MailLabelId = (typeof MAIL_LABELS)[number];
+
 export type Mail = {
-  id: MailId;
+  /** A demo mail's id is one of `MAIL_IDS`; a message written in the session has its own. */
+  id: string;
   accountId: number;
   from: Recipient;
   to: Recipient[];
@@ -72,8 +78,7 @@ export type Mail = {
   isRead: boolean;
   isPinned: boolean;
   isPriority: boolean;
-  /** Stable tag ids; the demo does not show them. */
-  labels: string[];
+  labels: MailLabelId[];
   attachments?: Attachment[];
   messageCount?: number;
 };
@@ -332,44 +337,28 @@ export function createMails(now: number, text: MailMessages, locale: Locale): Ma
   }));
 }
 
-export type MailNavId =
-  | "inbox"
-  | "priority"
-  | "drafts"
-  | "sent"
-  | "archive"
-  | "trash"
-  | "help-feedback"
-  | "keyboard-shortcuts";
+export type MailFolderId = "inbox" | "priority" | "drafts" | "sent" | "archive" | "trash";
 
 export type MailNavItem = {
-  id: MailNavId;
-  /** Unread count shown as a badge. */
-  count?: number;
+  id: MailFolderId;
   icon: LucideIcon;
-  isActive: boolean;
 };
 
 type MailNavigation = {
   navMain: MailNavItem[];
   folders: MailNavItem[];
-  navFooter: MailNavItem[];
 };
 
 export const mailNavigation: MailNavigation = {
   navMain: [
-    { id: "inbox", count: 18, icon: Inbox, isActive: true },
-    { id: "priority", count: 3, icon: Star, isActive: false },
+    { id: "inbox", icon: Inbox },
+    { id: "priority", icon: Star },
   ],
   folders: [
-    { id: "drafts", count: 9, icon: File, isActive: false },
-    { id: "sent", icon: Send, isActive: false },
-    { id: "archive", icon: Archive, isActive: false },
-    { id: "trash", icon: Trash2, isActive: false },
-  ],
-  navFooter: [
-    { id: "help-feedback", icon: CircleHelp, isActive: false },
-    { id: "keyboard-shortcuts", icon: Keyboard, isActive: false },
+    { id: "drafts", icon: File },
+    { id: "sent", icon: Send },
+    { id: "archive", icon: Archive },
+    { id: "trash", icon: Trash2 },
   ],
 };
 

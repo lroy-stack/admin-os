@@ -1,20 +1,16 @@
 "use client";
 
-import * as React from "react";
-
 import { cn } from "cn";
-import { Check, EllipsisVertical, LogOut, PenLine, Settings2, UserPlus, UsersRound } from "lucide-react";
+import { Check, Keyboard, PenLine } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -36,14 +32,19 @@ import { format, formatNumber, useLocale, useMessages } from "@/core/i18n/client
 import { getInitials } from "@/lib/utils";
 
 import { accounts, type MailNavItem, mailNavigation } from "./data";
+import { useMailbox, useMailWindows } from "./mail-context";
+import { updateMail } from "./mail-session";
+import { setAccount, setFolder, unreadIn } from "./mail-state";
 import { mailMessageKey } from "./messages";
 
 export function MailSidebar() {
   const { state } = useSidebar();
   const text = useMessages(mailMessageKey);
   const locale = useLocale();
+  const windows = useMailWindows();
+  const { state: mail } = useMailbox();
   const isCollapsed = state === "collapsed";
-  const [selectedAccount, setSelectedAccount] = React.useState(accounts[0]);
+  const selectedAccount = accounts.find((account) => account.id === mail.accountId) ?? accounts[0];
 
   return (
     <Sidebar collapsible="icon" className="**:data-[sidebar=sidebar]:bg-background absolute inset-y-0 h-full">
@@ -61,49 +62,45 @@ export function MailSidebar() {
                   <AccountMarker account={selectedAccount} isSelected />
                 </Button>
               </DropdownMenuTrigger>
-              <AccountMenuContent
-                selectedAccountId={selectedAccount.id}
-                onSelectAccount={setSelectedAccount}
-                showAccounts
-                side="right"
-                align="start"
-              />
+              <DropdownMenuContent className="w-56" side="right" align="start">
+                <DropdownMenuLabel>{text.sidebar.accounts}</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuRadioGroup
+                    value={String(selectedAccount.id)}
+                    onValueChange={(value) => updateMail((current) => setAccount(current, Number(value)))}
+                  >
+                    {accounts.map((account) => (
+                      <DropdownMenuRadioItem key={account.id} value={String(account.id)}>
+                        <div className="flex min-w-0 flex-col">
+                          <span>{account.label}</span>
+                          <span className="text-muted-foreground truncate text-xs">{account.email}</span>
+                        </div>
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <>
-              <ToggleGroup
-                type="single"
-                value={String(selectedAccount.id)}
-                onValueChange={(value) => {
-                  const account = accounts.find((item) => item.id === Number(value));
-
-                  if (account) {
-                    setSelectedAccount(account);
-                  }
-                }}
-                spacing={2}
-              >
-                {accounts.map((account) => (
-                  <ToggleGroupItem
-                    key={account.id}
-                    className={accountTriggerClassName}
-                    value={String(account.id)}
-                    aria-label={format(text.sidebar.selectAccount, locale, { name: account.label })}
-                  >
-                    <AccountMarker account={account} />
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label={text.sidebar.openAccountMenu}>
-                    <EllipsisVertical />
-                  </Button>
-                </DropdownMenuTrigger>
-                <AccountMenuContent selectedAccountId={selectedAccount.id} onSelectAccount={setSelectedAccount} />
-              </DropdownMenu>
-            </>
+            <ToggleGroup
+              type="single"
+              value={String(selectedAccount.id)}
+              onValueChange={(value) => {
+                if (value) updateMail((current) => setAccount(current, Number(value)));
+              }}
+              spacing={2}
+            >
+              {accounts.map((account) => (
+                <ToggleGroupItem
+                  key={account.id}
+                  className={accountTriggerClassName}
+                  value={String(account.id)}
+                  aria-label={format(text.sidebar.selectAccount, locale, { name: account.label })}
+                >
+                  <AccountMarker account={account} />
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           )}
         </div>
 
@@ -123,7 +120,7 @@ export function MailSidebar() {
         <SidebarGroup>
           <SidebarMenu className="gap-1">
             {mailNavigation.navMain.map((nav) => (
-              <NavEntry key={nav.id} nav={nav} />
+              <FolderEntry key={nav.id} nav={nav} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
@@ -132,36 +129,53 @@ export function MailSidebar() {
           <SidebarGroupLabel className="font-normal">{text.sidebar.folders}</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {mailNavigation.folders.map((nav) => (
-              <NavEntry key={nav.id} nav={nav} />
+              <FolderEntry key={nav.id} nav={nav} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu className="gap-1">
-          {mailNavigation.navFooter.map((nav) => (
-            <NavEntry key={nav.id} nav={nav} />
-          ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="[&_svg]:size-3.5"
+              size="sm"
+              tooltip={text.sidebar.keyboardShortcuts}
+              onClick={windows.openShortcuts}
+            >
+              <Keyboard />
+              <span className="font-medium">{text.sidebar.keyboardShortcuts}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
 }
 
-function NavEntry({ nav }: { nav: MailNavItem }) {
+/** A folder: choosing it filters the list. The unread count is the folder's own, from the session's mail. */
+function FolderEntry({ nav }: { nav: MailNavItem }) {
   const text = useMessages(mailMessageKey);
   const locale = useLocale();
+  const { state, all } = useMailbox();
   const title = text.nav[nav.id];
+  const isActive = state.folder === nav.id;
+  const unread = unreadIn(all, nav.id);
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton className="[&_svg]:size-3.5" size="sm" isActive={nav.isActive} tooltip={title}>
+      <SidebarMenuButton
+        className="[&_svg]:size-3.5"
+        size="sm"
+        isActive={isActive}
+        aria-current={isActive ? "true" : undefined}
+        tooltip={title}
+        onClick={() => updateMail((current) => setFolder(current, nav.id, all))}
+      >
         <nav.icon />
         <span className="font-medium">{title}</span>
       </SidebarMenuButton>
-      {nav.count !== undefined && (
-        <SidebarMenuBadge className="font-medium">{formatNumber(nav.count, locale)}</SidebarMenuBadge>
-      )}
+      {unread > 0 && <SidebarMenuBadge className="font-medium">{formatNumber(unread, locale)}</SidebarMenuBadge>}
     </SidebarMenuItem>
   );
 }
@@ -189,71 +203,5 @@ function AccountMarker({ account, isSelected = false }: { account: Account; isSe
         <Check className="size-2" />
       </span>
     </>
-  );
-}
-
-function AccountMenuContent({
-  selectedAccountId,
-  onSelectAccount,
-  showAccounts = false,
-  ...props
-}: {
-  selectedAccountId: number;
-  onSelectAccount: (account: Account) => void;
-  showAccounts?: boolean;
-} & Pick<React.ComponentProps<typeof DropdownMenuContent>, "align" | "side">) {
-  const text = useMessages(mailMessageKey);
-
-  return (
-    <DropdownMenuContent className="w-56" {...props}>
-      {showAccounts && (
-        <>
-          <DropdownMenuLabel>{text.sidebar.accounts}</DropdownMenuLabel>
-          <DropdownMenuGroup>
-            <DropdownMenuRadioGroup
-              value={String(selectedAccountId)}
-              onValueChange={(value) => {
-                const account = accounts.find((item) => item.id === Number(value));
-
-                if (account) {
-                  onSelectAccount(account);
-                }
-              }}
-            >
-              {accounts.map((account) => (
-                <DropdownMenuRadioItem key={account.id} value={String(account.id)}>
-                  <div className="flex min-w-0 flex-col">
-                    <span>{account.label}</span>
-                    <span className="text-muted-foreground truncate text-xs">{account.email}</span>
-                  </div>
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-        </>
-      )}
-      <DropdownMenuGroup>
-        <DropdownMenuItem>
-          <UserPlus />
-          {text.sidebar.addAccount}
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <UsersRound />
-          {text.sidebar.manageAccounts}
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Settings2 />
-          {text.sidebar.accountSettings}
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-      <DropdownMenuSeparator />
-      <DropdownMenuGroup>
-        <DropdownMenuItem>
-          <LogOut />
-          {text.sidebar.signOut}
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-    </DropdownMenuContent>
   );
 }

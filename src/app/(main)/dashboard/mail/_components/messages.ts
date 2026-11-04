@@ -1,32 +1,32 @@
 import { type MessageKey, messageKey, type PageMeta } from "@/core/i18n/client";
 
-import type { AttachmentId, MailId, MailNavId } from "./data";
+import type { AttachmentId, MailFolderId, MailId, MailLabelId } from "./data";
 
 /** Text of the mail app (embedded at /dashboard/mail and standalone at /mail). */
 export interface MailMessages {
   readonly meta: PageMeta;
   readonly loading: string;
-  readonly nav: Readonly<Record<MailNavId, string>>;
+  readonly nav: Readonly<Record<MailFolderId, string>>;
   readonly sidebar: {
     readonly newEmail: string;
     readonly folders: string;
     readonly accounts: string;
-    readonly addAccount: string;
-    readonly manageAccounts: string;
-    readonly accountSettings: string;
-    readonly signOut: string;
-    readonly openAccountMenu: string;
     /** Placeholders: `{name}`, the account's name. */
     readonly selectAccount: string;
     /** Placeholders: `{name}`, the account's name. */
     readonly openMenuOf: string;
+    readonly keyboardShortcuts: string;
   };
   readonly inbox: {
     readonly title: string;
     readonly search: string;
     readonly viewOptions: string;
-    readonly refresh: string;
-    readonly moreActions: string;
+    readonly sortBy: string;
+    readonly sorts: { readonly newest: string; readonly oldest: string; readonly unread: string };
+    readonly noResults: string;
+    readonly noResultsHint: string;
+    readonly emptyFolder: string;
+    readonly emptyFolderHint: string;
     readonly pinned: string;
     /** Placeholders: `{title}`, `{count}`. */
     readonly groupTitle: string;
@@ -51,12 +51,20 @@ export interface MailMessages {
     readonly attachments: string;
     /** Placeholders: `{name}`, the sender. */
     readonly replyPlaceholder: string;
-    readonly emoji: string;
-    readonly attach: string;
     readonly send: string;
     readonly empty: string;
     readonly drawerTitle: string;
     readonly drawerDescription: string;
+    readonly toast: { readonly archived: string; readonly trashed: string };
+  };
+  readonly labels: Readonly<Record<MailLabelId, string>>;
+  readonly shortcuts: {
+    readonly title: string;
+    readonly description: string;
+    readonly next: string;
+    readonly previous: string;
+    readonly archive: string;
+    readonly search: string;
   };
   /** Attachment sizes. Placeholders: `{size}`. French says Ko and Mo. */
   readonly size: { readonly kb: string; readonly mb: string };

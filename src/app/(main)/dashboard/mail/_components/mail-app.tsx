@@ -7,6 +7,7 @@ import { createMails } from "./data";
 import { MailComponent } from "./mail";
 import { MAIL_LAYOUT_COOKIE, parseMailLayout } from "./mail-layout-config";
 import { MailSidebar } from "./mail-sidebar";
+import { MailWorkspace } from "./mail-workspace";
 import { mailBundle, mailMessages } from "./messages.server";
 
 /**
@@ -20,12 +21,14 @@ export async function MailApp({ standaloneHref }: { standaloneHref?: string }) {
 
   return (
     <LocaleBundles bundles={[mailBundle]}>
-      <SidebarProvider className="h-full min-h-0">
-        <MailSidebar />
-        <div className="size-full min-h-0 overflow-hidden">
-          <MailComponent mails={mails} defaultLayout={layout} standaloneHref={standaloneHref} />
-        </div>
-      </SidebarProvider>
+      <MailWorkspace mails={mails}>
+        <SidebarProvider className="h-full min-h-0">
+          <MailSidebar />
+          <div className="size-full min-h-0 overflow-hidden">
+            <MailComponent defaultLayout={layout} standaloneHref={standaloneHref} />
+          </div>
+        </SidebarProvider>
+      </MailWorkspace>
     </LocaleBundles>
   );
 }

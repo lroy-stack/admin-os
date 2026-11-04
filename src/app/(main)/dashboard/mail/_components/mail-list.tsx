@@ -6,8 +6,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, formatLocalDate, formatRelative, type Locale, useLocale, useMessages } from "@/core/i18n/client";
 
 import type { Mail } from "./data";
+import { useMailbox } from "./mail-context";
+import { updateMail } from "./mail-session";
+import { selectMail } from "./mail-state";
 import { mailMessageKey } from "./messages";
-import { useMail } from "./use-mail";
 
 type MailGroup = {
   id: string;
@@ -21,7 +23,7 @@ interface MailListProps {
 }
 
 export function MailList({ groups, onSelectMail }: MailListProps) {
-  const [mail, setMail] = useMail();
+  const { state } = useMailbox();
   const text = useMessages(mailMessageKey);
   const locale = useLocale();
 
@@ -39,19 +41,17 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
                 <button
                   type="button"
                   key={item.id}
+                  data-mail-id={item.id}
                   className={cn(
                     "group relative w-full border-y border-transparent p-3 text-left transition-colors",
                     "hover:bg-muted/60",
-                    mail.selected === item.id &&
+                    state.selected === item.id &&
                       "border-border bg-muted/70 before:bg-primary before:absolute before:-inset-y-px before:left-0 before:w-0.5",
                   )}
                   onClick={(event) => {
                     event.currentTarget.blur();
 
-                    setMail({
-                      ...mail,
-                      selected: item.id,
-                    });
+                    updateMail((current) => selectMail(current, item.id));
                     onSelectMail?.(item);
                   }}
                 >
@@ -84,7 +84,7 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
                         <div
                           className={cn(
                             "text-muted-foreground shrink-0 text-xs",
-                            mail.selected === item.id && "text-foreground",
+                            state.selected === item.id && "text-foreground",
                           )}
                         >
                           {formatMailDate(item.receivedAt, locale)}

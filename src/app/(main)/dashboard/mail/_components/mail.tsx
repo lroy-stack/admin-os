@@ -8,7 +8,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useMessages } from "@/core/i18n/client";
 import { setClientCookie } from "@/lib/cookie.client";
 
-import type { Mail } from "./data";
+import { useMailbox } from "./mail-context";
 import { MailInbox } from "./mail-inbox";
 import {
   DEFAULT_MAIL_LAYOUT,
@@ -18,16 +18,14 @@ import {
 } from "./mail-layout-config";
 import { MailView } from "./mail-view";
 import { mailMessageKey } from "./messages";
-import { useMail } from "./use-mail";
 
 interface MailProps {
-  mails: Mail[];
   defaultLayout: number[] | undefined;
   /** Shows the button that opens the standalone mail page; set when the dashboard embeds the app. */
   standaloneHref?: string;
 }
 
-export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
+export function MailComponent({ defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
   const { isMobile } = useSidebar();
   const text = useMessages(mailMessageKey);
   const [isMounted, setIsMounted] = React.useState(false);
@@ -43,35 +41,34 @@ export function MailComponent({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT],
   }
 
   return isMobile ? (
-    <MailMobileLayout mails={mails} standaloneHref={standaloneHref} />
+    <MailMobileLayout standaloneHref={standaloneHref} />
   ) : (
-    <MailDesktopLayout mails={mails} defaultLayout={defaultLayout} standaloneHref={standaloneHref} />
+    <MailDesktopLayout defaultLayout={defaultLayout} standaloneHref={standaloneHref} />
   );
 }
 
-function MailMobileLayout({ mails, standaloneHref }: Pick<MailProps, "mails" | "standaloneHref">) {
-  const [mail] = useMail();
+function MailMobileLayout({ standaloneHref }: Pick<MailProps, "standaloneHref">) {
+  const { selected } = useMailbox();
   const text = useMessages(mailMessageKey);
   const [isMailOpen, setIsMailOpen] = React.useState(false);
-  const selectedMail = mails.find((item) => item.id === mail.selected) || null;
 
   return (
     <>
-      <MailInbox mails={mails} onSelectMail={() => setIsMailOpen(true)} standaloneHref={standaloneHref} />
+      <MailInbox onSelectMail={() => setIsMailOpen(true)} standaloneHref={standaloneHref} />
 
       <Drawer open={isMailOpen} onOpenChange={setIsMailOpen}>
         <DrawerContent>
           <DrawerTitle className="sr-only">{text.view.drawerTitle}</DrawerTitle>
           <DrawerDescription className="sr-only">{text.view.drawerDescription}</DrawerDescription>
-          <MailView mail={selectedMail} onClose={() => setIsMailOpen(false)} />
+          <MailView mail={selected} onClose={() => setIsMailOpen(false)} />
         </DrawerContent>
       </Drawer>
     </>
   );
 }
 
-function MailDesktopLayout({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
-  const [mail] = useMail();
+function MailDesktopLayout({ defaultLayout = [...DEFAULT_MAIL_LAYOUT], standaloneHref }: MailProps) {
+  const { selected } = useMailbox();
 
   return (
     <ResizablePanelGroup
@@ -83,11 +80,11 @@ function MailDesktopLayout({ mails, defaultLayout = [...DEFAULT_MAIL_LAYOUT], st
       className="h-full"
     >
       <ResizablePanel id={MAIL_LIST_PANEL_ID} defaultSize={`${defaultLayout[0]}%`} minSize="30%" className="min-h-0">
-        <MailInbox mails={mails} standaloneHref={standaloneHref} />
+        <MailInbox standaloneHref={standaloneHref} />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel id={MAIL_DETAIL_PANEL_ID} defaultSize={`${defaultLayout[1]}%`} minSize="30%" className="min-h-0">
-        <MailView mail={mails.find((item) => item.id === mail.selected) || null} />
+        <MailView mail={selected} />
       </ResizablePanel>
     </ResizablePanelGroup>
   );

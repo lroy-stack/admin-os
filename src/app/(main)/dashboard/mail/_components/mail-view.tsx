@@ -7,14 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   EllipsisVertical,
-  Forward,
   MailOpen,
-  Paperclip,
   Pin,
-  Reply,
-  ReplyAll,
-  Send,
-  Smile,
   Tag,
   Trash2,
   X,
@@ -22,24 +16,29 @@ import {
 
 import { SimpleIcon } from "@/components/simple-icon";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, formatLocalDate, useLocale, useMessages } from "@/core/i18n/client";
+import { PopoverOrSheet } from "@/ds/overlays";
 
-import type { Mail } from "./data";
+import { MAIL_LABELS, type Mail } from "./data";
+import { useMailActions } from "./mail-actions";
+import { useMailbox } from "./mail-context";
+import { updateMail } from "./mail-session";
+import { focusMail, neighbour, toggleLabel } from "./mail-state";
 import { mailMessageKey } from "./messages";
-import { useMail } from "./use-mail";
 
 interface MailDisplayProps {
   mail: Mail | null;
@@ -47,12 +46,15 @@ interface MailDisplayProps {
 }
 
 export function MailView({ mail, onClose }: MailDisplayProps) {
-  const [, setMail] = useMail();
   const text = useMessages(mailMessageKey);
   const locale = useLocale();
+  const { order } = useMailbox();
+  const actions = useMailActions();
+  const previous = mail ? neighbour(order, mail.id, -1) : null;
+  const next = mail ? neighbour(order, mail.id, 1) : null;
 
   function handleClose() {
-    setMail({ selected: null });
+    updateMail((state) => focusMail(state, null));
     onClose?.();
   }
 
@@ -72,7 +74,13 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
           <div className="flex items-center gap-0">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label={text.view.previous}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={text.view.previous}
+                  disabled={previous === null}
+                  onClick={() => actions.step(-1)}
+                >
                   <ChevronLeft />
                 </Button>
               </TooltipTrigger>
@@ -80,7 +88,13 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label={text.view.next}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={text.view.next}
+                  disabled={next === null}
+                  onClick={() => actions.step(1)}
+                >
                   <ChevronRight />
                 </Button>
               </TooltipTrigger>
@@ -89,60 +103,80 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={text.view.pinThread}>
-                <Pin />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={text.view.pinThread}
+                aria-pressed={mail?.isPinned ?? false}
+                disabled={!mail}
+                onClick={() => mail && actions.togglePin(mail)}
+              >
+                <Pin className={cn(mail?.isPinned && "fill-current")} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{text.view.pinThread}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={text.view.archive}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={text.view.archive}
+                disabled={!mail || mail.folder === "archive"}
+                onClick={() => mail && actions.archive(mail, onClose)}
+              >
                 <Archive />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{text.view.archive}</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={text.view.reply}>
-                <Reply />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{text.view.reply}</TooltipContent>
-          </Tooltip>
+          {mail ? (
+            <PopoverOrSheet
+              title={text.view.addLabel}
+              align="end"
+              trigger={
+                <Button variant="ghost" size="icon-sm" aria-label={text.view.addLabel}>
+                  <Tag />
+                </Button>
+              }
+            >
+              <div className="flex flex-col gap-2">
+                {MAIL_LABELS.map((label) => (
+                  <Field key={label} orientation="horizontal">
+                    <Checkbox
+                      id={`mail-label-${label}`}
+                      checked={mail.labels.includes(label)}
+                      onCheckedChange={() => updateMail((state) => toggleLabel(state, mail, label))}
+                    />
+                    <FieldLabel htmlFor={`mail-label-${label}`} className="font-normal">
+                      {text.labels[label]}
+                    </FieldLabel>
+                  </Field>
+                ))}
+              </div>
+            </PopoverOrSheet>
+          ) : (
+            <Button variant="ghost" size="icon-sm" aria-label={text.view.addLabel} disabled>
+              <Tag />
+            </Button>
+          )}
           <Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label={text.view.moreActions}>
+                  <Button variant="ghost" size="icon-sm" aria-label={text.view.moreActions} disabled={!mail}>
                     <EllipsisVertical />
                   </Button>
                 </TooltipTrigger>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <ReplyAll />
-                    {text.view.replyAll}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Forward />
-                    {text.view.forward}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => mail && actions.markUnread(mail)}>
                     <MailOpen />
                     {text.view.markUnread}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Tag />
-                    {text.view.addLabel}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -152,7 +186,13 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
           <Separator className="h-4 data-vertical:self-center" orientation="vertical" />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={text.view.moveToTrash}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={text.view.moveToTrash}
+                disabled={!mail || mail.folder === "trash"}
+                onClick={() => mail && actions.trash(mail, onClose)}
+              >
                 <Trash2 className="text-destructive" />
               </Button>
             </TooltipTrigger>
@@ -179,6 +219,16 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
                   minute: "2-digit",
                 })}
               </div>
+
+              {mail.labels.length > 0 ? (
+                <ul className="flex flex-wrap gap-1 pt-1">
+                  {mail.labels.map((label) => (
+                    <li key={label}>
+                      <Badge variant="outline">{text.labels[label]}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
 
             <Separator />
@@ -233,11 +283,11 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
                   <CollapsibleContent>
                     <div className="flex flex-wrap gap-2">
                       {mail.attachments.map((attachment) => (
-                        <Button size="xs" variant="secondary" key={attachment.id}>
+                        <Badge variant="secondary" key={attachment.id}>
                           <SimpleIcon icon={attachment.icon} className="size-3 fill-current" />
                           <span className="font-normal">{attachment.name}</span>
                           <span className="text-muted-foreground font-normal">{attachment.size}</span>
-                        </Button>
+                        </Badge>
                       ))}
                     </div>
                   </CollapsibleContent>
@@ -248,30 +298,6 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
             ) : null}
 
             <div className="min-h-0 flex-1 scrollbar-none overflow-y-auto text-sm whitespace-pre-wrap">{mail.body}</div>
-
-            <div className="mt-auto flex flex-col gap-3">
-              <Separator />
-              <InputGroup>
-                <InputGroupAddon align="inline-start">
-                  <Reply />
-                </InputGroupAddon>
-                <InputGroupInput
-                  className="text-xs"
-                  placeholder={format(text.view.replyPlaceholder, locale, { name: mail.from.name })}
-                />
-                <InputGroupAddon className="gap-1" align="inline-end">
-                  <InputGroupButton variant="ghost" aria-label={text.view.emoji}>
-                    <Smile />
-                  </InputGroupButton>
-                  <InputGroupButton variant="ghost" aria-label={text.view.attach}>
-                    <Paperclip />
-                  </InputGroupButton>
-                  <InputGroupButton variant="ghost" aria-label={text.view.send}>
-                    <Send />
-                  </InputGroupButton>
-                </InputGroupAddon>
-              </InputGroup>
-            </div>
           </div>
         ) : (
           <div className="text-muted-foreground grid h-full place-items-center text-sm">{text.view.empty}</div>

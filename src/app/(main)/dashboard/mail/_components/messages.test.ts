@@ -6,7 +6,7 @@ import { createMails, MAIL_IDS } from "./data";
 import { mailMessages } from "./messages.server";
 
 // Identical on purpose: the emoji word, the app file name and the title-with-count join are the same everywhere.
-const SAME_EVERYWHERE = ["view.emoji", "demo.attachments.admin-os-fig", "inbox.groupTitle"];
+const SAME_EVERYWHERE = ["demo.attachments.admin-os-fig", "inbox.groupTitle"];
 
 describe("mail dictionary", () => {
   it("is complete and consistent in all four locales", () => {
