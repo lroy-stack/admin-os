@@ -243,6 +243,8 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run preview` | Cloudflare Workers build, served locally on workerd |
 | `npm run deploy` | Checks the session secret, builds for Cloudflare Workers, deploys the demo store Worker, the MCP Worker, then the app |
 | `npm run dev:mcp` | The MCP Worker under `wrangler dev`, at `http://localhost:8789/mcp` |
+| `npm run dev:mcp:read-only` | A second, read-only MCP Worker with the public demo tokens, at `http://localhost:8790/mcp` |
+| `npm run eval:mcp` | Agent evals: the golden MCP tasks through headless Claude Code (see "MCP") |
 | `npm run mcp:stdio` | MCP server over stdio |
 
 ### The three Workers locally
@@ -382,6 +384,12 @@ Claude Desktop (`claude_desktop_config.json`), with the absolute path of your cl
 ```
 
 Keep `--silent`: without it npm prints its banner on stdout, which carries the protocol.
+
+Agent evals: `npm run eval:mcp` runs [`evals/mcp/golden.json`](evals/mcp/golden.json) through headless Claude Code
+(`EVAL_MODEL`, default `sonnet`), grades each trial from its tool results and a follow-up read of the state, and
+writes pass rates and cost to `evals/mcp/results/`. It spends your Claude usage and starts nothing: run the Workers as
+in "The three Workers locally", with `MCP_TOKENS=eval-owner-0001:owner` and `MCP_READ_ONLY=false` in
+`workers/mcp/.dev.vars`, plus `npm run dev:mcp:read-only`.
 
 ## Credits
 

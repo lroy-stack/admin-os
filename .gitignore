@@ -8,6 +8,8 @@
 
 # testing
 /coverage
+# agent eval runs (npm run eval:mcp): results and transcripts stay local
+/evals/mcp/results/
 /test-results/
 /playwright-report/
 /playwright/.cache/

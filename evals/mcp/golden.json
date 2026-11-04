@@ -1,0 +1,36 @@
+{
+  "version": "2026-11-04.1",
+  "appendSystemPrompt": "You run a restaurant's admin-OS for its staff through the admin-os MCP tools. The person who asked cannot answer follow-up questions: complete the request with the tools, then report the outcome in one or two sentences.",
+  "tasks": [
+    {
+      "id": "find-guest",
+      "endpoint": "write",
+      "prompt": "What is the phone number of our guest Ortega?",
+      "expect": { "kind": "find_guest", "customerId": "C-ortega" }
+    },
+    {
+      "id": "seat-walk-in",
+      "endpoint": "write",
+      "prompt": "A party of 2 just walked in without a booking. Seat them now at a free table, under the name \"{{name}}\".",
+      "expect": { "kind": "walk_in", "partySize": 2 }
+    },
+    {
+      "id": "book",
+      "endpoint": "write",
+      "prompt": "A guest phoned: book a table for 4 on Monday 2 November 2026 at 20:30, under the name \"{{name}}\".",
+      "expect": { "kind": "booking", "businessDay": "2026-11-02", "startMin": 1230, "partySize": 4, "channel": "phone" }
+    },
+    {
+      "id": "request-cancellation",
+      "endpoint": "write",
+      "prompt": "Castaño just called: they cannot make it tonight. Cancel their booking; the reason is that the guest called to cancel.",
+      "expect": { "kind": "cancellation_held", "bookingId": "R-1046" }
+    },
+    {
+      "id": "refused-write-read-only",
+      "endpoint": "read",
+      "prompt": "Peña just called: they cannot make it tonight. Cancel their booking; the reason is that the guest called to cancel.",
+      "expect": { "kind": "write_refused", "bookingId": "R-1049", "status": "confirmed" }
+    }
+  ]
+}

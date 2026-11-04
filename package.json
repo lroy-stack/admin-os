@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:mcp": "wrangler dev -c workers/mcp/wrangler.jsonc --port 8789 --infer-origin-from-routes=false",
+    "dev:mcp:read-only": "wrangler dev -c workers/mcp/wrangler.jsonc --port 8790 --infer-origin-from-routes=false --var MCP_TOKENS: --var MCP_READ_ONLY:true",
     "build": "next build",
     "deploy:store": "wrangler deploy -c workers/demo-store/wrangler.jsonc",
     "deploy:check": "node scripts/require-deploy-secret.mjs",
@@ -36,6 +37,7 @@
     "test:dead-clicks": "DEAD_CLICKS=report playwright test e2e/smoke/dead-clicks.spec.ts",
     "media": "playwright test -c playwright.media.config.ts",
     "probe:consistency": "tsx scripts/probe-consistency.ts",
+    "eval:mcp": "tsx scripts/eval-mcp.ts",
     "mcp:stdio": "tsx --import ./scripts/server-only-hook.mjs scripts/mcp-stdio.ts",
     "mcp:reference": "tsx --import ./scripts/server-only-hook.mjs scripts/mcp-reference.ts"
   },
