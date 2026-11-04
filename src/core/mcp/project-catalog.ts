@@ -39,6 +39,25 @@ const IDEMPOTENCY_ARGUMENT_DESCRIPTION =
 /** The client the projection dispatches through, bound to the calling actor and one correlation id per call. */
 export type ClientFactory = (actor: Actor, correlationId: string) => DataClient<Catalog>;
 
+/** What the server's `instructions` are built from: the capabilities this actor is offered as tools. */
+export interface InstructionsContext {
+  readonly toolIds: ReadonlySet<string>;
+  readonly readOnly: boolean;
+}
+
+/**
+ * The log line of a call refused before it reaches the client (unknown, forbidden or read-only tool, missing or bad
+ * key), so a write attempted against a read-only server is audited too. `status` is the error code.
+ */
+export interface RefusalLogLine {
+  readonly event: "mcp.refused";
+  readonly tool: string;
+  readonly status: string;
+  readonly correlationId: string;
+  readonly actorRole: string;
+  readonly via: "mcp";
+}
+
 export interface ProjectionOptions {
   readonly catalog: Catalog;
   /** Which capabilities are tools, and their titles (spec 004 D5); every capability of `catalog` has an entry. */
@@ -47,8 +66,10 @@ export interface ProjectionOptions {
   readonly createClient: ClientFactory;
   /** Lists and runs read tools only; a write the actor could otherwise call answers `access.forbidden`. */
   readonly readOnly?: boolean;
-  /** The server's `instructions`: how an agent finds ids and what a held write means. */
-  readonly instructions?: string;
+  /** The server's `instructions`, from the tools this actor sees: how to find ids and what a held write means. */
+  readonly instructions?: (context: InstructionsContext) => string;
+  /** Where refusal lines go; the client writes the line of every call it dispatches. Defaults to `console.info`. */
+  readonly logRefusal?: (line: RefusalLogLine) => void;
 }
 
 const SERVER_NAME = "admin-os";
@@ -196,23 +217,28 @@ const hashOf = (text: string): string => {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, "0");
 };
 
-const versions = new WeakMap<Catalog, WeakMap<McpManifest, string>>();
+const versions = new WeakMap<Catalog, WeakMap<McpManifest, Map<boolean, string>>>();
 
 /**
- * `serverInfo.version`: a hash of the manifest and of every tool it exposes, whoever asks (spec 004 D8), so a client
- * that caches the tool list sees a new version whenever a title, schema, annotation or classification changes.
+ * `serverInfo.version`: a hash of the manifest, the read-only switch and every tool the deployment exposes, whoever
+ * asks (spec 004 D8), so a client that caches the tool list sees a new version whenever a title, schema, annotation
+ * or classification changes, or a deploy only flips `MCP_READ_ONLY`.
  */
-export const toolListVersion = (catalog: Catalog, manifest: McpManifest): string => {
-  const known = versions.get(catalog)?.get(manifest);
+export const toolListVersion = (catalog: Catalog, manifest: McpManifest, readOnly = false): string => {
+  const known = versions.get(catalog)?.get(manifest)?.get(readOnly);
   if (known !== undefined) return known;
-  const exposed = exposedCapabilities(catalog, manifest);
+  const exposed = exposedCapabilities(catalog, manifest).filter(
+    (capability) => !readOnly || capability.effect === "read",
+  );
   const toolIds = new Set(exposed.map((capability) => capability.id));
   const tools = exposed
     .map((capability) => toolOf(capability, manifest[capability.id] as ExposedEntry, toolIds))
     .sort(byName);
-  const version = hashOf(JSON.stringify({ manifest, tools }));
-  const forCatalog = versions.get(catalog) ?? new WeakMap<McpManifest, string>();
-  forCatalog.set(manifest, version);
+  const version = hashOf(JSON.stringify({ manifest, readOnly, tools }));
+  const forCatalog = versions.get(catalog) ?? new WeakMap<McpManifest, Map<boolean, string>>();
+  const forManifest = forCatalog.get(manifest) ?? new Map<boolean, string>();
+  forManifest.set(readOnly, version);
+  forCatalog.set(manifest, forManifest);
   versions.set(catalog, forCatalog);
   return version;
 };
@@ -380,7 +406,15 @@ const withCorrelation = (result: CallToolResult, correlationId: string): CallToo
  * connect it. It lists only the actor's tools and answers unlisted names with `access.forbidden`, like the UI.
  */
 export function projectCatalog(options: ProjectionOptions): Server {
-  const { catalog, manifest, actor, createClient, readOnly = false, instructions } = options;
+  const {
+    catalog,
+    manifest,
+    actor,
+    createClient,
+    readOnly = false,
+    instructions,
+    logRefusal = (line) => console.info(JSON.stringify(line)),
+  } = options;
   const index = toolIndex(catalog, manifest, actor, readOnly);
   const withheldWrites = new Set(
     readOnly
@@ -400,11 +434,11 @@ export function projectCatalog(options: ProjectionOptions): Server {
   // The list is fixed for this instance (one actor), so no list-changed notifications are ever sent; a client learns
   // of a new list from the version and the cache hint.
   const server = new Server(
-    { name: SERVER_NAME, version: toolListVersion(catalog, manifest) },
+    { name: SERVER_NAME, version: toolListVersion(catalog, manifest, readOnly) },
     {
       capabilities: { tools: { listChanged: false } },
       cacheHints: { "tools/list": TOOL_LIST_CACHE_HINT },
-      ...(instructions === undefined ? {} : { instructions }),
+      ...(instructions === undefined ? {} : { instructions: instructions({ toolIds, readOnly }) }),
     },
   );
 
@@ -424,12 +458,15 @@ export function projectCatalog(options: ProjectionOptions): Server {
   server.setRequestHandler("tools/call", async (request, ctx) => {
     const { name } = request.params;
     const correlationId = crypto.randomUUID();
+    const refuse = (error: CallToolResult): CallToolResult => {
+      const status = (error.structuredContent as { readonly code: string }).code;
+      logRefusal({ event: "mcp.refused", tool: name, status, correlationId, actorRole: actor.roleId, via: "mcp" });
+      return withCorrelation(error, correlationId);
+    };
     const capability = index.get(name);
-    if (capability === undefined) {
-      return withCorrelation(withheldWrites.has(name) ? readOnlyRefusal(name) : forbidden(name), correlationId);
-    }
+    if (capability === undefined) return refuse(withheldWrites.has(name) ? readOnlyRefusal(name) : forbidden(name));
     const prepared: PreparedCall = prepareCall(capability, request.params.arguments ?? {}, ctx.mcpReq._meta);
-    if (!prepared.ok) return withCorrelation(prepared.error, correlationId);
+    if (!prepared.ok) return refuse(prepared.error);
     const client = createClient(actor, correlationId);
     // The client validates the arguments itself, so a bad input is `schema.invalid_input` exactly as in the UI.
     const result = await client.call(capability.id, prepared.input, {

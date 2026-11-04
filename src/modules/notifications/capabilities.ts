@@ -3,7 +3,13 @@ import { z } from "zod";
 import { defineCapability } from "@/core/capability";
 import { pageInput, pageOutput } from "@/core/pagination";
 
-import { notificationSchema, notificationsReadInput, notificationsReadOutput, unreadCountOutput } from "./schema";
+import {
+  notificationSchema,
+  notificationsReadAllInput,
+  notificationsReadInput,
+  notificationsReadOutput,
+  unreadCountOutput,
+} from "./schema";
 
 export const notificationsList = defineCapability({
   id: "notifications.list",
@@ -41,8 +47,9 @@ export const notificationsRead = defineCapability({
 
 export const notificationsReadAll = defineCapability({
   id: "notifications.read_all",
-  summary: "Mark every notification of the acting user as read.",
-  input: z.strictObject({}),
+  summary:
+    "Mark the acting user's notifications as read. Pass upTo, the id of the newest notification you saw in notifications.list (its first item): only that one and those created at or before it (to the business clock's minute) are marked, so notifications that arrived since stay unread and a repeat marks nothing new. Without upTo it marks every notification. Fails with notifications.not_found when upTo names none.",
+  input: notificationsReadAllInput,
   output: notificationsReadOutput,
   permission: "update:notifications",
   effect: "write",

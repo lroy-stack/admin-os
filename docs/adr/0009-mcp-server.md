@@ -313,12 +313,15 @@ and unlisted names answering `access.forbidden`.
 - **Annotations.** From the descriptor's `change` and `idempotency` (ADR 0005, amended 2026-11-04):
   `destructiveHint` for destructive writes and for `overwrite` and `remove`; `idempotentHint` for reads and every write
   with a mode. `src/config/mcp.server.test.ts` pins them per tool with the tier and the key (AC7).
-- **Protocol metadata.** Tools are sorted by name; `instructions` say where ids come from and what a held write means;
-  `serverInfo.version` is a 14-hex-digit hash of the manifest and every exposed tool definition; `tools/list` carries
+- **Protocol metadata.** Tools are sorted by name; `instructions` say where ids come from and what a held write means,
+  naming only the tools the actor sees; `serverInfo.version` is a 14-hex-digit hash of the manifest, the read-only
+  switch and every tool the deployment exposes; `tools/list` carries
   `ttlMs: 300000, cacheScope: "private"` on the 2026-07-28 revision (the 2025 era has no cache fields).
 - **Errors and descriptions that say how to fix the call.** A manifest entry's `ids` names, per id field, the tools
   that list valid values; the description appends them ("Find valid ids: id with bookings_list") and writes the
   capability ids a summary mentions as the tool names this actor is offered. `schema.invalid_input` keeps its `paths`
   and its message names each failing field, what is wrong with it and where a valid id comes from; a `*.not_found`
   answer and `client.idempotency_required` say what to send. Every `tools/call` result carries
-  `_meta["admin-os/correlationId"]`, the id of the server's call log line.
+  `_meta["admin-os/correlationId"]`, the id of the server's call log line. A call refused before dispatch (unknown,
+  forbidden or read-only tool, missing or bad key) writes its own line, `{event: "mcp.refused", tool, status: <code>,
+  correlationId, actorRole, via: "mcp"}`, so write attempts on a read-only server are audited.

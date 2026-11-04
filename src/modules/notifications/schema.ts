@@ -30,6 +30,9 @@ const idsInput = z.array(z.string().min(1).max(128)).min(1).max(100);
 
 export const notificationsReadInput = z.strictObject({ ids: idsInput });
 
+/** `upTo` bounds a read-all to the notifications at or before one the caller saw, so later arrivals stay unread. */
+export const notificationsReadAllInput = z.strictObject({ upTo: z.string().min(1).max(128).optional() });
+
 export const unreadCountOutput = z.object({ unreadCount: z.number().int().nonnegative() });
 
 /** `marked` counts the notifications this call turned from unread to read; ids already read or unknown add nothing. */

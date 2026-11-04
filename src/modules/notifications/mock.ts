@@ -1,6 +1,6 @@
 import { type MockContext, mockHandler } from "@/core/mock";
 import { paginate } from "@/core/pagination";
-import { ok, type Result } from "@/core/result";
+import { err, ok, type Result } from "@/core/result";
 import { lateAfterMinutes } from "@/modules/bookings";
 
 import { notificationsList, notificationsRead, notificationsReadAll, notificationsUnreadCount } from "./capabilities";
@@ -46,6 +46,10 @@ const markRead = (context: Context, ids: ReadonlySet<string>): Result<{ marked: 
 
 const unreadFeed = (context: Context) => unreadOf(feedOf(context));
 
+/** Whether `a` comes after `b` on the business clock; business days are ISO dates, so they compare as strings. */
+const isAfter = (a: NotificationMoment, b: NotificationMoment): boolean =>
+  a.day > b.day || (a.day === b.day && a.minute > b.minute);
+
 /** Mock answers for the notifications module (ADR 0005): the feed is derived from the session's bookings. */
 export const notificationsMockHandlers = {
   ...mockHandler(notificationsList, (input, context: Context) => {
@@ -58,7 +62,14 @@ export const notificationsMockHandlers = {
 
   ...mockHandler(notificationsRead, ({ ids }, context: Context) => markRead(context, new Set(ids))),
 
-  ...mockHandler(notificationsReadAll, (_input, context: Context) =>
-    markRead(context, new Set(feedOf(context).map((item) => item.id))),
-  ),
+  ...mockHandler(notificationsReadAll, ({ upTo }, context: Context) => {
+    const feed = feedOf(context);
+    if (upTo === undefined) return markRead(context, new Set(feed.map((item) => item.id)));
+    const bound = feed.find((item) => item.id === upTo);
+    if (bound === undefined) {
+      return err("notifications.not_found", `No notification with id ${upTo}`, { ids: [upTo] });
+    }
+    const seen = feed.filter((item) => !isAfter(item.createdAt, bound.createdAt));
+    return markRead(context, new Set(seen.map((item) => item.id)));
+  }),
 };

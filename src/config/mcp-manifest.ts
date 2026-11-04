@@ -74,14 +74,3 @@ export const MCP_MANIFEST = {
   "resources.list": { expose: true, title: "List resources" },
   "staff.list": { expose: true, title: "List staff" },
 } as const satisfies ToolManifest<CatalogById>;
-
-const FIND_IDS =
-  "admin-OS runs one small business: bookings, customers, resources (tables, chairs or bays), staff, catalog items and notifications. Never guess an id: find booking ids with bookings_list, customer ids with customers_list or customers_duplicates_check, resource ids with resources_list or bookings_availability_get, and notification ids with notifications_list; clock_get gives today's business day.";
-
-const WRITES =
-  "Create and add tools require an idempotencyKey argument: a new UUID for each operation, the same one when you retry it. A write may answer awaiting_approval: a person must approve it first, so do not retry it. An error names the field to fix and the tool that finds a valid value.";
-
-const READ_ONLY = "This server is read-only: it lists and runs read tools only.";
-
-/** The server's `instructions` (spec 004 U2): where ids come from and what a held write means. */
-export const mcpInstructions = (readOnly: boolean): string => `${FIND_IDS} ${readOnly ? READ_ONLY : WRITES}`;

@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Actor, CallLogLine } from "@/core/client";
-import { type ExposedEntry, exposedCapabilities, toolNameOf, toolOf } from "@/core/mcp/server";
+import { type ExposedEntry, exposedCapabilities, type RefusalLogLine, toolNameOf, toolOf } from "@/core/mcp/server";
 import { bookingSchema, bookingsList } from "@/modules/bookings";
 import { customersList } from "@/modules/customers";
 import { notificationsList, notificationsRead } from "@/modules/notifications";
@@ -62,6 +62,9 @@ const PINNED = [
   ["staff_list", true, false, true, 1, false],
 ] as const;
 
+/** What `createMcpServer`'s logger receives: the client's call lines and the projection's refusals. */
+type LogLine = CallLogLine | RefusalLogLine;
+
 const open: Client[] = [];
 
 afterEach(async () => {
@@ -69,7 +72,7 @@ afterEach(async () => {
 });
 
 /** An MCP client on the hospitality preset, listing first as real clients do (so calls validate their output). */
-const connect = async (actor: Actor, logger?: (line: CallLogLine) => void, sessionId?: string) => {
+const connect = async (actor: Actor, logger?: (line: LogLine) => void, sessionId?: string) => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "admin-os-test", version: "0.0.0" });
   await createMcpServer({
@@ -134,17 +137,57 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
   });
 
   it.each([
-    ["a writable server", false, /idempotencyKey/],
-    ["a read-only server", true, /read-only/],
-  ] as const)("tells the agent how to find ids on %s", async (_label, readOnly, rest) => {
+    [
+      "the owner",
+      owner,
+      false,
+      expect.stringContaining(
+        "bookings_create, bookings_walk_in_seat, customers_create, customers_notes_add require an idempotencyKey argument",
+      ),
+    ],
+    [
+      "the owner on a read-only server",
+      owner,
+      true,
+      "admin-OS runs one small business: bookings, customers, resources (tables, chairs or bays), staff, catalog items and notifications. Never guess an id: find booking ids with bookings_list, customer ids with customers_list or customers_duplicates_check, resource ids with resources_list or bookings_availability_get, notification ids with notifications_list. clock_get gives today's business day. This server is read-only: it lists and runs read tools only. An error names the field to fix and, for an id, the tool that lists valid ones.",
+    ],
+    [
+      "an actor without tools",
+      nobody,
+      false,
+      "admin-OS runs one small business: bookings, customers, resources (tables, chairs or bays), staff, catalog items and notifications. An error names the field to fix and, for an id, the tool that lists valid ones.",
+    ],
+  ] as const)("gives %s instructions that name only the tools it sees", async (_label, actor, readOnly, expected) => {
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
     const client = new Client({ name: "admin-os-test", version: "0.0.0" });
-    await createMcpServer({ actor: owner, vertical: "hospitality", readOnly }).connect(serverSide);
+    await createMcpServer({ actor, vertical: "hospitality", readOnly }).connect(serverSide);
     await client.connect(clientSide);
     open.push(client);
-    expect([client.getInstructions(), client.getInstructions()]).toEqual([
-      expect.stringContaining("booking ids with bookings_list"),
-      expect.stringMatching(rest),
+    expect(client.getInstructions()).toEqual(expected);
+  });
+
+  it("logs a write refused by a read-only server with the result's correlation id", async () => {
+    const lines: LogLine[] = [];
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "admin-os-test", version: "0.0.0" });
+    await createMcpServer({
+      actor: owner,
+      vertical: "hospitality",
+      readOnly: true,
+      logger: (line) => lines.push(line),
+    }).connect(serverSide);
+    await client.connect(clientSide);
+    open.push(client);
+    const result = await client.callTool({ name: "customers_update", arguments: { id: "C-1", patch: {} } });
+    expect(lines).toEqual([
+      {
+        event: "mcp.refused",
+        tool: "customers_update",
+        status: "access.forbidden",
+        correlationId: result._meta?.["admin-os/correlationId"],
+        actorRole: "owner",
+        via: "mcp",
+      },
     ]);
   });
 
@@ -158,7 +201,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
   });
 
   it("creates its clients for the MCP surface, so the call line says via mcp", async () => {
-    const lines: CallLogLine[] = [];
+    const lines: LogLine[] = [];
     const { client } = await connect(staff, (line) => lines.push(line));
     await client.callTool({ name: "bookings_list", arguments: {} });
     expect(lines).toMatchObject([{ capability: "bookings.list", riskTier: 1, via: "mcp" }]);
@@ -275,6 +318,13 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
     );
   });
 
+  it("tells agents to bound notifications_read_all with upTo from notifications_list", async () => {
+    const { tools } = await connect(owner);
+    expect(tools.find((tool) => tool.name === "notifications_read_all")?.description).toContain(
+      "Pass upTo, the id of the newest notification you saw in notifications_list",
+    );
+  });
+
   it("names tools, not capability ids, in a description", async () => {
     const { tools } = await connect(owner);
     expect(tools.find((tool) => tool.name === "customers_duplicates_check")?.description).toContain(
@@ -310,7 +360,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
   });
 
   it("returns the call's correlation id in _meta, as in the call log line", async () => {
-    const lines: CallLogLine[] = [];
+    const lines: LogLine[] = [];
     const { client } = await connect(staff, (line) => lines.push(line));
     const result = await client.callTool({ name: "bookings_list", arguments: { limit: 1 } });
     expect(result._meta?.["admin-os/correlationId"]).toBe(lines[0]?.correlationId);

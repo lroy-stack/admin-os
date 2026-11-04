@@ -116,6 +116,36 @@ describe.each(presets)("notifications in the %s preset", (vertical) => {
     expect([outcome, (await feed(client)).unreadCount]).toEqual([{ marked: before.unreadCount, unreadCount: 0 }, 0]);
   });
 
+  it("marks with read_all upTo only notifications created at or before it, so a later arrival stays unread", async () => {
+    const client = session(vertical);
+    const oldest = (await feed(client)).items.at(-1);
+    const created = await client.call("bookings.create", newBooking(vertical), key());
+    const { id } = z.object({ id: z.string() }).parse(successOf(created));
+    await client.call("notifications.read_all", { upTo: oldest?.id ?? "" });
+    const after = (await feed(client)).items;
+    expect([
+      after.find((item) => item.id === oldest?.id)?.readAt,
+      after.find((item) => item.id === `booking.new:${id}`)?.readAt,
+    ]).toEqual([expect.any(Object), undefined]);
+  });
+
+  it("marks nothing new when read_all upTo is repeated", async () => {
+    const client = session(vertical);
+    const [newest] = (await feed(client)).items;
+    await client.call("notifications.read_all", { upTo: newest?.id ?? "" });
+    const again = readOutcome(await client.call("notifications.read_all", { upTo: newest?.id ?? "" }));
+    expect(again).toEqual({ marked: 0, unreadCount: 0 });
+  });
+
+  it("answers read_all with an unknown upTo with notifications.not_found and marks nothing", async () => {
+    const client = session(vertical);
+    const result = await client.call("notifications.read_all", { upTo: "booking.soon:nope" });
+    expect([result, (await feed(client)).unreadCount > 0]).toMatchObject([
+      { ok: false, error: { code: "notifications.not_found", details: { ids: ["booking.soon:nope"] } } },
+      true,
+    ]);
+  });
+
   it("returns the first result when the same idempotency key is replayed", async () => {
     const client = session(vertical);
     const [target] = (await feed(client)).items;

@@ -4,12 +4,13 @@ import type { Server } from "@modelcontextprotocol/server";
 
 import type { Actor, CallLogLine } from "@/core/client";
 import { createClient } from "@/core/client";
-import { projectCatalog } from "@/core/mcp/server";
+import { projectCatalog, type RefusalLogLine } from "@/core/mcp/server";
 import { parseFaults } from "@/core/mock";
 
 import { CATALOG } from "./catalog";
 import { getAdapter } from "./data.server";
-import { MCP_MANIFEST, mcpInstructions } from "./mcp-manifest";
+import { mcpInstructions } from "./mcp-instructions";
+import { MCP_MANIFEST } from "./mcp-manifest";
 import type { VerticalId } from "./vertical";
 
 export interface McpServerOptions {
@@ -18,8 +19,11 @@ export interface McpServerOptions {
   readonly vertical: VerticalId;
   /** The demo session writes act on; without one, writes answer `transport.unavailable` as in the UI (ADR 0005). */
   readonly sessionId?: string;
-  /** Where the client's call lines go; stdio passes a stderr logger, since stdout carries the protocol. */
-  readonly logger?: (line: CallLogLine) => void;
+  /**
+   * Where the call lines go, the client's and the projection's refusals; stdio passes a stderr logger, since stdout
+   * carries the protocol.
+   */
+  readonly logger?: (line: CallLogLine | RefusalLogLine) => void;
   /** Read tools only (`MCP_READ_ONLY`, see `mcp-env.ts`). */
   readonly readOnly?: boolean;
 }
@@ -39,7 +43,8 @@ export function createMcpServer(options: McpServerOptions): Server {
     manifest: MCP_MANIFEST,
     actor: options.actor,
     readOnly: options.readOnly === true,
-    instructions: mcpInstructions(options.readOnly === true),
+    instructions: mcpInstructions,
+    ...(options.logger === undefined ? {} : { logRefusal: options.logger }),
     createClient: (actor, correlationId) =>
       createClient(CATALOG, adapter, {
         actor,

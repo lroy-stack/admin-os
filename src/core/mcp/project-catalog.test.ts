@@ -14,7 +14,9 @@ import {
   CORRELATION_META_KEY,
   IDEMPOTENCY_META_KEY,
   type McpManifest,
+  type ProjectionOptions,
   projectCatalog,
+  type RefusalLogLine,
   toolListVersion,
   toolNameOf,
   toolOf,
@@ -45,6 +47,8 @@ const notesAdd = defineCapability({
   effect: "write",
   riskTier: 2,
   change: "add",
+  idempotency: "key",
+  requiresIdempotencyKey: true,
   mayRequireApproval: true,
   approval: (input) => input.text.startsWith("!"),
 });
@@ -157,8 +161,9 @@ afterEach(async () => {
 
 interface ConnectOptions {
   readonly manifest?: McpManifest;
-  readonly instructions?: string;
+  readonly instructions?: ProjectionOptions["instructions"];
   readonly logger?: (line: CallLogLine) => void;
+  readonly logRefusal?: (line: RefusalLogLine) => void;
 }
 
 /**
@@ -178,6 +183,7 @@ const connect = async (actor: Actor, readOnly = false, options: ConnectOptions =
     actor,
     readOnly,
     ...(options.instructions === undefined ? {} : { instructions: options.instructions }),
+    logRefusal: options.logRefusal ?? (() => undefined),
     createClient: (callingActor, correlationId) =>
       createClient(catalog, adapter, {
         actor: callingActor,
@@ -244,7 +250,7 @@ describe("listing", () => {
 
   it.each([
     ["notes.list", { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
-    ["notes.add", { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }],
+    ["notes.add", { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
     ["notes.clear", { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }],
     ["notes.create", { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
   ] as const)("%s is annotated from its effect, change and key", async (id, expected) => {
@@ -313,7 +319,10 @@ describe("descriptions and errors that say how to fix the call (spec 004 U3)", (
   });
 
   it("explains schema.invalid_input field by field and keeps the failing paths", async () => {
-    const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "", extra: 1 } });
+    const result = await (await connect(owner)).callTool({
+      name: "notes_add",
+      arguments: { text: "", extra: 1, idempotencyKey: "k-1" },
+    });
     expect(result).toMatchObject({
       isError: true,
       structuredContent: {
@@ -386,8 +395,17 @@ describe("server metadata (spec 004 D8)", () => {
   });
 
   it("reports the same version to every actor of one deployment", async () => {
-    const [ownerClient, readerClient] = await Promise.all([connect(owner), connect(reader, true)]);
+    const [ownerClient, readerClient] = await Promise.all([connect(owner), connect(reader)]);
     expect(readerClient.getServerVersion()?.version).toBe(ownerClient.getServerVersion()?.version);
+  });
+
+  it("changes the version when a deploy only flips the read-only switch", () => {
+    expect(toolListVersion(catalog, manifest, true)).not.toBe(toolListVersion(catalog, manifest, false));
+  });
+
+  it("reports the read-only version on a read-only server", async () => {
+    const client = await connect(owner, true);
+    expect(client.getServerVersion()?.version).toBe(toolListVersion(catalog, manifest, true));
   });
 
   it.each([
@@ -401,9 +419,48 @@ describe("server metadata (spec 004 D8)", () => {
     expect(toolListVersion(catalog, { ...manifest })).toBe(toolListVersion(catalog, manifest));
   });
 
-  it("serves the instructions it was given", async () => {
-    const client = await connect(owner, false, { instructions: "Find ids with notes_list." });
-    expect(client.getInstructions()).toBe("Find ids with notes_list.");
+  it.each([
+    ["the owner", owner, false, "notes.add,notes.clear,notes.create,notes.get,notes.list read-only=false"],
+    ["a reader", reader, false, "notes.get,notes.list read-only=false"],
+    ["the owner on a read-only server", owner, true, "notes.get,notes.list read-only=true"],
+  ] as const)("builds the instructions from the tools %s sees", async (_label, actor, readOnly, expected) => {
+    const client = await connect(actor, readOnly, {
+      instructions: ({ toolIds, readOnly: only }) => `${[...toolIds].sort().join(",")} read-only=${only}`,
+    });
+    expect(client.getInstructions()).toBe(expected);
+  });
+});
+
+describe("refusals are logged (spec 004 U3)", () => {
+  it.each([
+    ["an unknown tool", false, "billing_export", {}, "access.forbidden"],
+    ["a write on a read-only server", true, "notes_clear", {}, "access.forbidden"],
+    ["a create without a key", false, "notes_create", { text: "no key" }, "client.idempotency_required"],
+    ["a malformed key", false, "notes_create", { text: "bad key", idempotencyKey: "" }, "schema.invalid_input"],
+  ] as const)(
+    "writes one line for %s, with the result's correlation id",
+    async (_label, readOnly, name, args, code) => {
+      const lines: RefusalLogLine[] = [];
+      const client = await connect(owner, readOnly, { logRefusal: (line) => lines.push(line) });
+      const result = await client.callTool({ name, arguments: args });
+      expect(lines).toEqual([
+        {
+          event: "mcp.refused",
+          tool: name,
+          status: code,
+          correlationId: result._meta?.[CORRELATION_META_KEY],
+          actorRole: "owner",
+          via: "mcp",
+        },
+      ]);
+    },
+  );
+
+  it("writes no refusal line for a call the client dispatches", async () => {
+    const lines: RefusalLogLine[] = [];
+    const client = await connect(owner, false, { logRefusal: (line) => lines.push(line) });
+    await client.callTool({ name: "notes_list", arguments: {} });
+    expect(lines).toEqual([]);
   });
 });
 
@@ -442,7 +499,10 @@ describe("calls", () => {
   });
 
   it("returns a write's value as structured content", async () => {
-    const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "hello" } });
+    const result = await (await connect(owner)).callTool({
+      name: "notes_add",
+      arguments: { text: "hello", idempotencyKey: crypto.randomUUID() },
+    });
     expect(result).toMatchObject({ structuredContent: { items: ["seeded", "hello"] } });
   });
 
@@ -475,7 +535,10 @@ describe("calls", () => {
   );
 
   it("answers invalid input with schema.invalid_input and the failing paths", async () => {
-    const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "" } });
+    const result = await (await connect(owner)).callTool({
+      name: "notes_add",
+      arguments: { text: "", idempotencyKey: crypto.randomUUID() },
+    });
     expect(result).toMatchObject({
       isError: true,
       structuredContent: { code: "schema.invalid_input", details: { paths: ["text"] } },
@@ -483,14 +546,20 @@ describe("calls", () => {
   });
 
   it("answers an approval-gated write with awaiting_approval, not an error", async () => {
-    const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "!urgent" } });
+    const result = await (await connect(owner)).callTool({
+      name: "notes_add",
+      arguments: { text: "!urgent", idempotencyKey: crypto.randomUUID() },
+    });
     expect(result).toMatchObject({
       structuredContent: { status: "awaiting_approval", approvalId: expect.any(String) },
     });
   });
 
   it("keeps an approval-gated write out of the error channel", async () => {
-    const result = await (await connect(owner)).callTool({ name: "notes_add", arguments: { text: "!urgent" } });
+    const result = await (await connect(owner)).callTool({
+      name: "notes_add",
+      arguments: { text: "!urgent", idempotencyKey: crypto.randomUUID() },
+    });
     expect(result.isError).not.toBe(true);
   });
 
@@ -527,7 +596,7 @@ describe("idempotency by operation (spec 004 D6)", () => {
 
   it("advertises no idempotencyKey argument on a write that needs no key", async () => {
     const { tools } = await (await connect(owner)).listTools();
-    expect(tools.find((tool) => tool.name === "notes_add")?.inputSchema.properties).not.toHaveProperty(
+    expect(tools.find((tool) => tool.name === "notes_clear")?.inputSchema.properties).not.toHaveProperty(
       "idempotencyKey",
     );
   });
@@ -604,8 +673,8 @@ describe("idempotency by operation (spec 004 D6)", () => {
 
   it("refuses an idempotencyKey argument on a tool that takes none, as an unknown field", async () => {
     const result = await (await connect(owner)).callTool({
-      name: "notes_add",
-      arguments: { text: "hello", idempotencyKey: "k-1" },
+      name: "notes_clear",
+      arguments: { idempotencyKey: "k-1" },
     });
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "schema.invalid_input" } });
   });
