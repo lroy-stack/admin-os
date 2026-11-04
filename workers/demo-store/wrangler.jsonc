@@ -1,0 +1,22 @@
+// The demo's session store as its own Worker: one SQLite-backed Durable Object per visitor session (ADR 0005).
+// It has no public surface; the web Worker reaches `DemoStore` through a binding by `script_name`. Deploy it before
+// any Worker that binds it, since the migration below lives here:
+//   npx wrangler deploy -c workers/demo-store/wrangler.jsonc
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "admin-os-demo-store",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "durable_objects": {
+    "bindings": [{ "name": "DEMO_STORE", "class_name": "DemoStore" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DemoStore"] }],
+  // wrangler's esbuild resolves without the `react-server` condition, where `server-only` throws.
+  "alias": {
+    "server-only": "./stubs/empty.ts"
+  },
+  "observability": { "enabled": true }
+}

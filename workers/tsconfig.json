@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext", "dom"],
+    "types": [],
+    "plugins": [],
+    "incremental": false,
+    "paths": { "@/*": ["../src/*"] }
+  },
+  "include": [
+    "worker-configuration.d.ts",
+    "../node_modules/@cloudflare/vitest-plugin/types/cloudflare-test.d.ts",
+    "demo-store/src",
+    "demo-store/test"
+  ],
+  "exclude": []
+}

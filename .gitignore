@@ -18,7 +18,7 @@
 
 # cloudflare (OpenNext build and wrangler state)
 /.open-next/
-/.wrangler/
+.wrangler/
 .dev.vars*
 
 # production
@@ -46,3 +46,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+workers/worker-configuration.d.ts
