@@ -24,6 +24,23 @@ const writeSequentially = async (client: Client, count: number): Promise<void> =
   }
 };
 
+/** A write the object holds for 300 ms (a forced latency fault), so a test can act on the object meanwhile. */
+const heldWrite = (sessionId: string, name: string) =>
+  stubFor(sessionId).dispatch(
+    "customers.create",
+    newCustomer(name),
+    contextFor(sessionId, { idempotencyKey: `held-${name}`, faults: [["customers.create", { latencyMs: 300 }]] }),
+  );
+
+/** How many `session` tables the object has: 0 until its first kept write, and again after the idle alarm. */
+const sessionTables = (sessionId: string) =>
+  runInDurableObject(
+    stubFor(sessionId),
+    (_instance, state) =>
+      state.storage.sql.exec("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'session'").toArray()
+        .length,
+  );
+
 /** The saved row of an object: its schema version and how many replay records the snapshot holds. */
 const savedRow = (sessionId: string) =>
   runInDurableObject(stubFor(sessionId), (_instance, state) => {
@@ -176,19 +193,33 @@ describe("DemoStore", () => {
     const client = clientFor(sessionId);
     const before = await customerCount(client);
     await client.call("customers.create", newCustomer("Before"), { idempotencyKey: crypto.randomUUID() });
-    const late = stubFor(sessionId).dispatch(
-      "customers.create",
-      newCustomer("Late"),
-      contextFor(sessionId, { idempotencyKey: "late", faults: [["customers.create", { latencyMs: 300 }]] }),
-    );
+    const late = heldWrite(sessionId, "Late");
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     await runDurableObjectAlarm(stubFor(sessionId));
+    const answer = await late;
 
-    expect([await late, await customerCount(client)]).toEqual([
+    expect([answer, await sessionTables(sessionId), await customerCount(client)]).toEqual([
       expect.objectContaining({ ok: false, error: expect.objectContaining({ code: "transport.unavailable" }) }),
+      0,
       before,
     ]);
+  });
+
+  it("keeps a write made after the wipe when a held write finishes later", async () => {
+    const sessionId = crypto.randomUUID();
+    const client = clientFor(sessionId);
+    const before = await customerCount(client);
+    await client.call("customers.create", newCustomer("Before"), { idempotencyKey: crypto.randomUUID() });
+    const late = heldWrite(sessionId, "Late");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await runDurableObjectAlarm(stubFor(sessionId));
+    await client.call("customers.create", newCustomer("After"), { idempotencyKey: crypto.randomUUID() });
+
+    await late;
+    await abortAllDurableObjects();
+
+    expect(await customerCount(client)).toBe(before + 1);
   });
 
   it("answers schema.invalid_input for an input the capability does not accept", async () => {
