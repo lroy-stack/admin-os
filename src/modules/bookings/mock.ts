@@ -109,16 +109,27 @@ function placementError(data: BookingsData, placement: Placement): Result<never>
     : undefined;
 }
 
-/** A start time must lie inside the service window and on the slot grid. */
-function startTimeError(context: Context, startMin: number): Result<never> | undefined {
+/** Whether a stay of `businessDay` starting at `startMin` begins before the clock: on an earlier day, or earlier today. */
+const hasStarted = ({ clock }: Context, businessDay: string, startMin: number): boolean =>
+  businessDay === clock.businessDay ? startMin < serviceMinute(clock) : businessDay < clock.businessDay;
+
+/** A start time must lie inside the service window, on the slot grid and not before the clock. */
+function startTimeError(context: Context, businessDay: string, startMin: number): Result<never> | undefined {
   const window = context.settings.get(serviceWindow);
   if (startMin < window.startMin || startMin >= window.endMin) {
     return err("bookings.outside_window", `${startMin} is outside the service window`, { startMin, window });
   }
   const slot = context.settings.get(slotMinutes);
-  return startMin % slot === 0
-    ? undefined
-    : err("bookings.off_grid", `${startMin} is not on the ${slot}-minute grid`, { startMin, slotMinutes: slot });
+  if (startMin % slot !== 0) {
+    return err("bookings.off_grid", `${startMin} is not on the ${slot}-minute grid`, { startMin, slotMinutes: slot });
+  }
+  if (!hasStarted(context, businessDay, startMin)) return undefined;
+  const now = { day: context.clock.businessDay, minute: serviceMinute(context.clock) };
+  return err(
+    "bookings.start_passed",
+    `${startMin} on ${businessDay} has already passed; the clock is at minute ${now.minute} of business day ${now.day}, counted from that day's midnight`,
+    { businessDay, startMin, now },
+  );
 }
 
 const newId = () => `bk-${crypto.randomUUID().slice(0, 8)}`;
@@ -135,8 +146,9 @@ function moveBooking(context: Context, id: string, change: BookingChange): Resul
   const { startMin: newStart, partySize, resourceIds } = change;
   const startMin = newStart ?? booking.startMin;
   const endMin = newStart === undefined ? booking.endMin : stayEnd(startMin, booking.endMin - booking.startMin);
-  if (newStart !== undefined) {
-    const timeError = startTimeError(context, newStart);
+  // Only a start that moves is checked again: a booking that has begun keeps its own, and a repeated move still lands.
+  if (newStart !== undefined && newStart !== booking.startMin) {
+    const timeError = startTimeError(context, booking.businessDay, newStart);
     if (timeError) return timeError;
   }
   const placeError = placementError(data, {
@@ -229,15 +241,19 @@ export const bookingsMockHandlers = {
   }),
 
   /**
-   * Offers single resources only: each free resource that seats the whole party. `bookings.create` also accepts
-   * several resources whose capacities add up to the party (joined tables); proposing those combinations is left to
-   * the caller until a preset needs it.
+   * Offers the starts still ahead of the clock (none on an earlier day), the ones `bookings.create` accepts, and single
+   * resources only: each free resource that seats the whole party. `bookings.create` also accepts several resources
+   * whose capacities add up to the party (joined tables); proposing those combinations is left to the caller until a
+   * preset needs it.
    */
   ...mockHandler(bookingsAvailabilityGet, ({ businessDay, partySize }, context: Context): Result<Availability> => {
     const { data, settings } = context;
     const stay = settings.get(walkInStayMinutes);
     const fits = data.resources.filter((resource) => resource.active && seatsOf(resource) >= partySize);
-    const slots = slotStarts(settings.get(serviceWindow), settings.get(slotMinutes)).map((startMin) => {
+    const ahead = slotStarts(settings.get(serviceWindow), settings.get(slotMinutes)).filter(
+      (startMin) => !hasStarted(context, businessDay, startMin),
+    );
+    const slots = ahead.map((startMin) => {
       const endMin = stayEnd(startMin, stay);
       const busy = busyResourceIds(data, businessDay, { startMin, endMin });
       return { startMin, endMin, resourceIds: fits.filter((resource) => !busy.has(resource.id)).map(({ id }) => id) };
@@ -250,7 +266,7 @@ export const bookingsMockHandlers = {
     if (input.customerId !== undefined && !data.customers.some((customer) => customer.id === input.customerId)) {
       return notFound("customer", [input.customerId]);
     }
-    const timeError = startTimeError(context, input.startMin);
+    const timeError = startTimeError(context, input.businessDay, input.startMin);
     if (timeError) return timeError;
     // A reservation carries no length of its own: it stays as long as a walk-in party is expected to.
     const endMin = stayEnd(input.startMin, settings.get(walkInStayMinutes));

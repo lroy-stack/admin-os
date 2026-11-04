@@ -46,6 +46,8 @@ const CLASS_BY_SUFFIX: Readonly<Record<string, ErrorClass>> = {
   resource_inactive: "invalid",
   outside_window: "invalid",
   off_grid: "invalid",
+  /** A start before the clock: another time works, the same one never will. */
+  start_passed: "invalid",
   not_walk_in: "invalid",
   unavailable: "unavailable",
   timeout: "timeout",

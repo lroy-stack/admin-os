@@ -181,6 +181,7 @@ const FIELD_OF_REFUSAL: Readonly<Record<string, "startMin" | "tableId">> = {
   "bookings.resource_busy": "tableId",
   "bookings.outside_window": "startMin",
   "bookings.off_grid": "startMin",
+  "bookings.start_passed": "startMin",
 };
 
 /**

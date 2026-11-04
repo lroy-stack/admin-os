@@ -97,6 +97,7 @@ describe("pointAtField", () => {
     ["bookings.resource_busy", "tableId"],
     ["bookings.outside_window", "startMin"],
     ["bookings.off_grid", "startMin"],
+    ["bookings.start_passed", "startMin"],
   ])("points %s at %s", (code, field) => {
     expect(pointAtField(refused(code))).toEqual({
       status: "invalid",

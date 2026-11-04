@@ -34,6 +34,10 @@ const presets = [
     customerId: "C-iglesias",
     lateConfirmed: "R-1046",
     slotCount: 20,
+    beforeService: 12 * 60,
+    passed: 20 * 60,
+    firstAhead: 20 * 60 + 45,
+    aheadCount: 13,
   },
   {
     vertical: "salon",
@@ -47,6 +51,10 @@ const presets = [
     customerId: "client-nora",
     lateConfirmed: "A-201",
     slotCount: 36,
+    beforeService: 8 * 60,
+    passed: 10 * 60,
+    firstAhead: 11 * 60,
+    aheadCount: 28,
   },
   {
     vertical: "workshop",
@@ -60,6 +68,10 @@ const presets = [
     customerId: "cust-carmen",
     lateConfirmed: "W-301",
     slotCount: 20,
+    beforeService: 7 * 60,
+    passed: 9 * 60,
+    firstAhead: 9 * 60 + 30,
+    aheadCount: 17,
   },
 ].map((preset) => [preset.vertical as VerticalId, preset] as const);
 
@@ -200,7 +212,7 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
 
     it("refuses a resource that an open booking holds during the stay", async () => {
       const input = createInput({ resourceIds: [p.busy.resourceId], startMin: p.busy.at });
-      expect(await world(vertical).client.call("bookings.create", input, key())).toMatchObject({
+      expect(await world(vertical).clientAt(p.beforeService).call("bookings.create", input, key())).toMatchObject({
         ok: false,
         error: { code: "bookings.resource_busy" },
       });
@@ -240,6 +252,27 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
       });
     });
 
+    it("refuses a start that has already passed on the clock's day", async () => {
+      const input = createInput({ startMin: p.passed, resourceIds: [] });
+      expect(await world(vertical).client.call("bookings.create", input, key())).toMatchObject({
+        ok: false,
+        error: { code: "bookings.start_passed" },
+      });
+    });
+
+    it("refuses a booking on a day before the clock's", async () => {
+      const input = createInput({ businessDay: "2026-10-30" });
+      expect(await world(vertical).client.call("bookings.create", input, key())).toMatchObject({
+        ok: false,
+        error: { code: "bookings.start_passed" },
+      });
+    });
+
+    it("accepts a start at the clock's own minute", async () => {
+      const { clientAt } = world(vertical);
+      expect(await clientAt(p.freeAt).call("bookings.create", createInput(), key())).toMatchObject({ ok: true });
+    });
+
     it("books without a resource and checks no seats", async () => {
       const input = createInput({ resourceIds: [], partySize: 12 });
       expect(await world(vertical).client.call("bookings.create", input, key())).toMatchObject({ ok: true });
@@ -273,8 +306,8 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
   });
 
   describe("availability and the day filter", () => {
-    it("lists every slot of the service window on the grid", async () => {
-      expect(await slotsOf(world(vertical).client, 1)).toHaveLength(p.slotCount);
+    it("lists every slot of the service window on the grid before the service opens", async () => {
+      expect(await slotsOf(world(vertical).clientAt(p.beforeService), 1)).toHaveLength(p.slotCount);
     });
 
     it("offers a free resource at its slot and withholds it once a booking holds it", async () => {
@@ -286,7 +319,8 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
     });
 
     it("withholds a resource that is busy in the slot's stay", async () => {
-      const slot = (await slotsOf(world(vertical).client, 1)).find((candidate) => candidate.startMin === p.busy.at);
+      const slots = await slotsOf(world(vertical).clientAt(p.beforeService), 1);
+      const slot = slots.find((candidate) => candidate.startMin === p.busy.at);
       expect(slot?.resourceIds).not.toContain(p.busy.resourceId);
     });
 
@@ -295,6 +329,15 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
         (candidate) => candidate.startMin === p.freeAt,
       );
       expect(slot?.resourceIds).not.toContain(p.tooSmall.resourceId);
+    });
+
+    it("offers only the slots still ahead of the clock on its own day", async () => {
+      const slots = await slotsOf(world(vertical).client, 1);
+      expect([slots.length, slots[0]?.startMin]).toEqual([p.aheadCount, p.firstAhead]);
+    });
+
+    it("offers no slot on a day before the clock's", async () => {
+      expect(await slotsOf(world(vertical).client, 1, "2026-10-30")).toEqual([]);
     });
 
     it("ends each slot's stay at the stay length", async () => {
@@ -370,6 +413,15 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
       });
     });
 
+    it("refuses a new start that has already passed", async () => {
+      const { client } = world(vertical);
+      const created = bookingOf(await client.call("bookings.create", createInput(), key()));
+      expect(await client.call("bookings.reschedule", { id: created.id, startMin: p.passed })).toMatchObject({
+        ok: false,
+        error: { code: "bookings.start_passed" },
+      });
+    });
+
     it("answers the booking as it is when the same reschedule is repeated", async () => {
       const { client } = world(vertical);
       const created = bookingOf(await client.call("bookings.create", createInput(), key()));
@@ -395,7 +447,7 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
     });
 
     it("refuses to move a booking onto a busy resource", async () => {
-      const { client } = world(vertical);
+      const client = world(vertical).clientAt(p.beforeService);
       const created = bookingOf(
         await client.call("bookings.create", createInput({ resourceIds: [], startMin: p.busy.at }), key()),
       );
@@ -507,7 +559,7 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
 
     it("counts a booking as late exactly at its start plus the late-after minutes", async () => {
       const { clientAt } = world(vertical);
-      const created = bookingOf(await clientAt(0).call("bookings.create", createInput(), key()));
+      const created = bookingOf(await clientAt(p.beforeService).call("bookings.create", createInput(), key()));
       expect(await clientAt(p.freeAt + 10).call("bookings.no_show.mark", { id: created.id }, key())).toMatchObject({
         ok: true,
       });
@@ -515,7 +567,7 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
 
     it("refuses a no-show one minute before it counts as late", async () => {
       const { clientAt } = world(vertical);
-      const created = bookingOf(await clientAt(0).call("bookings.create", createInput(), key()));
+      const created = bookingOf(await clientAt(p.beforeService).call("bookings.create", createInput(), key()));
       expect(await clientAt(p.freeAt + 9).call("bookings.no_show.mark", { id: created.id }, key())).toMatchObject({
         ok: false,
         error: { code: "bookings.too_early" },
@@ -951,6 +1003,36 @@ describe("bookings with an inactive resource", () => {
   });
 });
 
+describe("the hospitality clock after midnight", () => {
+  // At 00:30 the business day of DAY still runs, until the 05:00 cut-off, so the whole service window lies behind it.
+  const afterMidnight = () => world("hospitality").clientAt(30);
+  const createAt = (businessDay: string, startMin: number) => ({
+    businessDay,
+    startMin,
+    partySize: 2,
+    resourceIds: [],
+    contactName: "Rey",
+    channel: "phone",
+  });
+
+  it("refuses the last slot of that business day", async () => {
+    expect(await afterMidnight().call("bookings.create", createAt(DAY, 23 * 60 + 45), key())).toMatchObject({
+      ok: false,
+      error: { code: "bookings.start_passed" },
+    });
+  });
+
+  it("offers no slot left on that business day", async () => {
+    expect(await slotsOf(afterMidnight(), 2)).toEqual([]);
+  });
+
+  it("still books the next business day", async () => {
+    expect(await afterMidnight().call("bookings.create", createAt("2026-11-01", 20 * 60), key())).toMatchObject({
+      ok: true,
+    });
+  });
+});
+
 describe("booking permissions by role", () => {
   const permissions = (index: 0 | 1 | 2) =>
     permissionsOf(DEFAULT_ROLES[index], CATALOG, VERTICALS.hospitality.modules) as readonly string[];
@@ -1078,6 +1160,11 @@ describe("moving a booking in time and onto other tables", () => {
   ];
   const client = (resources = hospitalitySeed.resources) =>
     world("hospitality", hospitalityWith(seeded, resources)).client;
+
+  it("keeps the start of a booking that has begun when the same start is sent again", async () => {
+    const moved = bookingOf(await client().call("bookings.reschedule", { id: "mine", startMin: 1200, partySize: 2 }));
+    expect([moved.startMin, moved.partySize]).toEqual([1200, 2]);
+  });
 
   it("moves the time and the tables in one call", async () => {
     const moved = bookingOf(

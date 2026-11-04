@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `0046a025100fc1` | `0b761b0740e4c9` |
-| salon | `0046a025100fc1` | `0b761b0740e4c9` |
-| workshop | `0046a025100fc1` | `0b761b0740e4c9` |
+| hospitality | `00fd954c13d69b` | `09720ea5cbef5c` |
+| salon | `00fd954c13d69b` | `09720ea5cbef5c` |
+| workshop | `00fd954c13d69b` | `09720ea5cbef5c` |
 
 ## Tools by preset
 
@@ -187,7 +187,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_availability_get`
 
-**Find free times and resources.** The start times of a business day's service window, on the slot grid, each with the active resources that are free for a stay beginning there and seat the whole party on their own. An empty list means that time is full.
+**Find free times and resources.** The start times of a business day's service window that are still ahead of the clock (none on an earlier day), on the slot grid, each with the active resources that are free for a stay beginning there and seat the whole party on their own. An empty list means that time is full.
 
 - Capability: `bookings.availability.get`, permission `read:bookings`, tier 0, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
@@ -249,7 +249,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_create`
 
-**Create a booking.** Create a confirmed booking. Send exactly one of customerId (a guest on record; create one with customers_create first) or contactName. The start must be on the slot grid inside the service window. Resources are optional; when given they must be active, free for the stay and seat the party together. Fails with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid or bookings.not_found. Find valid ids: customerId with customers_search or customers_duplicates_check; resourceIds with bookings_availability_get or resources_list.
+**Create a booking.** Create a confirmed booking. Send exactly one of customerId (a guest on record; create one with customers_create first) or contactName. The start must be on the slot grid inside the service window and not before the clock (clock_get). Resources are optional; when given they must be active, free for the stay and seat the party together. Fails with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid, bookings.start_passed or bookings.not_found. Find valid ids: customerId with customers_search or customers_duplicates_check; resourceIds with bookings_availability_get or resources_list.
 
 - Capability: `bookings.create`, permission `create:bookings`, tier 2, idempotency key.
 - Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
@@ -437,7 +437,7 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 
 ### `bookings_reschedule`
 
-**Reschedule a booking.** Move an open booking in time and optionally onto other tables in the same step: send startMin, partySize and/or resourceIds (at least one); omitted fields stay as they are and moving the start keeps the length of the stay. The new time and tables are checked together, so use it when both change; bookings_table_assign changes only the tables. Same rules as bookings_create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid or bookings.not_found. Find valid ids: id with bookings_list or bookings_search.
+**Reschedule a booking.** Move an open booking in time and optionally onto other tables in the same step: send startMin, partySize and/or resourceIds (at least one); omitted fields stay as they are and moving the start keeps the length of the stay. The new time and tables are checked together, so use it when both change; bookings_table_assign changes only the tables. Same rules as bookings_create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid, bookings.start_passed or bookings.not_found. Find valid ids: id with bookings_list or bookings_search.
 
 - Capability: `bookings.reschedule`, permission `update:bookings`, tier 2, idempotency target-state.
 - Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.

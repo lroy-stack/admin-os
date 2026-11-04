@@ -9,6 +9,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `npm run deploy` stops unless `NEXT_PUBLIC_SITE_URL` is a public https URL, read from the shell and the `.env`
   files as the build reads it; without it the build wrote localhost into canonical, Open Graph and sitemap links.
+- A booking can no longer start before the business clock. `bookings.availability.get` offers only the starts still
+  ahead (none on an earlier day), and `bookings.create` and `bookings.reschedule` refuse an earlier start with
+  `bookings.start_passed`; before, only the web form hid past times, so an MCP client could book them.
 
 ## [0.2.0] - 2026-11-04
 
