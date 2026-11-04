@@ -7,7 +7,9 @@ import { AppRail, type ShellAccount, type ShellBrand, type ShellChoice, TopNav }
 import { examplesMessageKey } from "../(examples)/_nav/examples-messages";
 import { examplesNav } from "../(examples)/_nav/examples-nav";
 import { resetDemoData, setDemoPreset, setDemoRole } from "./demo-actions";
+import { dashboardMessageKey } from "./messages";
 import { buildShellNav, type NavData } from "./nav-model";
+import { NotificationsPanel } from "./notifications-panel";
 
 // Client wrappers: nav entries carry Lucide icon components, which cannot cross from a Server Component. The
 // server decides what the actor may see and sends ids and labels (`NavData`); these wrappers pick the entries from
@@ -29,13 +31,17 @@ export function DashboardTopNav({
   nav,
   account,
   demo,
+  unreadNotifications,
 }: {
   nav: NavData;
   account: ShellAccount;
   /** Present on the demo build only. */
   demo?: DemoData;
+  /** The actor's unread count; absent when they cannot read notifications, which hides the bell. */
+  unreadNotifications?: number;
 }) {
   const { top } = useShellNav(nav);
+  const { notifications } = useMessages(dashboardMessageKey);
   return (
     <TopNav
       brand={brand}
@@ -49,6 +55,11 @@ export function DashboardTopNav({
         }
       }
       inboxHref="/dashboard/mail"
+      notifications={
+        unreadNotifications === undefined
+          ? undefined
+          : { unread: unreadNotifications, title: notifications.title, panel: () => <NotificationsPanel /> }
+      }
     />
   );
 }

@@ -13,14 +13,14 @@ import { Button } from "@/components/ui/button";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { LiquidThumb, useLiquidThumb } from "@/ds/components";
 import { useGuardedLink } from "@/ds/feedback";
+import { PopoverOrSheet } from "@/ds/overlays";
 
 import { AccountMenu } from "./account-menu";
 import { isActiveLink } from "./active-link";
 import { shellMessageKey } from "./messages";
-import type { ShellAccount, ShellBrand, ShellDemo, ShellNavItem } from "./types";
+import type { ShellAccount, ShellBrand, ShellDemo, ShellNavItem, ShellNotifications } from "./types";
 
 // Demo count until the feed engine supplies the real one.
-const UNREAD_NOTIFICATIONS = 1;
 
 const headerButtonClassName = "liquid-glass liquid-glass-solid size-9 rounded-full hover:bg-foreground/10";
 
@@ -120,6 +120,7 @@ export function TopNav({
   account,
   demo,
   inboxHref,
+  notifications,
 }: {
   brand: ShellBrand;
   items: readonly ShellNavItem[];
@@ -128,6 +129,8 @@ export function TopNav({
   demo?: ShellDemo;
   /** Where the inbox button goes; the app owns its routes. */
   inboxHref: string;
+  /** The bell and its panel; omitted when the actor cannot read notifications. */
+  notifications?: ShellNotifications;
 }) {
   const pathname = usePathname();
   const { landmarks, header } = useMessages(shellMessageKey);
@@ -167,11 +170,24 @@ export function TopNav({
               <Inbox />
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" className={headerButtonClassName}>
-            <Bell />
-            <span className="bg-destructive absolute top-2 right-2.5 size-1.5 rounded-full" />
-            <span className="sr-only">{format(header.unread, locale, { count: UNREAD_NOTIFICATIONS })}</span>
-          </Button>
+          {notifications ? (
+            <PopoverOrSheet
+              align="end"
+              title={notifications.title}
+              className="w-96 p-0"
+              trigger={
+                <Button variant="ghost" size="icon" className={headerButtonClassName}>
+                  <Bell />
+                  {notifications.unread > 0 ? (
+                    <span className="bg-destructive absolute top-2 right-2.5 size-1.5 rounded-full" />
+                  ) : null}
+                  <span className="sr-only">{format(header.unread, locale, { count: notifications.unread })}</span>
+                </Button>
+              }
+            >
+              {notifications.panel}
+            </PopoverOrSheet>
+          ) : null}
           <AccountMenu account={account} demo={demo} />
         </div>
       </div>

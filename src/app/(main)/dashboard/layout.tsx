@@ -11,10 +11,12 @@ import { VERTICALS } from "@/config/vertical";
 import { textFor } from "@/config/vocabulary.server";
 import { AccessProvider } from "@/core/access/client";
 import { visibleNavIds } from "@/core/nav";
+import { isAwaitingApproval } from "@/core/result";
 import { feedbackBundle } from "@/ds/feedback/server";
 import { overlaysBundle } from "@/ds/overlays/server";
 import { AppBackdrop } from "@/ds/shell";
 import { shellBundle } from "@/ds/shell/server";
+import { unreadCountOutput } from "@/modules/notifications";
 
 import { demoMessages } from "./_components/demo-messages.server";
 import { dashboardBundle } from "./_components/messages.server";
@@ -23,7 +25,7 @@ import type { NavData } from "./_components/nav-model";
 import { examplesBundle } from "./(examples)/_nav/examples-messages.server";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
-  const { actor, vertical, locale } = await getRuntime();
+  const { actor, vertical, locale, client } = await getRuntime();
   const demo = isDemoAdapter();
 
   // The server decides what the actor may see; the client receives only the ids and plain labels (ADR 0006).
@@ -41,6 +43,15 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     ),
     showExamples: demo,
   };
+
+  // The bell shows the actor's real unread count; the panel reads the rows only when it opens (one read per page).
+  const unread = actor.permissions.includes("read:notifications")
+    ? await client.call("notifications.unread.count", {})
+    : undefined;
+  const unreadNotifications =
+    unread === undefined || isAwaitingApproval(unread) || !unread.ok
+      ? undefined
+      : unreadCountOutput.parse(unread.value).unreadCount;
 
   const roles = vertical.roles.map((role) => ({ id: role.id, label: textFor(vertical.id, locale, role.labelKey) }));
   const account = {
@@ -65,6 +76,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         <DashboardTopNav
           nav={nav}
           account={account}
+          unreadNotifications={unreadNotifications}
           demo={
             demo
               ? {

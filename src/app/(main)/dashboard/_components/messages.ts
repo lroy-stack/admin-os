@@ -77,6 +77,25 @@ export interface DashboardMessages {
     readonly won: string;
     readonly lost: string;
   };
+  /** The bell's panel. Placeholders: `{title}` (markRead). */
+  readonly notifications: {
+    readonly title: string;
+    readonly loading: string;
+    readonly failed: string;
+    readonly empty: string;
+    readonly retry: string;
+    readonly markAllRead: string;
+    readonly markRead: string;
+    readonly unread: string;
+    readonly approve: { readonly verb: string; readonly title: string; readonly consequence: string };
+    readonly reject: {
+      readonly verb: string;
+      readonly title: string;
+      readonly consequence: string;
+      readonly reasonLabel: string;
+    };
+    readonly toast: { readonly approved: string; readonly rejected: string };
+  };
 }
 
 export const dashboardMessageKey: MessageKey<DashboardMessages> = messageKey<DashboardMessages>("dashboard");

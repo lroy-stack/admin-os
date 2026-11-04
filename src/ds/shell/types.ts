@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { LucideIcon } from "lucide-react";
 
 /** A link in the top navbar or the quick-access rail. */
@@ -59,4 +61,12 @@ export type ShellDemo = {
   readonly role: ShellSwitch;
   readonly preset: ShellSwitch;
   readonly onReset: () => Promise<void>;
+};
+
+/** The bell: the unread count it shows and the panel it opens (`close` dismisses it). Omitted, the bell is not shown. */
+export type ShellNotifications = {
+  readonly unread: number;
+  /** The panel's heading, which names the job ("Notifications"). */
+  readonly title: string;
+  readonly panel: (panel: { close: () => void }) => ReactNode;
 };

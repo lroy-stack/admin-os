@@ -72,6 +72,28 @@ const en: DashboardMessages = {
     won: "Won",
     lost: "Lost",
   },
+  notifications: {
+    title: "Notifications",
+    loading: "Loading notifications…",
+    failed: "That didn't go through. Try again.",
+    empty: "You're all caught up.",
+    retry: "Try again",
+    markAllRead: "Mark all as read",
+    markRead: "Mark {title} as read",
+    unread: "Unread",
+    approve: {
+      verb: "Approve",
+      title: "Approve this request?",
+      consequence: "The change runs now, exactly as the assistant asked, on behalf of whoever asked for it.",
+    },
+    reject: {
+      verb: "Reject",
+      title: "Reject this request?",
+      consequence: "The change does not run. The assistant sees that it was rejected.",
+      reasonLabel: "Reason (optional)",
+    },
+    toast: { approved: "Request approved", rejected: "Request rejected" },
+  },
 };
 
 const es: DashboardMessages = {
@@ -141,6 +163,28 @@ const es: DashboardMessages = {
     closing: "Cierre",
     won: "Ganada",
     lost: "Perdida",
+  },
+  notifications: {
+    title: "Notificaciones",
+    loading: "Cargando notificaciones…",
+    failed: "No se ha podido completar. Inténtalo de nuevo.",
+    empty: "Estás al día.",
+    retry: "Reintentar",
+    markAllRead: "Marcar todas como leídas",
+    markRead: "Marcar {title} como leída",
+    unread: "Sin leer",
+    approve: {
+      verb: "Aprobar",
+      title: "¿Aprobar esta solicitud?",
+      consequence: "El cambio se ejecuta ahora, tal y como lo pidió el asistente, en nombre de quien lo solicitó.",
+    },
+    reject: {
+      verb: "Rechazar",
+      title: "¿Rechazar esta solicitud?",
+      consequence: "El cambio no se ejecuta. El asistente verá que se rechazó.",
+      reasonLabel: "Motivo (opcional)",
+    },
+    toast: { approved: "Solicitud aprobada", rejected: "Solicitud rechazada" },
   },
 };
 
@@ -212,6 +256,29 @@ const de: DashboardMessages = {
     won: "Gewonnen",
     lost: "Verloren",
   },
+  notifications: {
+    title: "Benachrichtigungen",
+    loading: "Benachrichtigungen werden geladen…",
+    failed: "Das hat nicht geklappt. Bitte erneut versuchen.",
+    empty: "Alles erledigt.",
+    retry: "Erneut versuchen",
+    markAllRead: "Alle als gelesen markieren",
+    markRead: "{title} als gelesen markieren",
+    unread: "Ungelesen",
+    approve: {
+      verb: "Genehmigen",
+      title: "Diese Anfrage genehmigen?",
+      consequence:
+        "Die Änderung wird jetzt genau so ausgeführt, wie der Assistent sie angefragt hat, im Namen der anfragenden Person.",
+    },
+    reject: {
+      verb: "Ablehnen",
+      title: "Diese Anfrage ablehnen?",
+      consequence: "Die Änderung wird nicht ausgeführt. Der Assistent sieht, dass sie abgelehnt wurde.",
+      reasonLabel: "Grund (optional)",
+    },
+    toast: { approved: "Anfrage genehmigt", rejected: "Anfrage abgelehnt" },
+  },
 };
 
 const fr: DashboardMessages = {
@@ -282,6 +349,29 @@ const fr: DashboardMessages = {
     closing: "Conclusion",
     won: "Gagnée",
     lost: "Perdue",
+  },
+  notifications: {
+    title: "Notifications",
+    loading: "Chargement des notifications…",
+    failed: "L’opération n’a pas abouti. Réessayez.",
+    empty: "Vous êtes à jour.",
+    retry: "Réessayer",
+    markAllRead: "Tout marquer comme lu",
+    markRead: "Marquer {title} comme lu",
+    unread: "Non lu",
+    approve: {
+      verb: "Approuver",
+      title: "Approuver cette demande ?",
+      consequence:
+        "La modification s’exécute maintenant, telle que l’assistant l’a demandée, au nom de la personne qui l’a demandée.",
+    },
+    reject: {
+      verb: "Refuser",
+      title: "Refuser cette demande ?",
+      consequence: "La modification ne s’exécute pas. L’assistant voit qu’elle a été refusée.",
+      reasonLabel: "Motif (facultatif)",
+    },
+    toast: { approved: "Demande approuvée", rejected: "Demande refusée" },
   },
 };
 

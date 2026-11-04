@@ -10,6 +10,13 @@ import { join, relative } from "node:path";
  */
 const REVIEWED_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   "src/app/(main)/dashboard/_components/demo-actions.ts": ["resetDemoData", "setDemoPreset", "setDemoRole"],
+  "src/app/(main)/dashboard/_components/notification-actions.ts": [
+    "approveHeldWrite",
+    "loadNotifications",
+    "markAllNotificationsRead",
+    "markNotificationsRead",
+    "rejectHeldWrite",
+  ],
   "src/app/(main)/dashboard/bookings/actions.ts": [
     "advanceStatus",
     "cancelBooking",
