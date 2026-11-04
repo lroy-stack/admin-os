@@ -34,7 +34,23 @@ const en: TasksMessages = {
     favorite: "Favorite",
     labels: "Labels",
     delete: "Delete",
-    deleteShortcut: "⌘⌫",
+    unfavorite: "Remove from favorites",
+    favoriteMark: "Favorite",
+  },
+  edit: {
+    title: "Edit task",
+    verb: "Save task",
+    description: "Change this task.",
+    label: "Label",
+    titleRequired: "Enter a title.",
+  },
+  toast: {
+    saved: "Task saved",
+    copied: "Copy created as {id}",
+    copyOf: "Copy of {title}",
+    deleted: "{id} deleted",
+    favorited: "{id} added to favorites",
+    unfavorited: "{id} removed from favorites",
   },
   toolbar: {
     filterPlaceholder: "Filter tasks…",
@@ -46,6 +62,7 @@ const en: TasksMessages = {
     toggleColumns: "Toggle columns",
   },
   table: {
+    label: "Tasks",
     empty: "No results found.",
     selected: {
       one: "{count} of {total} row selected.",
@@ -93,7 +110,23 @@ const es: TasksMessages = {
     favorite: "Marcar como favorita",
     labels: "Etiquetas",
     delete: "Eliminar",
-    deleteShortcut: "⌘⌫",
+    unfavorite: "Quitar de favoritas",
+    favoriteMark: "Favorita",
+  },
+  edit: {
+    title: "Editar tarea",
+    verb: "Guardar tarea",
+    description: "Cambia esta tarea.",
+    label: "Etiqueta",
+    titleRequired: "Introduce un título.",
+  },
+  toast: {
+    saved: "Tarea guardada",
+    copied: "Copia creada como {id}",
+    copyOf: "Copia de {title}",
+    deleted: "{id} eliminada",
+    favorited: "{id} marcada como favorita",
+    unfavorited: "{id} quitada de favoritas",
   },
   toolbar: {
     filterPlaceholder: "Filtrar tareas…",
@@ -105,6 +138,7 @@ const es: TasksMessages = {
     toggleColumns: "Mostrar columnas",
   },
   table: {
+    label: "Tareas",
     empty: "No se encontraron resultados.",
     selected: {
       one: "{count} de {total} fila seleccionada.",
@@ -152,7 +186,23 @@ const de: TasksMessages = {
     favorite: "Als Favorit markieren",
     labels: "Labels",
     delete: "Löschen",
-    deleteShortcut: "⌘⌫",
+    unfavorite: "Aus Favoriten entfernen",
+    favoriteMark: "Favorit",
+  },
+  edit: {
+    title: "Aufgabe bearbeiten",
+    verb: "Aufgabe speichern",
+    description: "Ändere diese Aufgabe.",
+    label: "Label",
+    titleRequired: "Gib einen Titel ein.",
+  },
+  toast: {
+    saved: "Aufgabe gespeichert",
+    copied: "Kopie erstellt als {id}",
+    copyOf: "Kopie von {title}",
+    deleted: "{id} gelöscht",
+    favorited: "{id} als Favorit markiert",
+    unfavorited: "{id} aus Favoriten entfernt",
   },
   toolbar: {
     filterPlaceholder: "Aufgaben filtern…",
@@ -164,6 +214,7 @@ const de: TasksMessages = {
     toggleColumns: "Spalten anzeigen",
   },
   table: {
+    label: "Aufgaben",
     empty: "Keine Ergebnisse gefunden.",
     selected: {
       one: "{count} von {total} Zeile ausgewählt.",
@@ -211,7 +262,23 @@ const fr: TasksMessages = {
     favorite: "Ajouter aux favoris",
     labels: "Étiquettes",
     delete: "Supprimer",
-    deleteShortcut: "⌘⌫",
+    unfavorite: "Retirer des favoris",
+    favoriteMark: "Favori",
+  },
+  edit: {
+    title: "Modifier la tâche",
+    verb: "Enregistrer la tâche",
+    description: "Modifiez cette tâche.",
+    label: "Étiquette",
+    titleRequired: "Saisissez un titre.",
+  },
+  toast: {
+    saved: "Tâche enregistrée",
+    copied: "Copie créée sous {id}",
+    copyOf: "Copie de {title}",
+    deleted: "{id} supprimée",
+    favorited: "{id} ajoutée aux favoris",
+    unfavorited: "{id} retirée des favoris",
   },
   toolbar: {
     filterPlaceholder: "Filtrer les tâches…",
@@ -223,6 +290,7 @@ const fr: TasksMessages = {
     toggleColumns: "Afficher les colonnes",
   },
   table: {
+    label: "Tâches",
     empty: "Aucun résultat.",
     selected: {
       one: "{count} sur {total} ligne sélectionnée.",

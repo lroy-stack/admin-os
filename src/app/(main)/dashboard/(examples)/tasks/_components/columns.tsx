@@ -3,7 +3,7 @@
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import { Subscribe } from "@tanstack/react-table";
 import { cn } from "cn";
-import { ArrowDown, ArrowUp, ArrowUpDown, MoreHorizontal, RotateCcw } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, RotateCcw, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,19 +12,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DataTableFeatures } from "@/ds/data-table";
 
 import { labels, priorities, statuses, type Task } from "./data";
 import type { TasksMessages } from "./messages";
+import { type TaskActions, TaskRowMenu } from "./task-row-menu";
 
 const statusStyles: Record<string, string> = {
   backlog: "border-muted-foreground/20 bg-muted text-muted-foreground",
@@ -80,7 +75,7 @@ function TitleColumnHeader({
   );
 }
 
-export function createColumns(text: TasksMessages): ColumnDef<DataTableFeatures, Task>[] {
+export function createColumns(text: TasksMessages, actions: TaskActions): ColumnDef<DataTableFeatures, Task>[] {
   return [
     {
       id: "select",
@@ -137,6 +132,12 @@ export function createColumns(text: TasksMessages): ColumnDef<DataTableFeatures,
                 {text.labels[label.value]}
               </Badge>
             )}
+            {actions.isFavorite(row.original.id) ? (
+              <span className="shrink-0 text-amber-500" title={text.row.favoriteMark}>
+                <Star className="size-3.5 fill-current" aria-hidden="true" />
+                <span className="sr-only">{text.row.favoriteMark}</span>
+              </span>
+            ) : null}
             <span
               className="line-clamp-2 max-w-lg min-w-0 text-sm font-medium break-words hyphens-auto"
               title={row.original.title}
@@ -191,45 +192,7 @@ export function createColumns(text: TasksMessages): ColumnDef<DataTableFeatures,
     },
     {
       id: "actions",
-      cell: ({ row }) => {
-        const task = row.original as Task;
-
-        return (
-          <div className="text-right">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="text-muted-foreground data-[state=open]:bg-muted">
-                  <MoreHorizontal />
-                  <span className="sr-only">{text.row.openMenu}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-40">
-                <DropdownMenuItem>{text.row.edit}</DropdownMenuItem>
-                <DropdownMenuItem>{text.row.copy}</DropdownMenuItem>
-                <DropdownMenuItem>{text.row.favorite}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>{text.row.labels}</DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuRadioGroup value={task.label}>
-                      {labels.map((label) => (
-                        <DropdownMenuRadioItem key={label.value} value={label.value}>
-                          {text.labels[label.value]}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  {text.row.delete}
-                  <DropdownMenuShortcut>{text.row.deleteShortcut}</DropdownMenuShortcut>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
-      },
+      cell: ({ row }) => <TaskRowMenu task={row.original} text={text} actions={actions} />,
     },
   ];
 }

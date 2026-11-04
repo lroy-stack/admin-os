@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import { ChevronsLeft, ChevronsRight, MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Pagination,
@@ -23,10 +24,25 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { dataTableFeatures } from "@/ds/data-table";
+import { useToastWithUndo } from "@/ds/feedback";
 
 import { createColumns } from "./columns";
 import type { Task } from "./data";
 import { tasksMessageKey } from "./messages";
+import { TaskEditWindow } from "./task-edit-dialog";
+import type { TaskActions } from "./task-row-menu";
+import {
+  copyTask,
+  EMPTY_TASKS_STATE,
+  editTask,
+  isFavorite,
+  removeCopy,
+  removeTask,
+  resolveTasks,
+  restoreTask,
+  setLabel,
+  toggleFavorite,
+} from "./tasks-state";
 import { TasksToolbar } from "./tasks-toolbar";
 
 interface TasksProps {
@@ -60,7 +76,56 @@ function getPageNumbers(currentPage: number, pageCount: number) {
 export function Tasks({ data }: TasksProps) {
   const text = useMessages(tasksMessageKey);
   const locale = useLocale();
-  const columns = React.useMemo(() => createColumns(text), [text]);
+  const withUndo = useToastWithUndo();
+  const [state, setState] = React.useState(EMPTY_TASKS_STATE);
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
+  const [editing, setEditing] = React.useState<{ task: Task; opening: number; open: boolean } | null>(null);
+  const opener = React.useRef<Element | null>(null);
+  const region = React.useRef<HTMLDivElement>(null);
+  const rows = React.useMemo(() => resolveTasks(data, state), [data, state]);
+
+  const actions = React.useMemo<TaskActions>(() => {
+    const focusRegion = () => requestAnimationFrame(() => region.current?.focus());
+    return {
+      isFavorite: (id) => isFavorite(state, id),
+      edit: (task, from) => {
+        opener.current = from;
+        setEditing((current) => ({ task, opening: (current?.opening ?? 0) + 1, open: true }));
+      },
+      copy: (task, from) => {
+        const result = copyTask(
+          data,
+          stateRef.current,
+          task.id,
+          format(text.toast.copyOf, locale, { title: task.title }),
+        );
+        if (!result.copy) return;
+        const { id } = result.copy;
+        setState(result.state);
+        opener.current = from;
+        withUndo({
+          message: format(text.toast.copied, locale, { id }),
+          undo: () => setState((current) => removeCopy(current, id)),
+        });
+      },
+      toggleFavorite: (task) => {
+        const marked = isFavorite(stateRef.current, task.id);
+        setState((current) => toggleFavorite(current, task.id));
+        toast.success(format(marked ? text.toast.unfavorited : text.toast.favorited, locale, { id: task.id }));
+      },
+      setLabel: (task, label) => setState((current) => setLabel(current, task.id, label)),
+      remove: (task) => {
+        setState((current) => removeTask(current, task.id));
+        focusRegion();
+        withUndo({
+          message: format(text.toast.deleted, locale, { id: task.id }),
+          undo: () => setState((current) => restoreTask(current, task.id)),
+        });
+      },
+    };
+  }, [data, state, text, locale, withUndo]);
+  const columns = React.useMemo(() => createColumns(text, actions), [text, actions]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -72,7 +137,7 @@ export function Tasks({ data }: TasksProps) {
 
   const table = useTable({
     features: dataTableFeatures,
-    data,
+    data: rows,
     columns,
     state: {
       sorting,
@@ -97,7 +162,12 @@ export function Tasks({ data }: TasksProps) {
   const canNextPage = table.getCanNextPage();
 
   return (
-    <div className="border-border/70 bg-background overflow-hidden rounded-xl border">
+    <section
+      ref={region}
+      aria-label={text.table.label}
+      tabIndex={-1}
+      className="border-border/70 bg-background overflow-hidden rounded-xl border outline-none"
+    >
       <div className="border-b px-4 py-4">
         <TasksToolbar table={table} />
       </div>
@@ -254,6 +324,19 @@ export function Tasks({ data }: TasksProps) {
           </Pagination>
         </div>
       </div>
-    </div>
+      {editing ? (
+        <TaskEditWindow
+          key={editing.opening}
+          task={editing.task}
+          open={editing.open}
+          onOpenChange={(open) => setEditing((current) => (current ? { ...current, open } : current))}
+          returnFocus={() => opener.current}
+          onSave={(fields) => {
+            setState((current) => editTask(current, editing.task.id, fields));
+            toast.success(text.toast.saved);
+          }}
+        />
+      ) : null}
+    </section>
   );
 }

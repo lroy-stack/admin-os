@@ -8,8 +8,8 @@ import { localizeTasks, taskTitles } from "./task-titles.server";
 
 describe("Tasks dictionary", () => {
   it("is complete and consistent in all four locales", () => {
-    // "Backlog" is the term every task tool uses in all four languages; the shortcut is symbols.
-    expect(() => assertDictionaryParity(tasksMessages, ["statuses.backlog", "row.deleteShortcut"])).not.toThrow();
+    // "Backlog" is the term every task tool uses in all four languages.
+    expect(() => assertDictionaryParity(tasksMessages, ["statuses.backlog"])).not.toThrow();
   });
 });
 

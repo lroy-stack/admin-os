@@ -32,8 +32,25 @@ export interface TasksMessages {
     readonly favorite: string;
     readonly labels: string;
     readonly delete: string;
-    /** The keyboard shortcut hint: symbols, the same in every language. */
-    readonly deleteShortcut: string;
+    readonly unfavorite: string;
+    /** The star next to a favorite task, read by screen readers. */
+    readonly favoriteMark: string;
+  };
+  readonly edit: {
+    readonly title: string;
+    readonly verb: string;
+    readonly description: string;
+    readonly label: string;
+    readonly titleRequired: string;
+  };
+  /** Each confirmation of a change. Placeholders: `{id}`, `{title}` (copyOf only). */
+  readonly toast: {
+    readonly saved: string;
+    readonly copied: string;
+    readonly copyOf: string;
+    readonly deleted: string;
+    readonly favorited: string;
+    readonly unfavorited: string;
   };
   readonly toolbar: {
     readonly filterPlaceholder: string;
@@ -45,6 +62,8 @@ export interface TasksMessages {
     readonly toggleColumns: string;
   };
   readonly table: {
+    /** Names the region focus returns to when a deleted row leaves the table. */
+    readonly label: string;
     readonly empty: string;
     /** Placeholders: `{count}` (selected rows), `{total}` (rows after filtering). */
     readonly selected: Plural;
