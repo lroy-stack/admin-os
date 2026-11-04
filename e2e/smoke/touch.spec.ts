@@ -98,7 +98,8 @@ test.describe("glass capsules on a coarse pointer", () => {
   for (const route of CAPSULE_ROUTES) {
     test(`every sliding thumb on ${route} stays inside its capsule`, async ({ page }) => {
       await page.goto(route);
-      await expect(page.locator(".liquid-thumb").first()).toBeVisible();
+      // Wait for a capsule's own thumb: the nav thumb appears first, and a slow machine measures before the rest.
+      await expect(page.locator('.liquid-glass[data-slot="toggle-group"] > .liquid-thumb').first()).toBeVisible();
       const { checked, outside } = await thumbsOutsideCapsules(page);
       expect(checked).toBeGreaterThan(0);
       expect(outside).toEqual([]);
