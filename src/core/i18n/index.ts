@@ -1,3 +1,5 @@
+// Server entry of core/i18n (ADR 0007): no React here, so server kernels and Workers load it without a renderer.
+// The provider and its hooks are in `@/core/i18n/client`.
 export { type ChartFormatters, chartFormatters } from "./chart-format";
 export { defaultErrorMessages, type ErrorMessages, errorText } from "./error-text";
 export {
@@ -38,6 +40,5 @@ export {
 export { type MessageBundle, type MessageKey, messageKey, type ResolvedMessages, resolveMessages } from "./namespace";
 export type { PageMeta } from "./page-meta";
 export { assertDictionaryParity, flattenMessages, placeholderSignature } from "./parity";
-export { LocaleProvider, useChartFormatters, useCurrency, useLocale, useMessages } from "./provider";
 export { resolveCurrency } from "./resolve-currency";
 export { resolveLocale } from "./resolve-locale";

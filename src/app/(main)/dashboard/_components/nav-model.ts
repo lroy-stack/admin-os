@@ -1,4 +1,5 @@
 import { VERTICALS, type VerticalId } from "@/config/vertical";
+import { NAV_ICONS } from "@/config/vertical-ui";
 import type { NavEntry, NavManifest } from "@/core/nav";
 import type { ShellNavItem, ShellSearchGroup } from "@/ds/shell";
 
@@ -33,7 +34,7 @@ function presetNav(data: NavData): ShellNav {
     id: entry.id,
     title: data.labels[entry.id] ?? entry.id,
     url: entry.href,
-    icon: entry.icon,
+    icon: NAV_ICONS[data.presetId][entry.id],
   });
   const pinned = (placement: NavEntry["placement"]) =>
     visible.filter((entry) => entry.placement === placement).map(item);

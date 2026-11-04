@@ -4,13 +4,13 @@ import { cn } from "cn";
 
 import { LocaleRoot } from "@/app/_components/locale-root";
 import { commonBundle } from "@/components/common-messages.server";
+import { DEMO_PERSON } from "@/config/actor";
 import { isDemoAdapter } from "@/config/data.server";
 import { getRuntime } from "@/config/runtime";
 import { VERTICALS } from "@/config/vertical";
 import { textFor } from "@/config/vocabulary.server";
 import { AccessProvider } from "@/core/access/client";
 import { visibleNavIds } from "@/core/nav";
-import { users } from "@/data/users";
 import { feedbackBundle } from "@/ds/feedback/server";
 import { overlaysBundle } from "@/ds/overlays/server";
 import { AppBackdrop } from "@/ds/shell";
@@ -46,7 +46,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const account = {
     id: actor.actorId,
     name: actor.displayName ?? actor.roleId,
-    email: users[0]?.email ?? "",
+    email: DEMO_PERSON.email,
     avatar: "",
     role: roles.find((role) => role.id === actor.roleId)?.label ?? actor.roleId,
   };

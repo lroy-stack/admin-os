@@ -85,6 +85,29 @@ module.exports = {
       to: { path: "^src/verticals/", pathNot: "^src/verticals/$1/" },
     },
     {
+      name: "workers-reach-no-web-code",
+      severity: "error",
+      comment:
+        "a Worker entry never reaches Next, React, lucide-react or the web layers: the Workers deploy without the web app (docs/adr/0016-mcp-server-as-its-own-product.md, AC1)",
+      from: { path: "^workers/(mcp|demo-store)/src/index\\.ts$" },
+      to: {
+        reachable: true,
+        path: [
+          "^node_modules/(next|react|react-dom|lucide-react|@opennextjs/[^/]+)/",
+          "^src/(app|ds|components|engines|data)/",
+          "^src/config/(runtime|web-store\\.server)\\.ts$",
+        ],
+      },
+    },
+    {
+      name: "src-never-imports-workers",
+      severity: "error",
+      comment:
+        "the Workers compose src; src never depends on a Worker (docs/adr/0016-mcp-server-as-its-own-product.md)",
+      from: { path: "^src/" },
+      to: { path: "^workers/" },
+    },
+    {
       name: "ds-is-domain-free",
       severity: "error",
       comment: `ds never imports demo data (${SEE})`,
@@ -93,7 +116,8 @@ module.exports = {
     },
   ],
   options: {
-    includeOnly: "^src",
+    // node_modules appear only as the packages the Worker rule forbids, so the rule can see them reached.
+    includeOnly: ["^src/", "^workers/", "^node_modules/(next|react|react-dom|lucide-react|@opennextjs/[^/]+)/"],
     doNotFollow: { path: "node_modules" },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: "tsconfig.json" },

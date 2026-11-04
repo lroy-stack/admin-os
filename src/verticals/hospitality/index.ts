@@ -1,5 +1,3 @@
-import { CalendarDays, House, UsersRound } from "lucide-react";
-
 import { DEFAULT_ROLES } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
 
@@ -21,7 +19,6 @@ const nav = [
     id: "home",
     href: "/dashboard/default",
     labelKey: "nav.home",
-    icon: House,
     placement: "area",
     group: "overview",
     requiredModule: "access",
@@ -30,7 +27,6 @@ const nav = [
     id: "bookings",
     href: "/dashboard/bookings",
     labelKey: "bookings.title",
-    icon: CalendarDays,
     placement: "area",
     group: "operations",
     requiredPermission: "read:bookings",
@@ -39,7 +35,6 @@ const nav = [
     id: "customers",
     href: "/dashboard/customers",
     labelKey: "customers.title",
-    icon: UsersRound,
     placement: "area",
     group: "operations",
     requiredPermission: "read:customers",

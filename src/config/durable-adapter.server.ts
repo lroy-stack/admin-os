@@ -17,10 +17,11 @@ export interface StoreNamespace {
 /** Reads that do not depend on the visitor's session: answered in process, so they cost no Durable Object request. */
 const SESSION_FREE_READS: ReadonlySet<string> = new Set(["clock.get", "settings.values.get"]);
 
-async function webNamespace(): Promise<StoreNamespace | undefined> {
-  const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-  return (getCloudflareContext().env as { DEMO_STORE?: StoreNamespace }).DEMO_STORE;
-}
+/**
+ * Finds the `DEMO_STORE` binding for a call: a Worker hands its own `env.DEMO_STORE`, the web app looks it up in the
+ * OpenNext context (`web-store.server.ts`). Kept a function so this module never imports the platform it runs on.
+ */
+export type StoreLookup = () => StoreNamespace | undefined | Promise<StoreNamespace | undefined>;
 
 /** One object per `vertical:sessionId`; every call is an RPC to it, the kernel runs inside (ADR 0005). */
 export function durableAdapter(options: {
@@ -31,13 +32,13 @@ export function durableAdapter(options: {
   readonly clockLive?: boolean;
   /** Answers the session-free reads; the same kernel over the seed, run in this process. */
   readonly inProcess: Adapter;
-  /** Workers pass their own binding; the web app leaves it out and takes `DEMO_STORE` from the OpenNext context. */
-  readonly namespace?: StoreNamespace;
+  /** The binding itself, or a lookup that finds it per call. */
+  readonly namespace: StoreNamespace | StoreLookup;
 }): Adapter {
   return {
     async dispatch(capability: AnyCapability, input, context) {
       if (SESSION_FREE_READS.has(capability.id)) return options.inProcess.dispatch(capability, input, context);
-      const namespace = options.namespace ?? (await webNamespace());
+      const namespace = typeof options.namespace === "function" ? await options.namespace() : options.namespace;
       if (namespace === undefined) return err(ErrorCodes.unavailable, "DEMO_STORE binding is missing");
       const stub = namespace.get(namespace.idFromName(`${options.vertical}:${options.sessionId}`));
       try {

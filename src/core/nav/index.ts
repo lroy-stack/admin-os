@@ -1,5 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-
 import { type Access, can, KERNEL_MODULES } from "@/core/access";
 import type { Permission } from "@/core/capability";
 
@@ -8,7 +6,8 @@ export type ModuleId = string;
 
 /**
  * One entry of a preset's navigation (ADR 0006). Visibility is fail-closed: an entry with neither gate is hidden,
- * and a gate on a disabled module hides it too.
+ * and a gate on a disabled module hides it too. Its icon lives in the preset's `ui.ts`, so the manifest loads on a
+ * server without React.
  */
 export interface NavEntry {
   /** Stable id, for example `"bookings"`. */
@@ -17,7 +16,6 @@ export interface NavEntry {
   readonly href: string;
   /** Key of a module message (for example `"bookings.title"`), so the preset vocabulary can override the label. */
   readonly labelKey: string;
-  readonly icon: LucideIcon;
   /** Top-nav pill or tools rail. */
   readonly placement: "area" | "tool";
   /** Preset group id. */

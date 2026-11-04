@@ -1,14 +1,11 @@
-import type { LucideIcon } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
 import { type NavEntry, type NavManifest, visibleNavIds } from "./index";
 
-const icon = (() => null) as unknown as LucideIcon;
 const entry = (id: string, gate: Pick<NavEntry, "requiredModule" | "requiredPermission">): NavEntry => ({
   id,
   href: `/dashboard/${id}`,
   labelKey: `${id}.title`,
-  icon,
   placement: "area",
   group: "operations",
   ...gate,

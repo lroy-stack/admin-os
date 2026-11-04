@@ -14,6 +14,7 @@ import { getAdapter, settingsFor } from "./data.server";
 import { DEMO_SESSION_COOKIE, verifiedDemoSession } from "./demo-session.server";
 import { getLocale } from "./locale.server";
 import { getVertical } from "./vertical.server";
+import { webStoreNamespace } from "./web-store.server";
 
 /** Demo switch (ADR 0006): which role preset the visitor acts as. */
 export const DEMO_ROLE_COOKIE = "demo_role";
@@ -49,6 +50,7 @@ export const getRuntime = cache(async () => {
     vertical: vertical.id,
     sessionId: await verifiedDemoSession(jar.get(DEMO_SESSION_COOKIE)?.value),
     faults: faultsFrom(process.env.MOCK_FAULTS, jar.get(MOCK_FAULTS_COOKIE)?.value),
+    store: webStoreNamespace,
   });
   return {
     client: createClient(CATALOG, adapter, { actor, correlationId }),

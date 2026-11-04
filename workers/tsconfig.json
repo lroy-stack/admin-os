@@ -2,7 +2,7 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "lib": ["esnext", "dom"],
-    "types": [],
+    "types": ["node"],
     "plugins": [],
     "incremental": false,
     "paths": { "@/*": ["../src/*"] }

@@ -52,7 +52,13 @@ const inProcess: Adapter = createMockAdapter({
 const clientOver = (namespace: StoreNamespace | undefined) =>
   createClient(
     CATALOG,
-    durableAdapter({ vertical: "hospitality", sessionId: "s-1", clockLive: true, inProcess, namespace }),
+    durableAdapter({
+      vertical: "hospitality",
+      sessionId: "s-1",
+      clockLive: true,
+      inProcess,
+      namespace: () => namespace,
+    }),
     { actor, retryDelayMs: 0, logger: () => undefined, mode: "production" },
   );
 
@@ -104,8 +110,12 @@ describe("durableAdapter", () => {
   });
 
   it("answers transport.unavailable when the binding is missing", async () => {
-    vi.doMock("@opennextjs/cloudflare", () => ({ getCloudflareContext: () => ({ env: {} }) }));
-    const adapter = durableAdapter({ vertical: "hospitality", sessionId: "s-1", inProcess });
+    const adapter = durableAdapter({
+      vertical: "hospitality",
+      sessionId: "s-1",
+      inProcess,
+      namespace: () => undefined,
+    });
 
     const answer = await adapter.dispatch(
       CATALOG["customers.list"],
