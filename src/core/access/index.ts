@@ -15,7 +15,7 @@ export const roleIdSchema = z.enum(ROLE_IDS);
  * How a role is derived from the catalogue (ADR 0006):
  * - `everything`: every permission of the enabled modules;
  * - `all-but-elevated`: the same without the elevated ones (capabilities flagged `elevated`);
- * - `reads-and-writes`: reads and non-destructive writes, without the elevated ones.
+ * - `reads-and-writes`: reads and non-destructive writes, without the elevated and the restricted ones.
  *
  * A permission is granted only if every capability carrying it passes the rule, so a slug shared by a safe and a
  * destructive capability is never handed out by accident.
@@ -60,7 +60,7 @@ function allows(rule: RoleRule, capability: AnyCapability): boolean {
     case "all-but-elevated":
       return capability.elevated !== true;
     case "reads-and-writes":
-      return capability.effect !== "destructive" && capability.elevated !== true;
+      return capability.effect !== "destructive" && capability.elevated !== true && capability.restricted !== true;
   }
 }
 

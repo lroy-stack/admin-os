@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { accessCapabilities } from "@/core/access";
-import { approvalsCapabilities } from "@/core/approvals";
+import { approvalsCapabilities, approvalsSettings } from "@/core/approvals";
 import { type ApprovalContext, defineCapability } from "@/core/capability";
 import { type Actor, createClient } from "@/core/client";
 import { type BusinessClock, clockCapabilities } from "@/core/clock";
 import { ok } from "@/core/result";
+import { createSettingsReader, mergeSettings } from "@/core/settings";
 
 import {
   createMockAdapter,
@@ -40,26 +41,11 @@ const notesAdd = defineCapability({
   permission: "create:notes",
   effect: "write",
   riskTier: 2,
-  mayRequireApproval: true,
-  approval: (input) => input.text.startsWith("!"),
-});
-
-const notesShare = defineCapability({
-  id: "notes.share",
-  summary: "Share the notes; an assistant needs approval.",
-  input: z.strictObject({}),
-  output: z.array(z.string()),
-  permission: "create:notes",
-  effect: "write",
-  riskTier: 2,
-  mayRequireApproval: true,
-  approval: (_input, { via }) => via === "mcp",
 });
 
 const catalog = {
   "notes.list": notesList,
   "notes.add": notesAdd,
-  "notes.share": notesShare,
   ...clockCapabilities,
   ...accessCapabilities,
   ...approvalsCapabilities,
@@ -71,7 +57,6 @@ const handlers: Readonly<Record<string, MockHandler<Notes>>> = {
     data.notes.push(input.text);
     return ok([...data.notes]);
   }),
-  ...mockHandler(notesShare, (_input, { data }: { data: Notes }) => ok([...data.notes])),
   ...kernelMockHandlers,
 };
 
@@ -92,6 +77,9 @@ const owner: Actor = {
 
 const reader: Actor = { actorId: "demo-staff", roleId: "staff", permissions: ["read:notes"] };
 
+/** Every assistant write waits for a person; a write from the web app never does. */
+const allWrites = createSettingsReader(mergeSettings(...approvalsSettings), { "approvals.policy": "all" });
+
 const setup = (options: { sessionId?: string; faults?: string; actor?: Actor } = {}) => {
   const store = createSessionStore<Notes>({ notes: ["seeded"] });
   const clientFor = (
@@ -101,10 +89,19 @@ const setup = (options: { sessionId?: string; faults?: string; actor?: Actor } =
   ) =>
     createClient(
       catalog,
-      createMockAdapter({ handlers, store, sessionId, clock, faults: parseFaults(options.faults) }),
+      createMockAdapter({
+        handlers,
+        store,
+        sessionId,
+        clock,
+        settings: allWrites,
+        faults: parseFaults(options.faults),
+      }),
       { actor, via, retryDelayMs: 0, logger: () => undefined, mode: "production" },
     );
-  return { store, client: clientFor(options.sessionId), clientFor };
+  const assistantFor = (sessionId: string | undefined, actor: Actor = options.actor ?? owner) =>
+    clientFor(sessionId, actor, "mcp");
+  return { store, client: clientFor(options.sessionId), clientFor, assistantFor };
 };
 
 describe("parseFaults", () => {
@@ -249,8 +246,8 @@ describe("createMockAdapter", () => {
   });
 
   it("holds a write that needs approval and leaves the data alone", async () => {
-    const { store, clientFor } = setup();
-    const visitor = clientFor("visitor-a");
+    const { store, assistantFor } = setup();
+    const visitor = assistantFor("visitor-a");
     expect(await visitor.call("notes.add", { text: "!delete all" })).toEqual({
       status: "awaiting_approval",
       approvalId: expect.any(String),
@@ -260,7 +257,7 @@ describe("createMockAdapter", () => {
       approvals: [
         {
           capabilityId: "notes.add",
-          requestedBy: { actorId: "demo-owner", role: "owner", via: "ui" },
+          requestedBy: { actorId: "demo-owner", role: "owner", via: "mcp" },
           status: "pending",
           input: { text: "!delete all" },
         },
@@ -269,8 +266,8 @@ describe("createMockAdapter", () => {
   });
 
   it("reports a held write's capability and status, and that the caller asked for it", async () => {
-    const { clientFor } = setup();
-    const visitor = clientFor("visitor-a");
+    const { assistantFor } = setup();
+    const visitor = assistantFor("visitor-a");
     const held = (await visitor.call("notes.add", { text: "!delete all" })) as { approvalId: string };
     expect(await visitor.call("approvals.get", { approvalId: held.approvalId })).toEqual({
       ok: true,
@@ -279,8 +276,8 @@ describe("createMockAdapter", () => {
   });
 
   it("never returns the held input", async () => {
-    const { clientFor } = setup();
-    const visitor = clientFor("visitor-a");
+    const { assistantFor } = setup();
+    const visitor = assistantFor("visitor-a");
     const held = (await visitor.call("notes.add", { text: "!secret" })) as { approvalId: string };
     expect(JSON.stringify(await visitor.call("approvals.get", { approvalId: held.approvalId }))).not.toContain(
       "secret",
@@ -288,8 +285,8 @@ describe("createMockAdapter", () => {
   });
 
   it("tells another actor of the session that the write is not theirs", async () => {
-    const { clientFor } = setup();
-    const held = (await clientFor("visitor-a").call("notes.add", { text: "!x" })) as { approvalId: string };
+    const { clientFor, assistantFor } = setup();
+    const held = (await assistantFor("visitor-a").call("notes.add", { text: "!x" })) as { approvalId: string };
     const colleague: Actor = { ...owner, actorId: "demo-manager" };
     expect(
       await clientFor("visitor-a", colleague).call("approvals.get", { approvalId: held.approvalId }),
@@ -308,20 +305,20 @@ describe("createMockAdapter", () => {
   });
 
   it("does not show one visitor's approval to another session", async () => {
-    const { clientFor } = setup();
-    const held = (await clientFor("visitor-a").call("notes.add", { text: "!x" })) as { approvalId: string };
+    const { clientFor, assistantFor } = setup();
+    const held = (await assistantFor("visitor-a").call("notes.add", { text: "!x" })) as { approvalId: string };
     expect(await clientFor("visitor-b").call("approvals.get", { approvalId: held.approvalId })).toMatchObject({
       ok: false,
       error: { code: "approvals.not_found" },
     });
   });
 
-  it("lets the approval rule depend on the surface of the call", async () => {
-    const { clientFor } = setup();
-    const fromUi = await clientFor("visitor-a").call("notes.share", {});
-    const fromMcp = await clientFor("visitor-b", owner, "mcp").call("notes.share", {});
+  it("holds only what an assistant asks for, not what the web app does", async () => {
+    const { clientFor, assistantFor } = setup();
+    const fromUi = await clientFor("visitor-a").call("notes.add", { text: "mine" });
+    const fromMcp = await assistantFor("visitor-b").call("notes.add", { text: "mine" });
     expect([fromUi, fromMcp]).toEqual([
-      { ok: true, value: ["seeded"] },
+      { ok: true, value: ["seeded", "mine"] },
       { status: "awaiting_approval", approvalId: expect.any(String) },
     ]);
   });

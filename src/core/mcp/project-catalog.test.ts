@@ -3,11 +3,13 @@ import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { type ApprovalPolicy, approvalsSettings } from "@/core/approvals";
 import { type AnyCapability, defineCapability } from "@/core/capability";
 import { type Actor, type CallLogLine, createClient } from "@/core/client";
 import type { BusinessClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore, type MockHandler, mockHandler } from "@/core/mock";
 import { err, ok } from "@/core/result";
+import { createSettingsReader, mergeSettings } from "@/core/settings";
 
 import {
   annotationsOf,
@@ -40,7 +42,7 @@ const notesList = defineCapability({
 
 const notesAdd = defineCapability({
   id: "notes.add",
-  summary: "Add a note; a note starting with ! waits for approval.",
+  summary: "Add a note.",
   input: z.strictObject({ text: z.string().min(1) }),
   output: notesOutput,
   permission: "create:notes",
@@ -49,8 +51,6 @@ const notesAdd = defineCapability({
   change: "add",
   idempotency: "key",
   requiresIdempotencyKey: true,
-  mayRequireApproval: true,
-  approval: (input) => input.text.startsWith("!"),
 });
 
 const notesClear = defineCapability({
@@ -164,6 +164,8 @@ interface ConnectOptions {
   readonly instructions?: ProjectionOptions["instructions"];
   readonly logger?: (line: CallLogLine) => void;
   readonly logRefusal?: (line: RefusalLogLine) => void;
+  /** Which assistant writes wait for a person; the default is none, so a write runs. */
+  readonly policy?: ApprovalPolicy;
 }
 
 /**
@@ -176,6 +178,9 @@ const connect = async (actor: Actor, readOnly = false, options: ConnectOptions =
     store: createSessionStore<Notes>({ notes: ["seeded"] }),
     sessionId: "mcp-test",
     clock,
+    settings: createSettingsReader(mergeSettings(...approvalsSettings), {
+      "approvals.policy": options.policy ?? "none",
+    }),
   });
   const server = projectCatalog({
     catalog,
@@ -188,6 +193,7 @@ const connect = async (actor: Actor, readOnly = false, options: ConnectOptions =
       createClient(catalog, adapter, {
         actor: callingActor,
         correlationId,
+        via: "mcp",
         retryDelayMs: 0,
         logger: options.logger ?? (() => undefined),
         mode: "production",
@@ -545,20 +551,20 @@ describe("calls", () => {
     });
   });
 
-  it("answers an approval-gated write with awaiting_approval, not an error", async () => {
-    const result = await (await connect(owner)).callTool({
+  it("answers a write the policy holds with awaiting_approval, not an error", async () => {
+    const result = await (await connect(owner, false, { policy: "all" })).callTool({
       name: "notes_add",
-      arguments: { text: "!urgent", idempotencyKey: crypto.randomUUID() },
+      arguments: { text: "urgent", idempotencyKey: crypto.randomUUID() },
     });
     expect(result).toMatchObject({
       structuredContent: { status: "awaiting_approval", approvalId: expect.any(String) },
     });
   });
 
-  it("keeps an approval-gated write out of the error channel", async () => {
-    const result = await (await connect(owner)).callTool({
+  it("keeps a held write out of the error channel", async () => {
+    const result = await (await connect(owner, false, { policy: "all" })).callTool({
       name: "notes_add",
-      arguments: { text: "!urgent", idempotencyKey: crypto.randomUUID() },
+      arguments: { text: "urgent", idempotencyKey: crypto.randomUUID() },
     });
     expect(result.isError).not.toBe(true);
   });

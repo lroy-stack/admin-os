@@ -43,7 +43,6 @@ describe("defineCapability", () => {
 });
 
 describe("descriptorViolations", () => {
-  const approve = () => true;
   const setState = { change: "set", idempotency: "target-state" } as const;
   const keyedSet = {
     effect: "write",
@@ -55,10 +54,8 @@ describe("descriptorViolations", () => {
 
   it.each([
     ["read-tier", { effect: "read", riskTier: 2 }],
-    ["read-approval", { effect: "read", riskTier: 1, approval: approve, mayRequireApproval: true }],
     ["tier3-destructive", { effect: "write", riskTier: 3, ...setState }],
     ["destructive-tier", { effect: "destructive", riskTier: 1, ...setState }],
-    ["approval-flag", { effect: "write", riskTier: 2, ...setState, approval: approve }],
     ["key-on-read", { effect: "read", riskTier: 0, requiresIdempotencyKey: true }],
     ["write-change", { effect: "write", riskTier: 2, idempotency: "target-state" }],
     ["write-change", { effect: "read", riskTier: 0, change: "set" }],
@@ -80,10 +77,6 @@ describe("descriptorViolations", () => {
       { effect: "write", riskTier: 2, change: "add", idempotency: "key", requiresIdempotencyKey: true },
     ],
     ["a keyed set-state write", keyedSet],
-    [
-      "a write that may need approval",
-      { effect: "write", riskTier: 2, ...setState, approval: approve, mayRequireApproval: true },
-    ],
     [
       "an irreversible destructive write",
       { effect: "destructive", riskTier: 3, change: "remove", idempotency: "target-state" },

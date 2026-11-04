@@ -1,6 +1,14 @@
 import type { z } from "zod";
 
-import { type ApprovalPolicy, holdsForApproval, policyOf, withSessionPolicy } from "@/core/approvals";
+import {
+  APPROVAL_TTL_MS,
+  type ApprovalPolicy,
+  type ApprovalRecord,
+  effectiveStatus,
+  holdsForApproval,
+  policyOf,
+  withSessionPolicy,
+} from "@/core/approvals";
 import type { AnyCapability, Capability, Catalog } from "@/core/capability";
 import type { Actor, Adapter, CallContext } from "@/core/client";
 import type { BusinessClock } from "@/core/clock";
@@ -9,9 +17,10 @@ import { paginate } from "@/core/pagination";
 import { type CallResult, err, ok, type Result } from "@/core/result";
 import { createSettingsReader, type SettingsReader } from "@/core/settings";
 
-import { APPROVAL_TTL_MS, effectiveStatus, evictSettled, MAX_APPROVALS } from "./approval-queue";
+import { evictSettled, MAX_APPROVALS } from "./approval-queue";
+import { changesBetween } from "./changes";
 import type { FaultMap } from "./faults";
-import type { ApprovalRecord, DemoSession, SessionStore } from "./session-store";
+import type { DemoSession, SessionStore } from "./session-store";
 
 /** What deciding a held write needs from the kernel; only the approvals capabilities call it. */
 export interface ApprovalKernel {
@@ -124,13 +133,29 @@ const delay = (ms: number, signal: AbortSignal) =>
 
 const iso = (ms: number): string => new Date(ms).toISOString();
 
+/** When a record was decided; one that expired unread has no decision, so its deadline stands for it. */
+const decidedAtOf = (record: ApprovalRecord, nowMs: number): string | undefined =>
+  record.decidedAt ?? (effectiveStatus(record, nowMs) === "expired" ? record.expiresAt : undefined);
+
 /**
- * What a write answered, reduced to what approving must find unchanged. An `add` mints a new id on every run, so for
- * it only whether it can run is compared.
+ * What approving must find unchanged: that the write can run, and the changes it makes to the state (before against
+ * after, so an unrelated edit elsewhere does not matter but a cancel that already happened does). An `add` mints a
+ * new id on every run, so for it only whether it can run is compared.
  */
-const expectationOf = (capability: AnyCapability, result: Result<unknown>): string => {
-  if (capability.change !== "add") return fingerprintOf(result);
-  return result.ok ? "ok" : `error:${result.error.code}`;
+const expectationOf = (capability: AnyCapability, result: Result<unknown>, changes: readonly string[]): string => {
+  if (!result.ok) return `error:${result.error.code}`;
+  return capability.change === "add" ? "ok" : `ok\n${changes.join("\n")}`;
+};
+
+/** Writes being approved right now, per session, so a second approval of the same record cannot start meanwhile. */
+const decidingBySession = new WeakMap<object, Set<string>>();
+
+const decidingOf = (session: object): Set<string> => {
+  const existing = decidingBySession.get(session);
+  if (existing) return existing;
+  const created = new Set<string>();
+  decidingBySession.set(session, created);
+  return created;
 };
 
 /**
@@ -158,6 +183,23 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
     kernel: ApprovalKernel,
   ): MockContext<Data> => ({ actor, clock, settings: effective, approvals, nowMs, kernel, data });
 
+  /** Runs the write on a copy of the session as `actor`: its answer, and what approving must find unchanged. */
+  const rehearse = async (
+    session: DemoSession<Data>,
+    capability: AnyCapability,
+    handler: MockHandler<Data>,
+    asked: { input: unknown; actor: Actor },
+    effective: SettingsReader,
+    nowMs: number,
+  ) => {
+    const before = structuredClone(session.data);
+    const after = structuredClone(session.data);
+    const result = await Promise.resolve(
+      handler(asked.input, contextFor(asked.actor, after, session.approvals, effective, nowMs, NO_KERNEL)),
+    );
+    return { result, expectation: expectationOf(capability, result, changesBetween(before, after)) };
+  };
+
   /** Decides the session's held writes as `decider`; a write that is approved runs as the person who asked. */
   const kernelOf = (
     session: DemoSession<Data>,
@@ -165,7 +207,10 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
     effective: SettingsReader,
     nowMs: number,
   ): ApprovalKernel => {
+    const deciding = decidingOf(session);
     const settle = (record: ApprovalRecord, status: ApprovalRecord["status"], details: Partial<ApprovalRecord>) => {
+      // A record that left `pending` is final: a late decision never rewrites the audit.
+      if (record.status !== "pending") return;
       Object.assign(record, details, {
         status,
         decidedBy: { actorId: decider.actorId, role: decider.roleId },
@@ -179,7 +224,14 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
       if (record === undefined) return err("approvals.not_found", `No approval with id ${approvalId}`, { approvalId });
       if (effectiveStatus(record, nowMs) === "expired") {
         record.status = "expired";
+        record.decidedAt ??= record.expiresAt;
         return err("approvals.expired", `Approval ${approvalId} expired at ${record.expiresAt}`, { approvalId });
+      }
+      if (deciding.has(approvalId)) {
+        return err("approvals.not_pending", `Approval ${approvalId} is being decided`, {
+          approvalId,
+          status: "deciding",
+        });
       }
       return record.status === "pending"
         ? ok(record)
@@ -209,8 +261,13 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
         if (held === undefined || handler === undefined) {
           return conflict("approvals.conflict", `${record.capabilityId} is no longer available`);
         }
+        // The decider needs the right to do the write themselves, besides the right to decide.
+        if (!decider.permissions.includes(held.permission)) {
+          return err(ErrorCodes.forbidden, `${decider.roleId} lacks ${held.permission}`);
+        }
         const requester: Actor = {
           actorId: record.requestedBy.actorId,
+          ...(record.requestedBy.displayName === undefined ? {} : { displayName: record.requestedBy.displayName }),
           roleId: record.requestedBy.role,
           permissions: heldWrites.permissionsOfRole(record.requestedBy.role),
         };
@@ -218,19 +275,33 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
           return conflict("approvals.requester_forbidden", `${requester.roleId} no longer holds ${held.permission}`);
         }
 
-        const runOn = (data: Data) =>
-          Promise.resolve(
-            handler(record.input, contextFor(requester, data, session.approvals, effective, nowMs, NO_KERNEL)),
+        // Claimed before the first await: a second approval of this record now answers not_pending.
+        deciding.add(approvalId);
+        try {
+          // The write must still do now what it would have done when it was asked; a copy answers that first.
+          const dry = await rehearse(
+            session,
+            held,
+            handler,
+            { input: record.input, actor: requester },
+            effective,
+            nowMs,
           );
-        // The write must still do now what it would have done when it was asked; a copy answers that first.
-        const dry = await runOn(structuredClone(session.data));
-        if (expectationOf(held, dry) !== record.expected) {
-          return conflict("approvals.conflict", `${record.capabilityId} would not do what was asked: the state moved`);
+          if (dry.expectation !== record.expected) {
+            return conflict(
+              "approvals.conflict",
+              `${record.capabilityId} would not do what was asked: the state moved`,
+            );
+          }
+          const applied = await Promise.resolve(
+            handler(record.input, contextFor(requester, session.data, session.approvals, effective, nowMs, NO_KERNEL)),
+          );
+          if (!applied.ok) return conflict("approvals.conflict", applied.error.message);
+          settle(record, "approved", { result: applied.value });
+          return ok({ approvalId, status: "approved", result: applied.value });
+        } finally {
+          deciding.delete(approvalId);
         }
-        const applied = await runOn(session.data);
-        if (!applied.ok) return conflict("approvals.conflict", applied.error.message);
-        settle(record, "approved", { result: applied.value });
-        return ok({ approvalId, status: "approved", result: applied.value });
       },
 
       reject: (approvalId, reason) => {
@@ -271,30 +342,39 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
     const retried = queued();
     if (retried) return waiting(retried);
 
+    const makeRoom = (): Result<never> | undefined => {
+      evictSettled(session.approvals, nowMs, MAX_APPROVALS - 1);
+      return session.approvals.length < MAX_APPROVALS
+        ? undefined
+        : err(
+            "approvals.queue_full",
+            `${MAX_APPROVALS} writes are already waiting for a person; decide some of them, then ask again`,
+            { limit: MAX_APPROVALS },
+          );
+    };
+    const full = makeRoom();
+    if (full) return full;
+
     // A write that cannot run now is refused now: nobody is asked to approve it. The copy keeps the session intact.
-    const preview = await handler(
-      asked.input,
-      contextFor(asked.actor, structuredClone(session.data), session.approvals, effective, nowMs, NO_KERNEL),
-    );
-    if (!preview.ok) return preview;
+    const rehearsal = await rehearse(session, capability, handler, asked, effective, nowMs);
+    if (!rehearsal.result.ok) return rehearsal.result;
+    // Another hold of the same write, or one that took the last place, may have landed while this one rehearsed.
     const parallel = queued();
     if (parallel) return waiting(parallel);
-
-    evictSettled(session.approvals, nowMs, MAX_APPROVALS - 1);
-    if (session.approvals.length >= MAX_APPROVALS) {
-      return err(
-        "approvals.queue_full",
-        `${MAX_APPROVALS} writes are already waiting for a person; decide some of them, then ask again`,
-        { limit: MAX_APPROVALS },
-      );
-    }
+    const filledMeanwhile = makeRoom();
+    if (filledMeanwhile) return filledMeanwhile;
     const record: ApprovalRecord = {
       approvalId: crypto.randomUUID(),
       capabilityId: capability.id,
       input: asked.input,
       fingerprint: asked.fingerprint,
-      expected: expectationOf(capability, preview),
-      requestedBy: { actorId: asked.actor.actorId, role: asked.actor.roleId, via: asked.via },
+      expected: rehearsal.expectation,
+      requestedBy: {
+        actorId: asked.actor.actorId,
+        ...(asked.actor.displayName === undefined ? {} : { displayName: asked.actor.displayName }),
+        role: asked.actor.roleId,
+        via: asked.via,
+      },
       requestedAt: iso(nowMs),
       expiresAt: iso(nowMs + APPROVAL_TTL_MS),
       status: "pending",
@@ -348,10 +428,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
 
       const run = async (): Promise<CallResult<unknown>> => {
         const effective = withSessionPolicy(settings, session.approvalPolicy);
-        const waits =
-          holdsForApproval(policyOf(effective), capability, context.via) ||
-          capability.approval?.(input, { via: context.via }) === true;
-        if (waits) {
+        if (holdsForApproval(policyOf(effective), capability, context.via)) {
           const asked = { input, fingerprint, actor: context.actor, via: context.via };
           return hold(session, capability, handler, asked, effective, nowMs);
         }
@@ -403,12 +480,13 @@ export const kernelMockHandlers: Readonly<Record<string, MockHandler<unknown>>> 
     const { approvalId } = input as { approvalId: string };
     const held = approvals.find((candidate) => candidate.approvalId === approvalId);
     if (held === undefined) return err("approvals.not_found", `No approval with id ${approvalId}`, { approvalId });
+    const decidedAt = decidedAtOf(held, nowMs);
     return ok({
       approvalId: held.approvalId,
       capabilityId: held.capabilityId,
       status: effectiveStatus(held, nowMs),
       requestedByYou: held.requestedBy.actorId === actor.actorId,
-      ...(held.decidedAt === undefined ? {} : { decidedAt: held.decidedAt }),
+      ...(decidedAt === undefined ? {} : { decidedAt }),
       ...(held.reason === undefined ? {} : { reason: held.reason }),
       ...(held.result === undefined ? {} : { result: held.result }),
       ...(held.error === undefined ? {} : { error: held.error }),
@@ -417,7 +495,11 @@ export const kernelMockHandlers: Readonly<Record<string, MockHandler<unknown>>> 
   "approvals.list": (input, { approvals, nowMs }) => {
     // Pending first, then newest first.
     const ordered = approvals
-      .map((record) => ({ ...record, status: effectiveStatus(record, nowMs) }))
+      .map((record) => ({
+        ...record,
+        status: effectiveStatus(record, nowMs),
+        ...(decidedAtOf(record, nowMs) === undefined ? {} : { decidedAt: decidedAtOf(record, nowMs) }),
+      }))
       .sort(
         (a, b) =>
           Number(b.status === "pending") - Number(a.status === "pending") || b.requestedAt.localeCompare(a.requestedAt),

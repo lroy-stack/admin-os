@@ -8,7 +8,7 @@ const capability = <const Id extends string>(
   id: Id,
   permission: `${string}:${string}`,
   effect: "read" | "write" | "destructive",
-  elevated?: boolean,
+  flags: { readonly elevated?: boolean; readonly restricted?: boolean } = {},
 ) =>
   defineCapability({
     id,
@@ -18,14 +18,15 @@ const capability = <const Id extends string>(
     permission,
     effect,
     riskTier: effect === "read" ? 0 : 2,
-    elevated,
+    ...flags,
   });
 
 const catalog: Catalog = {
   "notes.list": capability("notes.list", "read:notes", "read"),
   "notes.create": capability("notes.create", "create:notes", "write"),
   "notes.delete": capability("notes.delete", "delete:notes", "destructive"),
-  "notes.export": capability("notes.export", "export:notes", "read", true),
+  "notes.export": capability("notes.export", "export:notes", "read", { elevated: true }),
+  "notes.review": capability("notes.review", "review:notes", "read", { restricted: true }),
   "billing.list": capability("billing.list", "read:billing", "read"),
 };
 
@@ -39,8 +40,8 @@ describe("moduleOf", () => {
 
 describe("permissionsOf", () => {
   it.each([
-    ["owner", ["create:notes", "delete:notes", "export:notes", "read:notes"]],
-    ["manager", ["create:notes", "delete:notes", "read:notes"]],
+    ["owner", ["create:notes", "delete:notes", "export:notes", "read:notes", "review:notes"]],
+    ["manager", ["create:notes", "delete:notes", "read:notes", "review:notes"]],
     ["staff", ["create:notes", "read:notes"]],
   ] as const)("%s over the notes module", (id, expected) => {
     expect(permissionsOf(roleNamed(id), catalog, ["notes"])).toEqual(expected);
@@ -65,7 +66,7 @@ describe("permissionsOf", () => {
   it("withholds a slug shared by a plain and an elevated capability from managers", () => {
     const shared: Catalog = {
       "notes.update": capability("notes.update", "manage:notes", "write"),
-      "notes.audit": capability("notes.audit", "manage:notes", "read", true),
+      "notes.audit": capability("notes.audit", "manage:notes", "read", { elevated: true }),
     };
     expect(permissionsOf(roleNamed("manager"), shared, ["notes"])).toEqual([]);
   });
@@ -87,6 +88,7 @@ describe("catalogPermissions", () => {
       "export:notes",
       "read:billing",
       "read:notes",
+      "review:notes",
     ]);
   });
 });

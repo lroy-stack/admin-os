@@ -51,10 +51,10 @@ export function holdsForApproval(policy: ApprovalPolicy, capability: Described, 
   );
 }
 
-/** The policy in effect; a registry without the setting (a bare test kernel) holds nothing. */
+/** The policy in effect; a registry without the setting falls back to the safe default, never to `none`. */
 export function policyOf(settings: SettingsReader): ApprovalPolicy {
   const values = settings.values([approvalPolicy.key]);
-  if (!values.ok) return "none";
+  if (!values.ok) return DEFAULT_APPROVAL_POLICY;
   return approvalPolicySchema.catch(DEFAULT_APPROVAL_POLICY).parse(values.value[approvalPolicy.key]);
 }
 

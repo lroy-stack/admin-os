@@ -20,7 +20,7 @@ export type Change = "add" | "set" | "overwrite" | "remove";
  */
 export type IdempotencyMode = "key" | "target-state";
 
-/** Who is calling, for the approval rule: the same capability may be held for a person only when an assistant asks. */
+/** Who is calling, for the approval policy: a write is held for a person only when an assistant asks. */
 export interface ApprovalContext {
   readonly via: "ui" | "mcp" | "system";
 }
@@ -36,17 +36,18 @@ export interface Capability<Id extends string, I extends z.ZodType, O extends z.
   readonly effect: Effect;
   /** Reserved for owners: roles other than `owner` never hold the permission (ADR 0006). Absent means not elevated. */
   readonly elevated?: boolean;
+  /**
+   * Kept from the staff tier like a destructive write, for a read that shows what only the people who decide should
+   * see (ADR 0006). Owner and manager hold it.
+   */
+  readonly restricted?: boolean;
   readonly riskTier: RiskTier;
   /** Every write declares its change and a read never does; MCP derives `destructiveHint` from it. */
   readonly change?: Change;
   /** Every write declares its idempotency mode and a read never does; `key` goes with `requiresIdempotencyKey`. */
   readonly idempotency?: IdempotencyMode;
-  /** Declares that `approval` is defined; the descriptor invariants check the two agree (`descriptorViolations`). */
-  readonly mayRequireApproval?: boolean;
   /** The client refuses the call without a key (payments, sends). */
   readonly requiresIdempotencyKey?: boolean;
-  /** Mock HITL rule; absent means never. Method syntax keeps concrete capabilities assignable to `AnyCapability`. */
-  approval?(input: z.output<I>, context: ApprovalContext): boolean;
 }
 
 export type AnyCapability = Capability<string, z.ZodType, z.ZodType>;
@@ -76,10 +77,8 @@ export const mergeCatalogs = (...catalogs: readonly Catalog[]): Catalog => {
 
 export type DescriptorRule =
   | "read-tier"
-  | "read-approval"
   | "tier3-destructive"
   | "destructive-tier"
-  | "approval-flag"
   | "key-on-read"
   | "write-change"
   | "write-idempotency"
@@ -88,7 +87,7 @@ export type DescriptorRule =
 
 type DescribedCapability = Pick<
   AnyCapability,
-  "effect" | "riskTier" | "approval" | "mayRequireApproval" | "requiresIdempotencyKey" | "change" | "idempotency"
+  "effect" | "riskTier" | "requiresIdempotencyKey" | "change" | "idempotency"
 >;
 
 /** The descriptor rules a capability breaks (ADR 0005, descriptor v2); the catalogue contract test expects `[]`. */
@@ -96,10 +95,8 @@ export const descriptorViolations = (capability: DescribedCapability): readonly 
   const isRead = capability.effect === "read";
   const rules: readonly (readonly [DescriptorRule, boolean])[] = [
     ["read-tier", isRead && capability.riskTier > 1],
-    ["read-approval", isRead && capability.approval !== undefined],
     ["tier3-destructive", capability.riskTier === 3 && capability.effect !== "destructive"],
     ["destructive-tier", capability.effect === "destructive" && capability.riskTier < 2],
-    ["approval-flag", (capability.approval !== undefined) !== (capability.mayRequireApproval === true)],
     ["key-on-read", isRead && capability.requiresIdempotencyKey === true],
     ["write-change", isRead === (capability.change !== undefined)],
     ["write-idempotency", isRead === (capability.idempotency !== undefined)],

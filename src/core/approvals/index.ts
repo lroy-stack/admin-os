@@ -16,6 +16,7 @@ export {
   policyOf,
   withSessionPolicy,
 } from "./policy";
+export { APPROVAL_TTL_MS, type ApprovalRecord, effectiveStatus } from "./record";
 
 /**
  * Where a held write stands (spec 004, D7): `pending` waits for a person; `approved`, `rejected` and `expired` are
@@ -85,8 +86,10 @@ export const approvalsList = defineCapability({
     "The writes held for a person in this session, pending first and then newest first, one page at a time, with the input each one would run. For the person who decides.",
   input: pageInput({ defaultLimit: 20, maxLimit: 50 }),
   output: pageOutput(approvalEntrySchema),
-  permission: "read:approvals",
+  permission: "review:approvals",
   effect: "read",
+  // The held inputs are what the deciders review; staff never hold it.
+  restricted: true,
   riskTier: 1,
 });
 

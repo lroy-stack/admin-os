@@ -1,34 +1,5 @@
-import type { ApprovalPolicy, ApprovalStatus } from "@/core/approvals";
-import type { ApprovalContext } from "@/core/capability";
+import type { ApprovalPolicy, ApprovalRecord } from "@/core/approvals";
 import type { CallResult } from "@/core/result";
-
-/**
- * A write that waits for a person, with who asked, who decided and how it ended (ADR 0016, D7). The decision fields
- * are filled in place when the record leaves `pending`. Times are real ISO instants: the demo's business clock is
- * fixed, so a deadline on it would never arrive.
- */
-export interface ApprovalRecord {
-  readonly approvalId: string;
-  readonly capabilityId: string;
-  /** The parsed input as asked; never returned by `approvals.get`. */
-  readonly input: unknown;
-  /** Key-order independent fingerprint of `input`, to dedupe a retried hold. */
-  readonly fingerprint: string;
-  /** What the write answered when it was asked, so approving can tell that the state moved. */
-  readonly expected: string;
-  readonly requestedBy: { readonly actorId: string; readonly role: string; readonly via: ApprovalContext["via"] };
-  readonly requestedAt: string;
-  readonly expiresAt: string;
-  status: ApprovalStatus;
-  decidedBy?: { readonly actorId: string; readonly role: string };
-  decidedAt?: string;
-  /** Why the approver rejected it. */
-  reason?: string;
-  /** The value the approved write returned. */
-  result?: unknown;
-  /** Why a held write could not run (`conflict`). */
-  error?: { readonly code: string; readonly message: string };
-}
 
 /** One visitor's copy of the demo: their data, their replayable writes and their pending approvals. */
 export interface DemoSession<T> {

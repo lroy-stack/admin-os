@@ -24,8 +24,6 @@ const saveThing = defineCapability({
   permission: "write:things",
   effect: "write",
   riskTier: 2,
-  mayRequireApproval: true,
-  approval: (input) => input.name === "big",
 });
 
 const payThing = defineCapability({

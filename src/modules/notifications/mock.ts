@@ -42,7 +42,10 @@ const unreadOf = (feed: readonly Notification[]): number => feed.filter((item) =
 /** Marks the unread ones among `ids`, and answers how many it marked and how many are still unread. */
 const markRead = (context: Context, ids: ReadonlySet<string>): Result<{ marked: number; unreadCount: number }> => {
   const feed = feedOf(context);
-  const targets = feed.filter((item) => item.readAt === undefined && ids.has(item.id));
+  // A waiting approval stays unread until a person decides it: an agent must not be able to silence it.
+  const targets = feed.filter(
+    (item) => item.readAt === undefined && item.kind !== "approval.requested" && ids.has(item.id),
+  );
   const data = context.data as MarkedData;
   data.notificationReads ??= {};
   const at = { day: context.clock.businessDay, minute: context.clock.nowMin };
