@@ -36,10 +36,20 @@ test.describe("invoice from the business settings", () => {
     await expect(paperOf(page)).toContainText("Payment due: Nov 15, 2026");
   });
 
-  test("bills a customer of the session and starts with its catalog items (AC8)", async ({ page }) => {
+  test("bills a company with its tax ID and fiscal address, never an agenda customer (spec 011, H0)", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/invoice");
 
-    await expect(paperOf(page)).toContainText("Iglesias");
+    await expect(paperOf(page)).toContainText("Servicios Corporativos Levante S.L.");
+    await expect(paperOf(page)).toContainText("Tax ID: B00000201");
+    await expect(paperOf(page)).toContainText("Calle del Comercio 12");
+    await expect(paperOf(page)).not.toContainText("Iglesias");
+  });
+
+  test("starts with the session's catalog items (AC8)", async ({ page }) => {
+    await page.goto("/dashboard/invoice");
+
     await expect(paperOf(page)).toContainText("Ham croquettes");
   });
 

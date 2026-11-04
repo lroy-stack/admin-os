@@ -9,7 +9,7 @@ import { getInitials } from "@/lib/utils";
 import type { InvoiceFormValues, InvoiceToDetails } from "./data";
 import { invoiceMessageKey } from "./messages";
 
-/** Who the invoice bills: one of the session's customers (spec 008). */
+/** Who the invoice bills: a billing client with a tax ID and a fiscal address (spec 011). */
 export function ClientSelector({ clients }: { clients: readonly InvoiceToDetails[] }) {
   const text = useMessages(invoiceMessageKey).client;
   const { control } = useFormContext<InvoiceFormValues>();

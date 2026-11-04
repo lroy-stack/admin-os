@@ -17,7 +17,7 @@ export const generateMetadata = () => pageMetadata("/dashboard/invoice", invoice
 export default async function Page() {
   const [locale, currency] = await Promise.all([getLocale(), getCurrency()]);
   const text = invoiceMessages[locale];
-  // The document starts from the business settings, the session's customers and catalog (spec 008).
+  // The document starts from the business settings, the billing clients and the session's catalog (specs 008, 011).
   const seed = await loadInvoiceSeed(currency);
   const initialInvoice = createDefaultInvoice(seed);
 

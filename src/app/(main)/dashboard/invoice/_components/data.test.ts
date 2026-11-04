@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { BusinessDetails } from "@/core/business";
 import type { CatalogItem } from "@/modules/catalog";
-import type { Customer } from "@/modules/customers";
 
 import {
-  clientOf,
+  billingClients,
   createDefaultInvoice,
   getInvoiceSubtotal,
   getInvoiceTax,
@@ -93,12 +92,12 @@ describe("the invoice a business starts (spec 008, AC7)", () => {
   });
 });
 
-describe("the invoice's client and lines (spec 008, AC8)", () => {
-  it("bills the first customer of the list", () => {
+describe("the invoice's client and lines (spec 008, AC8; spec 011, H0)", () => {
+  it("bills the first client of the list", () => {
     expect(createDefaultInvoice(seed()).to).toEqual(client);
   });
 
-  it("starts with no client when the business has no customers", () => {
+  it("starts with no client when it is given none", () => {
     expect(createDefaultInvoice(seed({ clients: [] })).to.name).toBe("");
   });
 
@@ -106,19 +105,20 @@ describe("the invoice's client and lines (spec 008, AC8)", () => {
     expect(createDefaultInvoice(seed()).items).toEqual([item]);
   });
 
-  it("names a customer and their email as the directory has them", () => {
-    const customer = { id: "C-1", name: "Bravo", email: "bravo@example.com" } as Customer;
-    expect(clientOf(customer)).toEqual({
-      id: "C-1",
-      name: "Bravo",
-      email: "bravo@example.com",
-      addressLines: [],
-      taxId: "",
-    });
+  it("offers billing clients with a tax ID and a fiscal address, never the agenda's customers", () => {
+    expect(billingClients.map((option) => [option.name, option.taxId, option.addressLines.length])).toEqual([
+      ["Servicios Corporativos Levante S.L.", "B00000201", 3],
+      ["Mediterránea de Eventos S.A.", "A00000202", 3],
+      ["Laura Gómez Ruiz", "00000203Z", 3],
+    ]);
   });
 
-  it("bills a customer without an email", () => {
-    expect(clientOf({ id: "C-2", name: "Calvo" } as Customer).email).toBe("");
+  it("gives every billing client an email the invoice is sent to", () => {
+    expect(billingClients.map((option) => option.email)).toEqual([
+      "facturas@servicios-levante.example",
+      "administracion@mediterranea-eventos.example",
+      "laura.gomez@correo.example",
+    ]);
   });
 
   it("writes a catalog item in the request's language, at its price in major units", () => {

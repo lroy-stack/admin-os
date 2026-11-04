@@ -4,7 +4,6 @@ import type { BusinessDetails, InvoiceTaxId } from "@/core/business";
 import type { Locale } from "@/core/i18n/client";
 import { type Currency, isCurrency, majorUnits } from "@/core/money/client";
 import type { CatalogItem } from "@/modules/catalog";
-import type { Customer } from "@/modules/customers";
 
 export type { InvoiceTaxId } from "@/core/business";
 
@@ -73,7 +72,7 @@ export interface InvoiceSeed {
   readonly today: string;
   readonly currency: Currency;
   readonly business: BusinessDetails;
-  /** The clients the form offers, the first one billed; the customers of the session. */
+  /** The billing clients the form offers, the first one billed: parties with a tax ID and a fiscal address. */
   readonly clients: readonly InvoiceToDetails[];
   /** The lines it starts with; items of the session's catalog. */
   readonly items: readonly InvoiceLineItem[];
@@ -118,14 +117,34 @@ export function createDefaultInvoice(seed: InvoiceSeed): InvoiceFormValues {
   };
 }
 
-/** A customer of the directory as an invoice bills them; the directory keeps no address or tax ID. */
-export const clientOf = (customer: Pick<Customer, "id" | "name" | "email">): InvoiceToDetails => ({
-  id: customer.id,
-  name: customer.name,
-  email: customer.email ?? "",
-  addressLines: [],
-  taxId: "",
-});
+/**
+ * Who a full invoice is issued to: a person or a company with a tax ID and a fiscal address (RD 1619/2012, art. 6),
+ * never a customer of the agenda, who books and holds no fiscal identity. Fictitious demo data, with tax IDs that
+ * cannot be real, until the parties module keeps them per business (spec 011).
+ */
+export const billingClients: readonly InvoiceToDetails[] = [
+  {
+    id: "servicios-levante",
+    name: "Servicios Corporativos Levante S.L.",
+    email: "facturas@servicios-levante.example",
+    addressLines: ["Calle del Comercio 12", "46002 Valencia", "Spain"],
+    taxId: "B00000201",
+  },
+  {
+    id: "mediterranea-eventos",
+    name: "Mediterránea de Eventos S.A.",
+    email: "administracion@mediterranea-eventos.example",
+    addressLines: ["Avenida del Puerto 45", "03001 Alicante", "Spain"],
+    taxId: "A00000202",
+  },
+  {
+    id: "laura-gomez",
+    name: "Laura Gómez Ruiz",
+    email: "laura.gomez@correo.example",
+    addressLines: ["Calle Mayor 3", "30001 Murcia", "Spain"],
+    taxId: "00000203Z",
+  },
+];
 
 /** A catalog item as one line: its name in the request's language and its price in its currency's major units. */
 export const lineItemOf = (item: Pick<CatalogItem, "id" | "name" | "price">, locale: Locale): InvoiceLineItem => ({
