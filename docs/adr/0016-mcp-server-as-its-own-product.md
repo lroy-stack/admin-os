@@ -738,6 +738,32 @@ These are places where the first draft found a decision incomplete. Each came wi
   tokens, so a key per token would let one client spend the whole demo's window. The trade-off: one client that
   rotates IPs gets a window per IP, and visitors behind one NAT share one. A grant (A1a) restores a key per person.
 
+### As built (2026-11-04, plan A1a–A2)
+
+- **A1a.** `OAuthProvider` (`@cloudflare/workers-oauth-provider` 1.2.4, KV `OAUTH_KV`) wraps the MCP Worker, one per
+  origin it answers on, with `/mcp` as its resource (`requiredScopes: ["read"]`, `scopesSupported: ["read", "write"]`),
+  CIMD, DCR at `/register`, `/token`, and the consent page at `/authorize`, which verifies or starts the signed
+  `demo_sid` through the Next-free `src/config/demo-session.ts` the web app now uses too. A grant is `userId` = the
+  session id, `props: {sessionId, role}` (role from `demo_role`, owner by default), `scope: ["read"]`, and lives two idle
+  hours like the session. The static tokens reach the same handler through `resolveExternalToken`. A held write records
+  the grant's client in `requestedBy.clientId`, which `approvals.list` returns.
+  - *The consent page.* It requires S256 PKCE of every client (the provider requires it of public clients only). The
+    form carries the role and client name it showed, signed with `DEMO_SESSION_SECRET` and bound to the consent handle
+    (`signDemoValue`), so the grant gets the role the visitor saw and approving needs no second CIMD fetch. It sends
+    `Referrer-Policy: same-origin` (under `no-referrer` a form post carries `Origin: null`, which the Origin check
+    refuses), `frame-ancestors 'none'` and `X-Frame-Options: DENY`, and accepts only the Worker's own Origin.
+  - *Rate limits, per client IP (an IPv6 /64; a request without `CF-Connecting-IP` shares one bucket).*
+    `OAUTH_LIMITER` (10 a minute) covers `/authorize`, `/register` (each registration writes KV, whose Free plan allows
+    1,000 writes a day) and new demo sessions. `EDGE_LIMITER` (600 a minute) covers `/token` and `/mcp` before the
+    provider reads KV for a bearer, wide because a hosted client calls them for all its users from a few egress IPs;
+    a CIMD client's id is shared by every installation, so a key per client would be no narrower. `MCP_LIMITER` then
+    keys a grant by session and client.
+  - *Accepted: session fixation from sibling hosts.* `demo_sid` carries `Domain=admin-os.lr0y.dev`, and any host
+    under `lr0y.dev` can set a cookie for that domain, so a page on a sibling host could plant a session id it signed
+    nowhere; it cannot forge the HMAC, but it can plant a `demo_sid` it obtained itself and have the victim's grant act
+    on the attacker's session. For a demo whose data is fake and per visitor this is accepted; a real deployment keeps
+    the cookie host-only and consent in the web app (open question 2, option b).
+
 ## Sources
 
 From spec 004:

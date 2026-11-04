@@ -374,6 +374,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
         ...(asked.actor.displayName === undefined ? {} : { displayName: asked.actor.displayName }),
         role: asked.actor.roleId,
         via: asked.via,
+        ...(asked.actor.clientId === undefined ? {} : { clientId: asked.actor.clientId }),
       },
       requestedAt: iso(nowMs),
       expiresAt: iso(nowMs + APPROVAL_TTL_MS),

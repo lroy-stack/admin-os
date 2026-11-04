@@ -78,12 +78,14 @@ export function createMcpServer(options: McpServerOptions): Server {
 }
 
 /**
- * Who a door serves: the role it acts as and the demo session it acts on. A bearer demo token resolves to one today;
- * an OAuth grant (`{sessionId, role, scopes}`, plan A1a) replaces it.
+ * Who a door serves: the role it acts as and the demo session it acts on. An OAuth grant names both from the
+ * visitor's demo cookies (ADR 0016 D4); a demo token, `MCP_TOKENS` or the stdio environment name them otherwise.
  */
 export interface McpCaller {
   readonly roleId: RoleId;
   readonly sessionId: string;
+  /** The OAuth client a grant was issued to; a write held for a person records it as who asked. */
+  readonly clientId?: string;
 }
 
 /** The server a door hands its caller: the deployment's preset (`VERTICAL`) and the demo actor of the caller's role. */
@@ -93,9 +95,10 @@ export function createMcpServerFor(
 ): Server {
   // MCP clients carry no demo cookies, so the preset is the deployment's (VERTICAL).
   const vertical = resolveVertical(door.env.VERTICAL);
+  const actor = demoActor(caller.roleId, vertical);
   return createMcpServer({
     ...door,
-    actor: demoActor(caller.roleId, vertical),
+    actor: caller.clientId === undefined ? actor : { ...actor, clientId: caller.clientId },
     vertical: vertical.id,
     sessionId: caller.sessionId,
   });

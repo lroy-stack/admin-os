@@ -56,7 +56,11 @@ export const approvalEntrySchema = z.object({
   approvalId: z.string().min(1),
   capabilityId: z.string().min(1),
   status: approvalStatusSchema,
-  requestedBy: personSchema.extend({ via: z.enum(["ui", "mcp", "system"]) }),
+  requestedBy: personSchema.extend({
+    via: z.enum(["ui", "mcp", "system"]),
+    /** The OAuth client an assistant asked through, when it acted with a grant (spec 004, A1a). */
+    clientId: z.string().optional(),
+  }),
   requestedAt: z.string().min(1),
   expiresAt: z.string().min(1),
   input: z.unknown(),

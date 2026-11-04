@@ -4,24 +4,22 @@ import { cache } from "react";
 
 import { cookies } from "next/headers";
 
-import { roleIdSchema } from "@/core/access";
 import { createClient } from "@/core/client";
 import { type FaultMap, parseFaults } from "@/core/mock";
 
 import { demoActor } from "./actor";
 import { CATALOG } from "./catalog";
 import { getAdapter, settingsFor } from "./data.server";
+import { DEMO_ROLE_COOKIE, demoRoleOf } from "./demo-session";
 import { DEMO_SESSION_COOKIE, verifiedDemoSession } from "./demo-session.server";
 import { getLocale } from "./locale.server";
 import { getVertical } from "./vertical.server";
 import { webStoreNamespace } from "./web-store.server";
 
-/** Demo switch (ADR 0006): which role preset the visitor acts as. */
-export const DEMO_ROLE_COOKIE = "demo_role";
+/** Demo switch (ADR 0006): which role preset the visitor acts as; the MCP consent page reads it too. */
+export { DEMO_ROLE_COOKIE };
 /** Demo switch (ADR 0005): faults for this visitor only, in the `MOCK_FAULTS` grammar. */
 export const MOCK_FAULTS_COOKIE = "mock_faults";
-
-const roleSchema = roleIdSchema.catch("owner");
 
 /** The environment is trusted and fails loudly; a visitor's cookie is not, so a malformed one is ignored. */
 const faultsFrom = (environment: string | undefined, cookie: string | undefined): FaultMap => {
@@ -43,7 +41,7 @@ const faultsFrom = (environment: string | undefined, cookie: string | undefined)
 export const getRuntime = cache(async () => {
   const [jar, locale] = await Promise.all([cookies(), getLocale()]);
   const vertical = await getVertical();
-  const roleId = roleSchema.parse(jar.get(DEMO_ROLE_COOKIE)?.value);
+  const roleId = demoRoleOf(jar.get(DEMO_ROLE_COOKIE)?.value);
   const actor = demoActor(roleId, vertical);
   const correlationId = crypto.randomUUID();
   const adapter = getAdapter({

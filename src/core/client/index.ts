@@ -14,6 +14,8 @@ export interface Actor {
   readonly displayName?: string;
   readonly roleId: string;
   readonly permissions: readonly string[];
+  /** The OAuth client an assistant acts through (MCP with a grant); held writes record it as who asked. */
+  readonly clientId?: string;
 }
 
 export interface CallContext {

@@ -175,7 +175,10 @@ npm run dev:mcp                                                                 
 
 The web app answers at `http://localhost:8788`, MCP at `http://localhost:8789/mcp`. Start the web and store process
 first: until the store is registered, MCP writes answer `transport.unavailable`. The public demo tokens are read-only
-there as in production; to try writes, put `MCP_READ_ONLY=false` in `workers/mcp/.dev.vars`.
+there as in production; to try writes, put `MCP_READ_ONLY=false` in `workers/mcp/.dev.vars`. The MCP Worker's consent
+page verifies the web app's `demo_sid` cookie (both run on `localhost`, which shares cookies across ports), so give
+`.dev.vars` and `workers/mcp/.dev.vars` the same `DEMO_SESSION_SECRET`; `wrangler dev` keeps the OAuth clients and
+grants in its local KV.
 
 ## Deploy
 
@@ -198,6 +201,11 @@ deploy your own:
    openssl rand -base64 32 | npx wrangler secret put DEMO_SESSION_SECRET
    ```
 
+   The MCP Worker's consent page verifies the same cookie, so give it the same value
+   (`npx wrangler secret put DEMO_SESSION_SECRET -c workers/mcp/wrangler.jsonc`). It keeps OAuth clients and grants in
+   a KV namespace bound as `OAUTH_KV`: create it with `npx wrangler kv namespace create OAUTH_KV` and put its `id` in
+   [`workers/mcp/wrangler.jsonc`](workers/mcp/wrangler.jsonc), or let `wrangler deploy` provision it.
+
    To keep a visitor's data in the memory of each instance instead, remove `DATA_STORE`, `durable_objects` and
    `DEMO_SESSION_SECRET`; it then resets when Cloudflare recycles the instance.
 4. Build and deploy with your public URL, which the build writes into canonical and Open Graph links:
@@ -218,13 +226,17 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
 ([ADR 0016](docs/adr/0016-mcp-server-as-its-own-product.md)), and two transports serve it:
 
 - **Streamable HTTP** at `https://mcp.admin-os.lr0y.dev/mcp` (locally `http://localhost:8789/mcp`, see "The three
-  Workers locally"), with a bearer token. `MCP_TOKENS` maps tokens to roles (see [`.env.example`](.env.example)); on
-  the mock adapter, with `MCP_TOKENS` unset, the demo tokens `demo-owner-token`, `demo-manager-token` and
-  `demo-staff-token` work. Each token has its own demo data. With those public tokens the server is **read-only**:
-  anyone holds them, so they list and run read tools only. Your own `MCP_TOKENS` keep the writes;
-  `MCP_READ_ONLY=true` or `false` overrides either default. Requests are rate-limited per token, and per client IP
-  for the public tokens (`429` with `Retry-After`), and a browser page may call it only from the demo's own
-  origin or `claude.ai`.
+  Workers locally"), with **OAuth**: the Worker is its own authorization server. A client that connects without a
+  token is sent to a consent page on the Worker, which shows who asks and what it may do; the grant acts on **your
+  own demo data**, the session the web demo keeps in your browser (or a new one), as the role you picked there
+  (owner by default), and holds the `read` scope. The connection also accepts bearer tokens: `MCP_TOKENS` maps tokens
+  to roles (see [`.env.example`](.env.example)); on the mock adapter, with `MCP_TOKENS` unset, the demo tokens
+  `demo-owner-token`, `demo-manager-token` and `demo-staff-token` work, each on demo data of its own. With those
+  public tokens the server is **read-only**: anyone holds them, so they list and run read tools only. Your own
+  `MCP_TOKENS` keep the writes; `MCP_READ_ONLY=true` or `false` overrides either default. Requests are rate-limited
+  per grant, per token and client IP for the public tokens, and per client IP on the OAuth endpoints and before a
+  token is checked (`429` with `Retry-After`), and a browser page may call it only from the demo's own origin or
+  `claude.ai`.
 - **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
 
 The web app's old endpoint, `https://admin-os.lr0y.dev/api/mcp`, answers `410` with the new URL; add the server again
@@ -237,14 +249,20 @@ whether it can overwrite or remove data, and whether a repeat is safe.
 The server's `serverInfo.version` is a hash of its tool list, so it changes whenever a tool does. If a client keeps
 showing an old list after an update, reconnect it (in Claude Code, `/mcp`, then reconnect `admin-os`).
 
-Claude Code, from the repository root:
+Claude Code: add the server, then run `/mcp` in a session and authenticate `admin-os`; the consent page opens in your
+browser. Open the demo at `https://admin-os.lr0y.dev` in the same browser first if the agent should act on the data
+you see there.
 
 ```bash
-claude mcp add --scope project --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp \
-  --header "Authorization: Bearer demo-staff-token"
-# or over stdio
+claude mcp add --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp
+# or with a public demo token instead of OAuth (read-only)
+claude mcp add --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp --header "Authorization: Bearer demo-staff-token"
+# or over stdio, from the repository root
 claude mcp add --scope project admin-os -e MCP_ROLE=owner -- npm run --silent mcp:stdio
 ```
+
+claude.ai: add a custom connector with the URL `https://mcp.admin-os.lr0y.dev/mcp` and connect it; Claude registers
+itself and opens the same consent page.
 
 Claude Desktop (`claude_desktop_config.json`), with the absolute path of your clone:
 

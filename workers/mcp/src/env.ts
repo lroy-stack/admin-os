@@ -1,3 +1,4 @@
+import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { z } from "zod";
 
 import type { StoreNamespace } from "@/config/durable-adapter.server";
@@ -10,11 +11,19 @@ import type { McpEnv } from "@/config/mcp.server";
 export interface McpWorkerEnv {
   /** The store Worker's `DemoStore`, bound by `script_name`; only a writable caller's session reaches it. */
   readonly DEMO_STORE: StoreNamespace;
-  /** Requests to `/mcp`, per token (per grant once OAuth lands). */
+  /** Requests to `/mcp`, per grant, or per token and client IP for the public demo tokens. */
   readonly MCP_LIMITER: RateLimit;
+  /** `/authorize` and `/register` (no bearer) and new demo sessions, per client IP: tight, they write KV. */
+  readonly OAUTH_LIMITER: RateLimit;
+  /** `/token` and `/mcp` per client IP before the provider reads KV: wide, a hosted client shares a few IPs. */
+  readonly EDGE_LIMITER: RateLimit;
+  /** `workers-oauth-provider`'s clients, grants and tokens (tokens and secrets by hash, props encrypted). */
+  readonly OAUTH_KV: KVNamespace;
+  /** The provider's helpers; `OAuthProvider` sets them on the env before any handler of this Worker runs. */
+  readonly OAUTH_PROVIDER: OAuthHelpers;
   /**
-   * `vars` and secrets: `DATA_STORE`, `MCP_RATE_LIMIT_PERIOD_S`, `VERTICAL`, `MCP_TOKENS`, `MCP_READ_ONLY`,
-   * `MOCK_CLOCK`, `MOCK_FAULTS`.
+   * `vars` and secrets: `DATA_STORE`, `DEMO_SESSION_SECRET`, `DEMO_COOKIE_DOMAIN`, `MCP_RATE_LIMIT_PERIOD_S`,
+   * `VERTICAL`, `MCP_TOKENS`, `MCP_READ_ONLY`, `MOCK_CLOCK`, `MOCK_FAULTS`.
    */
   readonly [variable: string]: unknown;
 }
@@ -27,8 +36,8 @@ export const variablesOf = (env: McpWorkerEnv): McpEnv =>
 const periodSchema = z.enum(["10", "60"]);
 
 /**
- * `MCP_RATE_LIMIT_PERIOD_S`: the `period` of `MCP_LIMITER`, set beside it in wrangler.jsonc, so `Retry-After` tells a
- * refused client the window the binding really uses. A missing or other value fails loudly.
+ * `MCP_RATE_LIMIT_PERIOD_S`: the `period` of `MCP_LIMITER`, `OAUTH_LIMITER` and `EDGE_LIMITER`, set beside them in wrangler.jsonc, so
+ * `Retry-After` tells a refused client the window the bindings really use. A missing or other value fails loudly.
  */
 export const rateLimitPeriodOf = (variables: McpEnv): number => {
   const parsed = periodSchema.safeParse(variables.MCP_RATE_LIMIT_PERIOD_S);

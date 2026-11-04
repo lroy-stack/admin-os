@@ -143,19 +143,8 @@ describe("the bearer token", () => {
 
     expect([response.status, response.headers.get("www-authenticate")]).toEqual([
       401,
-      expect.stringMatching(new RegExp(`^Bearer error="invalid_token", .*resource_metadata="${METADATA_URL}"$`)),
+      `Bearer realm="OAuth", resource_metadata="${METADATA_URL}", error="invalid_token", scope="read"`,
     ]);
-  });
-
-  it("serves the protected-resource metadata the challenge names (RFC 9728)", async () => {
-    const response = await selfFetch(METADATA_URL);
-
-    expect(await response.json()).toEqual({
-      resource: ENDPOINT,
-      bearer_methods_supported: ["header"],
-      resource_name: "admin-OS",
-      resource_documentation: "https://github.com/lroy-stack/admin-os#mcp",
-    });
   });
 
   it("logs a malformed MCP_TOKENS without echoing it, and refuses the call", async () => {

@@ -21,6 +21,7 @@ export const storeCallContextSchema = z.object({
     displayName: z.string().optional(),
     roleId: z.string(),
     permissions: z.array(z.string()).readonly(),
+    clientId: z.string().max(512).optional(),
   }),
   correlationId: z.string().min(1).max(128),
   idempotencyKey: idempotencyKeySchema.optional(),

@@ -4,6 +4,7 @@ import type { StoreNamespace } from "@/config/durable-adapter.server";
 
 import type { McpWorkerEnv } from "../src/env";
 import worker from "../src/index";
+import { createExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 
 /** The production endpoint: tests address the Worker by the URL clients use. */
@@ -16,7 +17,7 @@ export const baseEnv = env as unknown as McpWorkerEnv;
 export const fetchWith =
   (overrides: Partial<Record<string, unknown>> = {}) =>
   (input: string | URL | Request, init?: RequestInit): Promise<Response> =>
-    worker.fetch(new Request(input, init), { ...baseEnv, ...overrides } as McpWorkerEnv);
+    worker.fetch(new Request(input, init), { ...baseEnv, ...overrides } as McpWorkerEnv, createExecutionContext());
 
 const ERAS = {
   legacy: { mode: "legacy" },

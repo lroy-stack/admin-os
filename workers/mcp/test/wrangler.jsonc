@@ -8,12 +8,25 @@
   "main": "./entry.ts",
   "compatibility_date": "2026-10-23",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-  "vars": { "DATA_STORE": "durable", "MCP_RATE_LIMIT_PERIOD_S": "60" },
+  "vars": {
+    "DATA_STORE": "durable",
+    "DEMO_COOKIE_DOMAIN": "admin-os.lr0y.dev",
+    "MCP_RATE_LIMIT_PERIOD_S": "60",
+    // A fixture key for the demo_sid cookies the tests sign; the deployed Worker takes its own as a secret.
+    "DEMO_SESSION_SECRET": "test-only-demo-session-secret-0123456789"
+  },
   "durable_objects": {
     "bindings": [{ "name": "DEMO_STORE", "class_name": "DemoStore" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DemoStore"] }],
-  "ratelimits": [{ "name": "MCP_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }],
+  "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+  "ratelimits": [
+    { "name": "MCP_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
+    { "name": "OAUTH_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } },
+    // Wide enough that the suite, whose MCP calls mostly carry no client IP, never meets it; tests that need it
+    // replace the binding.
+    { "name": "EDGE_LIMITER", "namespace_id": "1003", "simple": { "limit": 100000, "period": 60 } }
+  ],
   "alias": {
     "server-only": "../../stubs/server-only.ts"
   }

@@ -9,14 +9,18 @@ import { localhostAllowedHostnames, localhostAllowedOrigins } from "@modelcontex
 const PRODUCTION_ORIGINS = ["admin-os.lr0y.dev", "claude.ai"];
 
 /**
- * The `Origin` hostnames this request may carry. Localhost origins are allowed only while the Worker itself is served on
- * localhost (`wrangler dev`), so production never trusts a page on the visitor's own machine. A request without an
- * `Origin` (Claude Code and other non-browser clients) always passes the SDK's check.
+ * The `Origin` hostnames this request may carry. The Worker's own pages (`ownPage`: the consent page, whose form posts
+ * to itself) accept only the Worker's own host. Everything else also accepts the production origins, and localhost
+ * origins only while the Worker itself is served on localhost (`wrangler dev`), so production never trusts a page on
+ * the visitor's own machine. A request without an `Origin` (Claude Code and other non-browser clients) always passes
+ * the SDK's check; the opaque `null` Origin never does.
  */
-export const allowedOriginsFor = (url: URL): string[] =>
-  localhostAllowedHostnames().includes(url.hostname)
+export const allowedOriginsFor = (url: URL, ownPage = false): string[] => {
+  if (ownPage) return [url.hostname];
+  return localhostAllowedHostnames().includes(url.hostname)
     ? [...PRODUCTION_ORIGINS, ...localhostAllowedOrigins()]
-    : PRODUCTION_ORIGINS;
+    : [url.hostname, ...PRODUCTION_ORIGINS];
+};
 
 const ALLOWED_HEADERS = ["Authorization", "Content-Type", "MCP-Protocol-Version", "Mcp-Method", "Mcp-Name"];
 const EXPOSED_HEADERS = ["WWW-Authenticate", "Mcp-Protocol-Version", "Retry-After"];
