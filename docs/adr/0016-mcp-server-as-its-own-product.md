@@ -779,6 +779,9 @@ These are places where the first draft found a decision incomplete. Each came wi
   (`/mcp` and `/mcp/…`, one bucket per IP), so no sub-path reaches a KV read unlimited. `MCP_READ_ONLY` no longer
   defaults on for grants (`grantReadOnlyFrom`); the static tokens keep `mcpReadOnlyFrom`, so the public demo tokens stay
   read-only and are never challenged.
+- **A2.** `npm run mcp:stdio` takes `MCP_SCOPES` (`mcpScopesFrom`, default `read`, space- or comma-separated) into the
+  same `createMcpServerFor`, so stdio no longer writes by default: `MCP_SCOPES="read write"` restores the role's
+  writes, and `MCP_READ_ONLY=true` still switches them off.
 
 ## Sources
 

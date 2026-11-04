@@ -5,6 +5,7 @@ import {
   grantReadOnlyFrom,
   mcpReadOnlyFrom,
   mcpRoleFrom,
+  mcpScopesFrom,
   mcpTokensFrom,
   parseMcpTokens,
   parseReadOnly,
@@ -65,6 +66,23 @@ describe("MCP_ROLE (ADR 0009)", () => {
 
   it("fails loudly on an unknown role", () => {
     expect(() => mcpRoleFrom("superuser")).toThrow(/MCP_ROLE must be one of owner, manager, staff/);
+  });
+});
+
+describe("MCP_SCOPES (spec 004, plan A2)", () => {
+  it.each([
+    ["unset", undefined, ["read"]],
+    ["empty", " ", ["read"]],
+    ["read", "read", ["read"]],
+    ["space-separated, as OAuth writes them", "read write", ["read", "write"]],
+    ["comma-separated, in any order", "write, read", ["read", "write"]],
+    ["write alone, which includes read in effectivePermissions", "write", ["write"]],
+  ])("reads %s as %j", (_case, raw, scopes) => {
+    expect(mcpScopesFrom(raw)).toEqual(scopes);
+  });
+
+  it("fails loudly on an unknown scope", () => {
+    expect(() => mcpScopesFrom("read admin")).toThrow(/MCP_SCOPES must be scopes from read, write.*got "read admin"/);
   });
 });
 

@@ -240,7 +240,9 @@ The same capabilities the screens use are MCP tools, filtered by the caller's ro
   per grant, per token and client IP for the public tokens, and per client IP on the OAuth endpoints and before a
   token is checked (`429` with `Retry-After`), and a browser page may call it only from the demo's own origin or
   `claude.ai`.
-- **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset.
+- **stdio** with `npm run --silent mcp:stdio`. `MCP_ROLE` picks the role (default `staff`), `VERTICAL` the preset,
+  and `MCP_SCOPES` what the process may do, as a grant's scopes over HTTP: `read` by default, `read write` for the
+  role's writes too.
 
 The web app's old endpoint, `https://admin-os.lr0y.dev/api/mcp`, answers `410` with the new URL; add the server again
 at `https://mcp.admin-os.lr0y.dev/mcp`.
@@ -261,8 +263,8 @@ not keeps its `read` grant.
 claude mcp add --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp
 # or with a public demo token instead of OAuth (read-only)
 claude mcp add --transport http admin-os https://mcp.admin-os.lr0y.dev/mcp --header "Authorization: Bearer demo-staff-token"
-# or over stdio, from the repository root
-claude mcp add --scope project admin-os -e MCP_ROLE=owner -- npm run --silent mcp:stdio
+# or over stdio, from the repository root, with writes
+claude mcp add --scope project admin-os -e MCP_ROLE=owner -e "MCP_SCOPES=read write" -- npm run --silent mcp:stdio
 ```
 
 claude.ai: add a custom connector with the URL `https://mcp.admin-os.lr0y.dev/mcp` and connect it; Claude registers
@@ -276,7 +278,7 @@ Claude Desktop (`claude_desktop_config.json`), with the absolute path of your cl
     "admin-os": {
       "command": "npm",
       "args": ["--prefix", "/absolute/path/to/admin-os", "run", "--silent", "mcp:stdio"],
-      "env": { "MCP_ROLE": "owner" }
+      "env": { "MCP_ROLE": "owner", "MCP_SCOPES": "read write" }
     }
   }
 }

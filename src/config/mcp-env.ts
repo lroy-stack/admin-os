@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ROLE_IDS, type RoleId } from "@/core/access";
+import { SCOPES, type Scope, scopesOf } from "@/core/mcp/server";
 
 /**
  * The MCP transports' environment (ADR 0009): which bearer token acts as which role over HTTP (`MCP_TOKENS`) and
@@ -96,4 +97,23 @@ export function mcpRoleFrom(raw: string | undefined): RoleId {
   const parsed = stdioRoleSchema.safeParse(raw === "" ? undefined : raw);
   if (!parsed.success) throw new Error(`MCP_ROLE must be one of ${ROLE_IDS.join(", ")}; got "${String(raw)}".`);
   return parsed.data;
+}
+
+/** Scopes separated by spaces or commas, as OAuth writes them (`"read write"`) or as a list (`"read,write"`). */
+const stdioScopesSchema = z
+  .string()
+  .transform((text) => text.split(/[\s,]+/).filter((scope) => scope !== ""))
+  .pipe(z.array(z.enum(SCOPES)).min(1));
+
+/**
+ * The stdio actor's scopes (spec 004 D3, plan A2): `MCP_SCOPES`, `read` when unset, so a stdio process reads unless
+ * its developer grants `write` as a person grants it over OAuth. A malformed value fails loudly.
+ */
+export function mcpScopesFrom(raw: string | undefined): readonly Scope[] {
+  if (raw === undefined || raw.trim() === "") return ["read"];
+  const parsed = stdioScopesSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(`MCP_SCOPES must be scopes from ${SCOPES.join(", ")}, such as "read write"; got "${raw}".`);
+  }
+  return scopesOf(parsed.data);
 }
