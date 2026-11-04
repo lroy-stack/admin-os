@@ -184,6 +184,11 @@ page verifies the web app's `demo_sid` cookie (both run on `localhost`, which sh
 `.dev.vars` and `workers/mcp/.dev.vars` the same `DEMO_SESSION_SECRET`; `wrangler dev` keeps the OAuth clients and
 grants in its local KV.
 
+`npm run test:e2e:workers` runs the cross-door e2e on demand (it builds, starts both processes itself with a
+throwaway shared secret and needs no `.dev.vars`): an agent's held `bookings_cancel` is approved in the web bell and
+the booking is cancelled in both doors. It is not part of `npm run test:e2e` or of CI; set `E2E_WEB_PORT` and
+`E2E_MCP_PORT` when 8788 and 8789 are taken.
+
 ## Deploy
 
 The live demo runs on Cloudflare Workers through the [OpenNext adapter](https://opennext.js.org/cloudflare). To

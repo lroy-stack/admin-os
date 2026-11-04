@@ -32,6 +32,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:workers": "opennextjs-cloudflare build && playwright test -c playwright.workers.config.ts",
     "test:dead-clicks": "DEAD_CLICKS=report playwright test e2e/smoke/dead-clicks.spec.ts",
     "media": "playwright test -c playwright.media.config.ts",
     "probe:consistency": "tsx scripts/probe-consistency.ts",

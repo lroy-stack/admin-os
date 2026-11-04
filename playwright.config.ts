@@ -12,6 +12,8 @@ const PORT = Number(process.env.E2E_PORT ?? 3400);
  */
 export default defineConfig({
   testDir: "e2e",
+  // The cross-door e2e needs wrangler and two processes: `npm run test:e2e:workers`, never the default run.
+  testIgnore: "workers/**",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
