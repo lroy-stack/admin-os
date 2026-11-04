@@ -96,16 +96,21 @@ Every image is generated from the running app by `npm run media`
 
 ## Status
 
+Released as [v0.2.0](CHANGELOG.md).
+
 | Area | State |
 | --- | --- |
 | Shell, glass design system, five themes in light and dark | Done |
-| Bookings: floor plan, rail, editor, full view | Done (mock data) |
-| Generic domain contracts (bookings, customers, catalog, staff, resources) | Done, proven on three vertical seeds |
-| Data seam, permissions and roles | Done (mock adapter) |
 | Languages (en / es / de / fr) and currencies (USD / EUR / GBP) | Done |
-| MCP server (Streamable HTTP and stdio) | Done |
-| Customers CRM, agenda, team, catalog, messaging, tasks | Planned for `v0.1` |
-| Landing page | In progress |
+| Data seam, permissions, roles and approvals | Done (mock adapter) |
+| Generic domain contracts (bookings, customers, catalog, staff, resources, notifications) | Done, proven on three vertical seeds |
+| Bookings: floor plan, rail, editor, full view, writes with undo | Done (mock data) |
+| Customers: directory, search, export, new contact | Done (mock data) |
+| Notifications and approvals in the bell | Done |
+| MCP server: its own Worker with OAuth, and stdio | Done |
+| Showcase screens (mail, chat, projects, tasks, finance and more) | Working on demo-local state |
+| Landing page | Done |
+| Product Home, customer record, agenda with layers, rooms per vertical | Planned for v1 |
 
 ## Tech stack
 
