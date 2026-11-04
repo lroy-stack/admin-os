@@ -35,9 +35,16 @@ jobs:
   # The smoke runs in parallel shards, each on its own build. Playwright splits a run by test count, so the dead-click
   # sweep (about 40 % of the time in 74 tests of one file) is sharded on its own and the rest of the smoke apart from
   # it; otherwise its tests would land in one or two shards.
+  #
+  # Each shard runs in Playwright's image, which holds Chromium and its system libraries: `playwright install
+  # --with-deps` waited on apt for 2 to 7 minutes on some runners. The tag follows the locked `@playwright/test`
+  # (scripts/ci-workflow.test.ts fails when they differ).
   smoke:
     name: smoke (${{ matrix.suite }} ${{ matrix.shard }})
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -64,7 +71,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - name: Production build
         run: npm run build
       - name: Playwright smoke

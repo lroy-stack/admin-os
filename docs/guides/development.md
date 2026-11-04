@@ -73,7 +73,8 @@ npm test
 
 The pre-commit hook checks the staged files (`scripts/check-staged.mts`), regenerates the theme presets, runs Biome on
 the staged files and the layer rules. CI ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) runs the gates
-in one job and the Playwright smoke in twelve parallel shards, each on its own production build.
+in one job and the Playwright smoke in twelve parallel shards, each on its own production build inside Playwright's
+image (`mcr.microsoft.com/playwright`, at the locked version), so no runner installs a browser.
 
 The test strategy (pure logic and contracts in Vitest, a smoke matrix over roles, viewports and presets in Playwright)
 is in [ADR 0008](../adr/0008-testing-contracts-and-smoke.md).
