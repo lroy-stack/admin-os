@@ -11,9 +11,11 @@ import {
   bookingCancelInput,
   bookingCreateInput,
   bookingRescheduleInput,
+  bookingSchema,
   bookingStaffNoteAddInput,
   bookingStatusAdvanceInput,
   bookingTableAssignInput,
+  STAFF_NOTE_MAX,
   walkInSeatInput,
 } from "./schema";
 import { bookingsSettings, serviceWindow } from "./settings";
@@ -61,12 +63,41 @@ describe("booking write schemas", () => {
     expect(bookingCancelInput.safeParse({ id: "b", reason: "x".repeat(501) }).success).toBe(false);
   });
 
-  it.each([{ status: "confirmed" }, { endMin: 1300 }, { resourceIds: ["S1"] }, { guestNote: "x" }])(
+  it.each([{ status: "confirmed" }, { endMin: 1300 }, { guestNote: "x" }])(
     "refuses the reschedule field %j",
     (extra) => {
       expect(bookingRescheduleInput.safeParse({ id: "b", startMin: 1200, ...extra }).success).toBe(false);
     },
   );
+
+  it("refuses a reschedule that changes nothing", () => {
+    expect(bookingRescheduleInput.safeParse({ id: "b" }).success).toBe(false);
+  });
+
+  it.each([{ startMin: 1200 }, { partySize: 3 }, { resourceIds: ["T1"] }, { resourceIds: [] }])(
+    "accepts the reschedule %j",
+    (change) => {
+      expect(bookingRescheduleInput.safeParse({ id: "b", ...change }).success).toBe(true);
+    },
+  );
+
+  it("refuses a booking whose staff note passes the cap", () => {
+    expect(
+      bookingSchema.safeParse({
+        id: "b",
+        status: "confirmed",
+        businessDay: "2026-10-31",
+        startMin: 1200,
+        endMin: 1260,
+        resourceIds: [],
+        staffIds: [],
+        lines: [],
+        origin: "staff",
+        tags: [],
+        staffNote: "x".repeat(STAFF_NOTE_MAX + 1),
+      }).success,
+    ).toBe(false);
+  });
 
   it("refuses to assign a resource twice", () => {
     expect(bookingTableAssignInput.safeParse({ id: "b", resourceIds: ["S1", "S1"] }).success).toBe(false);

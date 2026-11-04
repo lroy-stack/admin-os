@@ -14,6 +14,7 @@ import {
   bookingSearchInput,
   bookingStaffNoteAddInput,
   bookingStatusAdvanceInput,
+  bookingSummarySchema,
   bookingTableAssignInput,
   walkInSeatInput,
   walkInUndoOutput,
@@ -43,9 +44,9 @@ export const bookingsGet = defineCapability({
 export const bookingsSearch = defineCapability({
   id: "bookings.search",
   summary:
-    "Find bookings across days, one page of at most 50 at a time, by customerId, by an inclusive range of business days (from, to) and by text matched against the guest's name, notes, tags and the booking id. Filters combine; results are ordered by day and start. Use bookings.list for one day.",
+    "Find bookings across days, one page of at most 50 at a time, by customerId, by an inclusive range of business days (from, to) and by text matched against the booking id, the guest's name and tags (never notes, which bookings.get returns). Rows are concise: id, day, start, party size, status, customer, name, resources and tags. Filters combine; results are ordered by day and start. Use bookings.list for one day.",
   input: bookingSearchInput,
-  output: pageOutput(bookingSchema),
+  output: pageOutput(bookingSummarySchema),
   permission: "read:bookings",
   effect: "read",
   riskTier: 1,
@@ -79,7 +80,7 @@ export const bookingsCreate = defineCapability({
 export const bookingsReschedule = defineCapability({
   id: "bookings.reschedule",
   summary:
-    "Move an open booking to another start and/or change its party size; omitted fields stay as they are and moving the start keeps the length of the stay. Same rules as bookings.create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.outside_window, bookings.off_grid or bookings.not_found. Tables are changed with bookings.table.assign.",
+    "Move an open booking in time and optionally onto other tables in the same step: send startMin, partySize and/or resourceIds (at least one); omitted fields stay as they are and moving the start keeps the length of the stay. The new time and tables are checked together, so use it when both change; bookings.table.assign changes only the tables. Same rules as bookings.create; fails with bookings.closed for a completed, cancelled or no-show booking, and with bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive, bookings.outside_window, bookings.off_grid or bookings.not_found.",
   input: bookingRescheduleInput,
   output: bookingSchema,
   permission: "update:bookings",
@@ -92,7 +93,7 @@ export const bookingsReschedule = defineCapability({
 export const bookingsTableAssign = defineCapability({
   id: "bookings.table.assign",
   summary:
-    "Set the resources (tables, chairs or bays) an open booking holds, replacing the ones it has; an empty list leaves it unassigned. They must be active, free for the stay and seat the party together. Fails with bookings.closed, bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive or bookings.not_found.",
+    "Set the resources (tables, chairs or bays) an open booking holds, replacing the ones it has, and change nothing else; an empty list leaves it unassigned. To change the time as well, use bookings.reschedule. They must be active, free for the stay and seat the party together. Fails with bookings.closed, bookings.not_enough_seats, bookings.resource_busy, bookings.resource_inactive or bookings.not_found.",
   input: bookingTableAssignInput,
   output: bookingSchema,
   permission: "update:bookings",
@@ -105,7 +106,7 @@ export const bookingsTableAssign = defineCapability({
 export const bookingsStaffNoteAdd = defineCapability({
   id: "bookings.staff_note.add",
   summary:
-    "Add a line to the staff note of an open booking, after what is already there. The guest's own note is not changed. Fails with bookings.closed for a completed, cancelled or no-show booking and bookings.not_found for an unknown id.",
+    "Add a line to the staff note of an open booking, after what is already there. The guest's own note is not changed. Notes are capped at 2000 characters in all: fails with bookings.staff_note_full when the line does not fit, with bookings.closed for a completed, cancelled or no-show booking and bookings.not_found for an unknown id.",
   input: bookingStaffNoteAddInput,
   output: bookingSchema,
   permission: "update:bookings",
@@ -119,7 +120,7 @@ export const bookingsStaffNoteAdd = defineCapability({
 export const bookingsStatusAdvance = defineCapability({
   id: "bookings.status.advance",
   summary:
-    "Move a booking one step forward: pending or awaiting_payment to confirmed, confirmed to in_progress, in_progress to completed. Cancelling and no-shows have their own capabilities. Any other move fails with bookings.invalid_transition.",
+    "Move a booking one step forward: pending or awaiting_payment to confirmed, confirmed to in_progress, in_progress to completed. Cancelling and no-shows have their own capabilities. Repeating a step on a booking already in that status answers it unchanged. Any other move fails with bookings.invalid_transition.",
   input: bookingStatusAdvanceInput,
   output: bookingSchema,
   permission: "update:bookings",
@@ -146,7 +147,7 @@ export const bookingsStatusUndo = defineCapability({
 export const bookingsCancel = defineCapability({
   id: "bookings.cancel",
   summary:
-    "Cancel a pending, awaiting_payment or confirmed booking with the reason staff will see, and release its resources. Fails with bookings.invalid_transition otherwise.",
+    "Cancel a pending, awaiting_payment or confirmed booking with the reason staff will see, and release its resources. Cancelling a booking that is already cancelled answers it unchanged and keeps the first reason. Fails with bookings.invalid_transition otherwise.",
   input: bookingCancelInput,
   output: bookingSchema,
   permission: "cancel:bookings",
@@ -159,7 +160,7 @@ export const bookingsCancel = defineCapability({
 export const bookingsNoShowMark = defineCapability({
   id: "bookings.no_show.mark",
   summary:
-    "Mark a confirmed booking as a no-show once it counts as late (bookings.late_after_minutes after its start), and release its resources. Fails with bookings.too_early before that and bookings.invalid_transition from any other status.",
+    "Mark a confirmed booking as a no-show once it counts as late (bookings.late_after_minutes after its start), and release its resources. Marking a booking that is already a no-show answers it unchanged. Fails with bookings.too_early before that and bookings.invalid_transition from any other status.",
   input: bookingNoShowInput,
   output: bookingSchema,
   permission: "noshow:bookings",

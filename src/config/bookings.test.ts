@@ -649,6 +649,14 @@ describe.each(presets)("bookings writes in the %s preset", (vertical, p) => {
       expect([advanced.status, undone.status, undone.lastStep]).toEqual(["in_progress", "confirmed", undefined]);
     });
 
+    it("takes back the original step after the advance was repeated", async () => {
+      const { client, clientAt } = world(vertical);
+      await client.call("bookings.status.advance", advanceInput, key());
+      await client.call("bookings.status.advance", advanceInput, key());
+      const undone = bookingOf(await clientAt(now + 1).call("bookings.status.undo", { id: p.lateConfirmed }, key()));
+      expect(undone.status).toBe("confirmed");
+    });
+
     it("refuses to take a step back once the window has passed", async () => {
       const { client, clientAt } = world(vertical);
       await client.call("bookings.status.advance", advanceInput, key());
@@ -976,6 +984,7 @@ describe("booking reads: get and search", () => {
       customerId: customer?.id,
       tags: ["vip"],
     }),
+    stored("s4", { businessDay: "2026-11-04", startMin: 600, contactName: "José Núñez" }),
   ];
   const reader = () => world("hospitality", hospitalityWith(seeded)).client;
   const idsOf = (result: CallResult<unknown>) =>
@@ -994,16 +1003,18 @@ describe("booking reads: get and search", () => {
 
   it.each([
     ["customer", { customerId: customer?.id }, ["s3"]],
-    ["a range starting on a day", { from: "2026-11-02" }, ["s3"]],
+    ["a range starting on a day", { from: "2026-11-02" }, ["s3", "s4"]],
     ["a range ending on a day", { to: "2026-11-01" }, ["s1", "s2"]],
     ["a range of one day", { from: "2026-11-01", to: "2026-11-01" }, ["s1", "s2"]],
     ["text in a contact name, in any case", { text: "ALICE" }, ["s1"]],
-    ["text in a guest note", { text: "birthday" }, ["s1"]],
-    ["text in a staff note", { text: "highchair" }, ["s2"]],
+    ["text in a guest note, which is never searched", { text: "birthday" }, []],
+    ["text in a staff note, which is never searched", { text: "highchair" }, []],
+    ["text in a name without its accents", { text: "jose nunez" }, ["s4"]],
+    ["text in an accented name typed with accents", { text: "JOSÉ" }, ["s4"]],
     ["text in a tag", { text: "vip" }, ["s3"]],
     ["text in the customer's name", { text: customer?.name ?? "" }, ["s3"]],
     ["text and range together", { text: "bob", from: "2026-11-03" }, []],
-    ["no filter, ordered by day then start", {}, ["s1", "s2", "s3"]],
+    ["no filter, ordered by day then start", {}, ["s1", "s2", "s3", "s4"]],
   ])("searches by %s", async (_label, input, expected) => {
     expect(idsOf(await reader().call("bookings.search", input))).toEqual(expected);
   });
@@ -1012,7 +1023,25 @@ describe("booking reads: get and search", () => {
     const client = reader();
     const first = successValue(await client.call("bookings.search", { limit: 2 })) as { nextCursor: string };
     const second = await client.call("bookings.search", { limit: 2, cursor: first.nextCursor });
-    expect(idsOf(second)).toEqual(["s3"]);
+    expect(idsOf(second)).toEqual(["s3", "s4"]);
+  });
+
+  it("returns concise rows with no notes and no ext (AC8)", async () => {
+    const rows = (successValue(await reader().call("bookings.search", { text: "bob" })) as { items: object[] }).items;
+    expect(Object.keys(rows[0] ?? {}).sort()).toEqual([
+      "businessDay",
+      "contactName",
+      "id",
+      "partySize",
+      "resourceIds",
+      "startMin",
+      "status",
+      "tags",
+    ]);
+  });
+
+  it("keeps the notes in bookings.get", async () => {
+    expect(bookingOf(await reader().call("bookings.get", { id: "s1" })).guestNote).toBe("Birthday cake");
   });
 
   it.each([
@@ -1033,5 +1062,117 @@ describe("booking reads: get and search", () => {
   ] as const)("is forbidden to call %s without read:bookings", async (id, input) => {
     const client = world("hospitality", hospitalityWith(seeded)).clientAt(CLOCKS.hospitality.nowMin, []);
     expect(await client.call(id, input)).toMatchObject({ ok: false, error: { code: "access.forbidden" } });
+  });
+});
+
+describe("moving a booking in time and onto other tables", () => {
+  const stored = (id: string, extra: Partial<BookingInput>): BookingInput => ({
+    ...booking("confirmed", id),
+    ...extra,
+  });
+  // "mine" sits on T1 from 20:00. T1 is taken from 21:00 and T2 until 21:00, so the move to 21:00 works only as a pair.
+  const seeded = [
+    stored("mine", { resourceIds: ["T1"], startMin: 1200, endMin: 1260 }),
+    stored("block-t1", { resourceIds: ["T1"], startMin: 1260, endMin: 1320 }),
+    stored("block-t2", { resourceIds: ["T2"], startMin: 1200, endMin: 1260 }),
+  ];
+  const client = (resources = hospitalitySeed.resources) =>
+    world("hospitality", hospitalityWith(seeded, resources)).client;
+
+  it("moves the time and the tables in one call", async () => {
+    const moved = bookingOf(
+      await client().call("bookings.reschedule", { id: "mine", startMin: 1260, resourceIds: ["T2"] }),
+    );
+    expect([moved.startMin, moved.endMin, moved.resourceIds]).toEqual([1260, 1320, ["T2"]]);
+  });
+
+  it("refuses the new time alone, because the booking's own table is taken then", async () => {
+    expect(await client().call("bookings.reschedule", { id: "mine", startMin: 1260 })).toMatchObject({
+      ok: false,
+      error: { code: "bookings.resource_busy", details: { resourceIds: ["T1"] } },
+    });
+  });
+
+  it("refuses the new table alone, because it is taken at the booking's time", async () => {
+    expect(await client().call("bookings.table.assign", { id: "mine", resourceIds: ["T2"] })).toMatchObject({
+      ok: false,
+      error: { code: "bookings.resource_busy" },
+    });
+  });
+
+  it("changes nothing when the pair is refused", async () => {
+    const c = client();
+    await c.call("bookings.reschedule", { id: "mine", startMin: 1260, resourceIds: ["T1"] });
+    expect(bookingOf(await c.call("bookings.get", { id: "mine" }))).toMatchObject({
+      startMin: 1200,
+      resourceIds: ["T1"],
+    });
+  });
+
+  it("refuses an inactive table with bookings.resource_inactive", async () => {
+    const resources = hospitalitySeed.resources.map((r) => (r.id === "T3" ? { ...r, active: false } : r));
+    expect(await client(resources).call("bookings.table.assign", { id: "mine", resourceIds: ["T3"] })).toMatchObject({
+      ok: false,
+      error: { code: "bookings.resource_inactive" },
+    });
+  });
+
+  it("refuses a party the tables cannot seat with bookings.not_enough_seats", async () => {
+    expect(await client().call("bookings.reschedule", { id: "mine", partySize: 4 })).toMatchObject({
+      ok: false,
+      error: { code: "bookings.not_enough_seats" },
+    });
+  });
+
+  it("accepts joined tables whose seats add up to the party", async () => {
+    const free = [stored("mine", { resourceIds: ["T1"], startMin: 1200, endMin: 1260 })];
+    const c = world("hospitality", hospitalityWith(free)).client;
+    const joined = bookingOf(
+      await c.call("bookings.reschedule", { id: "mine", partySize: 4, resourceIds: ["T1", "T2"] }),
+    );
+    expect([joined.partySize, joined.resourceIds]).toEqual([4, ["T1", "T2"]]);
+  });
+});
+
+describe("staff notes are bounded and applied once", () => {
+  const stored = (staffNote?: string): BookingInput => ({
+    ...booking("confirmed", "noted"),
+    ...(staffNote === undefined ? {} : { staffNote }),
+  });
+  const clientWith = (staffNote?: string) => world("hospitality", hospitalityWith([stored(staffNote)])).client;
+
+  it("refuses a line that would pass 2000 characters in all, and keeps the note", async () => {
+    const c = clientWith("x".repeat(1990));
+    const refused = await c.call("bookings.staff_note.add", { id: "noted", text: "y".repeat(20) }, key());
+    expect([refused, bookingOf(await c.call("bookings.get", { id: "noted" })).staffNote?.length]).toMatchObject([
+      { ok: false, error: { code: "bookings.staff_note_full" } },
+      1990,
+    ]);
+  });
+
+  it("accepts a line that fills the note exactly", async () => {
+    const full = await clientWith("x".repeat(1990)).call(
+      "bookings.staff_note.add",
+      { id: "noted", text: "y".repeat(9) },
+      key(),
+    );
+    expect(bookingOf(full).staffNote).toHaveLength(2000);
+  });
+
+  it("appends once when the same keyed call is sent five times in parallel", async () => {
+    const c = clientWith();
+    const options = key();
+    await Promise.all(
+      Array.from({ length: 5 }, () => c.call("bookings.staff_note.add", { id: "noted", text: "Regular" }, options)),
+    );
+    expect(bookingOf(await c.call("bookings.get", { id: "noted" })).staffNote).toBe("Regular");
+  });
+
+  it("reads a replayed note back from the store as it was written once", async () => {
+    const c = clientWith();
+    const options = key();
+    await c.call("bookings.staff_note.add", { id: "noted", text: "Regular" }, options);
+    await c.call("bookings.staff_note.add", { id: "noted", text: "Regular" }, options);
+    expect(bookingOf(await c.call("bookings.get", { id: "noted" })).staffNote).toBe("Regular");
   });
 });

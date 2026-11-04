@@ -1,6 +1,7 @@
 import { type MockContext, mockHandler } from "@/core/mock";
 import { paginate } from "@/core/pagination";
 import { err, ok, type Result } from "@/core/result";
+import { foldText } from "@/core/text";
 import type { Resource } from "@/modules/resources";
 
 import {
@@ -30,7 +31,7 @@ import {
   slotStarts,
   stayEnd,
 } from "./rules";
-import type { Availability, BookingChange, BookingInput, ClockReading } from "./schema";
+import { type Availability, type BookingChange, type BookingInput, type ClockReading, STAFF_NOTE_MAX } from "./schema";
 import { lateAfterMinutes, serviceWindow, slotMinutes, walkInStayMinutes, walkInUndoSeconds } from "./settings";
 
 /**
@@ -157,19 +158,18 @@ function moveBooking(context: Context, id: string, change: BookingChange): Resul
   );
 }
 
-/** The text a search looks in: who booked, what was written about the booking and its tags. */
+/** The text a search looks in: the booking id, who booked and the tags. Notes are never searched. */
 const searchableText = (data: BookingsData, booking: BookingInput): string =>
-  [
-    booking.id,
-    booking.contactName,
-    data.customers.find((customer) => customer.id === booking.customerId)?.name,
-    booking.guestNote,
-    booking.staffNote,
-    ...booking.tags,
-  ]
-    .filter((part) => part !== undefined)
-    .join("\n")
-    .toLowerCase();
+  foldText(
+    [
+      booking.id,
+      booking.contactName,
+      data.customers.find((customer) => customer.id === booking.customerId)?.name,
+      ...booking.tags,
+    ]
+      .filter((part) => part !== undefined)
+      .join("\n"),
+  );
 
 /** Whether a booking of `businessDay` starting at `startMin` counts as late on the clock. */
 const isLate = (context: Context, booking: BookingInput): boolean => {
@@ -203,7 +203,7 @@ export const bookingsMockHandlers = {
   }),
 
   ...mockHandler(bookingsSearch, ({ customerId, from, to, text, ...page }, { data }: Context) => {
-    const needle = text?.toLowerCase();
+    const needle = text === undefined ? undefined : foldText(text);
     const found = data.bookings
       .filter((booking) => customerId === undefined || booking.customerId === customerId)
       .filter((booking) => from === undefined || booking.businessDay >= from)
@@ -212,7 +212,20 @@ export const bookingsMockHandlers = {
       .sort(
         (a, b) => a.businessDay.localeCompare(b.businessDay) || a.startMin - b.startMin || a.id.localeCompare(b.id),
       );
-    return paginate(found, page);
+    return paginate(
+      found.map(({ id, businessDay, startMin, partySize, status, customerId, contactName, resourceIds, tags }) => ({
+        id,
+        businessDay,
+        startMin,
+        partySize,
+        status,
+        ...(customerId === undefined ? {} : { customerId }),
+        ...(contactName === undefined ? {} : { contactName }),
+        resourceIds,
+        tags,
+      })),
+      page,
+    );
   }),
 
   /**
@@ -277,6 +290,12 @@ export const bookingsMockHandlers = {
     if (booking === undefined) return notFound("booking", [id]);
     if (!isActive(booking.status)) return closedError(booking);
     const staffNote = booking.staffNote ? `${booking.staffNote}\n${text}` : text;
+    if (staffNote.length > STAFF_NOTE_MAX) {
+      return err("bookings.staff_note_full", `The staff note would pass ${STAFF_NOTE_MAX} characters`, {
+        max: STAFF_NOTE_MAX,
+        length: staffNote.length,
+      });
+    }
     return ok(replace(data, { ...booking, staffNote }));
   }),
 
@@ -301,7 +320,7 @@ export const bookingsMockHandlers = {
     const booking = bookingOf(data, id);
     if (booking === undefined) return notFound("booking", [id]);
     const { lastStep, ...rest } = booking;
-    // Only the step that left the booking where it is can be taken back: a cancel or an update since breaks the chain.
+    // Only the step that left the booking where it is can be taken back: a cancel or a no-show since breaks the chain.
     if (lastStep === undefined || NEXT_STATUS[lastStep.from] !== booking.status) {
       return invalidTransition(booking.status, "its previous status");
     }

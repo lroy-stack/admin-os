@@ -5,6 +5,9 @@ import { businessDaySchema, endAfterStart, endAfterStartIssue, minuteOfDaySchema
 import { moneySchema } from "@/core/money";
 import { pageInput } from "@/core/pagination";
 
+/** Most characters the staff note of one booking can hold, whatever lines were added to it. */
+export const STAFF_NOTE_MAX = 2000;
+
 export const bookingStatuses = [
   "pending",
   "awaiting_payment",
@@ -61,7 +64,7 @@ export const bookingObject = z.object({
   origin: z.enum(bookingOrigins),
   channel: channelSchema.optional(),
   guestNote: z.string().optional(),
-  staffNote: z.string().optional(),
+  staffNote: z.string().max(STAFF_NOTE_MAX).optional(),
   /** Why staff cancelled it; present only on a cancelled booking. */
   cancelReason: z.string().min(1).optional(),
   /** Why staff marked it a no-show, when they said. */
@@ -119,24 +122,47 @@ export const bookingCreateInput = z
     path: ["customerId"],
   });
 
-/** An omitted field stays as it is. Moving the start keeps the length of the stay. */
-export const bookingRescheduleInput = z.strictObject({
-  id: idInput,
-  startMin: minuteOfDaySchema.optional(),
-  partySize: partySizeInput.optional(),
-});
+/**
+ * Moves a booking in time and, when `resourceIds` is sent, onto other tables in the same step, so a move that frees
+ * one table only by taking another is checked as a whole. An omitted field stays as it is and moving the start keeps
+ * the length of the stay. At least one field must change something.
+ */
+export const bookingRescheduleInput = z
+  .strictObject({
+    id: idInput,
+    startMin: minuteOfDaySchema.optional(),
+    partySize: partySizeInput.optional(),
+    resourceIds: resourceIdsInput.optional(),
+  })
+  .refine(({ startMin, partySize, resourceIds }) => [startMin, partySize, resourceIds].some((v) => v !== undefined), {
+    message: "send at least one of startMin, partySize or resourceIds",
+    path: ["startMin"],
+  });
 
 /** The full set of resources the booking holds from now on; an empty list leaves it unassigned. */
 export const bookingTableAssignInput = z.strictObject({ id: idInput, resourceIds: resourceIdsInput });
 
 export const bookingStaffNoteAddInput = z.strictObject({ id: idInput, text: noteInput.min(1) });
 
+/** A booking as a search shows it: who, when, where and in which status. No notes and no `ext` (spec 004, AC8). */
+export const bookingSummarySchema = bookingObject.pick({
+  id: true,
+  businessDay: true,
+  startMin: true,
+  partySize: true,
+  status: true,
+  customerId: true,
+  contactName: true,
+  resourceIds: true,
+  tags: true,
+});
+
 /** Most bookings one search page returns; the full record of each is long. */
 export const BOOKING_SEARCH_MAX_LIMIT = 50;
 
 /**
  * Finds bookings across days: by guest (`customerId`), by an inclusive range of business days and by free text over
- * the name, notes and tags. Every filter is optional; without one it pages through all bookings.
+ * the name and tags. Every filter is optional; without one it pages through all bookings.
  */
 export const bookingSearchInput = pageInput({ defaultLimit: 20, maxLimit: BOOKING_SEARCH_MAX_LIMIT })
   .extend({
@@ -184,5 +210,4 @@ export type Availability = z.infer<typeof availabilitySchema>;
 export type ClockReading = z.infer<typeof clockReadingSchema>;
 export type StatusStep = z.infer<typeof statusStepSchema>;
 export type BookingCreateInput = z.input<typeof bookingCreateInput>;
-export type BookingChange = Omit<z.infer<typeof bookingRescheduleInput>, "id"> &
-  Partial<Omit<z.infer<typeof bookingTableAssignInput>, "id">>;
+export type BookingChange = Omit<z.infer<typeof bookingRescheduleInput>, "id">;
