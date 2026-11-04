@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, formatLocalDate, formatRelative, type Locale, useLocale, useMessages } from "@/core/i18n/client";
 
-import type { Mail } from "./data";
+import { accounts, type Mail } from "./data";
 import { useMailbox } from "./mail-context";
 import { updateMail } from "./mail-session";
 import { selectMail } from "./mail-state";
@@ -57,7 +57,7 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
                 >
                   <div className="flex items-start gap-3">
                     <Avatar className="size-9 after:rounded-sm">
-                      <AvatarFallback className="bg-background rounded-sm">{item.from.name[0]}</AvatarFallback>
+                      <AvatarFallback className="bg-background rounded-sm">{counterpart(item).name[0]}</AvatarFallback>
                     </Avatar>
 
                     <div className="min-w-0 flex-1 space-y-2">
@@ -69,7 +69,8 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
                               !item.isRead && "font-medium",
                             )}
                           >
-                            {item.from.name} {!item.isRead && <span className="size-2 rounded-full bg-blue-600" />}
+                            {isOwn(item) ? `${text.view.to} ${counterpart(item).name}` : item.from.name}{" "}
+                            {!item.isRead && <span className="size-2 rounded-full bg-blue-600" />}
                           </div>
                           <div
                             className={cn(
@@ -103,6 +104,13 @@ export function MailList({ groups, onSelectMail }: MailListProps) {
     </ScrollArea>
   );
 }
+
+/** Who the list names: the sender, or on a message the person sent, its first recipient. */
+function counterpart(mail: Mail) {
+  return isOwn(mail) ? (mail.to[0] ?? mail.from) : mail.from;
+}
+
+const isOwn = (mail: Mail) => accounts.some((account) => account.email === mail.from.email);
 
 function formatMailDate(date: string, locale: Locale) {
   const mailDate = new Date(date);

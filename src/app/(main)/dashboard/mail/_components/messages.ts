@@ -50,7 +50,15 @@ export interface MailMessages {
     /** Placeholders: `{count}`. */
     readonly attachments: string;
     /** Placeholders: `{name}`, the sender. */
+    /** Placeholders: `{name}`. */
     readonly replyPlaceholder: string;
+    /** Placeholders: `{name}`. */
+    readonly replyAllPlaceholder: string;
+    /** Placeholders: `{names}`, the recipients. */
+    readonly replyingTo: string;
+    /** Placeholders: `{from}`, `{names}`, `{time}`. */
+    readonly replyMeta: string;
+    readonly replyDemoNote: string;
     readonly send: string;
     readonly empty: string;
     readonly drawerTitle: string;
@@ -64,7 +72,31 @@ export interface MailMessages {
     readonly next: string;
     readonly previous: string;
     readonly archive: string;
+    readonly compose: string;
     readonly search: string;
+  };
+  readonly compose: {
+    readonly newTitle: string;
+    readonly forwardTitle: string;
+    /** Placeholders: `{email}`, the account the message leaves from. */
+    readonly description: string;
+    readonly to: string;
+    readonly cc: string;
+    readonly subject: string;
+    readonly body: string;
+    readonly addressesHint: string;
+    readonly send: string;
+    /** Placeholders: `{subject}`. */
+    readonly forwardSubject: string;
+    /** Placeholders: `{name}`, the sender; `{body}`. */
+    readonly forwardBody: string;
+    readonly errors: {
+      readonly toRequired: string;
+      readonly addressInvalid: string;
+      readonly subjectRequired: string;
+      readonly bodyRequired: string;
+    };
+    readonly toast: { readonly sent: string };
   };
   /** Attachment sizes. Placeholders: `{size}`. French says Ko and Mo. */
   readonly size: { readonly kb: string; readonly mb: string };

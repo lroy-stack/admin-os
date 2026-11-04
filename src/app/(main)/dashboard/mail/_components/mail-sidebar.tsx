@@ -38,12 +38,16 @@ import { setAccount, setFolder, unreadIn } from "./mail-state";
 import { mailMessageKey } from "./messages";
 
 export function MailSidebar() {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const text = useMessages(mailMessageKey);
   const locale = useLocale();
   const windows = useMailWindows();
   const { state: mail } = useMailbox();
   const isCollapsed = state === "collapsed";
+  /** On a phone the sidebar is a sheet over the page: choosing something lets the page show. */
+  const dismiss = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   const selectedAccount = accounts.find((account) => account.id === mail.accountId) ?? accounts[0];
 
   return (
@@ -111,7 +115,16 @@ export function MailSidebar() {
           <div className="text-muted-foreground truncate text-sm leading-none">{selectedAccount.email}</div>
         </div>
 
-        <Button size={isCollapsed ? "icon-sm" : "sm"} variant="outline" className="group-data-[state=expanded]:w-full">
+        <Button
+          size={isCollapsed ? "icon-sm" : "sm"}
+          variant="outline"
+          className="group-data-[state=expanded]:w-full"
+          aria-label={isCollapsed ? text.sidebar.newEmail : undefined}
+          onClick={() => {
+            dismiss();
+            windows.openCompose({ kind: "new" });
+          }}
+        >
           <PenLine data-icon="inline-start" />
           <span className="group-data-[state=collapsed]:hidden">{text.sidebar.newEmail}</span>
         </Button>
@@ -120,7 +133,7 @@ export function MailSidebar() {
         <SidebarGroup>
           <SidebarMenu className="gap-1">
             {mailNavigation.navMain.map((nav) => (
-              <FolderEntry key={nav.id} nav={nav} />
+              <FolderEntry key={nav.id} nav={nav} onChoose={dismiss} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
@@ -129,7 +142,7 @@ export function MailSidebar() {
           <SidebarGroupLabel className="font-normal">{text.sidebar.folders}</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {mailNavigation.folders.map((nav) => (
-              <FolderEntry key={nav.id} nav={nav} />
+              <FolderEntry key={nav.id} nav={nav} onChoose={dismiss} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
@@ -141,7 +154,10 @@ export function MailSidebar() {
               className="[&_svg]:size-3.5"
               size="sm"
               tooltip={text.sidebar.keyboardShortcuts}
-              onClick={windows.openShortcuts}
+              onClick={() => {
+                dismiss();
+                windows.openShortcuts();
+              }}
             >
               <Keyboard />
               <span className="font-medium">{text.sidebar.keyboardShortcuts}</span>
@@ -154,7 +170,7 @@ export function MailSidebar() {
 }
 
 /** A folder: choosing it filters the list. The unread count is the folder's own, from the session's mail. */
-function FolderEntry({ nav }: { nav: MailNavItem }) {
+function FolderEntry({ nav, onChoose }: { nav: MailNavItem; onChoose: () => void }) {
   const text = useMessages(mailMessageKey);
   const locale = useLocale();
   const { state, all } = useMailbox();
@@ -170,7 +186,10 @@ function FolderEntry({ nav }: { nav: MailNavItem }) {
         isActive={isActive}
         aria-current={isActive ? "true" : undefined}
         tooltip={title}
-        onClick={() => updateMail((current) => setFolder(current, nav.id, all))}
+        onClick={() => {
+          updateMail((current) => setFolder(current, nav.id, all));
+          onChoose();
+        }}
       >
         <nav.icon />
         <span className="font-medium">{title}</span>

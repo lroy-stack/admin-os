@@ -7,7 +7,7 @@ import { useMessages } from "@/core/i18n/client";
 import { QuickDialog } from "@/ds/overlays";
 
 import { useMailActions } from "./mail-actions";
-import { useMailbox } from "./mail-context";
+import { useMailbox, useMailWindows } from "./mail-context";
 import { mailMessageKey } from "./messages";
 
 /** Keys that belong to a control, a window or a menu are theirs: the shortcuts stay out of the way. */
@@ -17,6 +17,7 @@ const OWNED = "input,textarea,select,[contenteditable],[role=dialog],[role=alert
 export function useMailShortcuts() {
   const { selected } = useMailbox();
   const actions = useMailActions();
+  const windows = useMailWindows();
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -32,6 +33,9 @@ export function useMailShortcuts() {
         case "e":
           if (selected && selected.folder !== "archive") actions.archive(selected);
           break;
+        case "c":
+          windows.openCompose({ kind: "new" });
+          break;
         case "/":
           document.querySelector<HTMLElement>("[data-mail-search]")?.focus();
           break;
@@ -42,7 +46,7 @@ export function useMailShortcuts() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [actions, selected]);
+  }, [actions, selected, windows]);
 }
 
 /** What each shortcut does, in the order the window lists them; `useMailShortcuts` binds the same keys. */
@@ -50,6 +54,7 @@ const SHORTCUT_KEYS = [
   { key: "j", action: "next" },
   { key: "k", action: "previous" },
   { key: "e", action: "archive" },
+  { key: "c", action: "compose" },
   { key: "/", action: "search" },
 ] as const;
 

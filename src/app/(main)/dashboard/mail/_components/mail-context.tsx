@@ -3,12 +3,15 @@
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 
 import type { Mail } from "./data";
+import type { ComposeTarget } from "./mail-compose-dialog";
 import { useMailState } from "./mail-session";
 import { displayOrder, type MailState, resolveMails, visibleMails } from "./mail-state";
 
 /** What the windows of the mail app can be asked to open. Focus returns to the control that asked. */
 export interface MailWindows {
   openShortcuts: () => void;
+  /** `returnTo` is where focus goes on close when the opener is gone by then (a menu item). */
+  openCompose: (target: ComposeTarget, returnTo?: Element | null) => void;
 }
 
 interface MailContextValue {

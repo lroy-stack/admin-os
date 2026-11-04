@@ -1,4 +1,4 @@
-import { MAIL_IDS, type Mail, type MailFolderId, type MailLabelId } from "./data";
+import { MAIL_IDS, type Mail, type MailFolderId, type MailLabelId, type MailReply, type Recipient } from "./data";
 
 export const MAIL_SORTS = ["newest", "oldest", "unread"] as const;
 
@@ -12,6 +12,7 @@ export interface MailEntry {
   readonly isRead?: boolean;
   readonly isPinned?: boolean;
   readonly labels?: readonly MailLabelId[];
+  readonly replies?: readonly MailReply[];
 }
 
 /**
@@ -26,6 +27,8 @@ export interface MailState {
   readonly sort: MailSort;
   /** The account the person writes as (`accounts` in `data.tsx`). */
   readonly accountId: number;
+  /** The messages written in the session (they live in Sent). */
+  readonly created: readonly Mail[];
   readonly entries: Readonly<Record<string, MailEntry>>;
 }
 
@@ -35,6 +38,7 @@ export const INITIAL_MAIL_STATE: MailState = {
   query: "",
   sort: "newest",
   accountId: 1,
+  created: [],
   entries: {},
 };
 
@@ -56,11 +60,12 @@ export function applyEntry(mail: Mail, entry: MailEntry | undefined): Mail {
     isRead: entry.isRead ?? mail.isRead,
     isPinned: entry.isPinned ?? mail.isPinned,
     labels: entry.labels ? [...entry.labels] : mail.labels,
+    replies: entry.replies ? [...entry.replies] : mail.replies,
   };
 }
 
 export function resolveMails(base: readonly Mail[], state: MailState): Mail[] {
-  return base.map((mail) => applyEntry(mail, entryOf(state, mail.id)));
+  return [...base, ...state.created].map((mail) => applyEntry(mail, entryOf(state, mail.id)));
 }
 
 /** Priority is a view of the inbox: a message that was archived or trashed leaves it. */
@@ -170,4 +175,72 @@ export function moveTo(state: MailState, id: string, folder: Mail["folder"]): Ma
 /** Undo: puts back what `entryOf` returned before the action (`undefined` clears the message's entry). */
 export function restoreEntry(state: MailState, id: string, entry: MailEntry | undefined): MailState {
   return withEntry(state, id, entry);
+}
+
+/** What a person writes in the New email and Forward windows. */
+export interface MailDraft {
+  readonly from: Recipient;
+  readonly to: readonly Recipient[];
+  readonly cc: readonly Recipient[];
+  readonly subject: string;
+  readonly body: string;
+}
+
+/** Sends a message: it is added to Sent, already read. `now` is an ISO time. */
+export function sendMail(state: MailState, draft: MailDraft, now: string): MailState {
+  const mail: Mail = {
+    id: `session-${state.created.length + 1}`,
+    accountId: state.accountId,
+    from: draft.from,
+    to: [...draft.to],
+    cc: draft.cc.length > 0 ? [...draft.cc] : undefined,
+    subject: draft.subject,
+    body: draft.body,
+    receivedAt: now,
+    folder: "sent",
+    isRead: true,
+    isPinned: false,
+    isPriority: false,
+    labels: [],
+  };
+  return { ...state, created: [...state.created, mail] };
+}
+
+/** Appends a reply to the thread of the message it answers. */
+export function sendReply(
+  state: MailState,
+  id: string,
+  reply: { readonly from: Recipient; readonly to: readonly Recipient[]; readonly body: string },
+  now: string,
+): MailState {
+  const entry = entryOf(state, id);
+  const replies = entry?.replies ?? [];
+  const added: MailReply = {
+    id: `${id}-reply-${replies.length + 1}`,
+    from: reply.from,
+    to: [...reply.to],
+    body: reply.body,
+    sentAt: now,
+  };
+  return withEntry(state, id, { ...entry, replies: [...replies, added] });
+}
+
+export type ReplyMode = "reply" | "all";
+
+/**
+ * Who a reply goes to. A reply goes to the sender (on a message the person sent, to its recipients); reply all adds the
+ * other recipients and the Cc, never the person's own addresses, each address once.
+ */
+export function replyRecipients(mail: Mail, mode: ReplyMode, ownEmails: readonly string[]): Recipient[] {
+  const own = new Set(ownEmails.map((email) => email.toLowerCase()));
+  const sentByMe = own.has(mail.from.email.toLowerCase());
+  const first = sentByMe ? mail.to : [mail.from];
+  const rest = mode === "all" ? [...(sentByMe ? [] : mail.to), ...(mail.cc ?? [])] : [];
+  const seen = new Set<string>();
+  return [...first, ...rest].filter((recipient) => {
+    const email = recipient.email.toLowerCase();
+    if (seen.has(email) || (own.has(email) && !sentByMe)) return false;
+    seen.add(email);
+    return true;
+  });
 }

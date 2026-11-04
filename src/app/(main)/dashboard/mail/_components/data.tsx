@@ -20,6 +20,15 @@ export type Recipient = {
   email: string;
 };
 
+/** A reply written in the session; it joins the thread of the message it answers. */
+export type MailReply = {
+  id: string;
+  from: Recipient;
+  to: Recipient[];
+  body: string;
+  sentAt: string;
+};
+
 export const MAIL_IDS = [
   "6c84fb90-12c4-11e1-840d-7b25c5ee775a",
   "110e8400-e29b-11d4-a716-446655440000",
@@ -80,6 +89,8 @@ export type Mail = {
   isPriority: boolean;
   labels: MailLabelId[];
   attachments?: Attachment[];
+  /** The replies of the session, oldest first. */
+  replies?: MailReply[];
   messageCount?: number;
 };
 

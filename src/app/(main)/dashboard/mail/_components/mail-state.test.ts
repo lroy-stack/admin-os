@@ -10,9 +10,12 @@ import {
   moveTo,
   neighbour,
   nextAfterRemoval,
+  replyRecipients,
   resolveMails,
   restoreEntry,
   selectMail,
+  sendMail,
+  sendReply,
   setFolder,
   setQuery,
   setSort,
@@ -181,5 +184,88 @@ describe("undo", () => {
     const state = focusMail(markUnread(INITIAL_MAIL_STATE, first), first);
 
     expect(resolveMails(base, state)[0]?.isRead).toBe(false);
+  });
+});
+
+const ME = { name: "Alex Morgan", email: "alex.morgan@example.com" };
+const OWN = ["alex.morgan@example.com", "contact@weblabs.studio"];
+const SENT_AT = "2026-10-31T09:30:00.000Z";
+const DRAFT = {
+  from: ME,
+  to: [{ name: "bea@example.com", email: "bea@example.com" }],
+  cc: [],
+  subject: "Opening hours",
+  body: "We open at nine.",
+};
+
+describe("sending", () => {
+  it("adds the message to Sent, read and unpinned", () => {
+    const state = sendMail(INITIAL_MAIL_STATE, DRAFT, SENT_AT);
+    const sent = visibleMails(resolveMails(base, state), setFolder(state, "sent", resolveMails(base, state)));
+
+    expect(sent.map((mail) => [mail.subject, mail.isRead, mail.isPinned, mail.from.email])).toEqual([
+      ["Opening hours", true, false, ME.email],
+    ]);
+  });
+
+  it("keeps the new message out of the inbox", () => {
+    const state = sendMail(INITIAL_MAIL_STATE, DRAFT, SENT_AT);
+
+    expect(visibleMails(resolveMails(base, state), state)).toHaveLength(base.length);
+  });
+
+  it("gives each sent message its own id", () => {
+    const twice = sendMail(sendMail(INITIAL_MAIL_STATE, DRAFT, SENT_AT), DRAFT, SENT_AT);
+
+    expect(twice.created.map((mail) => mail.id)).toEqual(["session-1", "session-2"]);
+  });
+
+  it("appends a reply to the thread it answers, oldest first", () => {
+    const reply = { from: ME, to: [mailOf(first).from], body: "Thanks" };
+    const state = sendReply(
+      sendReply(INITIAL_MAIL_STATE, first, reply, SENT_AT),
+      first,
+      { ...reply, body: "Again" },
+      SENT_AT,
+    );
+
+    expect(resolveMails(base, state)[0]?.replies?.map((item) => [item.id, item.body])).toEqual([
+      [`${first}-reply-1`, "Thanks"],
+      [`${first}-reply-2`, "Again"],
+    ]);
+  });
+
+  it("leaves the other threads alone when one gets a reply", () => {
+    const state = sendReply(INITIAL_MAIL_STATE, first, { from: ME, to: [], body: "Thanks" }, SENT_AT);
+
+    expect(resolveMails(base, state)[1]?.replies).toBeUndefined();
+  });
+});
+
+describe("who a reply goes to", () => {
+  const withCc = mailOf(first);
+
+  it("answers the sender", () => {
+    expect(replyRecipients(withCc, "reply", OWN).map((to) => to.email)).toEqual(["williamsmith@example.com"]);
+  });
+
+  it("adds the other recipients and the Cc on reply all, never the person's own addresses", () => {
+    expect(replyRecipients(withCc, "all", ["alex.morgan@example.com"]).map((to) => to.email)).toEqual([
+      "williamsmith@example.com",
+      "contact@weblabs.studio",
+    ]);
+  });
+
+  it("names each address once", () => {
+    const twice = { ...withCc, cc: [withCc.from] };
+
+    expect(replyRecipients(twice, "all", OWN).map((to) => to.email)).toEqual(["williamsmith@example.com"]);
+  });
+
+  it("answers the recipients of a message the person sent", () => {
+    const state = sendMail(INITIAL_MAIL_STATE, DRAFT, SENT_AT);
+    const own = resolveMails(base, state).at(-1) ?? withCc;
+
+    expect(replyRecipients(own, "reply", OWN).map((to) => to.email)).toEqual(["bea@example.com"]);
   });
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { type FormEvent, useEffect, useRef, useState } from "react";
+
 import { cn } from "cn";
 import {
   Archive,
@@ -7,8 +9,12 @@ import {
   ChevronLeft,
   ChevronRight,
   EllipsisVertical,
+  Forward,
   MailOpen,
   Pin,
+  Reply,
+  ReplyAll,
+  Send,
   Tag,
   Trash2,
   X,
@@ -25,19 +31,21 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, formatLocalDate, useLocale, useMessages } from "@/core/i18n/client";
 import { PopoverOrSheet } from "@/ds/overlays";
 
-import { MAIL_LABELS, type Mail } from "./data";
+import { accounts, MAIL_LABELS, type Mail } from "./data";
 import { useMailActions } from "./mail-actions";
-import { useMailbox } from "./mail-context";
+import { useMailbox, useMailWindows } from "./mail-context";
 import { updateMail } from "./mail-session";
-import { focusMail, neighbour, toggleLabel } from "./mail-state";
+import { focusMail, neighbour, type ReplyMode, replyRecipients, sendReply, toggleLabel } from "./mail-state";
 import { mailMessageKey } from "./messages";
 
 interface MailDisplayProps {
@@ -50,8 +58,17 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
   const locale = useLocale();
   const { order } = useMailbox();
   const actions = useMailActions();
+  const windows = useMailWindows();
+  const moreTrigger = useRef<HTMLButtonElement>(null);
+  const replyAfterMenu = useRef<ReplyMode | null>(null);
+  const [request, setRequest] = useState<{ mode: ReplyMode; count: number }>({ mode: "reply", count: 0 });
   const previous = mail ? neighbour(order, mail.id, -1) : null;
   const next = mail ? neighbour(order, mail.id, 1) : null;
+
+  /** Asks the composer under the message to take focus, answering the sender or everyone. */
+  function askReply(mode: ReplyMode) {
+    setRequest((current) => ({ mode, count: current.count + 1 }));
+  }
 
   function handleClose() {
     updateMail((state) => focusMail(state, null));
@@ -133,6 +150,20 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
             </TooltipTrigger>
             <TooltipContent>{text.view.archive}</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={text.view.reply}
+                disabled={!mail}
+                onClick={() => askReply("reply")}
+              >
+                <Reply />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{text.view.reply}</TooltipContent>
+          </Tooltip>
           {mail ? (
             <PopoverOrSheet
               title={text.view.addLabel}
@@ -167,12 +198,46 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label={text.view.moreActions} disabled={!mail}>
+                  <Button
+                    ref={moreTrigger}
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={text.view.moreActions}
+                    disabled={!mail}
+                  >
                     <EllipsisVertical />
                   </Button>
                 </TooltipTrigger>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent
+                align="end"
+                className="w-48"
+                onCloseAutoFocus={(event) => {
+                  // The composer takes focus once the menu has let go, and the menu must not give it back to its trigger.
+                  const mode = replyAfterMenu.current;
+                  if (mode === null) return;
+                  replyAfterMenu.current = null;
+                  event.preventDefault();
+                  askReply(mode);
+                }}
+              >
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      replyAfterMenu.current = "all";
+                    }}
+                  >
+                    <ReplyAll />
+                    {text.view.replyAll}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => mail && windows.openCompose({ kind: "forward", mail }, moreTrigger.current)}
+                  >
+                    <Forward />
+                    {text.view.forward}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem onSelect={() => mail && actions.markUnread(mail)}>
                     <MailOpen />
@@ -297,12 +362,103 @@ export function MailView({ mail, onClose }: MailDisplayProps) {
               </>
             ) : null}
 
-            <div className="min-h-0 flex-1 scrollbar-none overflow-y-auto text-sm whitespace-pre-wrap">{mail.body}</div>
+            <div className="min-h-0 flex-1 scrollbar-none overflow-y-auto text-sm">
+              <div className="whitespace-pre-wrap">{mail.body}</div>
+              {mail.replies?.length ? (
+                <ul className="mt-4 flex flex-col gap-3">
+                  {mail.replies.map((reply) => (
+                    <li key={reply.id} className="flex flex-col gap-1 border-t pt-3">
+                      <div className="text-muted-foreground text-xs">
+                        {format(text.view.replyMeta, locale, {
+                          from: reply.from.name,
+                          names: reply.to.map((recipient) => recipient.name).join(", "),
+                          time: formatLocalDate(new Date(reply.sentAt), locale, {
+                            day: "numeric",
+                            month: "short",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          }),
+                        })}
+                      </div>
+                      <div className="break-words whitespace-pre-wrap">{reply.body}</div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <ReplyComposer key={mail.id} mail={mail} request={request} />
           </div>
         ) : (
           <div className="text-muted-foreground grid h-full place-items-center text-sm">{text.view.empty}</div>
         )}
       </div>
     </div>
+  );
+}
+
+/** The inline reply under the open message. Send adds the reply to the message's thread on the session's mail. */
+function ReplyComposer({ mail, request }: { mail: Mail; request: { mode: ReplyMode; count: number } }) {
+  const text = useMessages(mailMessageKey);
+  const locale = useLocale();
+  const input = useRef<HTMLInputElement>(null);
+  const handled = useRef(request.count);
+  const [mode, setMode] = useState<ReplyMode>("reply");
+  const [body, setBody] = useState("");
+  const { accountId } = useMailbox().state;
+  const account = accounts.find((item) => item.id === accountId) ?? accounts[0];
+  const recipients = replyRecipients(
+    mail,
+    mode,
+    accounts.map((item) => item.email),
+  );
+  const names = recipients.map((recipient) => recipient.name).join(", ");
+
+  useEffect(() => {
+    if (request.count === handled.current) return;
+    handled.current = request.count;
+    setMode(request.mode);
+    input.current?.focus();
+  }, [request]);
+
+  function send(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = body.trim();
+    if (trimmed === "") return;
+    updateMail((state) =>
+      sendReply(
+        state,
+        mail.id,
+        { from: { name: account.label, email: account.email }, to: recipients, body: trimmed },
+        new Date().toISOString(),
+      ),
+    );
+    setBody("");
+  }
+
+  return (
+    <form className="mt-auto flex flex-col gap-2" onSubmit={send}>
+      <Separator />
+      <p className="text-muted-foreground truncate text-xs">{format(text.view.replyingTo, locale, { names })}</p>
+      <InputGroup>
+        <InputGroupAddon align="inline-start">{mode === "all" ? <ReplyAll /> : <Reply />}</InputGroupAddon>
+        <InputGroupInput
+          ref={input}
+          className="text-xs"
+          aria-label={mode === "all" ? text.view.replyAll : text.view.reply}
+          placeholder={format(mode === "all" ? text.view.replyAllPlaceholder : text.view.replyPlaceholder, locale, {
+            name: mail.from.name,
+          })}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+        />
+        <InputGroupAddon className="gap-1" align="inline-end">
+          <InputGroupButton type="submit" variant="ghost" aria-label={text.view.send} disabled={body.trim() === ""}>
+            <Send />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+      <p className="text-muted-foreground text-xs">{text.view.replyDemoNote}</p>
+    </form>
   );
 }
