@@ -3,6 +3,13 @@
 All notable changes to admin-OS are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `npm run deploy` stops unless `NEXT_PUBLIC_SITE_URL` is a public https URL, read from the shell and the `.env`
+  files as the build reads it; without it the build wrote localhost into canonical, Open Graph and sitemap links.
+
 ## [0.2.0] - 2026-11-04
 
 The first release. admin-OS began as an import of the dashboard template credited in the README; this entry covers
@@ -68,4 +75,5 @@ everything since that import.
 - The public demo MCP tokens are read-only.
 - The demo cookies are `Secure` over HTTPS, bounded in time and scoped to the request's host.
 
+[Unreleased]: https://github.com/lroy-stack/admin-os/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/lroy-stack/admin-os/releases/tag/v0.2.0

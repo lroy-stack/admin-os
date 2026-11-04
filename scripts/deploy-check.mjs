@@ -1,7 +1,38 @@
-// Fails the deploy before it starts when a Worker lacks a secret it cannot serve without. It reads only the secret
-// names from `wrangler secret list`, never their values.
+// Fails the deploy before it starts when it would ship without what it needs: the public URL the build writes into its
+// links, and the secrets each Worker cannot serve without. It reads the URL from the environment the build sees (the
+// shell, then the .env files `next build` loads) and only the secret names from `wrangler secret list`, never values.
+
+import nextEnv from "@next/env";
+
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+
+const LOCAL_HOSTS = new Set(["localhost", "0.0.0.0", "[::1]"]);
+const SITE_URL_FIX = [
+  "The build writes it into canonical, Open Graph and sitemap links; deploy with your public URL:",
+  "",
+  "NEXT_PUBLIC_SITE_URL=https://admin-os.example.com npm run deploy",
+].join("\n");
+
+const isLocalHost = (hostname) => {
+  const host = hostname.replace(/\.$/, "");
+  return LOCAL_HOSTS.has(host) || host.endsWith(".localhost") || host.startsWith("127.");
+};
+
+// The links are the origin followed by a route, so anything after the host (even a trailing slash) breaks them.
+const isPublicOrigin = (value) => {
+  if (!URL.canParse(value)) return false;
+  const url = new URL(value);
+  return url.protocol === "https:" && url.origin === value && !isLocalHost(url.hostname);
+};
+
+/** Why the build would write a wrong public URL into its links; empty when `value` is a public https origin. */
+export function siteUrlError(value) {
+  if (value === undefined || value === "") return `NEXT_PUBLIC_SITE_URL is not set. ${SITE_URL_FIX}`;
+  return isPublicOrigin(value)
+    ? ""
+    : `NEXT_PUBLIC_SITE_URL is "${value}", not the public https origin of the site (scheme and host only). ${SITE_URL_FIX}`;
+}
 
 /** The secrets each Worker cannot serve without. A secret that several Workers require holds one value on all of them. */
 export const WORKERS = [
@@ -57,16 +88,29 @@ function listSecrets({ worker, config }) {
   try {
     return execFileSync("npx", ["wrangler", "secret", "list", "--format", "json", "-c", config], { encoding: "utf8" });
   } catch {
-    console.error(
+    throw new Error(
       `Could not list the secrets of the ${worker} Worker (${config}). Log in with \`npx wrangler login\`; a Worker that does not exist yet is created by putting its first secret.`,
     );
-    process.exit(1);
+  }
+}
+
+/** The secrets advice, or why the secrets could not be read; the site URL is reported either way. */
+function secretsProblem() {
+  try {
+    return deployCheckMessage(
+      WORKERS.map((entry) => ({ ...entry, missing: missingSecrets(listSecrets(entry), entry.secrets) })),
+    );
+  } catch (error) {
+    return error.message;
   }
 }
 
 function main() {
-  const checked = WORKERS.map((entry) => ({ ...entry, missing: missingSecrets(listSecrets(entry), entry.secrets) }));
-  const message = deployCheckMessage(checked);
+  // The production build's view: the shell's variables win, then .env.production.local, .env.local, .env.production, .env.
+  nextEnv.loadEnvConfig(process.cwd(), false, { info: () => undefined, error: console.error });
+  const message = [siteUrlError(process.env.NEXT_PUBLIC_SITE_URL), secretsProblem()]
+    .filter((part) => part !== "")
+    .join("\n\n");
   if (message === "") return;
   console.error(message);
   process.exit(1);

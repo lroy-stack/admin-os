@@ -246,7 +246,7 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 | `npm run check` | Lint, format and layer boundaries (Biome, dependency-cruiser) |
 | `npm run media` | Rebuilds the screenshots and recordings in `media/` |
 | `npm run preview` | Cloudflare Workers build, served locally on workerd |
-| `npm run deploy` | Checks the session secret, builds for Cloudflare Workers, deploys the demo store Worker, the MCP Worker, then the app |
+| `npm run deploy` | Checks the public URL and the session secret, builds for Cloudflare Workers, deploys the demo store Worker, the MCP Worker, then the app |
 | `npm run dev:mcp` | The MCP Worker under `wrangler dev`, at `http://localhost:8789/mcp` |
 | `npm run dev:mcp:read-only` | A second, read-only MCP Worker with the public demo tokens, at `http://localhost:8790/mcp` |
 | `npm run eval:mcp` | Agent evals: the golden MCP tasks through headless Claude Code (see "MCP") |
@@ -312,7 +312,8 @@ deploy your own:
 
    To keep a visitor's data in the memory of each instance instead, remove `DATA_STORE`, `durable_objects` and
    `DEMO_SESSION_SECRET`; it then resets when Cloudflare recycles the instance.
-4. Build and deploy with your public URL, which the build writes into canonical and Open Graph links:
+4. Build and deploy with your public URL, which the build writes into canonical, Open Graph and sitemap links
+   (`npm run deploy` stops unless it is a public https URL):
 
    ```bash
    NEXT_PUBLIC_SITE_URL=https://admin-os.example.com npm run deploy
