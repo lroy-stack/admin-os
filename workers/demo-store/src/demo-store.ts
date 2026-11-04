@@ -1,13 +1,14 @@
 import { z } from "zod";
 
 import { CATALOG } from "@/config/catalog";
-import { DEMO, type DemoSeed, MOCK_HANDLERS, settingsFor } from "@/config/demo-kernel";
+import { DEMO, type DemoSeed, heldWritesFor, MOCK_HANDLERS, settingsFor } from "@/config/demo-kernel";
 import {
   catalogVersion,
   type DemoStoreRpc,
   type StoreCallContext,
   storeCallContextSchema,
 } from "@/config/demo-store-rpc";
+import { approvalPolicySchema, approvalStatusSchema } from "@/core/approvals";
 import type { AnyCapability } from "@/core/capability";
 import { fixedClock, liveClock } from "@/core/clock";
 import { ErrorCodes } from "@/core/errors";
@@ -21,18 +22,34 @@ import { DurableObject } from "cloudflare:workers";
  * Bump when the shape of the persisted session changes: a mismatch resets the object to the seed. A test pins it to
  * a fingerprint of the seeds' structure, so a seed change without a bump fails there.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 /** A session is deleted this long after its last write; the demo cookie is renewed on each write for as long. */
 const IDLE_MS = 2 * 60 * 60 * 1000;
+
+const approvalRecordSchema = z.object({
+  approvalId: z.string(),
+  capabilityId: z.string(),
+  input: z.unknown(),
+  fingerprint: z.string(),
+  expected: z.string(),
+  requestedBy: z.object({ actorId: z.string(), role: z.string(), via: z.enum(["ui", "mcp", "system"]) }),
+  requestedAt: z.string(),
+  expiresAt: z.string(),
+  status: approvalStatusSchema,
+  decidedBy: z.object({ actorId: z.string(), role: z.string() }).optional(),
+  decidedAt: z.string().optional(),
+  reason: z.string().optional(),
+  result: z.unknown().optional(),
+  error: z.object({ code: z.string(), message: z.string() }).optional(),
+});
 
 const snapshotSchema = z.object({
   data: z.record(z.string(), z.unknown()),
   replays: z.array(
     z.tuple([z.string(), z.object({ fingerprint: z.string(), result: z.custom<CallResult<unknown>>() })]),
   ),
-  approvals: z.array(
-    z.object({ approvalId: z.string(), capabilityId: z.string(), actorId: z.string(), input: z.unknown() }),
-  ),
+  approvals: z.array(approvalRecordSchema),
+  approvalPolicy: approvalPolicySchema.optional(),
 });
 
 type Store = ReturnType<typeof createSessionStore<DemoSeed>>;
@@ -88,6 +105,7 @@ export class DemoStore extends DurableObject implements DemoStoreRpc {
       sessionId: context.sessionId,
       clock: context.clockLive ? liveClock(clock, new Date()) : fixedClock(clock),
       settings: settingsFor(context.vertical),
+      heldWrites: heldWritesFor(context.vertical),
       faults: new Map(context.faults ?? []),
     });
     const result = await adapter.dispatch(capability, parsedInput.data, {
@@ -145,6 +163,7 @@ export class DemoStore extends DurableObject implements DemoStoreRpc {
     Object.assign(session.data as object, saved.data);
     for (const [key, value] of saved.replays) session.replays.set(key, value);
     session.approvals.push(...saved.approvals);
+    if (saved.approvalPolicy !== undefined) session.approvalPolicy = saved.approvalPolicy;
     return store;
   }
 
@@ -157,6 +176,7 @@ export class DemoStore extends DurableObject implements DemoStoreRpc {
       data: session.data,
       replays: [...session.replays],
       approvals: session.approvals,
+      approvalPolicy: session.approvalPolicy,
     });
     this.ctx.storage.sql.exec(
       "INSERT OR REPLACE INTO session (id, schema_version, owner, snapshot) VALUES (1, ?, ?, ?)",

@@ -111,6 +111,43 @@ describe("DemoStore", () => {
     expect(await customerCount(client)).toBe(before + 1);
   });
 
+  it("keeps a held write and its policy across eviction, so a person can still approve it", async () => {
+    const sessionId = crypto.randomUUID();
+    const held = await stubFor(sessionId).dispatch(
+      "bookings.cancel",
+      { id: "R-1046", reason: "Guest called" },
+      contextFor(sessionId, { via: "mcp" }),
+    );
+    const approvalId = (held as { approvalId: string }).approvalId;
+
+    await abortAllDurableObjects();
+    const waiting = await stubFor(sessionId).dispatch("approvals.get", { approvalId }, contextFor(sessionId));
+    const approved = await stubFor(sessionId).dispatch("approvals.approve", { approvalId }, contextFor(sessionId));
+    await abortAllDurableObjects();
+    const booking = await stubFor(sessionId).dispatch("bookings.get", { id: "R-1046" }, contextFor(sessionId));
+
+    expect([held, waiting, approved, booking]).toMatchObject([
+      { status: "awaiting_approval" },
+      { ok: true, value: { status: "pending" } },
+      { ok: true, value: { status: "approved" } },
+      { ok: true, value: { status: "cancelled" } },
+    ]);
+  });
+
+  it("keeps the policy a person chose across eviction", async () => {
+    const sessionId = crypto.randomUUID();
+    await stubFor(sessionId).dispatch("approvals.policy.set", { policy: "none" }, contextFor(sessionId));
+
+    await abortAllDurableObjects();
+    const cancelled = await stubFor(sessionId).dispatch(
+      "bookings.cancel",
+      { id: "R-1046", reason: "Guest called" },
+      contextFor(sessionId, { via: "mcp" }),
+    );
+
+    expect(cancelled).toMatchObject({ ok: true, value: { status: "cancelled" } });
+  });
+
   it("resets to the seed when the saved schemaVersion is not the current one", async () => {
     const sessionId = crypto.randomUUID();
     const client = clientFor(sessionId);
