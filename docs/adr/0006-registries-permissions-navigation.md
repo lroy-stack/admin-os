@@ -147,6 +147,11 @@ is one, serialised into the boot script (`src/scripts/theme-boot.tsx`).
 > under `productViews`. A view whose module is off or whose permission the actor lacks is hidden at runtime, and the
 > contract test keeps this record's rule: every entry names a declared kind of an enabled module.
 
+> **Amended 2026-11-05 (ADR 0017):** a generator writes the composition of the registries from the modules'
+> manifests (`npm run generate:modules`), for ADR 0017's reason: v2 merges v1 tags and agents add and remove modules.
+> This record's own revisit trigger has not fired, since presets are still edited by hand. The arrays stay static and
+> typed, with no runtime registration.
+
 ```ts
 export interface NavEntry {
   readonly id: string;                        // stable: "bookings"

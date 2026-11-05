@@ -3,6 +3,10 @@
 Status: accepted · Date: 2026-11-04 · Spec: `docs/specs/004-mcp-server/spec.md` (D1–D8, AC1–AC12) · Plan: M0
 · Spike: `docs/specs/004-mcp-server/spike-s0.md` (GO) · Amends: ADR 0005, 0009 · Related: ADR 0003, 0006, 0008
 
+> **Amended 2026-11-05 (ADR 0017):** the composition root assembles the MCP manifest from the modules' manifests
+> (kernel entries first, then the modules by id); a hint to an absent module is dropped, and `ID_SOURCES` and the
+> instructions' module sentence come from the generated list.
+
 ## Context
 
 ### The problem, measured

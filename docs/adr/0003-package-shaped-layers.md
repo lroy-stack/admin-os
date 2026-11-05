@@ -2,6 +2,10 @@
 
 Status: accepted (owner, 2026-10-31) · Date: 2026-10-31 · Spec: `docs/specs/002-reference-console/spec.md` · Related: ADR 0004–0008
 
+> **Amended 2026-11-05 (ADR 0017):** the distribution is chosen before the "two external users" trigger: the
+> repository as a template, a manifest per module and a generated composition root, and a public registry for `ds`
+> pieces only. No monorepo; `src/core/module` holds the manifest type.
+
 ## Context
 
 This repo is a fork of Studio Admin that becomes a **reusable, publishable kit** for building the management

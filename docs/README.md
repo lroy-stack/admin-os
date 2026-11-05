@@ -36,6 +36,7 @@ reference is generated from the code.
 | [ADR 0009](adr/0009-mcp-server.md) | The MCP server is a projection of the catalogue through the UI's client |
 | [ADR 0015](adr/0015-window-rules.md) | The window is chosen by the job, from one shared kit |
 | [ADR 0016](adr/0016-mcp-server-as-its-own-product.md) | The MCP server is its own Worker over a durable demo store, with scoped access |
+| [ADR 0017](adr/0017-a-module-is-a-folder.md) | A module is a folder: a manifest per module and a generated composition root |
 | [ADR 0018](adr/0018-product-views-and-inventory.md) | Products: `catalog` for what a business sells, `inventory` for what it keeps, views each preset picks |
 | [ADR 0019](adr/0019-billing-parties.md) | Parties: who a business invoices and buys from, apart from the agenda's customers |
 

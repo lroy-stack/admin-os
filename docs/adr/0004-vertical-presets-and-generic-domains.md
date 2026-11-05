@@ -72,6 +72,10 @@ Option 3.
 > default of a business setting (`bookings.walk_in.stay_minutes`, ...) where the business really differs. Keys and
 > values are checked against the settings registry (`src/config/settings.ts`) by the contract tests.
 
+> **Amended 2026-11-05 (ADR 0017):** a preset's seed is split per module (`seed/<module>.ts`, with `seed/index.ts`),
+> and a module's manifest `seed` field replaces `extends` and the required-collections list. The bullet below about
+> `server.ts` seeds reads as `seed/*.ts` from then on.
+
 - **Business data lives only in `src/verticals/*/server.ts` seeds.** Generic layers contain none (see the leak
   check in ADR 0008).
 - **Modules never read the preset.** They receive registrations and settings through the composition root

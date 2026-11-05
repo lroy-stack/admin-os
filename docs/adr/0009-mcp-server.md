@@ -2,6 +2,10 @@
 
 Status: proposed · Date: 2026-10-31 · Amended: 2026-10-31 (transports, T8b) · Spec: `docs/specs/001-v0-1/spec.md` (D4, AC5) · Plan: T8a, T8b · Related: ADR 0003, 0005, 0006
 
+> **Amended 2026-11-05 (ADR 0017):** the MCP manifest is the kernel entries plus the module entries the generator
+> composes from each module's manifest. A cross-module hint is dropped when its module is absent, and the instructions'
+> module sentence comes from the generated list.
+
 ## Context
 
 - **Spec D4, one catalogue, two doors.** The UI and the MCP server call the same capabilities through the same
