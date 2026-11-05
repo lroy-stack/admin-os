@@ -11,7 +11,14 @@ import { watch } from "./watch";
 /**
  * `skill` is a seeded skill with words in the preset's terms and `rawSkill` the id the data holds. `leaks` are fields
  * of that preset's seed (contract terms and extensions) that no byte of the page may carry; each occurs in the seed.
+ * `contract` is matched as a JSON key (`"contract":`, escaped or not in the RSC payload), since the actor's permission
+ * list legitimately names `read:staff.contracts`.
  */
+/** The `contract` key of a serialised record, plain or escaped inside the RSC payload. */
+const CONTRACT_KEY = /\\?"contract\\?":/;
+/** A seed value or field name that must not appear anywhere in the page. */
+const field = (name: string) => new RegExp(name);
+
 const PRESETS = [
   {
     preset: "hospitality",
@@ -21,7 +28,7 @@ const PRESETS = [
     role: "Manager",
     skill: "Sommelier",
     rawSkill: "sommelier",
-    leaks: ["full_time", "startDate", "hoursPerWeek", "contract", "crew"],
+    leaks: [field("full_time"), field("startDate"), field("hoursPerWeek"), CONTRACT_KEY, field("crew")],
   },
   {
     preset: "salon",
@@ -31,7 +38,7 @@ const PRESETS = [
     role: "Stylist",
     skill: "Colour",
     rawSkill: "colour",
-    leaks: ["commissionBp", "startDate", "contract"],
+    leaks: [field("commissionBp"), field("startDate"), CONTRACT_KEY],
   },
   {
     preset: "workshop",
@@ -41,7 +48,7 @@ const PRESETS = [
     role: "Mechanic",
     skill: "Brakes",
     rawSkill: "brakes",
-    leaks: ["certifications", "startDate", "hoursPerWeek", "contract"],
+    leaks: [field("certifications"), field("startDate"), field("hoursPerWeek"), CONTRACT_KEY],
   },
 ] as const;
 
@@ -62,7 +69,8 @@ for (const { preset, word, members, one, role, skill, rawSkill, leaks } of PRESE
     });
 
     test(`the "${word}" entry of the nav opens the directory under that word`, async ({ page }) => {
-      await page.goto("/dashboard/default");
+      // The nav row is client code: let it load before the click, as the cross-door spec does.
+      await page.goto("/dashboard/default", { waitUntil: "networkidle" });
       await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: word, exact: true }).click();
 
       await expect(page).toHaveURL(/\/dashboard\/staff$/);
@@ -110,7 +118,7 @@ for (const { preset, word, members, one, role, skill, rawSkill, leaks } of PRESE
 
       // A control: the same payload does carry the members, so a missing field is not a missing page.
       expect(members.every((name) => html.includes(name))).toBe(true);
-      expect(leaks.filter((field) => html.includes(field))).toEqual([]);
+      expect(leaks.filter((leak) => leak.test(html)).map(String)).toEqual([]);
     });
   });
 }
