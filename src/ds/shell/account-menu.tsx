@@ -59,12 +59,21 @@ function DemoSwitch({ label, control, failed }: { label: string; control: ShellS
 export function AccountMenu({
   account,
   demo,
+  accountHref,
   settingsHref,
+  logoutHref,
+  onOpenNotifications,
 }: {
   account: ShellAccount;
   demo?: ShellDemo;
-  /** Where the business settings live; the app owns its routes. */
+  /** The signed-in person's own page; the app owns its routes. */
+  accountHref: string;
+  /** Where the business settings live. */
   settingsHref: string;
+  /** Where signing out leads. */
+  logoutHref: string;
+  /** Opens the bell's inbox; absent when the actor cannot read notifications, which hides the item. */
+  onOpenNotifications?: () => void;
 }) {
   const { account: text } = useMessages(shellMessageKey);
   const guardLink = useGuardedLink();
@@ -105,9 +114,11 @@ export function AccountMenu({
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <BadgeCheck />
-            {text.account}
+          <DropdownMenuItem asChild>
+            <Link prefetch={false} href={accountHref} onNavigate={guardLink(accountHref)}>
+              <BadgeCheck />
+              {text.account}
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link prefetch={false} href={settingsHref} onNavigate={guardLink(settingsHref)}>
@@ -115,10 +126,12 @@ export function AccountMenu({
               {text.businessSettings}
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Bell />
-            {text.notifications}
-          </DropdownMenuItem>
+          {onOpenNotifications ? (
+            <DropdownMenuItem onSelect={onOpenNotifications}>
+              <Bell />
+              {text.notifications}
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuGroup>
         {demo && (
           <>
@@ -134,9 +147,11 @@ export function AccountMenu({
           </>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <LogOut />
-          {text.logOut}
+        <DropdownMenuItem asChild>
+          <Link prefetch={false} href={logoutHref} onNavigate={guardLink(logoutHref)}>
+            <LogOut />
+            {text.logOut}
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

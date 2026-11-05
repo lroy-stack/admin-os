@@ -125,7 +125,9 @@ export function TopNav({
   account,
   demo,
   inboxHref,
+  accountHref,
   settingsHref,
+  logoutHref,
   notifications,
 }: {
   brand: ShellBrand;
@@ -135,8 +137,12 @@ export function TopNav({
   demo?: ShellDemo;
   /** Where the inbox button goes; the app owns its routes. */
   inboxHref: string;
+  /** Where the account menu's Account item goes: the signed-in person's own page. */
+  accountHref: string;
   /** Where the account menu's business settings go. */
   settingsHref: string;
+  /** Where the account menu's Log out goes. */
+  logoutHref: string;
   /** The bell and its panel; omitted when the actor cannot read notifications. */
   notifications?: ShellNotifications;
 }) {
@@ -145,6 +151,8 @@ export function TopNav({
   const locale = useLocale();
   const scrolled = useScrolledPast(8);
   const guardLink = useGuardedLink();
+  // Held here so the account menu's Notifications item opens the same inbox as the bell.
+  const [bellOpen, setBellOpen] = useState(false);
 
   return (
     <header
@@ -180,6 +188,8 @@ export function TopNav({
           </Button>
           {notifications ? (
             <PopoverOrSheet
+              open={bellOpen}
+              onOpenChange={setBellOpen}
               align="end"
               title={notifications.title}
               className="w-96 p-0"
@@ -196,7 +206,14 @@ export function TopNav({
               {notifications.panel}
             </PopoverOrSheet>
           ) : null}
-          <AccountMenu account={account} demo={demo} settingsHref={settingsHref} />
+          <AccountMenu
+            account={account}
+            demo={demo}
+            accountHref={accountHref}
+            settingsHref={settingsHref}
+            logoutHref={logoutHref}
+            onOpenNotifications={notifications ? () => setBellOpen(true) : undefined}
+          />
         </div>
       </div>
 

@@ -161,6 +161,26 @@ test("the account menu resets the demo data", async ({ page, context, baseURL })
   await expect(page.getByText("Demo data reset.")).toBeVisible();
 });
 
+/**
+ * Every account menu item has a destination (plan 009 D1, ADR 0015: a control with no destination is removed):
+ * Account opens the signed-in person's profile, Notifications opens the bell's inbox, Log out the sign-in page.
+ */
+test("the account menu's items each lead somewhere", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+  await page.goto("/dashboard/default", { waitUntil: "networkidle" });
+
+  await openAccountMenu(page);
+  await expect(page.getByRole("menuitem", { name: "Account" })).toHaveAttribute("href", "/dashboard/profile");
+  await expect(page.getByRole("menuitem", { name: "Business settings" })).toHaveAttribute(
+    "href",
+    "/dashboard/settings",
+  );
+  await expect(page.getByRole("menuitem", { name: "Log out" })).toHaveAttribute("href", "/auth/v1/login");
+
+  await page.getByRole("menuitem", { name: "Notifications" }).click();
+  await expect(page.getByRole("dialog", { name: "Notifications" })).toBeVisible();
+});
+
 test("a section far to the right scrolls the nav row, never the page", async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
   await page.goto("/dashboard/kanban");
