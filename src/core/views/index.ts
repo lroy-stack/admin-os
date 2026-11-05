@@ -1,5 +1,8 @@
 import type { z } from "zod";
 
+import type { Locale } from "@/core/i18n";
+import type { CallResult, ReadStatus } from "@/core/result";
+
 /**
  * A kind of product view, declared by a module (ADR 0018 §3): a serialisable descriptor naming the module that owns
  * it, the read capability it calls (whose permission the viewer needs) and the schema of the parameters a preset gives
@@ -26,3 +29,20 @@ export interface ViewEntry<Kind extends string = string> {
   /** Parsed by the kind's `params` schema in the contract test. */
   readonly params: unknown;
 }
+
+/** What a view's loader hands its renderer: the state of the read, its reason when it failed, and plain rows. */
+export interface ViewData<Row = unknown> {
+  readonly state: ReadStatus;
+  /** The translated reason when the read failed or was refused. */
+  readonly reason?: string;
+  readonly rows: readonly Row[];
+}
+
+/** What a loader may use (ADR 0017 §1): the request's locale and a read that goes through the actor's client. */
+export interface ViewLoaderContext {
+  readonly locale: Locale;
+  readonly call: (capability: string, input: unknown) => Promise<CallResult<unknown>>;
+}
+
+/** The server half of a view kind: reads through its capability and returns serialisable rows (ADR 0018 §3). */
+export type ViewLoader = (context: ViewLoaderContext, params: unknown) => Promise<ViewData>;

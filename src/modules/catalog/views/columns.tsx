@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, type Locale } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
-import type { ProductsMessages } from "./messages";
-import type { ProductRow, ProductStatus } from "./products-model";
+import type { CatalogCollectionMessages } from "./messages";
+import type { ProductRow, ProductStatus } from "./model";
 
 const statusColors: Record<ProductStatus, string> = {
   active: "bg-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400",
@@ -21,7 +21,7 @@ export function createProductsColumns({
   text,
   locale,
 }: {
-  text: ProductsMessages;
+  text: CatalogCollectionMessages;
   locale: Locale;
 }): ColumnDef<DataTableFeatures, ProductRow>[] {
   return [

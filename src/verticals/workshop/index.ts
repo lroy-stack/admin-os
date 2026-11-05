@@ -61,7 +61,7 @@ export const workshop = {
     "bookings.service_window": { startMin: 8 * 60, endMin: 18 * 60 },
   },
   /** Words that must never appear in the generic layers (ADR 0008). */
-  /** The product views it offers, in order (ADR 0018 §3): parts; supplier orders join with `inventory`. */
+  /** The product views it offers, in order (ADR 0018 §3): parts and supplier orders. */
   productViews: [
     {
       id: "parts",
@@ -69,6 +69,7 @@ export const workshop = {
       labelKey: "catalog.collections.parts",
       params: { categoryIds: ["parts"] },
     },
+    { id: "orders", kind: "inventory.orders", labelKey: "inventory.views.orders", params: {} },
   ],
   leakTerms: ["vehicle", "mechanic"],
 } as const;

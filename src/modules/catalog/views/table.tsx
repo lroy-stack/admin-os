@@ -11,8 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
-import { productsMessageKey } from "./messages";
-import type { ProductRow } from "./products-model";
+import { catalogCollectionMessageKey } from "./messages";
+import type { ProductRow } from "./model";
 
 const headerIcons: Record<string, typeof Package> = {
   name: Package,
@@ -27,8 +27,8 @@ export function ProductsTable({
   table: ReactTable<DataTableFeatures, ProductRow>;
   onReset: () => void;
 }) {
-  const clearFilters = useMessages(productsMessageKey).clearFilters;
-  const text = useMessages(productsMessageKey).table;
+  const clearFilters = useMessages(catalogCollectionMessageKey).clearFilters;
+  const text = useMessages(catalogCollectionMessageKey).table;
   const locale = useLocale();
   const { pageIndex, pageSize } = table.state.pagination;
   const total = table.getFilteredRowModel().rows.length;

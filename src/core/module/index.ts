@@ -2,13 +2,13 @@ import { z } from "zod";
 
 import { KERNEL_MODULES } from "@/core/access";
 import type { AnyCapability, Catalog } from "@/core/capability";
-import type { Locale } from "@/core/i18n";
+import type { Locale, MessageBundle } from "@/core/i18n";
 // Types only: they are erased, so a client bundle that reads a manifest never reaches the server-only entry.
 import type { InputField, ManifestEntry, McpManifest, ToolManifest } from "@/core/mcp/server";
 import type { MockHandler } from "@/core/mock";
 import type { ModuleId } from "@/core/nav";
 import type { AnySetting } from "@/core/settings";
-import type { ViewKind } from "@/core/views";
+import type { ViewKind, ViewLoader } from "@/core/views";
 
 /**
  * A module's manifest (ADR 0017 §1): what the composition root needs from a module folder, as data and descriptors
@@ -123,6 +123,10 @@ export interface ModuleServer<Id extends string = string> {
   readonly id: Id;
   readonly messages: Readonly<Record<Locale, unknown>>;
   readonly mockHandlers: Readonly<Record<string, MockHandler<never>>>;
+  /** A loader for each view kind it declares, by kind id (ADR 0018 §3); the Products route calls the one a preset lists. */
+  readonly viewLoaders?: Readonly<Record<string, ViewLoader>>;
+  /** The dictionary each of its view renderers reads, by kind id, so a route delivers the words of the views it shows. */
+  readonly viewBundles?: Readonly<Record<string, MessageBundle<unknown>>>;
 }
 
 /**

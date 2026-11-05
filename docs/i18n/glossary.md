@@ -99,10 +99,12 @@ German statuses are participles without gender in these positions and need no ru
 | Customer (one) | Customer | Cliente | Kunde | Client | |
 | Party (fiscal directory) | Party | Tercero | Geschäftspartner | Tiers | A client or a supplier with a tax ID (ADR 0019); not a customer of the agenda |
 | Client (billing) | Client | Cliente | Kunde | Client | Whom the business invoices; "Cliente" in es is shared with "Customer" |
+| Stock (a product view) | Stock | Existencias | Bestand | Stock | What the business keeps; a preset may rename it |
 | Stock item | Stock item | Artículo en stock | Lagerartikel | Article en stock | What the business keeps, sold or not (ADR 0018) |
 | Purchase order | Purchase order | Pedido de compra | Bestellung | Commande d’achat | A buy from a supplier; not a sales order |
 | Reorder point | Reorder point | Punto de pedido | Meldebestand | Seuil de réapprovisionnement | Stock at or under it needs re-ordering |
 | Supplier | Supplier | Proveedor | Lieferant | Fournisseur | Whom the business buys from |
+| Supplier orders (a product view) | Supplier orders | Pedidos a proveedores | Lieferantenbestellungen | Commandes fournisseurs | The purchase orders a business places; a preset may rename it |
 | Contact | Contact | Contacto | Kontakt | Contact | |
 | Company | Company | Empresa | Unternehmen | Entreprise | Company names are proper nouns |
 | Segment | Segment | Segmento | Segment | Segment | |

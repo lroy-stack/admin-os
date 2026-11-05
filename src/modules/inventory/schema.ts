@@ -58,3 +58,5 @@ export const ordersListInput = pageInput({ defaultLimit: 50, maxLimit: 200 }).ex
 export type StockItem = z.infer<typeof stockItemSchema>;
 export type PurchaseOrder = z.infer<typeof purchaseOrderSchema>;
 export type PurchaseOrderStatus = (typeof purchaseOrderStatuses)[number];
+export type StockItemRow = z.infer<typeof stockItemRowSchema>;
+export type PurchaseOrderRow = z.infer<typeof purchaseOrderRowSchema>;

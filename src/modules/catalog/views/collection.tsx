@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -11,29 +11,26 @@ import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocale, useMessages } from "@/core/i18n/client";
-import { SegmentedControl, type SegmentedOption } from "@/ds/components";
+import type { ViewData } from "@/core/views";
 import { dataTableFeatures } from "@/ds/data-table";
 import { ReadState } from "@/ds/feedback";
 
-import { productsMessageKey } from "./messages";
-import { createProductsColumns } from "./products-columns";
-import { PRODUCT_STATUSES, type ProductViewData } from "./products-model";
-import { ProductsTable } from "./products-table";
+import { createProductsColumns } from "./columns";
+import { catalogCollectionMessageKey } from "./messages";
+import { PRODUCT_STATUSES, type ProductRow } from "./model";
+import { ProductsTable } from "./table";
 
-/** The views the viewer may read, in the preset's order; with one, there is no toggle and that view is shown. */
-export function Products({ views }: { views: readonly ProductViewData[] }) {
-  const text = useMessages(productsMessageKey);
+/** The `catalog.collection` renderer (ADR 0018 §3): the items of one view, with search, a status filter and pages. */
+export function CatalogCollection({ data }: { data: ViewData<ProductRow> }) {
+  const text = useMessages(catalogCollectionMessageKey);
   const locale = useLocale();
   const router = useRouter();
-  const [viewId, setViewId] = useState(views[0]?.id ?? "");
-  const view = views.find((item) => item.id === viewId) ?? views[0];
 
   const columns = useMemo(() => createProductsColumns({ text, locale }), [text, locale]);
-  const viewOptions: SegmentedOption<string>[] = views.map((item) => ({ value: item.id, label: item.label }));
 
   const table = useTable({
     features: dataTableFeatures,
-    data: view?.rows ?? [],
+    data: data.rows,
     columns,
     initialState: {
       columnVisibility: { search: false },
@@ -57,23 +54,10 @@ export function Products({ views }: { views: readonly ProductViewData[] }) {
     table.setPageIndex(0);
   }
 
-  function showView(id: string) {
-    setViewId(id);
-    resetFilters();
-  }
-
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 md:px-6">
         <div className="flex flex-wrap items-center gap-2">
-          {views.length > 1 && (
-            <SegmentedControl
-              label={text.viewsLabel}
-              value={view?.id ?? ""}
-              options={viewOptions}
-              onValueChange={showView}
-            />
-          )}
           <InputGroup className="h-7 w-full rounded-[min(var(--radius-md),10px)] sm:w-64">
             <InputGroupAddon>
               <Search />
@@ -112,8 +96,8 @@ export function Products({ views }: { views: readonly ProductViewData[] }) {
         </div>
       </div>
       <ReadState
-        state={view?.state ?? { status: "empty" }}
-        reason={view?.reason}
+        state={data.state}
+        reason={data.reason}
         onRetry={() => router.refresh()}
         emptyTitle={text.empty.title}
         emptyDescription={text.empty.description}

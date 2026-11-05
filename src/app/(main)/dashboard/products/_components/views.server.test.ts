@@ -4,7 +4,7 @@ import { hospitality } from "@/verticals/hospitality";
 import { salon } from "@/verticals/salon";
 import { workshop } from "@/verticals/workshop";
 
-import { readableViews, visibleViews } from "./product-views.server";
+import { readableViews, visibleViews } from "./views.server";
 
 const KINDS = [{ id: "catalog.collection", module: "catalog", capability: "catalog.list" }];
 const access = { kinds: KINDS, permissionOf: () => "read:catalog" };
