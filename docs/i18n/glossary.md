@@ -78,6 +78,7 @@ German statuses are participles without gender in these positions and need no ru
 | Preferences | Preferences | Preferencias | Einstellungen | Préférences | The personal panel in the shell |
 | Account | Account | Cuenta | Konto | Compte | |
 | Profile | Profile | Perfil | Profil | Profil | |
+| Breadcrumb | Breadcrumb | Ruta de navegación | Brotkrümelnavigation | Fil d’Ariane | The page trail's accessible name (ADR 0020); never shown |
 | Roles | Roles | Roles | Rollen | Rôles | |
 | Notifications | Notifications | Notificaciones | Benachrichtigungen | Notifications | |
 | Search | Search | Buscar | Suchen | Rechercher | Button and placeholder |

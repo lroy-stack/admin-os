@@ -3,6 +3,7 @@ export { CurrencyTooltipContent } from "./currency-tooltip";
 export { FilterChip } from "./filter-chip";
 export { LiquidThumb, useLiquidThumb } from "./liquid-thumb";
 export { type HeaderKpi, type KpiBadgeTone, PageHeader } from "./page-header";
+export { PageTrail, type TrailLevel } from "./page-trail";
 export { PeriodStepper } from "./period-stepper";
 export { SearchCapsule } from "./search-capsule";
 export { SegmentedControl, type SegmentedOption } from "./segmented-control";
