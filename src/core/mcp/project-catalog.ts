@@ -34,8 +34,14 @@ export const IDEMPOTENCY_META_KEY = "admin-os/idempotencyKey";
 /** Tool `_meta` key with the capability's risk tier (0 to 3). */
 export const RISK_TIER_META_KEY = "admin-os/riskTier";
 
+/**
+ * The key an agent writes as an argument is a UUID: agents asked for "a unique string" sent short, guessable ones
+ * that two distinct operations could share (eval M-E1). A host's `_meta` key keeps the client's rule.
+ */
+const argumentKeySchema = z.uuid();
+
 const IDEMPOTENCY_ARGUMENT_DESCRIPTION =
-  "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict.";
+  "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict.";
 
 /** The client the projection dispatches through, bound to the calling actor and one correlation id per call. */
 export type ClientFactory = (actor: Actor, correlationId: string) => DataClient<Catalog>;
@@ -99,7 +105,11 @@ export const TOOL_LIST_CACHE_HINT = { ttlMs: 5 * 60 * 1000, cacheScope: "private
 export const awaitingApprovalSchema = z.strictObject({
   status: z.literal("awaiting_approval"),
   approvalId: z.string().min(1),
+  /** The hint repeated: some clients show the model the structured content and not the text (eval M-E1). */
+  message: z.string().min(1),
 });
+
+const HELD_MESSAGE = "Held for a person to approve. Do not retry.";
 
 /** `bookings.list` → `bookings_list`: MCP clients and models handle underscores in tool names best. */
 export const toolNameOf = (capabilityId: string): string => capabilityId.replaceAll(".", "_");
@@ -166,7 +176,7 @@ const inputSchemaOf = (capability: AnyCapability): JsonObjectSchema => {
     );
   }
   const { $schema: _dialect, ...keySchema } = z.toJSONSchema(
-    idempotencyKeySchema.describe(IDEMPOTENCY_ARGUMENT_DESCRIPTION),
+    argumentKeySchema.describe(IDEMPOTENCY_ARGUMENT_DESCRIPTION),
     { target: JSON_SCHEMA_TARGET },
   );
   return {
@@ -316,7 +326,7 @@ export const toCallToolResult = (result: CallResult<unknown>): CallToolResult =>
           text: `awaiting_approval: held for a person to approve (approvalId ${result.approvalId}). Do not retry.`,
         },
       ],
-      structuredContent: { status: result.status, approvalId: result.approvalId },
+      structuredContent: { status: result.status, approvalId: result.approvalId, message: HELD_MESSAGE },
     };
   }
   if (!result.ok) return toolError(result.error.code, result.error.message, result.error.details);
@@ -345,10 +355,8 @@ type PreparedCall =
 
 const KEY_ADVICE = "send a new UUID for this operation, and the same one if you retry it";
 
-const keyIssue = (where: string) =>
-  toolError(ErrorCodes.invalidInput, `${where} must be a string of 1 to 128 characters: ${KEY_ADVICE}.`, {
-    paths: [where],
-  });
+const keyIssue = (where: string, shape: string) =>
+  toolError(ErrorCodes.invalidInput, `${where} must be ${shape}: ${KEY_ADVICE}.`, { paths: [where] });
 
 /**
  * Splits the key from the arguments (spec 004 D6). A create or add takes `idempotencyKey` as an argument; a host may
@@ -363,11 +371,14 @@ const prepareCall = (capability: AnyCapability, args: ToolArguments, meta: Serve
   const rawMeta = meta?.[IDEMPOTENCY_META_KEY];
   const fromMeta = idempotencyKeySchema.safeParse(rawMeta);
   if (rawMeta !== undefined && !fromMeta.success) {
-    return { ok: false, error: keyIssue(`_meta.${IDEMPOTENCY_META_KEY}`) } satisfies PreparedCall;
+    return {
+      ok: false,
+      error: keyIssue(`_meta.${IDEMPOTENCY_META_KEY}`, "a string of 1 to 128 characters"),
+    } satisfies PreparedCall;
   }
-  const fromArgument = idempotencyKeySchema.safeParse(rawArgument);
+  const fromArgument = argumentKeySchema.safeParse(rawArgument);
   if (keyed && rawArgument !== undefined && !fromArgument.success) {
-    return { ok: false, error: keyIssue(IDEMPOTENCY_ARGUMENT) } satisfies PreparedCall;
+    return { ok: false, error: keyIssue(IDEMPOTENCY_ARGUMENT, "a UUID") } satisfies PreparedCall;
   }
   const argumentKey = keyed && fromArgument.success ? fromArgument.data : undefined;
   const metaKey = fromMeta.success ? fromMeta.data : undefined;
@@ -387,7 +398,7 @@ const prepareCall = (capability: AnyCapability, args: ToolArguments, meta: Serve
       ok: false,
       error: toolError(
         ErrorCodes.idempotencyRequired,
-        `${toolNameOf(capability.id)} needs the ${IDEMPOTENCY_ARGUMENT} argument, a string of 1 to 128 characters: ${KEY_ADVICE}. Nothing was changed.`,
+        `${toolNameOf(capability.id)} needs the ${IDEMPOTENCY_ARGUMENT} argument, a UUID: ${KEY_ADVICE}. Nothing was changed.`,
         { paths: [IDEMPOTENCY_ARGUMENT] },
       ),
     } satisfies PreparedCall;

@@ -42,7 +42,11 @@ export const instructionsFor = (modules: readonly ModuleManifest[], catalog: Cat
     return [
       business,
       ...(sources.length > 0 ? [`Never guess an id: find ${sources.join(", ")}.`] : []),
-      ...(toolIds.has("clock.get") ? ["clock_get gives today's business day."] : []),
+      ...(toolIds.has("clock.get")
+        ? [
+            "Take every date from clock_get, never from your own system: it gives today's business day in the business's time zone.",
+          ]
+        : []),
       ...(readOnly ? ["This server is read-only: it lists and runs read tools only."] : []),
       ...(keyed.length > 0
         ? [

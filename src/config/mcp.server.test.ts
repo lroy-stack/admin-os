@@ -142,7 +142,9 @@ describe("the instructions of the server (spec 004 U2)", () => {
     const text = await instructionsOf(owner, true);
     expect([
       text.includes("This server is read-only: it lists and runs read tools only."),
-      text.includes("clock_get gives today's business day."),
+      text.includes(
+        "Take every date from clock_get, never from your own system: it gives today's business day in the business's time zone.",
+      ),
       text.includes("awaiting_approval"),
       text.includes("idempotencyKey"),
       text.endsWith(ENDING),

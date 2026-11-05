@@ -153,6 +153,9 @@ const owner: Actor = {
 const reader: Actor = { actorId: "demo-staff", roleId: "staff", permissions: ["read:notes"] };
 const nobody: Actor = { actorId: "anonymous", roleId: "anonymous", permissions: [] };
 
+/** An agent's key argument is a UUID (D2); `_meta` keys come from the host and keep the client's rule. */
+const KEY = "6f1c7a52-3b8e-4d0a-9c4e-2a7b5d9e1f30";
+
 const open: Client[] = [];
 
 afterEach(async () => {
@@ -327,7 +330,7 @@ describe("descriptions and errors that say how to fix the call (spec 004 U3)", (
   it("explains schema.invalid_input field by field and keeps the failing paths", async () => {
     const result = await (await connect(owner)).callTool({
       name: "notes_add",
-      arguments: { text: "", extra: 1, idempotencyKey: "k-1" },
+      arguments: { text: "", extra: 1, idempotencyKey: KEY },
     });
     expect(result).toMatchObject({
       isError: true,
@@ -443,6 +446,13 @@ describe("refusals are logged (spec 004 U3)", () => {
     ["a write on a read-only server", true, "notes_clear", {}, "access.forbidden"],
     ["a create without a key", false, "notes_create", { text: "no key" }, "client.idempotency_required"],
     ["a malformed key", false, "notes_create", { text: "bad key", idempotencyKey: "" }, "schema.invalid_input"],
+    [
+      "a key that is not a UUID (D2)",
+      false,
+      "notes_create",
+      { text: "short key", idempotencyKey: "k-1" },
+      "schema.invalid_input",
+    ],
   ] as const)(
     "writes one line for %s, with the result's correlation id",
     async (_label, readOnly, name, args, code) => {
@@ -561,6 +571,16 @@ describe("calls", () => {
     });
   });
 
+  it("tells the agent not to retry a held write in the structured content too (D2)", async () => {
+    const result = await (await connect(owner, false, { policy: "all" })).callTool({
+      name: "notes_add",
+      arguments: { text: "urgent", idempotencyKey: crypto.randomUUID() },
+    });
+    expect(result).toMatchObject({
+      structuredContent: { status: "awaiting_approval", message: expect.stringContaining("Do not retry") },
+    });
+  });
+
   it("keeps a held write out of the error channel", async () => {
     const result = await (await connect(owner, false, { policy: "all" })).callTool({
       name: "notes_add",
@@ -595,7 +615,7 @@ describe("idempotency by operation (spec 004 D6)", () => {
   it("advertises a required idempotencyKey argument on a create", async () => {
     const { tools } = await (await connect(owner)).listTools();
     expect(tools.find((tool) => tool.name === "notes_create")?.inputSchema).toMatchObject({
-      properties: { text: { type: "string" }, idempotencyKey: { type: "string", minLength: 1, maxLength: 128 } },
+      properties: { text: { type: "string" }, idempotencyKey: { type: "string", format: "uuid" } },
       required: ["text", "idempotencyKey"],
     });
   });
@@ -609,7 +629,7 @@ describe("idempotency by operation (spec 004 D6)", () => {
 
   it("applies a create retried with the same idempotencyKey argument once", async () => {
     const client = await connect(owner);
-    const call = { name: "notes_create", arguments: { text: "once", idempotencyKey: "k-1" } };
+    const call = { name: "notes_create", arguments: { text: "once", idempotencyKey: KEY } };
     const first = await client.callTool(call);
     const retry = await client.callTool(call);
     expect([retry.structuredContent, await notesAfter(client)]).toEqual([first.structuredContent, ["seeded", "once"]]);
@@ -626,8 +646,8 @@ describe("idempotency by operation (spec 004 D6)", () => {
   it("accepts the same key in the argument and in _meta", async () => {
     const result = await (await connect(owner)).callTool({
       name: "notes_create",
-      arguments: { text: "both", idempotencyKey: "k-1" },
-      _meta: { [IDEMPOTENCY_META_KEY]: "k-1" },
+      arguments: { text: "both", idempotencyKey: KEY },
+      _meta: { [IDEMPOTENCY_META_KEY]: KEY },
     });
     expect(result).toMatchObject({ structuredContent: { items: ["seeded", "both"] } });
   });
@@ -647,7 +667,7 @@ describe("idempotency by operation (spec 004 D6)", () => {
   it("refuses different keys in the argument and in _meta", async () => {
     const result = await (await connect(owner)).callTool({
       name: "notes_create",
-      arguments: { text: "two keys", idempotencyKey: "k-1" },
+      arguments: { text: "two keys", idempotencyKey: KEY },
       _meta: { [IDEMPOTENCY_META_KEY]: "k-2" },
     });
     expect(result).toMatchObject({
@@ -672,8 +692,8 @@ describe("idempotency by operation (spec 004 D6)", () => {
 
   it("answers the same key with other arguments with client.idempotency_conflict", async () => {
     const client = await connect(owner);
-    await client.callTool({ name: "notes_create", arguments: { text: "first", idempotencyKey: "k-1" } });
-    const reused = await client.callTool({ name: "notes_create", arguments: { text: "other", idempotencyKey: "k-1" } });
+    await client.callTool({ name: "notes_create", arguments: { text: "first", idempotencyKey: KEY } });
+    const reused = await client.callTool({ name: "notes_create", arguments: { text: "other", idempotencyKey: KEY } });
     expect(reused).toMatchObject({ isError: true, structuredContent: { code: "client.idempotency_conflict" } });
   });
 

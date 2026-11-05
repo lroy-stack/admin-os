@@ -122,7 +122,9 @@ describe("ensureDemoSession", () => {
   it("fails fast with an actionable message when the durable store has no secret", async () => {
     vi.stubEnv("DEMO_SESSION_SECRET", "");
     vi.stubEnv("DATA_STORE", "durable");
-    await expect(ensureDemoSession()).rejects.toThrow(/DEMO_SESSION_SECRET is required.*openssl rand/);
+    await expect(ensureDemoSession()).rejects.toThrow(
+      /DEMO_SESSION_SECRET is required.*openssl rand.*the repository root's `\.dev\.vars`/,
+    );
   });
 
   it("fails fast on a read when the durable store has no secret", async () => {
