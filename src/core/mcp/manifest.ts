@@ -42,14 +42,18 @@ export type McpManifest = Readonly<Record<string, ManifestEntry>>;
 
 type InputField<C extends AnyCapability> = keyof z.input<C["input"]> & string;
 
-/** An exposed entry whose id hints name the capability's own input fields and capabilities of the same catalogue. */
-type TypedExposedEntry<M extends Catalog, C extends AnyCapability> = Omit<ExposedEntry, "ids"> & {
-  readonly ids?: { readonly [F in InputField<C>]?: readonly (keyof M & string)[] };
+/** An exposed entry whose id hints name the capability's own input fields and, as `Hint`, the tools that list them. */
+type TypedExposedEntry<C extends AnyCapability, Hint extends string> = Omit<ExposedEntry, "ids"> & {
+  readonly ids?: { readonly [F in InputField<C>]?: readonly Hint[] };
 };
 
-/** One entry per capability of the catalogue `M`: a capability added to `M` does not compile until it is classified. */
-export type ToolManifest<M extends Catalog> = {
-  readonly [Id in keyof M]: UiOnlyEntry | TypedExposedEntry<M, M[Id]>;
+/**
+ * One entry per capability of the catalogue `M`: a capability added to `M` does not compile until it is classified.
+ * An id hint names a capability of `M` by default. A module's own manifest widens `Hint`, since a hint may name
+ * another module's tool; the composition root narrows it again (ADR 0017).
+ */
+export type ToolManifest<M extends Catalog, Hint extends string = keyof M & string> = {
+  readonly [Id in keyof M]: UiOnlyEntry | TypedExposedEntry<M[Id], Hint>;
 };
 
 export const isExposed = (entry: ManifestEntry): entry is ExposedEntry => "expose" in entry;

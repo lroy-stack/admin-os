@@ -1,0 +1,266 @@
+import { z } from "zod";
+
+import { KERNEL_MODULES } from "@/core/access";
+import type { Catalog } from "@/core/capability";
+// Types only: they are erased, so a client bundle that reads a manifest never reaches the server-only entry.
+import type { ManifestEntry, ToolManifest } from "@/core/mcp/server";
+import type { ModuleId } from "@/core/nav";
+import type { AnySetting } from "@/core/settings";
+
+/**
+ * A module's manifest (ADR 0017 §1): what the composition root needs from a module folder, as data and descriptors
+ * only, since the Workers read it and must never reach web code. Each module exports `<module>Module` from its
+ * `index.ts`; `moduleProblems` checks the installed manifests together.
+ */
+
+/**
+ * A capability id as an MCP id hint names it. A hint may name another module's tool without importing that module,
+ * not even as a type; the composition root type-checks it against the installed catalogue (ADR 0017).
+ */
+export type CapabilityRef = `${string}.${string}`;
+
+/** A field of a seed collection that holds another module's ids, which no import shows (ADR 0017 §3). */
+export interface ModuleReference {
+  /** The seed collection whose rows hold the field; the installed module that seeds it gives the row schema. */
+  readonly collection: string;
+  /** The field's path in a row: `customerId`, `staffIds[]`, `lines[].catalogItemId`. */
+  readonly field: string;
+  /** The module whose records the ids name. */
+  readonly module: ModuleId;
+  /**
+   * A required reference refuses the module without its target. An optional one reads an absent target's collection
+   * as empty and an id that matches nothing as unknown, never as a throw.
+   */
+  readonly required: boolean;
+}
+
+/** One seed collection of the module: its row schema, and whether every preset that enables the module seeds rows. */
+export interface SeedCollection {
+  readonly schema: z.ZodType;
+  readonly required: boolean;
+  /** The entity whose `ext` slot a preset may type (ADR 0004); `optional` lets a row leave `ext` out even then. */
+  readonly ext?: { readonly entity: string; readonly optional: boolean };
+}
+
+export interface ModuleManifest<
+  Id extends string = string,
+  C extends Catalog = Catalog,
+  T extends ToolManifest<C, CapabilityRef> = ToolManifest<C, CapabilityRef>,
+> {
+  /** The folder's name, and the first segment of every capability id and setting key. */
+  readonly id: Id;
+  readonly capabilities: C;
+  /** The settings it declares (ADR 0006). */
+  readonly settings: readonly AnySetting[];
+  readonly mcp: {
+    /** One entry per capability (spec 004 D5); an id hint names this module's tool or a referenced module's. */
+    readonly tools: T;
+  };
+  /** The seed collections it owns, by name. */
+  readonly seed: Readonly<Record<string, SeedCollection>>;
+  readonly references: readonly ModuleReference[];
+  /** Repository paths outside the folder that go with it: its routes, config tests and e2e specs. One owner each. */
+  readonly owns: readonly string[];
+}
+
+/** Keys that must not be there: each one is typed `never`, so a value under it does not compile. */
+type Refused<K extends PropertyKey> = { readonly [P in K]: never };
+
+/**
+ * Identity helper that keeps the literal id, capability ids and hints the composition root type-checks. A capability
+ * outside the module's prefix, an MCP entry for no capability and a capability without an entry do not compile.
+ */
+export const defineModule = <
+  const Id extends string,
+  const C extends Catalog,
+  const T extends ToolManifest<C, CapabilityRef>,
+>(
+  manifest: ModuleManifest<Id, C, T> & {
+    readonly capabilities: Refused<Exclude<keyof C, `${Id}.${string}`>>;
+    readonly mcp: { readonly tools: Refused<Exclude<keyof T, keyof C>> };
+  },
+): ModuleManifest<Id, C, T> => manifest;
+
+/** A manifest as the module folder that exports it was found. */
+export interface InstalledModule {
+  readonly folder: string;
+  readonly manifest: ModuleManifest;
+}
+
+/** Wrappers that parse their inner schema's value, each with `unwrap()`. */
+const WRAPPERS = [
+  z.ZodOptional,
+  z.ZodNullable,
+  z.ZodDefault,
+  z.ZodPrefault,
+  z.ZodNonOptional,
+  z.ZodReadonly,
+  z.ZodCatch,
+  z.ZodLazy,
+] as const;
+
+const unwrap = (schema: z.ZodType): z.ZodType => {
+  const wrapper = WRAPPERS.find((kind) => schema instanceof kind);
+  if (wrapper !== undefined) return unwrap((schema as InstanceType<typeof wrapper>).unwrap() as z.ZodType);
+  return schema instanceof z.ZodPipe ? unwrap(schema.in as z.ZodType) : schema;
+};
+
+/** The schema at a reference path (`lines[].catalogItemId`): `[]` steps into an array's element. */
+const schemaAt = (schema: z.ZodType, path: readonly string[]): z.ZodType | undefined => {
+  const [segment, ...rest] = path;
+  if (segment === undefined) return unwrap(schema);
+  const object = unwrap(schema);
+  if (!(object instanceof z.ZodObject)) return undefined;
+  const name = segment.endsWith("[]") ? segment.slice(0, -2) : segment;
+  const field = (object.shape as Readonly<Record<string, z.ZodType | undefined>>)[name];
+  if (field === undefined) return undefined;
+  if (!segment.endsWith("[]")) return schemaAt(field, rest);
+  const array = unwrap(field);
+  return array instanceof z.ZodArray ? schemaAt(array.element as z.ZodType, rest) : undefined;
+};
+
+/**
+ * Whether `path` reaches a string field of rows parsed by `schema`, as an id reference must. String formats
+ * (`z.uuid()`, `z.email()`) and template literals are strings too.
+ */
+export const isStringField = (schema: z.ZodType, path: string): boolean => {
+  const leaf = schemaAt(schema, path.split("."));
+  return leaf instanceof z.core.$ZodString || leaf instanceof z.ZodTemplateLiteral;
+};
+
+/**
+ * An owned path is written relative to the repository root, segment by segment: no leading or trailing `/`, no `.`
+ * or `..`, no empty segment. Only then does the overlap check below compare like with like.
+ */
+const isCanonical = (path: string) =>
+  path.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
+
+/** Whether one owned path contains the other, or is it: a path has one owner (ADR 0017 §7). */
+const overlaps = (a: string, b: string) => a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
+
+const prefixOf = (id: string) => id.split(".")[0] ?? id;
+
+/** The kernel is always installed (ADR 0004), so a hint may name its tools without a reference. */
+const KERNEL: ReadonlySet<string> = new Set(KERNEL_MODULES);
+
+/** The tools an entry's id hints name; a UI-only entry has none. */
+const hintsOf = (entry: ManifestEntry): string[] => Object.values("ids" in entry ? (entry.ids ?? {}) : {}).flat();
+
+function identityProblems({ folder, manifest }: InstalledModule): string[] {
+  const { id } = manifest;
+  const strayCapabilities = Object.entries(manifest.capabilities)
+    .filter(([key, capability]) => !key.startsWith(`${id}.`) || capability.id !== key)
+    .map(([key]) => key);
+  const straySettings = manifest.settings.map(({ key }) => key).filter((key) => !key.startsWith(`${id}.`));
+  return [
+    ...(id === folder ? [] : [`src/modules/${folder}: the manifest's id is "${id}"; set it to "${folder}"`]),
+    ...(strayCapabilities.length > 0
+      ? [`${id}: capabilities ${strayCapabilities.join(", ")} must be keyed by their own id, under "${id}."`]
+      : []),
+    ...(straySettings.length > 0 ? [`${id}: settings ${straySettings.join(", ")} must start with "${id}."`] : []),
+  ];
+}
+
+function ownershipProblems(modules: readonly InstalledModule[], pathExists: (path: string) => boolean): string[] {
+  const owned = modules.flatMap(({ manifest }) => manifest.owns.map((path) => ({ id: manifest.id, path })));
+  const crooked = owned
+    .filter(({ path }) => !isCanonical(path))
+    .map(({ id, path }) => `${id} owns "${path}"; write it from the repository root, without ".", ".." or an edge "/"`);
+  const canonical = owned.filter(({ path }) => isCanonical(path));
+  const missing = canonical
+    .filter(({ path }) => !pathExists(path))
+    .map(({ id, path }) => `${id} owns ${path}, which does not exist; fix the path or remove it from owns`);
+  const twice = canonical.flatMap((a, index) =>
+    canonical
+      .slice(index + 1)
+      .filter((b) => overlaps(a.path, b.path))
+      .map((b) => `${a.path} (${a.id}) and ${b.path} (${b.id}) overlap; a path has one owner`),
+  );
+  return [...crooked, ...missing, ...twice];
+}
+
+function seedProblems(modules: readonly InstalledModule[]): string[] {
+  const collections = modules.flatMap(({ manifest }) =>
+    Object.entries(manifest.seed).map(([name, collection]) => ({
+      id: manifest.id,
+      name,
+      entity: collection.ext?.entity,
+    })),
+  );
+  const seededTwice = collections.flatMap((a, index) =>
+    collections
+      .slice(index + 1)
+      .filter((b) => b.name === a.name)
+      .map((b) => `the seed collection ${a.name} is declared by ${a.id} and ${b.id}; one module owns it`),
+  );
+  const typedTwice = collections.flatMap((a, index) =>
+    collections
+      .slice(index + 1)
+      .filter((b) => a.entity !== undefined && b.entity === a.entity)
+      .map((b) => `the ext entity ${a.entity} is declared by ${a.id} (${a.name}) and ${b.id} (${b.name})`),
+  );
+  return [...seededTwice, ...typedTwice];
+}
+
+function referenceProblems(modules: readonly InstalledModule[]): string[] {
+  const installed = new Set(modules.map(({ manifest }) => manifest.id));
+  const seeds = new Map(
+    modules.flatMap(({ manifest }) => Object.entries(manifest.seed).map(([name, { schema }]) => [name, schema])),
+  );
+  return modules.flatMap(({ manifest: { id, references } }) =>
+    references.flatMap(({ collection, field, module, required }) => {
+      const where = `${id}'s reference ${collection}.${field} → ${module}`;
+      const schema = seeds.get(collection);
+      return [
+        ...(required && !installed.has(module)
+          ? [`${where} is required, and ${module} is not installed; restore src/modules/${module} or remove ${id}`]
+          : []),
+        ...(schema === undefined
+          ? [`${where}: no installed module seeds the collection ${collection}`]
+          : isStringField(schema, field)
+            ? []
+            : [`${where}: ${field} is not a string field of ${collection}'s rows`]),
+      ];
+    }),
+  );
+}
+
+function hintProblems(modules: readonly InstalledModule[]): string[] {
+  const catalogs = new Map(modules.map(({ manifest }) => [manifest.id, manifest.capabilities]));
+  return modules.flatMap(({ manifest: { id, capabilities, references, mcp } }) => {
+    const referenced = new Set(references.map(({ module }) => module));
+    const entries = Object.entries(mcp.tools as Readonly<Record<string, ManifestEntry>>);
+    return entries.flatMap(([tool, entry]) =>
+      hintsOf(entry).flatMap((hint) => {
+        const owner = prefixOf(hint);
+        if (owner === id) {
+          return Object.hasOwn(capabilities, hint) ? [] : [`${tool} hints ${hint}, which ${id} does not declare`];
+        }
+        // A kernel tool exists in every composition; the composition root's `satisfies` checks its name.
+        if (KERNEL.has(owner)) return [];
+        if (!referenced.has(owner)) {
+          return [`${tool} hints ${hint}, but ${id} declares no reference to ${owner}; add the reference`];
+        }
+        const target = catalogs.get(owner);
+        return target === undefined || Object.hasOwn(target, hint)
+          ? []
+          : [`${tool} hints ${hint}, which ${owner} does not declare`];
+      }),
+    );
+  });
+}
+
+/**
+ * Manifest bugs the types cannot catch, across the installed modules (ADR 0017 §1–§3, §7). Each message names the
+ * module and the fix; `pathExists` answers for a repository path.
+ */
+export const moduleProblems = (
+  modules: readonly InstalledModule[],
+  pathExists: (path: string) => boolean,
+): readonly string[] => [
+  ...modules.flatMap(identityProblems),
+  ...ownershipProblems(modules, pathExists),
+  ...seedProblems(modules),
+  ...referenceProblems(modules),
+  ...hintProblems(modules),
+];

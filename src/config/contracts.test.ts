@@ -13,11 +13,12 @@ import {
   type Vocabulary,
 } from "@/core/i18n";
 import type { NavEntry } from "@/core/nav";
-import { bookingSchema } from "@/modules/bookings";
-import { catalogItemSchema } from "@/modules/catalog";
-import { assetSchema, customerSchema } from "@/modules/customers";
-import { areaSchema, resourceSchema } from "@/modules/resources";
-import { shiftSchema, staffMemberSchema } from "@/modules/staff";
+import { bookingsModule } from "@/modules/bookings";
+import { catalogModule } from "@/modules/catalog";
+import { customersModule } from "@/modules/customers";
+import { notificationsModule } from "@/modules/notifications";
+import { resourcesModule } from "@/modules/resources";
+import { staffModule } from "@/modules/staff";
 import { hospitality } from "@/verticals/hospitality";
 import { hospitalitySeed, hospitalityVocabulary } from "@/verticals/hospitality/server";
 import { salon } from "@/verticals/salon";
@@ -42,29 +43,18 @@ const presets: readonly PresetUnderTest[] = [
   { id: "workshop", preset: workshop, seed: workshopSeed, vocabulary: workshopVocabulary },
 ];
 
-const seedSchemas = [
-  ["areas", areaSchema],
-  ["resources", resourceSchema],
-  ["customers", customerSchema],
-  ["assets", assetSchema],
-  ["catalog", catalogItemSchema],
-  ["staff", staffMemberSchema],
-  ["shifts", shiftSchema],
-  ["bookings", bookingSchema],
-] as const satisfies readonly (readonly [string, z.ZodType])[];
+/** The installed modules' manifests, until the generated list replaces this one (ADR 0017 §5). */
+const manifests = [bookingsModule, catalogModule, customersModule, notificationsModule, resourcesModule, staffModule];
 
-const REQUIRED_COLLECTIONS = ["areas", "resources", "customers", "catalog", "staff", "bookings"] as const;
+/** Every seed collection with the module that declares it: its row schema, whether it is required, its `ext` slot. */
+const collections = manifests.flatMap(({ id, seed }) =>
+  Object.entries(seed).map(([key, collection]) => ({ module: id, key, ...collection })),
+);
+const seedSchemas = collections.map(({ key, schema }) => [key, schema] as const);
 
 /** Which seed collection feeds each `ext` slot, and whether a row may leave it out (a booking may; the rest may not). */
-const extSlots = {
-  area: ["areas", false],
-  resource: ["resources", false],
-  customer: ["customers", false],
-  asset: ["assets", false],
-  catalogItem: ["catalog", false],
-  staff: ["staff", false],
-  booking: ["bookings", true],
-} as const satisfies Record<ExtensionEntity, readonly [string, boolean]>;
+const extSlots = collections.flatMap(({ key, ext }) => (ext ? [[ext.entity, key, ext.optional] as const] : []));
+const extEntities: readonly string[] = extSlots.map(([entity]) => entity);
 
 /** `<module>.<path>` -> message, per locale. */
 const knownMessages = Object.fromEntries(
@@ -118,16 +108,18 @@ describe("presets under test", () => {
 
 describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
   const seedKeys = seedSchemas.map(([key]) => key);
+  const enabled: readonly string[] = preset.modules;
+  const required = collections.filter((collection) => collection.required && enabled.includes(collection.module));
   const permissioned = preset.nav.flatMap((entry) =>
     entry.requiredPermission ? [[entry.id, entry.requiredPermission] as const] : [],
   );
 
   describe("seed", () => {
     it("has only collections the contracts know", () => {
-      expect(Object.keys(seed).filter((key) => !(seedKeys as readonly string[]).includes(key))).toEqual([]);
+      expect(Object.keys(seed).filter((key) => !seedKeys.includes(key))).toEqual([]);
     });
 
-    it.each(REQUIRED_COLLECTIONS)("has a non-empty %s collection", (key) => {
+    it.each(required.map(({ key }) => key))("has a non-empty %s collection", (key) => {
       expect(seed[key]).not.toHaveLength(0);
     });
 
@@ -139,7 +131,11 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
       expect(duplicates((seed[key] ?? []).map((row) => (row as { id: string }).id))).toEqual([]);
     });
 
-    const slots = Object.entries(extSlots).map(([entity, [key, optional]]) => {
+    it("types ext only for entities whose module seeds them", () => {
+      expect(Object.keys(preset.extensions).filter((entity) => !extEntities.includes(entity))).toEqual([]);
+    });
+
+    const slots = extSlots.map(([entity, key, optional]) => {
       const schema = preset.extensions[entity as ExtensionEntity] ?? z.undefined();
       return [entity, key, z.array(optional ? schema.optional() : schema)] as const;
     });
