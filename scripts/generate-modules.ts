@@ -31,6 +31,8 @@ export const ROOT = fileURLToPath(new URL("..", import.meta.url));
 export const MODULES_PATH = "src/config/modules.generated.ts";
 export const MODULE_SERVERS_PATH = "src/config/modules.server.generated.ts";
 export const MODULE_UIS_PATH = "src/config/modules.client.generated.ts";
+/** The paths modules own outside their folders, which `.dependency-cruiser.cjs` allows to import them (ADR 0017 §4). */
+export const MODULE_OWNS_PATH = "src/config/modules.owns.generated.json";
 
 const HEADER =
   "// Written by `npm run generate:modules` from the folders of src/modules; do not edit. A test fails when it is stale (ADR 0017 §5).";
@@ -188,6 +190,12 @@ function renderClient(folders: readonly string[]): string {
   ].join("\n");
 }
 
+/** The owned paths before Biome formats them: sorted, so the file changes only when an `owns` list does. */
+function renderOwns(modules: readonly InstalledModule[]): string {
+  const owned = [...new Set(modules.flatMap(({ manifest }) => manifest.owns))].sort(byCode);
+  return `${JSON.stringify({ $comment: "Written by npm run generate:modules from the modules' owns; do not edit.", owned })}\n`;
+}
+
 /** The module list before Biome formats it. */
 function render(modules: readonly InstalledModule[], graph: Readonly<Record<string, readonly string[]>>): string {
   const names = modules.map(({ folder }) => [folder, manifestExportOf(folder)] as const);
@@ -248,6 +256,7 @@ export async function generate(root: string = ROOT): Promise<Generated> {
             [MODULES_PATH]: formatted(root, MODULES_PATH, render(modules, graph)),
             [MODULE_SERVERS_PATH]: formatted(root, MODULE_SERVERS_PATH, renderServers(modules)),
             [MODULE_UIS_PATH]: formatted(root, MODULE_UIS_PATH, renderClient(uiFolders(root, modules))),
+            [MODULE_OWNS_PATH]: formatted(root, MODULE_OWNS_PATH, renderOwns(modules)),
           },
         }
       : {}),

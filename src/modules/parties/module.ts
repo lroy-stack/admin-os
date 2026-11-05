@@ -29,5 +29,10 @@ export const partiesModule = defineModule({
     parties: { schema: partySchema, required: true, ext: { entity: "party", optional: true } },
   },
   references: [],
-  owns: ["src/config/approvals.parties.test.ts", "src/config/mcp.server.parties.test.ts"],
+  owns: [
+    "e2e/smoke/parties.spec.ts",
+    "src/app/(main)/dashboard/parties",
+    "src/config/approvals.parties.test.ts",
+    "src/config/mcp.server.parties.test.ts",
+  ],
 });

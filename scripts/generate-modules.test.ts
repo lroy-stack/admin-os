@@ -8,6 +8,7 @@ import { compositionProblems, type ModuleServer } from "@/core/module";
 import {
   type Generated,
   generate,
+  MODULE_OWNS_PATH,
   MODULE_SERVERS_PATH,
   MODULE_UIS_PATH,
   MODULES_PATH,
@@ -74,11 +75,14 @@ describe("the generated module list (ADR 0017 §5)", () => {
     expect(generated.problems).toEqual([]);
   });
 
-  it.each([MODULES_PATH, MODULE_SERVERS_PATH, MODULE_UIS_PATH])("%s matches the module folders", (path) => {
-    expect(readFileSync(join(ROOT, path), "utf8"), `${path} is stale: run npm run generate:modules`).toBe(
-      generated.files?.[path],
-    );
-  });
+  it.each([MODULES_PATH, MODULE_SERVERS_PATH, MODULE_UIS_PATH, MODULE_OWNS_PATH])(
+    "%s matches the module folders",
+    (path) => {
+      expect(readFileSync(join(ROOT, path), "utf8"), `${path} is stale: run npm run generate:modules`).toBe(
+        generated.files?.[path],
+      );
+    },
+  );
 
   it("requires what the import graph shows (ADR 0017's first test, against census C0)", () => {
     const installed = Object.keys(generated.graph);
