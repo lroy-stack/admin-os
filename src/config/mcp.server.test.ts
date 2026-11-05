@@ -77,8 +77,10 @@ const PINNED = [
   ["notifications_read", false, false, true, 1, false],
   ["notifications_read_all", false, false, true, 1, false],
   ["notifications_unread_count", true, false, true, 1, false],
+  ["parties_create", false, false, true, 2, true],
   ["parties_get", true, false, true, 1, false],
   ["parties_list", true, false, true, 1, false],
+  ["parties_update", false, true, true, 2, false],
   ["resources_list", true, false, true, 0, false],
   ["settings_values_get", true, false, true, 0, false],
   ["settings_values_update", false, true, true, 2, false],
@@ -165,7 +167,7 @@ describe("the MCP projection of the catalogue (ADR 0009)", () => {
       owner,
       false,
       expect.stringContaining(
-        "bookings_create, bookings_staff_note_add, bookings_walk_in_seat, customers_create, customers_notes_add require an idempotencyKey argument",
+        "bookings_create, bookings_staff_note_add, bookings_walk_in_seat, customers_create, customers_notes_add, parties_create require an idempotencyKey argument",
       ),
     ],
     [

@@ -443,7 +443,7 @@ describe("what the default policy holds through MCP (AC5, pinned)", () => {
     .map((capability) => capability.id)
     .sort();
 
-  it("is exactly these eight writes; a change to the list is a decision, not an accident", () => {
+  it("is exactly these nine writes; a change to the list is a decision, not an accident", () => {
     expect(heldTools).toEqual([
       "bookings.cancel",
       "bookings.no_show.mark",
@@ -452,6 +452,7 @@ describe("what the default policy holds through MCP (AC5, pinned)", () => {
       "customers.block",
       "customers.contact.update",
       "customers.unblock",
+      "parties.update",
       "settings.values.update",
     ]);
   });

@@ -45,6 +45,16 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
     // `bookings.search` by text and `bookings.create` by customer id read the customers collection (ADR 0017 §3).
     "bookings.search": { text: "a" },
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
+    "parties.create": {
+      kind: "company",
+      legalName: "Contract Test S.L.",
+      taxId: "B00000990",
+      addressLines: ["Calle Contrato 1"],
+      countryCode: "ES",
+      email: "contract@demo.example",
+      roles: ["client"],
+    },
+    "parties.update": { id: firstParty[vertical], email: "contract@demo.example" },
     "customers.contact.update": { ...customer, name: "Contract Test" },
     "customers.notes.add": { ...customer, text: "Called back" },
     "customers.block": { ...customer, reason: "No-show twice" },

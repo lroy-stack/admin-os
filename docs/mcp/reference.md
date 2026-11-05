@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `10694702b9c0cb` | `10fbcae4fae775` |
-| salon | `10694702b9c0cb` | `10fbcae4fae775` |
-| workshop | `10694702b9c0cb` | `10fbcae4fae775` |
+| hospitality | `0f7e4c555d525f` | `042822ba6d1a85` |
+| salon | `0f7e4c555d525f` | `042822ba6d1a85` |
+| workshop | `0f7e4c555d525f` | `042822ba6d1a85` |
 
 ## Tools by preset
 
@@ -66,8 +66,10 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_create`](#parties_create) | Create a client or supplier | write | 2 | key | false | `manage:parties` | owner, manager |
 | [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
 | [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_update`](#parties_update) | Change a client or supplier | write | 2 | target-state | true | `manage:parties` | owner, manager |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
@@ -108,8 +110,10 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_create`](#parties_create) | Create a client or supplier | write | 2 | key | false | `manage:parties` | owner, manager |
 | [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
 | [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_update`](#parties_update) | Change a client or supplier | write | 2 | target-state | true | `manage:parties` | owner, manager |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
@@ -150,8 +154,10 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_create`](#parties_create) | Create a client or supplier | write | 2 | key | false | `manage:parties` | owner, manager |
 | [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
 | [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_update`](#parties_update) | Change a client or supplier | write | 2 | target-state | true | `manage:parties` | owner, manager |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
@@ -1252,6 +1258,94 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
+### `parties_create`
+
+**Create a client or supplier.** Create a client or supplier: kind (person or company), legal name, tax ID, fiscal address lines, country (ISO 3166-1 alpha-2, ES), email and at least one role (client, supplier). Phone must be E.164 (+34600000101).
+
+- Capability: `parties.create`, permission `manage:parties`, tier 2, idempotency key.
+- Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Untrusted text at: `notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "person",
+        "company"
+      ]
+    },
+    "legalName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tradeName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "taxId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "addressLines": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+    },
+    "phone": {
+      "type": "string",
+      "format": "e164",
+      "pattern": "^\\+[1-9]\\d{6,14}$"
+    },
+    "roles": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "client",
+          "supplier"
+        ]
+      }
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+    }
+  },
+  "required": [
+    "kind",
+    "legalName",
+    "taxId",
+    "addressLines",
+    "countryCode",
+    "email",
+    "roles",
+    "idempotencyKey"
+  ],
+  "additionalProperties": false
+}
+```
+
 ### `parties_get`
 
 **Get a client or supplier.** Get one party by id. Fails with parties.not_found when there is none. Find valid ids: id with parties_list.
@@ -1314,6 +1408,108 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
       "maxLength": 100
     }
   },
+  "additionalProperties": false
+}
+```
+
+### `parties_update`
+
+**Change a client or supplier.** Change a client's or supplier's data. Omitted fields stay as they are and a null trade name, phone or notes clears it. Fails with parties.not_found for an unknown id. Find valid ids: id with parties_list.
+
+- Capability: `parties.update`, permission `manage:parties`, tier 2, idempotency target-state.
+- Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `parties_list`
+- Untrusted text at: `notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "person",
+        "company"
+      ]
+    },
+    "legalName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tradeName": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "taxId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "addressLines": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+    },
+    "phone": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "e164",
+          "pattern": "^\\+[1-9]\\d{6,14}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "roles": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "client",
+          "supplier"
+        ]
+      }
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "id"
+  ],
   "additionalProperties": false
 }
 ```

@@ -16,6 +16,13 @@ export const partiesModule = defineModule({
     tools: {
       "parties.list": { expose: true, title: "List clients and suppliers", untrusted: ["items[].notes"] },
       "parties.get": { expose: true, title: "Get a client or supplier", ids: { id: PARTY_IDS }, untrusted: ["notes"] },
+      "parties.create": { expose: true, title: "Create a client or supplier", untrusted: ["notes"] },
+      "parties.update": {
+        expose: true,
+        title: "Change a client or supplier",
+        ids: { id: PARTY_IDS },
+        untrusted: ["notes"],
+      },
     },
   },
   seed: {
