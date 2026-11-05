@@ -6,28 +6,15 @@ import { hospitalitySeed } from "./seed";
 const NOW_MIN = 20 * 60 + 40;
 const LATE_AFTER_MIN = 10;
 
-const { bookings, resources, catalog, customers } = hospitalitySeed;
+const { bookings, catalog, customers } = hospitalitySeed;
 
 describe("hospitality seed", () => {
-  it("references only existing resources from bookings", () => {
-    const known = new Set(resources.map((resource) => resource.id));
-    const unknown = bookings.flatMap((booking) => booking.resourceIds).filter((id) => !known.has(id));
-    expect(unknown).toEqual([]);
-  });
-
-  it("references only existing catalog items from booking lines and bundle sections", () => {
+  // Bookings' references to resources, catalog items and customers are checked for every preset by the seed
+  // contract test, from the modules' `references` (ADR 0017 §3). A bundle's sections point inside the catalog itself.
+  it("references only existing catalog items from bundle sections", () => {
     const known = new Set(catalog.map((item) => item.id));
-    const fromLines = bookings.flatMap((booking) => booking.lines.map((line) => line.catalogItemId));
     const fromSections = catalog.flatMap((item) => item.sections?.flatMap((section) => section.itemIds) ?? []);
-    expect([...fromLines, ...fromSections].filter((id) => !known.has(id))).toEqual([]);
-  });
-
-  it("references only existing customers from bookings", () => {
-    const known = new Set(customers.map((customer) => customer.id));
-    const unknown = bookings
-      .flatMap((booking) => (booking.customerId ? [booking.customerId] : []))
-      .filter((id) => !known.has(id));
-    expect(unknown).toEqual([]);
+    expect(fromSections.filter((id) => !known.has(id))).toEqual([]);
   });
 
   it("places tables in areas across two levels", () => {

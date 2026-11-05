@@ -15,6 +15,7 @@ import {
   type ModuleManifest,
   moduleEdges,
   requiresOf,
+  valuesAt,
 } from "./index";
 
 const plantedGet = defineCapability({
@@ -560,6 +561,22 @@ describe("composeMcpManifest (ADR 0017 §5)", () => {
     expect(composeMcpManifest(kernel, [hinting, others])["planted.item.get"]).toBe(
       hinting.mcp.tools["planted.item.get"],
     );
+  });
+});
+
+describe("valuesAt (ADR 0017 §3)", () => {
+  const row = { id: "b1", otherId: "o1", otherIds: ["o2", "o3"], lines: [{ otherId: "o4" }, { otherId: "o5" }, {}] };
+
+  it.each([
+    ["otherId", ["o1"]],
+    ["otherIds[]", ["o2", "o3"]],
+    ["lines[].otherId", ["o4", "o5"]],
+    ["missing", []],
+    ["missing[]", []],
+    ["lines.otherId", []],
+    ["otherId[]", []],
+  ] as const)("%s → %j", (path, values) => {
+    expect(valuesAt(row, path)).toEqual(values);
   });
 });
 

@@ -1,5 +1,6 @@
 import { type ApprovalRecord, effectiveStatus } from "@/core/approvals";
 import type { BusinessClock } from "@/core/clock";
+import { collectionOf } from "@/core/mock";
 import type { BookingInput } from "@/modules/bookings";
 
 import type { Notification, NotificationMoment } from "./schema";
@@ -9,7 +10,8 @@ const DAY_MINUTES = 1440;
 /** The slice of the session data the feed reads. Notifications never write to another module. */
 export interface FeedSource {
   readonly bookings: readonly BookingInput[];
-  readonly customers: readonly { readonly id: string; readonly name: string }[];
+  /** Optional: absent when the customers module is not installed (ADR 0017 §3); read it through `collectionOf`. */
+  readonly customers?: readonly { readonly id: string; readonly name: string }[];
 }
 
 export interface FeedRules {
@@ -44,7 +46,9 @@ const AWAITING_GUEST = new Set<string>(["pending", "awaiting_payment"]);
 export function deriveNotifications(source: FeedSource, clock: BusinessClock, rules: FeedRules): Notification[] {
   const now = clock.nowMin < clock.cutoffMin ? clock.nowMin + DAY_MINUTES : clock.nowMin;
   const nameOf = (booking: BookingInput): string =>
-    booking.contactName ?? source.customers.find((customer) => customer.id === booking.customerId)?.name ?? booking.id;
+    booking.contactName ??
+    collectionOf(source, "customers").find((customer) => customer.id === booking.customerId)?.name ??
+    booking.id;
 
   const make = (
     kind: Notification["kind"],

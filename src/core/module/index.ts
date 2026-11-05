@@ -167,6 +167,27 @@ const schemaAt = (schema: z.ZodType, path: readonly string[]): z.ZodType | undef
 };
 
 /**
+ * The values a row holds at a reference path (`customerId`, `staffIds[]`, `lines[].catalogItemId`): `[]` steps into
+ * each element of an array. A missing field yields nothing, as `isStringField` reads the same paths in a schema.
+ */
+export const valuesAt = (row: unknown, path: string): unknown[] =>
+  path
+    .split(".")
+    .reduce<unknown[]>(
+      (values, segment) => {
+        const name = segment.endsWith("[]") ? segment.slice(0, -2) : segment;
+        const next = values.flatMap((value) =>
+          typeof value === "object" && value !== null && Object.hasOwn(value, name)
+            ? [(value as Readonly<Record<string, unknown>>)[name]]
+            : [],
+        );
+        return segment.endsWith("[]") ? next.flatMap((value) => (Array.isArray(value) ? value : [])) : next;
+      },
+      [row],
+    )
+    .filter((value) => value !== undefined);
+
+/**
  * Whether `path` reaches a string field of rows parsed by `schema`, as an id reference must. String formats
  * (`z.uuid()`, `z.email()`) and template literals are strings too.
  */

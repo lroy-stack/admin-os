@@ -1,4 +1,4 @@
-import { type MockContext, mockHandler } from "@/core/mock";
+import { collectionOf, type MockContext, mockHandler } from "@/core/mock";
 import { paginate } from "@/core/pagination";
 import { err, ok, type Result } from "@/core/result";
 import { foldText } from "@/core/text";
@@ -42,7 +42,8 @@ interface BookingsData {
   readonly bookings: BookingInput[];
   /** The resource fields bookings reads; the rows are resources' own (ADR 0017 §2). */
   readonly resources: readonly { readonly id: string; readonly capacity?: number; readonly active: boolean }[];
-  readonly customers: readonly { readonly id: string; readonly name: string }[];
+  /** Optional: absent when the customers module is not installed (ADR 0017 §3); read it through `collectionOf`. */
+  readonly customers?: readonly { readonly id: string; readonly name: string }[];
 }
 
 type Context = MockContext<BookingsData>;
@@ -176,7 +177,7 @@ const searchableText = (data: BookingsData, booking: BookingInput): string =>
     [
       booking.id,
       booking.contactName,
-      data.customers.find((customer) => customer.id === booking.customerId)?.name,
+      collectionOf(data, "customers").find((customer) => customer.id === booking.customerId)?.name,
       ...booking.tags,
     ]
       .filter((part) => part !== undefined)
@@ -263,7 +264,8 @@ export const bookingsMockHandlers = {
 
   ...mockHandler(bookingsCreate, (input, context: Context) => {
     const { data, settings, clock } = context;
-    if (input.customerId !== undefined && !data.customers.some((customer) => customer.id === input.customerId)) {
+    const customers = collectionOf(data, "customers");
+    if (input.customerId !== undefined && !customers.some((customer) => customer.id === input.customerId)) {
       return notFound("customer", [input.customerId]);
     }
     const timeError = startTimeError(context, input.businessDay, input.startMin);

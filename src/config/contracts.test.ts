@@ -12,7 +12,7 @@ import {
   placeholderSignature,
   type Vocabulary,
 } from "@/core/i18n";
-import { compositionProblems, type InstalledModule } from "@/core/module";
+import { compositionProblems, type InstalledModule, valuesAt } from "@/core/module";
 import type { NavEntry } from "@/core/nav";
 import { hospitality } from "@/verticals/hospitality";
 import { hospitalitySeed, hospitalityVocabulary } from "@/verticals/hospitality/server";
@@ -135,6 +135,27 @@ describe("kernel namespaces (ADR 0017 §5)", () => {
   });
 });
 
+/**
+ * Each data reference once, as (collection, field, target): notifications' reference repeats bookings' own. A target's
+ * ids are the rows of the collection named like it, which every referenced module seeds.
+ */
+const references = [
+  ...new Map(
+    MODULES.flatMap(({ references: declared }) =>
+      declared.map(
+        ({ collection, field, module }) => [`${collection}.${field}>${module}`, [collection, field, module]] as const,
+      ),
+    ),
+  ).values(),
+];
+const referencedModules = [...new Set(references.map(([, , module]) => module))].sort();
+
+describe("data references (ADR 0017 §3)", () => {
+  it.each(referencedModules)("%s seeds the collection named like it, which references point at", (module) => {
+    expect(Object.keys(MODULES.find(({ id }) => id === module)?.seed ?? {})).toContain(module);
+  });
+});
+
 describe("presets under test", () => {
   it("are exactly the registered verticals", () => {
     expect(presets.map(({ id }) => id).sort()).toEqual(Object.keys(VERTICALS).sort());
@@ -181,6 +202,18 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
 
     it.each(slots)("parses the %s ext slots of %s with the preset's schema, or has none", (_entity, key, schema) => {
       expect(schema.safeParse((seed[key] ?? []).map((row) => (row as { ext?: unknown }).ext)).error).toBeUndefined();
+    });
+
+    const enabledReferences = references.filter(
+      ([collection, , module]) =>
+        enabled.includes(module) &&
+        collections.some(({ key, module: owner }) => key === collection && enabled.includes(owner)),
+    );
+
+    it.each(enabledReferences)("names only existing rows in %s.%s, which point at %s", (collection, field, module) => {
+      const known = new Set((seed[module] ?? []).map((row) => (row as { id: string }).id));
+      const named = (seed[collection] ?? []).flatMap((row) => valuesAt(row, field));
+      expect(named.filter((id) => !known.has(id as string))).toEqual([]);
     });
   });
 

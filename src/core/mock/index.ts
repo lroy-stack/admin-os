@@ -8,5 +8,6 @@ export {
   mockHandler,
 } from "./adapter";
 export { evictSettled, MAX_APPROVALS } from "./approval-queue";
+export { collectionOf } from "./collection-of";
 export { type Fault, type FaultMap, parseFaults } from "./faults";
 export { createSessionStore, type DemoSession, type SessionStore } from "./session-store";

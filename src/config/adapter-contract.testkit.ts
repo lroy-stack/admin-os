@@ -40,6 +40,8 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
       },
     },
     "bookings.get": { id: booking },
+    // `bookings.search` by text and `bookings.create` by customer id read the customers collection (ADR 0017 §3).
+    "bookings.search": { text: "a" },
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
     "customers.contact.update": { ...customer, name: "Contract Test" },
     "customers.notes.add": { ...customer, text: "Called back" },
@@ -52,7 +54,7 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
       startMin,
       partySize: 1,
       resourceIds: [resource],
-      contactName: "Contract Test",
+      customerId: customer.id,
       channel: "phone",
     },
     "bookings.reschedule": { id: booking, partySize: 1 },

@@ -146,6 +146,15 @@ describe("deriving notifications from the business day", () => {
     expect(item?.params).toMatchObject({ name: "Grace", time: "20:20", partySize: 2, minutes: 20 });
   });
 
+  it("names the guest by the booking id when the customers module is not installed (ADR 0017 §3)", () => {
+    const [item] = deriveNotifications(
+      { bookings: [booking({ id: "b1", startMin: 20 * 60 + 20, contactName: undefined, customerId: "c1" })] },
+      clock,
+      rules,
+    );
+    expect(item?.params).toMatchObject({ name: "b1", time: "20:20" });
+  });
+
   it("derives the same feed twice from the same inputs", () => {
     const bookings = [booking({ id: "b1", startMin: 20 * 60 + 20 }), booking({ id: "b2", startMin: 19 * 60 })];
     expect(idsOf(bookings)).toEqual(idsOf(bookings));
