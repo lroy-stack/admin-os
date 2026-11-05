@@ -119,34 +119,27 @@ export function createDefaultInvoice(seed: InvoiceSeed): InvoiceFormValues {
   };
 }
 
+/** The fields of a client party the invoice reads, declared here so the invoice names no parties type (ADR 0017 §2). */
+export interface InvoiceClientParty {
+  readonly id: string;
+  readonly legalName: string;
+  readonly taxId: string;
+  readonly addressLines: readonly string[];
+  readonly email: string;
+}
+
 /**
- * Who a full invoice is issued to: a person or a company with a tax ID and a fiscal address (RD 1619/2012, art. 6),
- * never a customer of the agenda, who books and holds no fiscal identity. Fictitious demo data, with tax IDs that
- * cannot be real, until the parties module keeps them per business (spec 011).
+ * A client party as the invoice's recipient (spec 011): a person or a company with a tax ID and a fiscal address, named
+ * by its legal name, as a full invoice requires (RD 1619/2012, art. 6). Never a customer of the agenda, who books and
+ * holds no fiscal identity (ADR 0019 §1).
  */
-export const billingClients: readonly InvoiceToDetails[] = [
-  {
-    id: "servicios-levante",
-    name: "Servicios Corporativos Levante S.L.",
-    email: "facturas@servicios-levante.example",
-    addressLines: ["Calle del Comercio 12", "46002 Valencia", "Spain"],
-    taxId: "B00000201",
-  },
-  {
-    id: "mediterranea-eventos",
-    name: "Mediterránea de Eventos S.A.",
-    email: "administracion@mediterranea-eventos.example",
-    addressLines: ["Avenida del Puerto 45", "03001 Alicante", "Spain"],
-    taxId: "A00000202",
-  },
-  {
-    id: "laura-gomez",
-    name: "Laura Gómez Ruiz",
-    email: "laura.gomez@correo.example",
-    addressLines: ["Calle Mayor 3", "30001 Murcia", "Spain"],
-    taxId: "00000203Z",
-  },
-];
+export const recipientOf = (party: InvoiceClientParty): InvoiceToDetails => ({
+  id: party.id,
+  name: party.legalName,
+  email: party.email,
+  addressLines: [...party.addressLines],
+  taxId: party.taxId,
+});
 
 /** The fields of a catalog item an invoice line reads, declared here so the invoice names no catalog type (ADR 0017 §2). */
 export interface InvoiceCatalogItem {

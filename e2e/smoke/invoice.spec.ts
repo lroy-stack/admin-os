@@ -3,13 +3,38 @@ import { expect, type Page, test } from "@playwright/test";
 import { watch } from "./watch";
 
 /**
- * The invoice starts from the business settings, the session's customers and its catalog (spec 008): the hospitality
- * preset's company issues it, its first customer is billed, its first catalog items are the lines, and a change the
- * owner saves in Settings is on the next invoice. The wording is the `en` dictionary and the data the seeded preset.
+ * The invoice starts from the business settings, the session's client parties and its catalog (specs 008, 011): the
+ * hospitality preset's company issues it, each preset's first client party is billed, its first catalog items are the
+ * lines, and a change the owner saves in Settings is on the next invoice. The wording is the `en` dictionary and the data the seeded preset.
  */
 
 // The preview and the copy kept for printing are the same paper; the first is the one on screen.
 const paperOf = (page: Page) => page.locator("[data-print-paper]").first();
+
+/** Each preset's first client party and first agenda customer (ADR 0019 §5); only the party is billed. */
+const BILLED = [
+  {
+    preset: "hospitality",
+    party: "Servicios Corporativos Levante S.L.",
+    taxId: "B00000201",
+    street: "Calle del Comercio 12",
+    customer: "Iglesias",
+  },
+  {
+    preset: "salon",
+    party: "Hotel Balneario Costa Azul S.L.",
+    taxId: "B00000206",
+    street: "Paseo Marítimo 20",
+    customer: "Nora",
+  },
+  {
+    preset: "workshop",
+    party: "Transportes Rápidos del Sur S.L.",
+    taxId: "B00000209",
+    street: "Polígono Las Salinas 4",
+    customer: "Carmen",
+  },
+] as const;
 
 test.describe("invoice from the business settings", () => {
   let problems: string[] = [];
@@ -36,16 +61,21 @@ test.describe("invoice from the business settings", () => {
     await expect(paperOf(page)).toContainText("Payment due: Nov 15, 2026");
   });
 
-  test("bills a company with its tax ID and fiscal address, never an agenda customer (spec 011, H0)", async ({
-    page,
-  }) => {
-    await page.goto("/dashboard/invoice");
+  for (const billed of BILLED) {
+    test(`${billed.preset} bills its first client party, never an agenda customer (spec 011)`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      await context.addCookies([{ name: "demo_preset", value: billed.preset, url: baseURL }]);
+      await page.goto("/dashboard/invoice");
 
-    await expect(paperOf(page)).toContainText("Servicios Corporativos Levante S.L.");
-    await expect(paperOf(page)).toContainText("Tax ID: B00000201");
-    await expect(paperOf(page)).toContainText("Calle del Comercio 12");
-    await expect(paperOf(page)).not.toContainText("Iglesias");
-  });
+      await expect(paperOf(page)).toContainText(billed.party);
+      await expect(paperOf(page)).toContainText(`Tax ID: ${billed.taxId}`);
+      await expect(paperOf(page)).toContainText(billed.street);
+      await expect(paperOf(page)).not.toContainText(billed.customer);
+    });
+  }
 
   test("starts with the session's catalog items (AC8)", async ({ page }) => {
     await page.goto("/dashboard/invoice");
