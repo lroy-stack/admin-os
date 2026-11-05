@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { inputFor } from "@/config/adapter-contract.testkit";
 
 import { MAX_REPLAYS } from "../src/bounds";
-import { SCHEMA_VERSION } from "../src/demo-store";
+import { STORE_VERSION } from "../src/demo-store";
 import { clientFor, contextFor, stubFor } from "./support";
 import { abortAllDurableObjects, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 
@@ -226,7 +226,7 @@ describe("DemoStore", () => {
       );
       state.storage.sql.exec(
         "INSERT INTO session VALUES (1, ?, ?, 'not json')",
-        SCHEMA_VERSION,
+        STORE_VERSION,
         `hospitality:${sessionId}`,
       );
     });
@@ -304,7 +304,7 @@ describe("DemoStore", () => {
     const client = clientFor(sessionId);
     await writeSequentially(client, MAX_REPLAYS + 1);
 
-    expect(await savedRow(sessionId)).toEqual({ schemaVersion: SCHEMA_VERSION, replays: MAX_REPLAYS });
+    expect(await savedRow(sessionId)).toEqual({ schemaVersion: STORE_VERSION, replays: MAX_REPLAYS });
   });
 
   it("refuses a caller from another catalogue with the way to fix it", async () => {

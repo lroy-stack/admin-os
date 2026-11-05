@@ -16,13 +16,20 @@ import { createMockAdapter, createSessionStore, type DemoSession } from "@/core/
 import { type CallResult, err } from "@/core/result";
 
 import { boundSession } from "./bounds";
+import { seedFingerprint } from "./seed-shape";
 import { DurableObject } from "cloudflare:workers";
 
+/** Bump by hand when the snapshot's own format changes (its approvals, replays or policy); the seeds need no bump. */
+export const STORE_FORMAT = 7;
+
 /**
- * Bump when the shape of the persisted session changes: a mismatch resets the object to the seed. A test pins it to
- * a fingerprint of the seeds' structure, so a seed change without a bump fails there.
+ * The version of a saved session (ADR 0017 §8): the snapshot format and the fingerprint of the seeds it was written
+ * against, compared as text. A mismatch resets the session to the seed. The `:` keeps it text in the INTEGER column,
+ * so a session saved under the old numeric version resets once.
  */
-export const SCHEMA_VERSION = 6;
+export const STORE_VERSION = `${STORE_FORMAT}:${seedFingerprint(
+  Object.fromEntries(Object.entries(DEMO).map(([vertical, { seed }]) => [vertical, seed])),
+)}`;
 /** A session is deleted this long after its last write; the demo cookie is renewed on each write for as long. */
 const IDLE_MS = 2 * 60 * 60 * 1000;
 
@@ -159,7 +166,7 @@ export class DemoStore extends DurableObject implements DemoStoreRpc {
     const row = this.readRow();
     if (row === undefined) return store;
     const saved =
-      row.schema_version === SCHEMA_VERSION && typeof row.snapshot === "string" ? snapshotOf(row.snapshot) : undefined;
+      row.schema_version === STORE_VERSION && typeof row.snapshot === "string" ? snapshotOf(row.snapshot) : undefined;
     if (saved === undefined) {
       this.ctx.storage.sql.exec("DELETE FROM session");
       return store;
@@ -186,7 +193,7 @@ export class DemoStore extends DurableObject implements DemoStoreRpc {
     });
     this.ctx.storage.sql.exec(
       "INSERT OR REPLACE INTO session (id, schema_version, owner, snapshot) VALUES (1, ?, ?, ?)",
-      SCHEMA_VERSION,
+      STORE_VERSION,
       owner,
       snapshot,
     );
