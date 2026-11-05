@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import type { BellRequest } from "@/config/bell";
+import { type BellPanel, type BellRequest, bellErrorsKey } from "@/config/bell";
 import { useCan } from "@/core/access/client";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { BellRow } from "@/core/module";
-import { useCapabilityAction } from "@/ds/forms";
+import { type CapabilityActionOptions, useCapabilityAction } from "@/ds/forms";
 import { ConfirmAction, type ConfirmOutcome } from "@/ds/overlays";
 
 import { dashboardMessageKey } from "./messages";
@@ -22,7 +22,7 @@ const REASON_MAX = 500;
 /** What the panel shows: the rows, or the worded reason they could not be read (a failure is never an empty list). */
 type PanelState =
   | { readonly status: "loading" }
-  | { readonly status: "ok"; readonly items: readonly BellRow[] }
+  | { readonly status: "ok"; readonly items: readonly BellRow[]; readonly failures: readonly string[] }
   | { readonly status: "error"; readonly text: string };
 type Deciding = { readonly kind: "approve" | "reject"; readonly approvalId: string } | null;
 
@@ -38,11 +38,16 @@ export function NotificationsPanel() {
   const [state, setState] = useState<PanelState>({ status: "loading" });
   const [, startLoading] = useTransition();
   const [deciding, setDeciding] = useState<Deciding>(null);
-  const reader = useCapabilityAction<BellRequest>(bellAction);
-  const markRead = useCapabilityAction<BellRequest>(bellAction);
-  const markAll = useCapabilityAction<BellRequest>(bellAction);
-  const approve = useCapabilityAction<BellRequest>(bellAction);
-  const reject = useCapabilityAction<BellRequest>(bellAction);
+  const texts = useMessages(bellErrorsKey);
+  const errors = useMemo<NonNullable<CapabilityActionOptions["errors"]>>(
+    () => ({ en: texts, es: texts, de: texts, fr: texts }),
+    [texts],
+  );
+  const reader = useCapabilityAction<BellRequest>(bellAction, { errors });
+  const markRead = useCapabilityAction<BellRequest>(bellAction, { errors });
+  const markAll = useCapabilityAction<BellRequest>(bellAction, { errors });
+  const approve = useCapabilityAction<BellRequest>(bellAction, { errors });
+  const reject = useCapabilityAction<BellRequest>(bellAction, { errors });
   const busy: ConfirmOutcome = { status: "error", text: text.failed, code: "client.busy" };
 
   const { run: readRows } = reader;
@@ -52,9 +57,8 @@ export function NotificationsPanel() {
       startLoading(async () => {
         const outcome = await readRows({ op: "load" });
         if (outcome === null) return;
-        // The action answers a load with `{ items }`, which only the bell's own server code builds.
-        if (outcome.status === "ok")
-          setState({ status: "ok", items: (outcome.value as { items: readonly BellRow[] }).items });
+        // The action answers a load with a `BellPanel`, which only the bell's own server code builds.
+        if (outcome.status === "ok") setState({ status: "ok", ...(outcome.value as BellPanel) });
         else setState({ status: "error", text: outcome.status === "error" ? outcome.text : failedText });
       }),
     [readRows, failedText],
@@ -75,6 +79,24 @@ export function NotificationsPanel() {
         <Button size="sm" variant="outline" onClick={load}>
           {text.retry}
         </Button>
+      </div>
+    );
+  }
+  const failures = state.failures.map((failure, index) => (
+    // biome-ignore lint/suspicious/noArrayIndexKey: two feeds can fail with the same worded text, so the text is no key
+    <p key={`failure-${index}`} role="alert" className="px-4 py-3 text-sm">
+      {failure}
+    </p>
+  ));
+  if (state.items.length === 0 && failures.length > 0) {
+    return (
+      <div className="flex flex-col">
+        {failures}
+        <div className="px-4 pb-3">
+          <Button size="sm" variant="outline" onClick={load}>
+            {text.retry}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -107,6 +129,7 @@ export function NotificationsPanel() {
 
   return (
     <div className="flex flex-col">
+      {failures}
       {anyUnread ? (
         <div className="flex justify-end px-3 pt-2">
           <Button size="sm" variant="ghost" onClick={readAll}>

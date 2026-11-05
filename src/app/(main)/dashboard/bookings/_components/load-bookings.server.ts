@@ -117,9 +117,9 @@ export async function loadBookings(dayParam: string | undefined): Promise<Loaded
  * day with the filler's own translated reason; with no filler there are no records and a booking names its contact.
  */
 async function readGuests(ids: readonly string[]): Promise<Guests> {
-  const { client, locale } = await getRuntime();
+  const { client, locale, vertical } = await getRuntime();
   const context = { locale, call: (capability: string, input: unknown) => client.call(capability, input) };
-  const loaded = await loadSlot(BOOKING_SLOTS.guests, context, { ids });
+  const loaded = await loadSlot(BOOKING_SLOTS.guests, context, { ids }, vertical.modules);
   if (loaded.state.status !== "ready" && loaded.state.status !== "empty") {
     return { ok: false, state: loaded.state, ...(loaded.reason === undefined ? {} : { reason: loaded.reason }) };
   }

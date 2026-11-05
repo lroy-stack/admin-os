@@ -65,6 +65,7 @@ vi.mock("@/config/runtime", async () => {
           logger: () => undefined,
         }),
         locale: "en",
+        vertical: hospitality,
       };
     },
   };

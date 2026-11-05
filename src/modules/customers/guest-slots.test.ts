@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { errorText } from "@/core/i18n";
 import { err, ok } from "@/core/result";
 import type { ViewLoaderContext } from "@/core/views";
 
 import { loadGuests, searchGuests } from "./guest-slots";
+import { customersErrors } from "./messages";
 import { customerSchema } from "./schema";
 
 const customer = (id: string, name: string, patch: Record<string, unknown> = {}) =>
@@ -73,6 +75,27 @@ describe("loadGuests (bookings.guests)", () => {
 
     expect(data.state).toEqual({ status: "forbidden", code: "access.forbidden" });
     expect(data.rows).toEqual([]);
+  });
+
+  it("answers an error state with the customers text, never throws, when a page fails its schema", async () => {
+    const { context } = contextFor(
+      ok({ items: [{ id: "a", name: "Ada", phone: "not-a-phone" }], nextCursor: null }),
+      "es",
+    );
+
+    const data = await loadGuests(context, { ids: ["a"] });
+
+    expect(data).toEqual({
+      state: { status: "error", code: "schema.invalid_output" },
+      reason: errorText({ code: "schema.invalid_output" }, customersErrors, "es"),
+      rows: [],
+    });
+  });
+
+  it("words a read error with the customers dictionary", async () => {
+    const data = await loadGuests(contextFor(err("customers.not_found", "gone"), "es").context, { ids: ["a"] });
+
+    expect(data.reason).toBe("Este contacto ya no existe.");
   });
 });
 

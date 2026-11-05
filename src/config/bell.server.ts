@@ -2,15 +2,15 @@ import "server-only";
 
 import { z } from "zod";
 
-import { approvalEntrySchema, approvalRows, approvalsApprove } from "@/core/approvals";
+import { approvalEntrySchema, approvalRows, approvalsErrors, approvalsList } from "@/core/approvals";
 import { approvalsMessages } from "@/core/approvals/server";
 import { ErrorCodes } from "@/core/errors";
-import type { Locale } from "@/core/i18n";
+import { type ErrorMessages, errorText, type Locale, type MessageBundle } from "@/core/i18n";
 import { type BellRow, type FeedServer, feedUnreadOutput, type ModuleManifest, type ModuleServer } from "@/core/module";
 import { pageOutput } from "@/core/pagination";
 import { type CallResult, err, isAwaitingApproval, ok, type Result } from "@/core/result";
 
-import type { BellRequest } from "./bell";
+import { type BellPanel, type BellRequest, bellErrorsKey } from "./bell";
 import { MODULES } from "./modules.generated";
 import { MODULE_SERVERS } from "./modules.server.generated";
 import type { getRuntime } from "./runtime";
@@ -73,7 +73,7 @@ const visibleFeeds = ({ permissions }: BellRuntime, { manifests, servers }: Bell
     }),
   );
 
-const mayDecide = ({ permissions }: BellRuntime): boolean => permissions.includes(approvalsApprove.permission);
+const mayReview = ({ permissions }: BellRuntime): boolean => permissions.includes(approvalsList.permission);
 
 /** What a read answered, parsed with the schema it promises; a failure keeps its code. */
 function answerOf<S extends z.ZodType>(answer: CallResult<unknown>, schema: S, from: string): Result<z.output<S>> {
@@ -85,16 +85,39 @@ function answerOf<S extends z.ZodType>(answer: CallResult<unknown>, schema: S, f
 
 const approvalsPage = pageOutput(approvalEntrySchema);
 
-/** The actor's unread count for the bell, or undefined when there is nothing for them to read or a feed cannot answer. */
+/**
+ * The error texts of the panel's actions: the kernel's approvals, the modules that declare feeds and the modules that
+ * write, since a write an assistant holds fails with its own module's code when it is decided (`bookings.start_passed`).
+ */
+export function bellErrors({ manifests, servers }: BellModules = INSTALLED): Readonly<Record<Locale, ErrorMessages>> {
+  const speaking = manifests.filter(
+    ({ feeds, capabilities }) =>
+      (feeds ?? []).length > 0 || Object.values(capabilities).some(({ effect }) => effect !== "read"),
+  );
+  const own = servers.filter(({ id }) => speaking.some((manifest) => manifest.id === id));
+  const merged = (locale: Locale): ErrorMessages =>
+    Object.assign({}, approvalsErrors[locale], ...own.map(({ errors }) => errors?.[locale]));
+  return { en: merged("en"), es: merged("es"), de: merged("de"), fr: merged("fr") };
+}
+
+/** The bell's error texts as a bundle, for the layout to deliver to the panel. */
+export const bellErrorsBundle: MessageBundle<ErrorMessages> = {
+  key: bellErrorsKey,
+  dictionary: bellErrors(),
+};
+
+/**
+ * The actor's unread count for the bell: the sum of what answered. Undefined when there is nothing for them to read,
+ * or when nothing answered; one failing feed never hides the bell.
+ */
 export async function bellUnread(
   runtime: BellRuntime,
   installed: BellModules = INSTALLED,
 ): Promise<number | undefined> {
   const feeds = visibleFeeds(runtime, installed);
-  const decides = mayDecide(runtime);
-  if (feeds.length === 0 && !decides) return undefined;
+  const reviews = mayReview(runtime);
   const counts = await Promise.all([
-    ...(decides
+    ...(reviews
       ? [
           runtime.call("approvals.list", { limit: APPROVALS_LIMIT }).then((answer) => {
             const page = answerOf(answer, approvalsPage, "approvals.list");
@@ -107,38 +130,42 @@ export async function bellUnread(
       return count.ok ? count.value.unreadCount : undefined;
     }),
   ]);
-  return counts.includes(undefined) ? undefined : counts.reduce<number>((sum, count) => sum + (count ?? 0), 0);
+  const answered = counts.filter((count) => count !== undefined);
+  return answered.length === 0 ? undefined : answered.reduce((sum, count) => sum + count, 0);
 }
 
 /**
- * The panel's rows: the approvals that wait for the actor to decide, then each feed's page, in module order. A feed
- * that cannot answer fails the whole panel with its code: a failure is never an empty list.
+ * The panel's rows: the approvals that wait for the actor to review, then each feed's page, in module order. A feed
+ * that cannot answer adds its worded error to `failures` and keeps the others' rows: a failure is never an empty list.
  */
-export async function loadBell(
-  runtime: BellRuntime,
-  installed: BellModules = INSTALLED,
-): Promise<Result<{ readonly items: readonly BellRow[] }>> {
+export async function loadBell(runtime: BellRuntime, installed: BellModules = INSTALLED): Promise<Result<BellPanel>> {
   const feeds = visibleFeeds(runtime, installed);
+  const dictionary = installed === INSTALLED ? bellErrorsBundle.dictionary : bellErrors(installed);
   const [approvals, ...pages] = await Promise.all([
-    mayDecide(runtime) ? runtime.call("approvals.list", { limit: APPROVALS_LIMIT }) : undefined,
+    mayReview(runtime) ? runtime.call("approvals.list", { limit: APPROVALS_LIMIT }) : undefined,
     ...feeds.map(({ list }) => runtime.call(list, { limit: PANEL_LIMIT })),
   ]);
   const items: BellRow[] = [];
+  const failures: string[] = [];
+  const fail = (error: { readonly code: string }) => failures.push(errorText(error, dictionary, runtime.locale));
   if (approvals !== undefined) {
     const page = answerOf(approvals, approvalsPage, "approvals.list");
-    if (!page.ok) return page;
-    items.push(...approvalRows(page.value.items, approvalsMessages[runtime.locale].bell, runtime.locale));
+    if (page.ok) items.push(...approvalRows(page.value.items, approvalsMessages[runtime.locale].bell, runtime.locale));
+    else fail(page.error);
   }
   for (const [index, feed] of feeds.entries()) {
     const answer = pages[index];
     if (answer === undefined) continue;
     const page = answerOf(answer, z.unknown(), feed.list);
-    if (!page.ok) return page;
+    if (!page.ok) {
+      fail(page.error);
+      continue;
+    }
     const rows = feed.server.rows(page.value, runtime.locale);
-    if (rows === undefined) return err(ErrorCodes.invalidOutput, `${feed.list} answered an unexpected value`);
-    items.push(...rows.map((row) => ({ ...row, feed: feed.feed })));
+    if (rows === undefined) fail({ code: ErrorCodes.invalidOutput });
+    else items.push(...rows.map((row) => ({ ...row, feed: feed.feed })));
   }
-  return ok({ items });
+  return ok({ items, failures });
 }
 
 /** What the panel may send: validated here, since a Server Action takes untrusted arguments. */

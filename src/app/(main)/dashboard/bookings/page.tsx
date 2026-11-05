@@ -24,12 +24,12 @@ const errors = {
 /** `?day=YYYY-MM-DD` picks the business day; without it the screen shows the business clock's day. */
 export default async function Page({ searchParams }: { searchParams: Promise<{ day?: string | string[] }> }) {
   const { day } = await searchParams;
-  const [{ actor }, loaded] = await Promise.all([
+  const [{ actor, vertical }, loaded] = await Promise.all([
     getRuntime(),
     loadBookings(typeof day === "string" ? day : undefined),
   ]);
 
-  const contactBundle = slotBundleOf(BOOKING_SLOTS.contactFields);
+  const contactBundle = slotBundleOf(BOOKING_SLOTS.contactFields, vertical.modules);
   const contactBundles = contactBundle === undefined ? [] : [contactBundle];
 
   return (
@@ -39,7 +39,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
         reason={loaded.reason}
         service={loaded.service}
         reservations={loaded.reservations}
-        can={abilitiesOf(actor.permissions, reservationSlotsFilled())}
+        can={abilitiesOf(actor.permissions, reservationSlotsFilled(vertical.modules))}
         errors={errors}
       />
     </LocaleBundles>

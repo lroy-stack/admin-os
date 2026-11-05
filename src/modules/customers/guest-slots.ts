@@ -43,6 +43,7 @@ export const loadGuests: ViewLoader = async (context, params) => {
     input: {},
     item: customerSchema,
     row: guestRow,
+    errors: customersErrors,
   });
   if (directory.state.status !== "ready" && directory.state.status !== "empty") return directory;
   const byId = new Map(directory.rows.map((row) => [row.id, row]));

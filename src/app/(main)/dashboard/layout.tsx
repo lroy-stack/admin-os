@@ -5,7 +5,7 @@ import { cn } from "cn";
 import { LocaleRoot } from "@/app/_components/locale-root";
 import { commonBundle } from "@/components/common-messages.server";
 import { DEMO_PERSON } from "@/config/actor";
-import { bellRuntimeOf, bellUnread } from "@/config/bell.server";
+import { bellErrorsBundle, bellRuntimeOf, bellUnread } from "@/config/bell.server";
 import { isDemoAdapter } from "@/config/data.server";
 import { getRuntime } from "@/config/runtime";
 import { VERTICALS } from "@/config/vertical";
@@ -57,7 +57,15 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <LocaleRoot
-      bundles={[shellBundle, feedbackBundle, overlaysBundle, examplesBundle, commonBundle, dashboardBundle]}
+      bundles={[
+        shellBundle,
+        feedbackBundle,
+        overlaysBundle,
+        examplesBundle,
+        commonBundle,
+        dashboardBundle,
+        bellErrorsBundle,
+      ]}
       className={cn(
         "relative isolate flex min-h-svh flex-col",
         // Space above and below full-height app pages (kanban, logistics…): header plus content gutters.

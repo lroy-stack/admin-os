@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { getRuntime } from "@/config/runtime";
+import { getVertical } from "@/config/vertical.server";
 import { runWrite } from "@/config/write-action.server";
 import { serializeCallResult } from "@/core/client";
 import { ErrorCodes } from "@/core/errors";
@@ -56,7 +57,9 @@ export async function createReservation(input: unknown, attemptKey: unknown) {
  * `bookings.contact-fields` slot (ADR 0017 §4): `{ name, phone?, email? }` for customers. With no filler it is refused.
  */
 export async function createGuest(input: unknown, attemptKey: unknown) {
-  const write = slotWriteOf(BOOKING_SLOTS.contactFields);
+  // The preset only: `getRuntime` must not run before `runWrite` has started the demo session.
+  const vertical = await getVertical();
+  const write = slotWriteOf(BOOKING_SLOTS.contactFields, vertical.modules);
   if (write === undefined)
     return serializeCallResult(err(ErrorCodes.unavailable, "No module fills bookings.contact-fields"));
   return runWrite(write, input, attemptKey);
@@ -86,9 +89,14 @@ export async function findAvailability(input: unknown): Promise<AvailabilityAnsw
  * the browser, and a failure answers with the filler's translated text.
  */
 export async function searchGuests(text: unknown): Promise<GuestSearchAnswer> {
-  const { client, locale } = await getRuntime();
+  const { client, locale, vertical } = await getRuntime();
   const context = { locale, call: (capability: string, input: unknown) => client.call(capability, input) };
-  const found = await loadSlot(BOOKING_SLOTS.guestSearch, context, { text, limit: GUEST_SEARCH_LIMIT });
+  const found = await loadSlot(
+    BOOKING_SLOTS.guestSearch,
+    context,
+    { text, limit: GUEST_SEARCH_LIMIT },
+    vertical.modules,
+  );
   if (found.state.status !== "ready" && found.state.status !== "empty") {
     return {
       status: "error",
