@@ -32,17 +32,25 @@ interface SetupOptions {
   readonly policy?: ApprovalPolicy;
   /** A role whose permissions have been taken away since the write was asked for. */
   readonly revokedRole?: string;
+  /** Another harness's demo session, to decide there what was asked there. */
+  readonly store?: ReturnType<typeof createSessionStore>;
+  /** The business minute of the demo clock, when it has moved on since the seed. */
+  readonly nowMin?: number;
 }
 
-const setup = ({ policy, revokedRole }: SetupOptions = {}) => {
+const setup = ({
+  policy,
+  revokedRole,
+  store = createSessionStore(DEMO.hospitality.seed),
+  nowMin,
+}: SetupOptions = {}) => {
   const time = { ms: START };
-  const store = createSessionStore(DEMO.hospitality.seed);
   const held = heldWritesFor("hospitality");
   const adapter = createMockAdapter({
     handlers: MOCK_HANDLERS,
     store,
     sessionId: "visitor",
-    clock: fixedClock(DEMO.hospitality.clock),
+    clock: fixedClock(nowMin === undefined ? DEMO.hospitality.clock : { ...DEMO.hospitality.clock, nowMin }),
     settings: createSettingsReader(SETTINGS, {
       ...VERTICALS.hospitality.settingsDefaults,
       ...(policy === undefined ? {} : { "approvals.policy": policy }),
@@ -417,6 +425,28 @@ describe("what moved since the write was asked for", () => {
       ok: true,
       value: { status: "approved" },
     });
+  });
+
+  it("answers the write's own rule when it can no longer run: a booking approved after its start (D3)", async () => {
+    const asked = setup({ policy: "all" });
+    const held = await asked.assistant.call(
+      "bookings.create",
+      {
+        businessDay: "2026-10-31",
+        startMin: 22 * 60,
+        partySize: 1,
+        resourceIds: ["S8"],
+        customerId: "C-iglesias",
+        channel: "phone",
+      },
+      { idempotencyKey: "d3-late" },
+    );
+    const later = setup({ policy: "all", store: asked.store, nowMin: 22 * 60 + 15 });
+
+    expect([held, await later.person.call("approvals.approve", { approvalId: idOf(held) })]).toMatchObject([
+      { status: "awaiting_approval" },
+      { ok: false, error: { code: "bookings.start_passed" } },
+    ]);
   });
 
   it("answers conflict when the booking lost its table meanwhile", async () => {
