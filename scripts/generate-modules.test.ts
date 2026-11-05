@@ -24,30 +24,30 @@ import { join } from "node:path";
 let generated: Generated;
 
 /**
- * Census C0 (ADR 0017): what each of the first six modules required when the import graph was first counted. A module
- * that is not installed has no row, and a target that is not installed is dropped from the rows that name it, so the
- * census still holds after a removal.
+ * What each installed module requires, pinned for every module (ADR 0017 §2, §5: every edge counts). The first six rows
+ * are census C0's; inventory and parties joined with their ADRs (0018, 0019) and require nothing, since their
+ * references are optional. A module added without a row fails the pin below, so its edges are written down with it.
+ * A module that is not installed has no row, and a target that is not installed is dropped from the rows that name it,
+ * so the pin still holds after a removal.
  */
-const C0: Readonly<Record<string, readonly string[]>> = {
+const PINNED: Readonly<Record<string, readonly string[]>> = {
   // M9 (plan 006) changed this row: customers fills the bookings route's slots, so the route no longer imports it.
   bookings: ["resources"],
   catalog: [],
   customers: [],
+  inventory: [],
   notifications: ["bookings"],
+  parties: [],
   resources: [],
   staff: [],
 };
 
-const c0Of = (installed: readonly string[]) =>
+const pinnedFor = (installed: readonly string[]) =>
   Object.fromEntries(
-    Object.entries(C0)
+    Object.entries(PINNED)
       .filter(([id]) => installed.includes(id))
       .map(([id, targets]) => [id, targets.filter((target) => installed.includes(target))]),
   );
-
-/** The graph's rows for the modules the census knows. */
-const censusOf = (graph: Readonly<Record<string, readonly string[]>>) =>
-  Object.fromEntries(Object.entries(graph).filter(([id]) => id in C0));
 
 /** Each installed module, with the refusal that removing it must cause: one line per module that imports it. */
 const removals = Object.keys(MODULE_GRAPH).map((removed) => ({
@@ -87,9 +87,9 @@ describe("the generated module list (ADR 0017 §5)", () => {
     },
   );
 
-  it("requires what the import graph shows (ADR 0017's first test, against census C0)", () => {
+  it("requires what the import graph shows, for every installed module (ADR 0017's first test)", () => {
     const installed = Object.keys(generated.graph);
-    expect(censusOf(generated.graph)).toEqual(c0Of(installed));
+    expect(generated.graph).toEqual(pinnedFor(installed));
   });
 });
 
@@ -161,11 +161,13 @@ describe("the route slots modules fill (ADR 0017 §4)", () => {
   const servers: readonly ModuleServer[] = MODULE_SERVERS;
   const manifests: readonly ModuleManifest[] = MODULES;
   const filled = manifests.flatMap((module) => (module.slots ?? []).map((fill) => ({ module: module.id, ...fill })));
-  const serverHalfOf = (id: string) => servers.find((server) => server.id === id);
+  const slotsOfServerHalf = (id: string) => {
+    const half = servers.find((server) => server.id === id);
+    return [...Object.keys(half?.slotLoaders ?? {}), ...Object.keys(half?.slotBundles ?? {})];
+  };
 
   it.each(filled)("$slot, filled by $module, has a loader or a dictionary in its module's server half", (fill) => {
-    const half = serverHalfOf(fill.module);
-    expect(fill.slot in (half?.slotLoaders ?? {}) || fill.slot in (half?.slotBundles ?? {})).toBe(true);
+    expect(slotsOfServerHalf(fill.module)).toContain(fill.slot);
   });
 
   it("holds a client fill for each slot whose server half has a dictionary, and no other", () => {
@@ -173,11 +175,10 @@ describe("the route slots modules fill (ADR 0017 §4)", () => {
     expect(Object.keys(SLOT_FILLS).sort()).toEqual(withBundle);
   });
 
-  it("generates the slot fills, apart from the view renderers, from the ui.ts of the modules that declare slots", () => {
-    const text = generated.files?.[MODULE_SLOTS_PATH] ?? "";
-    for (const id of new Set(filled.map(({ module }) => module))) {
-      expect(text).toContain(`...${uiExportOf(id)}.slots`);
-    }
+  const fillers = [...new Set(filled.map(({ module }) => module))];
+
+  it.each(fillers)("generates the slot fills of %s from its ui.ts, apart from the view renderers", (id) => {
+    expect(generated.files?.[MODULE_SLOTS_PATH]).toContain(`...${uiExportOf(id)}.slots`);
   });
 });
 

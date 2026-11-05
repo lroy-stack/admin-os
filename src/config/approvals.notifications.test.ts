@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { actorOf, idOf, setup } from "./approvals.testkit";
+import type { CallResult } from "@/core/result";
+
+import { actorOf, idOf, okValueOf, setup } from "./approvals.testkit";
 import { type BellRuntime, bellUnread, bellWriteOf, loadBell } from "./bell.server";
 import { MODULES } from "./modules.generated";
 import { MODULE_SERVERS } from "./modules.server.generated";
@@ -20,11 +22,10 @@ const runtimeOf = (client: ReturnType<typeof setup>["person"]): BellRuntime => (
   locale: "en",
 });
 
-const approvalIds = async (runtime: BellRuntime, installed?: Parameters<typeof loadBell>[1]) => {
-  const answer = await loadBell(runtime, installed);
-  expect(answer).toMatchObject({ ok: true });
-  return answer.ok ? answer.value.items.filter(({ feed }) => feed === "approvals").map(({ id }) => id) : [];
-};
+const approvalIds = async (runtime: BellRuntime) =>
+  okValueOf(await loadBell(runtime))
+    .items.filter(({ feed }) => feed === "approvals")
+    .map(({ id }) => id);
 
 describe("the notifications feed in the bell", () => {
   it("is run by the capabilities its descriptor names", () => {
@@ -37,8 +38,7 @@ describe("the notifications feed in the bell", () => {
   it("lists the day's bookings after the approvals, each row stamped with its feed", async () => {
     const { assistant, person } = setup();
     const held = await cancel(assistant);
-    const answer = await loadBell(runtimeOf(person));
-    const items = answer.ok ? answer.value.items : [];
+    const { items } = okValueOf(await loadBell(runtimeOf(person)));
     expect(items.map(({ feed }) => feed)).toEqual(["approvals", ...items.slice(1).map(() => "notifications")]);
     expect(items[0]?.id).toBe(`approval.requested:${idOf(held)}`);
     expect(items.length).toBeGreaterThan(1);
@@ -60,11 +60,11 @@ describe("the notifications feed in the bell", () => {
   it("holds no waiting write in its own list, which is what the day's bookings give rise to", async () => {
     const { assistant, person } = setup();
     await cancel(assistant);
-    const listed = await person.call("notifications.list", { limit: 100 });
-    expect(listed).toMatchObject({ ok: true });
-    const page = (listed as { value?: { items: { kind: string }[] } }).value;
-    expect(page?.items.length).toBeGreaterThan(0);
-    expect(page?.items.map(({ kind }) => kind)).not.toContain("approval.requested");
+    const { items } = okValueOf(
+      (await person.call("notifications.list", { limit: 100 })) as CallResult<{ items: { kind: string }[] }>,
+    );
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.map(({ kind }) => kind)).not.toContain("approval.requested");
   });
 
   it("leaves the bell with its approvals when the module is not installed", async () => {
@@ -76,10 +76,10 @@ describe("the notifications feed in the bell", () => {
     };
     const runtime = runtimeOf(person);
 
-    const answer = await loadBell(runtime, without);
+    const answer = okValueOf(await loadBell(runtime, without));
 
     expect([
-      answer.ok && answer.value.items.map(({ id, feed }) => [feed, id]),
+      answer.items.map(({ id, feed }) => [feed, id]),
       await bellUnread(runtime, without),
       bellWriteOf({ op: "read", feed: "notifications", input: {} }, without.manifests),
     ]).toEqual([[["approvals", `approval.requested:${idOf(held)}`]], 1, undefined]);

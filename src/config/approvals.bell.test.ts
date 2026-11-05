@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { actorOf, type Harness, idOf, setup } from "./approvals.testkit";
+import { actorOf, type Harness, idOf, okValueOf, setup } from "./approvals.testkit";
 import { type BellRuntime, bellUnread, loadBell } from "./bell.server";
 
 /** The bell's lines about a waiting write (ADR 0017 "The bell"; the mechanism is in approvals.test.ts). */
@@ -15,10 +15,13 @@ const runtimeOf = (client: Harness["person"], role: "owner" | "staff"): BellRunt
   locale: "en",
 });
 
-const approvalRowsOf = async (runtime: BellRuntime) => {
-  const answer = await loadBell(runtime);
-  expect(answer).toMatchObject({ ok: true });
-  return answer.ok ? answer.value.items.filter(({ feed }) => feed === "approvals") : [];
+const approvalRowsOf = async (runtime: BellRuntime) =>
+  okValueOf(await loadBell(runtime)).items.filter(({ feed }) => feed === "approvals");
+
+const unreadOf = async (runtime: BellRuntime) => {
+  const unread = await bellUnread(runtime);
+  expect(unread).toBeTypeOf("number");
+  return unread as number;
 };
 
 describe("the bell", () => {
@@ -48,12 +51,12 @@ describe("the bell", () => {
   it("counts the waiting write with the unread notifications, and drops it once decided", async () => {
     const { assistant, person } = setup();
     const runtime = runtimeOf(person, "owner");
-    const before = await bellUnread(runtime);
+    const before = await unreadOf(runtime);
     const held = await cancel(assistant);
-    const waiting = await bellUnread(runtime);
+    const waiting = await unreadOf(runtime);
     await person.call("approvals.reject", { approvalId: idOf(held) });
 
-    expect([waiting, await bellUnread(runtime)]).toEqual([(before ?? 0) + 1, before]);
+    expect([waiting, await unreadOf(runtime)]).toEqual([before + 1, before]);
   });
 
   it("does not tell staff, who cannot decide", async () => {

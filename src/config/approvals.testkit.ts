@@ -7,6 +7,7 @@ import { type Actor, createClient } from "@/core/client";
 import { fixedClock } from "@/core/clock";
 import { exposedCapabilities } from "@/core/mcp/server";
 import { createMockAdapter, createSessionStore, type SessionStore } from "@/core/mock";
+import type { CallResult } from "@/core/result";
 import { createSettingsReader } from "@/core/settings";
 
 import { CATALOG } from "./catalog";
@@ -82,6 +83,12 @@ const capabilityOf = (id: string) => {
 };
 
 export const idOf = (held: unknown): string => (held as { approvalId: string }).approvalId;
+
+/** The value of an answer that must have succeeded: a failure reports the answer's own error, not a stand-in value. */
+export const okValueOf = <T>(answer: CallResult<T>): T => {
+  expect(answer).toMatchObject({ ok: true });
+  return (answer as { value: T }).value;
+};
 
 /** Rows of "which writes wait": the policy, the capability, how it is called, and whether it waits. */
 export type WaitRow = readonly [ApprovalPolicy, string, ApprovalContext["via"], boolean];

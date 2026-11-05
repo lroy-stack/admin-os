@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Result } from "@/core/result";
+import type { CallResult } from "@/core/result";
 
 import {
   type Harness,
@@ -8,6 +8,7 @@ import {
   idOf,
   itAppliesOnceWhenApprovedTwiceInOneTick,
   itHoldsAsThePolicySays,
+  okValueOf,
   setup,
 } from "./approvals.testkit";
 
@@ -20,10 +21,13 @@ const note = (client: Harness["assistant"], text: string) =>
 const cancel = (client: Harness["assistant"], id = BOOKING, reason = "Guest called") =>
   client.call("bookings.cancel", { id, reason });
 
-const statusOfBooking = async (client: Harness["person"]) => {
-  const fetched = (await client.call("bookings.get", { id: BOOKING })) as Result<{ status: string }>;
-  return fetched.ok ? fetched.value.status : fetched.error.code;
-};
+const bookingOf = async (client: Harness["person"]) =>
+  okValueOf((await client.call("bookings.get", { id: BOOKING })) as CallResult<{ status: string; staffNote?: string }>);
+
+const statusOfBooking = async (client: Harness["person"]) => (await bookingOf(client)).status;
+
+const timesNoted = async (client: Harness["person"], text: string) =>
+  ((await bookingOf(client)).staffNote ?? "").split(text).length - 1;
 
 describe("which bookings writes wait (spec 004, D7)", () => {
   itHoldsAsThePolicySays([
@@ -114,10 +118,7 @@ describe("deciding a booking write at the same moment", () => {
       label: "bookings.staff_note.add",
       policy: "all",
       hold: (assistant) => note(assistant, "Window seat"),
-      applied: async (person) => {
-        const fetched = (await person.call("bookings.get", { id: BOOKING })) as Result<{ staffNote?: string }>;
-        return { times: fetched.ok ? (fetched.value.staffNote ?? "").split("Window seat").length - 1 : -1 };
-      },
+      applied: async (person) => ({ times: await timesNoted(person, "Window seat") }),
       expected: { times: 1 },
     },
   ]);

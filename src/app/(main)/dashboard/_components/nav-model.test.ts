@@ -15,6 +15,7 @@ const presetNav = VERTICALS.salon.nav;
 const shown = presetNav.filter((entry) => entry.placement === "area").slice(0, 2);
 const shownIds = shown.map((entry) => entry.id);
 const shownTitles = shownIds.map((id) => `label:${id}`);
+const shownSearchGroups = [...new Set(shown.map((entry) => entry.group))].map((group) => [group, `group:${group}`]);
 
 const data = (overrides: Partial<NavData>): NavData => ({
   presetId: "salon",
@@ -42,7 +43,7 @@ describe("buildShellNav", () => {
 
   it("groups the preset entries for the search dialog", () => {
     expect(buildShellNav(data({}), examples).searchGroups.map((group) => [group.id, group.label])).toEqual(
-      [...new Set(shown.map((entry) => entry.group))].map((group) => [group, `group:${group}`]),
+      shownSearchGroups,
     );
   });
 
@@ -52,7 +53,8 @@ describe("buildShellNav", () => {
 
   it("puts the preset first and the showcase screens after it", () => {
     const nav = buildShellNav(data({ showExamples: true }), examples);
-    expect([titles(nav.top).slice(0, shown.length), nav.top.length > shown.length]).toEqual([shownTitles, true]);
+    expect(titles(nav.top).slice(0, shown.length)).toEqual(shownTitles);
+    expect(nav.top.length).toBeGreaterThan(shown.length);
   });
 
   it.each([

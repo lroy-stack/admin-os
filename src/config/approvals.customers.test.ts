@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Actor } from "@/core/client";
-import type { Result } from "@/core/result";
+import type { CallResult, Result } from "@/core/result";
 
 import {
   actorOf,
@@ -10,6 +10,7 @@ import {
   idOf,
   itAppliesOnceWhenApprovedTwiceInOneTick,
   itHoldsAsThePolicySays,
+  okValueOf,
   setup,
 } from "./approvals.testkit";
 
@@ -43,10 +44,10 @@ describe("a held customers write retried with its key", () => {
 });
 
 describe("deciding a customers write at the same moment", () => {
-  const customerNamed = async (person: Harness["person"], name: string) => {
-    const listed = (await person.call("customers.list", { limit: 200 })) as Result<{ items: { name: string }[] }>;
-    return listed.ok ? listed.value.items.filter((customer) => customer.name === name).length : -1;
-  };
+  const customerNamed = async (person: Harness["person"], name: string) =>
+    okValueOf(
+      (await person.call("customers.list", { limit: 200 })) as CallResult<{ items: { name: string }[] }>,
+    ).items.filter((customer) => customer.name === name).length;
 
   itAppliesOnceWhenApprovedTwiceInOneTick([
     {
