@@ -39,6 +39,7 @@ reference is generated from the code.
 | [ADR 0017](adr/0017-a-module-is-a-folder.md) | A module is a folder: a manifest per module and a generated composition root |
 | [ADR 0018](adr/0018-product-views-and-inventory.md) | Products: `catalog` for what a business sells, `inventory` for what it keeps, views each preset picks |
 | [ADR 0019](adr/0019-billing-parties.md) | Parties: who a business invoices and buys from, apart from the agenda's customers |
+| [ADR 0020](adr/0020-record-pages.md) | Record pages: a record with history and facets gets a page of its own (proposed) |
 
 ## Design and language
 
