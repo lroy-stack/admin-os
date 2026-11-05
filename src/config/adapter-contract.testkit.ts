@@ -12,6 +12,9 @@ const quiet = { retryDelayMs: 0, logger: () => undefined } as const;
 
 const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", workshop: "cust-carmen" } as const;
 
+/** Per preset, a seeded team member with a contract on record. */
+const firstStaff = { hospitality: "staff-marta", salon: "stylist-ines", workshop: "mech-rafa" } as const;
+
 /** Per preset: a confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, a bookable slot. */
 const bookable = {
   hospitality: { booking: "R-1046", resource: "S8", startMin: 22 * 60 },
@@ -23,9 +26,13 @@ const bookable = {
 export const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
   const customer = { id: firstCustomer[vertical] };
   const { booking, resource, startMin } = bookable[vertical];
+  const staffId = firstStaff[vertical];
   const inputs: Record<string, Record<string, unknown>> = {
     "customers.get": customer,
     "customers.search": { text: "ab" },
+    "staff.get": { id: staffId },
+    "staff.shifts.list": { staffId, from: "2026-10-26", to: "2026-11-01" },
+    "staff.contract.get": { staffId },
     "approvals.get": { approvalId: "held" },
     "approvals.approve": { approvalId: "held" },
     "approvals.reject": { approvalId: "held" },

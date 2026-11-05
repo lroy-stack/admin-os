@@ -1,11 +1,9 @@
 import { defineModule } from "@/core/module";
-import { pageOutput } from "@/core/pagination";
 
 import { staffCapabilities } from "./capabilities";
 import { shiftSchema, staffMemberSchema } from "./schema";
 
-/** A staff member as a list shows them: no contract terms and no `ext`. */
-const staffRow = staffMemberSchema.omit({ contract: true, ext: true });
+const STAFF_IDS = ["staff.list"] as const;
 
 /** The staff module's manifest (ADR 0017 §1). */
 export const staffModule = defineModule({
@@ -14,9 +12,12 @@ export const staffModule = defineModule({
   settings: [],
   mcp: {
     noun: "staff",
-    idSources: [],
+    idSources: [["team member ids", ["staff.list"]]],
     tools: {
-      "staff.list": { expose: true, title: "List staff", concise: pageOutput(staffRow) },
+      "staff.list": { expose: true, title: "List staff" },
+      "staff.get": { expose: true, title: "Get a team member", ids: { id: STAFF_IDS } },
+      "staff.shifts.list": { expose: true, title: "List a team member's shifts", ids: { staffId: STAFF_IDS } },
+      "staff.contract.get": { uiOnly: "Employment terms; no assistant job needs them (spec 012)" },
     },
   },
   seed: {
@@ -24,5 +25,5 @@ export const staffModule = defineModule({
     shifts: { schema: shiftSchema, required: false },
   },
   references: [],
-  owns: ["src/app/(main)/dashboard/staff", "e2e/smoke/staff.spec.ts"],
+  owns: ["src/app/(main)/dashboard/staff", "src/config/staff.test.ts", "e2e/smoke/staff.spec.ts"],
 });

@@ -1,9 +1,8 @@
-import type { StaffMember } from "@/modules/staff";
+import type { StaffRecord } from "@/modules/staff";
 
 /**
  * What a card of the directory shows of a member: the name, the role names in the preset's words, the skills and
- * whether they are active. The list's DTO also carries `contract` and `ext`; neither is ever copied here, so neither
- * can reach the browser (ADR 0020 §4: generic screens never read `ext`, and a contract is a restricted read).
+ * whether they are active. The list's DTO already leaves out the contract and `ext` (ADR 0020 §4).
  */
 export interface TeamCard {
   readonly id: string;
@@ -18,7 +17,7 @@ export interface TeamCard {
  * know is shown as it is. Search matches what the card shows, so it matches these words.
  */
 export function toCard(
-  member: StaffMember,
+  member: StaffRecord,
   roleName: (roleId: string) => string,
   skillName: (skill: string) => string = (skill) => skill,
 ): TeamCard {
