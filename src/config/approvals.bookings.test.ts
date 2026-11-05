@@ -146,6 +146,28 @@ describe("what moved since the write was asked for", () => {
     });
   });
 
+  it("answers the write's own rule when it can no longer run: a booking approved after its start (D3)", async () => {
+    const asked = setup({ policy: "all" });
+    const held = await asked.assistant.call(
+      "bookings.create",
+      {
+        businessDay: "2026-10-31",
+        startMin: 22 * 60,
+        partySize: 1,
+        resourceIds: ["S8"],
+        customerId: "C-iglesias",
+        channel: "phone",
+      },
+      { idempotencyKey: "d3-late" },
+    );
+    const later = setup({ policy: "all", store: asked.store, nowMin: 22 * 60 + 15 });
+
+    expect([held, await later.person.call("approvals.approve", { approvalId: idOf(held) })]).toMatchObject([
+      { status: "awaiting_approval" },
+      { ok: false, error: { code: "bookings.start_passed" } },
+    ]);
+  });
+
   it("answers conflict when the booking lost its table meanwhile", async () => {
     const { assistant, person } = setup();
     const held = await cancel(assistant);

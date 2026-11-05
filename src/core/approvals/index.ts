@@ -100,7 +100,7 @@ export const approvalsList = defineCapability({
 export const approvalsApprove = defineCapability({
   id: "approvals.approve",
   summary:
-    "Approve a held write: it must still be pending and inside its 24 hours, it runs as the person who asked (refused with approvals.requester_forbidden when their role no longer holds the permission) and only if the state still matches what it was when asked, otherwise approvals.conflict. Records the result.",
+    "Approve a held write: it must still be pending and inside its 24 hours, it runs as the person who asked (refused with approvals.requester_forbidden when their role no longer holds the permission) and only if it can still run and the state still matches what it was when asked: a write that can no longer run fails with its own rule's code (bookings.start_passed when the start has passed), one that would change other records with approvals.conflict. Records the result.",
   input: z.strictObject({ approvalId: approvalIdInput }),
   output: z.object({ approvalId: z.string().min(1), status: z.literal("approved"), result: z.unknown() }),
   permission: "decide:approvals",

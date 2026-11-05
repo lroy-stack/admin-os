@@ -6,11 +6,11 @@ import type { ApprovalContext } from "@/core/capability";
 import { type Actor, createClient } from "@/core/client";
 import { fixedClock } from "@/core/clock";
 import { exposedCapabilities } from "@/core/mcp/server";
-import { createMockAdapter, createSessionStore } from "@/core/mock";
+import { createMockAdapter, createSessionStore, type SessionStore } from "@/core/mock";
 import { createSettingsReader } from "@/core/settings";
 
 import { CATALOG } from "./catalog";
-import { DEMO, heldWritesFor, MOCK_HANDLERS } from "./demo-kernel";
+import { DEMO, type DemoSeed, heldWritesFor, MOCK_HANDLERS } from "./demo-kernel";
 import { isKernelTool } from "./mcp.server.testkit";
 import { MCP_MANIFEST } from "./mcp-manifest";
 import { SETTINGS } from "./settings";
@@ -33,17 +33,25 @@ interface SetupOptions {
   readonly policy?: ApprovalPolicy;
   /** A role whose permissions have been taken away since the write was asked for. */
   readonly revokedRole?: string;
+  /** Another harness's demo session, to decide there what was asked there. */
+  readonly store?: SessionStore<DemoSeed>;
+  /** The business minute of the demo clock, when it has moved on since the seed. */
+  readonly nowMin?: number;
 }
 
-export const setup = ({ policy, revokedRole }: SetupOptions = {}) => {
+export const setup = ({
+  policy,
+  revokedRole,
+  store = createSessionStore<DemoSeed>(DEMO.hospitality.seed),
+  nowMin,
+}: SetupOptions = {}) => {
   const time = { ms: START };
-  const store = createSessionStore(DEMO.hospitality.seed);
   const held = heldWritesFor("hospitality");
   const adapter = createMockAdapter({
     handlers: MOCK_HANDLERS,
     store,
     sessionId: "visitor",
-    clock: fixedClock(DEMO.hospitality.clock),
+    clock: fixedClock(nowMin === undefined ? DEMO.hospitality.clock : { ...DEMO.hospitality.clock, nowMin }),
     settings: createSettingsReader(SETTINGS, {
       ...VERTICALS.hospitality.settingsDefaults,
       ...(policy === undefined ? {} : { "approvals.policy": policy }),

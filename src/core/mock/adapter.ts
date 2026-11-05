@@ -287,6 +287,9 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
             effective,
             nowMs,
           );
+          // A write that can no longer run says which of its rules refuses it (a start that has passed, a closed
+          // booking); one that still runs but would change other records than when it was asked is a conflict.
+          if (!dry.result.ok) return conflict(dry.result.error.code, dry.result.error.message);
           if (dry.expectation !== record.expected) {
             return conflict(
               "approvals.conflict",
@@ -296,7 +299,7 @@ export function createMockAdapter<Data>(options: MockAdapterOptions<Data>): Adap
           const applied = await Promise.resolve(
             handler(record.input, contextFor(requester, session.data, session.approvals, effective, nowMs, NO_KERNEL)),
           );
-          if (!applied.ok) return conflict("approvals.conflict", applied.error.message);
+          if (!applied.ok) return conflict(applied.error.code, applied.error.message);
           settle(record, "approved", { result: applied.value });
           return ok({ approvalId, status: "approved", result: applied.value });
         } finally {
