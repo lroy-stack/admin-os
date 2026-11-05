@@ -23,6 +23,16 @@ export type Message = string | Plural;
  */
 export type Vocabulary = Readonly<Record<string, Readonly<Record<Locale, Message>>>>;
 
+/** The families of data a business types, which a preset may give words (`Terms`). A new family adds a key. */
+export type TermFamily = "skills";
+
+/**
+ * A preset's words for data its business types, keyed by family and then by the id as the data holds it, in four
+ * locales. Unlike `Vocabulary` they override no module message: a business may add ids with no words, and those show
+ * as typed (`termLabel`).
+ */
+export type Terms = Readonly<Record<TermFamily, Readonly<Record<string, Readonly<Record<Locale, string>>>>>>;
+
 export type MessageParams = Readonly<Record<string, string | number>>;
 
 /** Fails to compile when a locale is missing; a missing key fails when each locale constant is typed `T`. */

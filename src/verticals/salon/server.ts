@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ClockSeed } from "@/core/clock";
-import type { Vocabulary } from "@/core/i18n";
+import type { Terms, Vocabulary } from "@/core/i18n";
 
 import { BUSINESS_DAY } from "./seed";
 
@@ -54,3 +54,14 @@ export const salonVocabulary = {
   },
   "access.roles.staff": { en: "Stylist", es: "Estilista", de: "Stylist", fr: "Styliste" },
 } as const satisfies Vocabulary;
+
+/**
+ * The words for the data this preset's business types, keyed by family and id as the data holds it. The skills are the
+ * ones its seed gives the team; an id with no words here shows as typed (`termLabel`).
+ */
+export const salonTerms = {
+  skills: {
+    cut: { en: "Cut", es: "Corte", de: "Schnitt", fr: "Coupe" },
+    colour: { en: "Colour", es: "Color", de: "Farbe", fr: "Couleur" },
+  },
+} as const satisfies Terms;

@@ -59,7 +59,8 @@ for (const locale of LOCALES) {
 /**
  * Preset axis: each preset words its own areas (hospitality "Reservations", salon "Appointments"). The nav is
  * filtered by permission, but today owner, manager and staff all hold `read:bookings`, so the three roles see the
- * same entries; the test pins that, and that no entry of another module (Team, Menu...) is in the DOM.
+ * same entries (the team entry joined with its screen, ADR 0006 and 0020); the test pins that, and that no entry of
+ * another module (Menu, Tables...) or another preset's word is in the DOM.
  * The permission-gated hiding itself is unit-tested (`visibleNavIds`); a real difference joins with the next gated area.
  */
 const PRESETS = [
@@ -67,13 +68,15 @@ const PRESETS = [
     preset: "hospitality",
     bookings: "Reservations",
     customers: "Guests",
-    absent: ["Appointments", "Team", "Menu", "Clients", "Tables"],
+    staff: "Team",
+    absent: ["Appointments", "Menu", "Clients", "Tables", "Stylists", "Mechanics"],
   },
   {
     preset: "salon",
     bookings: "Appointments",
     customers: "Clients",
-    absent: ["Reservations", "Team", "Menu", "Guests", "Tables"],
+    staff: "Stylists",
+    absent: ["Reservations", "Team", "Menu", "Guests", "Tables", "Mechanics"],
   },
 ] as const;
 
@@ -81,7 +84,7 @@ const PRESETS = [
 const HOSPITALITY_WORDS =
   /\b(reservations?|diner|dining|covers|waiter|allergen|dish(es)?|restaurant|mesa|comensal|carta|guests?|tables?)\b/i;
 
-for (const { preset, bookings, customers, absent } of PRESETS) {
+for (const { preset, bookings, customers, staff, absent } of PRESETS) {
   for (const role of ROLES) {
     test(`${preset} nav as ${role}: same entries, none hidden left in the DOM`, async ({ page, context, baseURL }) => {
       await context.addCookies([
@@ -95,6 +98,7 @@ for (const { preset, bookings, customers, absent } of PRESETS) {
       await expect(sections.getByRole("link", { name: "Home", exact: true })).toBeVisible();
       await expect(sections.getByRole("link", { name: bookings, exact: true })).toBeVisible();
       await expect(sections.getByRole("link", { name: customers, exact: true })).toBeVisible();
+      await expect(sections.getByRole("link", { name: staff, exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: new RegExp(`^(${absent.join("|")})$`) })).toHaveCount(0);
     });
   }

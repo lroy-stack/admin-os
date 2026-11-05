@@ -27,7 +27,7 @@ describe("buildShellNav", () => {
   it.each([
     ["only home", ["home"], ["Home"]],
     ["nothing", [], []],
-    ["an id the preset does not define", ["staff"], []],
+    ["an id the preset does not define", ["not-an-area"], []],
   ])("hides entries that are not visible: %s", (_name, visibleIds, expected) => {
     expect(titles(buildShellNav(data({ visibleIds }), examples).top)).toEqual(expected);
   });

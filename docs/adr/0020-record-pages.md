@@ -82,6 +82,17 @@ entry) · Related: ADR 0005, 0007, 0016, 0017, 0019
 The profile stays where it is. Its trail becomes the nav's Home, linked, then "Profile", and the account menu's
 "Account" opens it, since it shows the signed-in person.
 
+### 6. Words for data
+
+A record page shows values a business types, such as a team member's skills, and later a contract's type and an
+asset's kind. They are data, not module messages, so a vocabulary cannot override them (ADR 0004's contract test).
+
+- **Where they live.** Each preset's server half carries `terms`, a dictionary by family and id
+  (`terms.skills.sommelier`) in the four locales.
+- **How a screen reads them.** One reader, `termLabel(preset, locale, family, id)`, returns the preset's word, or the
+  id as typed when there is none. It never throws, since a business adds values the preset never saw.
+- **What it allows.** A new family only adds keys; leak terms are allowed there, as they are in a preset's vocabulary.
+
 ## Consequences
 
 - **What it gives.** Every customer and team member has a link that can be shared within the team, and Back returns
@@ -108,3 +119,4 @@ The profile stays where it is. Its trail becomes the nav's Home, linked, then "P
   leaving a task. The window table in `.claude/skills/admin-os-ui/SKILL.md` follows on acceptance.
 - **ADR 0006.** The team's nav entry returns with its screen (`/dashboard/staff`), gated by `read:staff`. Its label is
   the preset's word for its staff.
+- **ADR 0004.** The preset contract gains `terms` (§6) in `server.ts`, beside `vocabulary`.

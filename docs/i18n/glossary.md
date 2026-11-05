@@ -101,6 +101,8 @@ German statuses are participles without gender in these positions and need no ru
 | Segment | Segment | Segmento | Segment | Segment | |
 | Owner (of a deal) | Owner | Responsable | Verantwortlich | Responsable | |
 | Team | Team | Equipo | Team | Équipe | |
+| Team member | Team member | Miembro del equipo | Teammitglied | Membre de l’équipe | A person who works in the business; the preset words the group (Team, Stylists, Mechanics) |
+| Skill | Skill | Habilidad | Fähigkeit | Compétence | A free-text tag on a team member; shown as the data holds it |
 | Quota | Quota | Cuota | Quote | Quota | |
 | Target | Target | Objetivo | Ziel | Objectif | |
 | Win rate | Win rate | Tasa de éxito | Abschlussquote | Taux de réussite | |
