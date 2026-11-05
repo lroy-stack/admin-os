@@ -1,57 +1,39 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+
+import { useRouter } from "next/navigation";
 
 import { useTable } from "@tanstack/react-table";
 import { Search } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, useCurrency, useLocale, useMessages } from "@/core/i18n/client";
+import { useLocale, useMessages } from "@/core/i18n/client";
+import { SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { dataTableFeatures } from "@/ds/data-table";
+import { ReadState } from "@/ds/feedback";
 
-import { categories, type Product, statuses } from "./data";
 import { productsMessageKey } from "./messages";
-import { ProductForm } from "./product-form";
 import { createProductsColumns } from "./products-columns";
+import { PRODUCT_STATUSES, type ProductViewData } from "./products-model";
 import { ProductsTable } from "./products-table";
 
-export function Products({ initialProducts }: { initialProducts: Product[] }) {
+/** The views the viewer may read, in the preset's order; with one, there is no toggle and that view is shown. */
+export function Products({ views }: { views: readonly ProductViewData[] }) {
   const text = useMessages(productsMessageKey);
   const locale = useLocale();
-  const currency = useCurrency();
-  const [products, setProducts] = useState(initialProducts);
-  const [editor, setEditor] = useState<Product | null>(null);
+  const router = useRouter();
+  const [viewId, setViewId] = useState(views[0]?.id ?? "");
+  const view = views.find((item) => item.id === viewId) ?? views[0];
 
-  const editProduct = useCallback((product: Product) => setEditor(product), []);
-  const duplicateProduct = useCallback(
-    (product: Product) => {
-      const id = crypto.randomUUID();
-      setProducts((current) => [
-        {
-          ...product,
-          id,
-          name: format(text.row.copyOf, locale, { name: product.name }),
-          sku: `COPY-${id.replaceAll("-", "")}`,
-          status: "draft",
-          sold: 0,
-        },
-        ...current,
-      ]);
-      toast.success(text.toasts.duplicated);
-    },
-    [text, locale],
-  );
-  const columns = useMemo(
-    () => createProductsColumns({ text, locale, currency, onEdit: editProduct, onDuplicate: duplicateProduct }),
-    [text, locale, currency, editProduct, duplicateProduct],
-  );
+  const columns = useMemo(() => createProductsColumns({ text, locale }), [text, locale]);
+  const viewOptions: SegmentedOption<string>[] = views.map((item) => ({ value: item.id, label: item.label }));
 
   const table = useTable({
     features: dataTableFeatures,
-    data: products,
+    data: view?.rows ?? [],
     columns,
     initialState: {
       columnVisibility: { search: false },
@@ -59,13 +41,11 @@ export function Products({ initialProducts }: { initialProducts: Product[] }) {
     },
     getRowId: (row) => row.id,
     autoResetPageIndex: false,
-    enableRowSelection: true,
     enableSorting: false,
   });
 
   const search = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";
   const status = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? "all";
-  const category = (table.getColumn("category")?.getFilterValue() as string | undefined) ?? "all";
 
   function filterColumn(id: string, value: string) {
     table.getColumn(id)?.setFilterValue(!value || (id !== "search" && value === "all") ? undefined : value);
@@ -77,24 +57,39 @@ export function Products({ initialProducts }: { initialProducts: Product[] }) {
     table.setPageIndex(0);
   }
 
+  function showView(id: string) {
+    setViewId(id);
+    resetFilters();
+  }
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 md:px-6">
-        <InputGroup className="h-7 w-full rounded-[min(var(--radius-md),10px)] sm:w-64">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            className="h-7"
-            type="text"
-            aria-label={text.search.label}
-            placeholder={text.search.placeholder}
-            value={search}
-            onChange={(event) => filterColumn("search", event.target.value)}
-          />
-        </InputGroup>
         <div className="flex flex-wrap items-center gap-2">
-          {(search || status !== "all" || category !== "all") && (
+          {views.length > 1 && (
+            <SegmentedControl
+              label={text.viewsLabel}
+              value={view?.id ?? ""}
+              options={viewOptions}
+              onValueChange={showView}
+            />
+          )}
+          <InputGroup className="h-7 w-full rounded-[min(var(--radius-md),10px)] sm:w-64">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
+              className="h-7"
+              type="text"
+              aria-label={text.search.label}
+              placeholder={text.search.placeholder}
+              value={search}
+              onChange={(event) => filterColumn("search", event.target.value)}
+            />
+          </InputGroup>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {(search || status !== "all") && (
             <Button variant="ghost" size="sm" onClick={resetFilters}>
               {text.clearFilters}
             </Button>
@@ -106,7 +101,7 @@ export function Products({ initialProducts }: { initialProducts: Product[] }) {
             <SelectContent align="end">
               <SelectGroup>
                 <SelectItem value="all">{text.filters.allStatuses}</SelectItem>
-                {statuses.map((item) => (
+                {PRODUCT_STATUSES.map((item) => (
                   <SelectItem key={item} value={item}>
                     {text.statuses[item]}
                   </SelectItem>
@@ -114,38 +109,17 @@ export function Products({ initialProducts }: { initialProducts: Product[] }) {
               </SelectGroup>
             </SelectContent>
           </Select>
-          <Select value={category} onValueChange={(value) => filterColumn("category", value)}>
-            <SelectTrigger size="sm" aria-label={text.filters.categoryLabel} className="min-w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectGroup>
-                <SelectItem value="all">{text.filters.allCategories}</SelectItem>
-                {categories.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {text.categories[item]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
         </div>
       </div>
-      <ProductsTable table={table} onReset={resetFilters} />
-
-      {editor && (
-        <ProductForm
-          product={editor}
-          products={products}
-          onClose={() => setEditor(null)}
-          onSave={(product) => {
-            setProducts((current) => current.map((p) => (p.id === product.id ? product : p)));
-            setEditor(null);
-            resetFilters();
-            toast.success(text.toasts.saved);
-          }}
-        />
-      )}
+      <ReadState
+        state={view?.state ?? { status: "empty" }}
+        reason={view?.reason}
+        onRetry={() => router.refresh()}
+        emptyTitle={text.empty.title}
+        emptyDescription={text.empty.description}
+      >
+        <ProductsTable table={table} onReset={resetFilters} />
+      </ReadState>
     </div>
   );
 }

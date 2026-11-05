@@ -2,17 +2,7 @@
 
 import type { ReactTable } from "@tanstack/react-table";
 import { cn } from "cn";
-import {
-  Boxes,
-  ChevronLeft,
-  ChevronRight,
-  CircleCheck,
-  DollarSign,
-  Hash,
-  Package,
-  ShoppingBag,
-  Tags,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleCheck, DollarSign, Package } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -21,24 +11,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import type { DataTableFeatures } from "@/ds/data-table";
 
-import type { Product } from "./data";
 import { productsMessageKey } from "./messages";
+import type { ProductRow } from "./products-model";
 
 const headerIcons: Record<string, typeof Package> = {
   name: Package,
-  sku: Hash,
-  category: Tags,
   status: CircleCheck,
-  stock: Boxes,
   price: DollarSign,
-  sold: ShoppingBag,
 };
 
 export function ProductsTable({
   table,
   onReset,
 }: {
-  table: ReactTable<DataTableFeatures, Product>;
+  table: ReactTable<DataTableFeatures, ProductRow>;
   onReset: () => void;
 }) {
   const clearFilters = useMessages(productsMessageKey).clearFilters;
@@ -46,7 +32,6 @@ export function ProductsTable({
   const locale = useLocale();
   const { pageIndex, pageSize } = table.state.pagination;
   const total = table.getFilteredRowModel().rows.length;
-  const selected = table.getSelectedRowModel().rows.length;
   const pageCount = Math.max(1, table.getPageCount());
   const pageStart = Math.max(0, Math.min(pageIndex - 2, pageCount - 5));
   const rangeText = format(text.range, locale, {
@@ -59,13 +44,13 @@ export function ProductsTable({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col *:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:flex-1 *:data-[slot=table-container]:overflow-auto">
-      <Table aria-label={text.label} className="border-border/60 min-w-280 border-separate border-spacing-0 border-b">
+      <Table aria-label={text.label} className="border-border/60 min-w-96 border-separate border-spacing-0 border-b">
         <TableHeader className="bg-background sticky top-0 z-10">
           {table.getHeaderGroups().map((group) => (
             <TableRow key={group.id} className="border-border/60 hover:bg-transparent">
               {group.headers.map((header) => {
                 const Icon = headerIcons[header.column.id];
-                const right = header.column.id === "price" || header.column.id === "sold";
+                const right = header.column.id === "price";
                 return (
                   <TableHead
                     key={header.id}
@@ -76,17 +61,11 @@ export function ProductsTable({
                     }}
                     className={cn(
                       "border-border/50 bg-background h-10 border-t border-r border-b px-4.5 font-[450] last:border-r-0",
-                      header.column.id === "select" && "px-0 text-center",
-                      header.column.id === "actions" && "px-2.5",
                     )}
                   >
                     {!header.isPlaceholder && (
                       <div
-                        className={cn(
-                          "text-muted-foreground flex w-full items-center gap-2",
-                          right && "justify-end",
-                          header.column.id === "select" && "justify-center",
-                        )}
+                        className={cn("text-muted-foreground flex w-full items-center gap-2", right && "justify-end")}
                       >
                         {Icon && <Icon className="size-3.5 shrink-0" aria-hidden="true" />}
                         <table.FlexRender header={header} />
@@ -100,11 +79,7 @@ export function ProductsTable({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <TableRow
-              key={row.id}
-              data-state={table.state.rowSelection[row.id] ? "selected" : undefined}
-              className="border-border/60 hover:bg-muted/30 last:*:border-b-0"
-            >
+            <TableRow key={row.id} className="border-border/60 hover:bg-muted/30 last:*:border-b-0">
               {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
@@ -115,9 +90,7 @@ export function ProductsTable({
                   }}
                   className={cn(
                     "border-border/50 h-12 border-r border-b px-4.5 py-2 last:border-r-0",
-                    cell.column.id === "select" && "px-0 text-center",
-                    cell.column.id === "actions" && "px-2.5",
-                    (cell.column.id === "price" || cell.column.id === "sold") && "text-right",
+                    cell.column.id === "price" && "text-right",
                   )}
                 >
                   <table.FlexRender cell={cell} />
@@ -145,7 +118,7 @@ export function ProductsTable({
       <footer className="bg-background flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-t px-4 py-2 text-sm">
         <div className="text-muted-foreground flex flex-wrap items-center gap-4">
           <span className="tabular-nums" aria-live="polite">
-            {selected > 0 ? format(text.rangeSelected, locale, { range: rangeText, selected }) : rangeText}
+            {rangeText}
           </span>
           <div className="flex items-center gap-2">
             <label htmlFor="products-page-size">{text.rowsPerPage}</label>

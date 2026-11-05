@@ -1,18 +1,16 @@
 import { LocaleBundles } from "@/app/_components/locale-root";
 import { getMessages } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
+import { ReadState } from "@/ds/feedback";
 
-import { AddProductDrawer } from "./_components/add-product-drawer";
-import { seedProducts } from "./_components/data";
+import { loadProducts } from "./_components/load-products.server";
 import { productsBundle, productsMessages } from "./_components/messages.server";
 import { Products } from "./_components/products";
 
 export const generateMetadata = () => pageMetadata("/dashboard/products", productsMessages);
 
 export default async function Page() {
-  const text = await getMessages(productsMessages);
-  // The demo catalogue is named on the server in the request's language.
-  const catalogue = seedProducts.map((product) => ({ ...product, name: text.names[product.id] }));
+  const [text, loaded] = await Promise.all([getMessages(productsMessages), loadProducts()]);
 
   return (
     <LocaleBundles bundles={[productsBundle]}>
@@ -23,9 +21,16 @@ export default async function Page() {
               <h1 className="text-3xl leading-none font-normal tracking-tight">{text.title}</h1>
               <p className="text-muted-foreground text-sm">{text.subtitle}</p>
             </div>
-            <AddProductDrawer />
           </div>
-          <Products initialProducts={catalogue} />
+          {loaded.refusal ? (
+            <div className="px-4 md:px-6">
+              <ReadState state={loaded.refusal.state} reason={loaded.refusal.reason} emptyTitle={text.empty.title}>
+                {null}
+              </ReadState>
+            </div>
+          ) : (
+            <Products views={loaded.views} />
+          )}
         </div>
       </div>
     </LocaleBundles>

@@ -30,6 +30,12 @@ export const catalogModule = defineModule({
     catalog: { schema: catalogItemSchema, required: true, ext: { entity: "catalogItem", optional: false } },
   },
   references: [],
-  owns: ["src/app/(main)/dashboard/invoice", "src/config/catalog-collections.test.ts", "e2e/smoke/invoice.spec.ts"],
+  owns: [
+    "src/app/(main)/dashboard/invoice",
+    "src/app/(main)/dashboard/products",
+    "src/config/catalog-collections.test.ts",
+    "e2e/smoke/invoice.spec.ts",
+    "e2e/smoke/products.spec.ts",
+  ],
   views: [catalogCollectionView],
 });
