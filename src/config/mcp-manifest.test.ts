@@ -134,7 +134,7 @@ describe("a composition without the customers module", () => {
 
   it("leaves customers out of the instructions", () => {
     expect(instructionsWithoutCustomers).toMatch(
-      /^admin-OS runs one small business: bookings, catalog items, notifications, resources \(tables, chairs or bays\) and staff\. /,
+      /^admin-OS runs one small business: bookings, catalog items, notifications, parties, resources \(tables, chairs or bays\) and staff\. /,
     );
     expect(instructionsWithoutCustomers).not.toMatch(/customer/);
   });

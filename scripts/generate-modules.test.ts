@@ -48,6 +48,7 @@ describe("the generated module list (ADR 0017 §5)", () => {
       catalog: [],
       customers: [],
       notifications: ["bookings"],
+      parties: [],
       resources: [],
       staff: [],
     });

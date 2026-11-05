@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `0d8e574caf0d3d` | `0b73371ac008ac` |
-| salon | `0d8e574caf0d3d` | `0b73371ac008ac` |
-| workshop | `0d8e574caf0d3d` | `0b73371ac008ac` |
+| hospitality | `1a81d5a4918563` | `144d34b8ba5295` |
+| salon | `1a81d5a4918563` | `144d34b8ba5295` |
+| workshop | `1a81d5a4918563` | `144d34b8ba5295` |
 
 ## Tools by preset
 
@@ -64,6 +64,8 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
@@ -102,6 +104,8 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
@@ -140,6 +144,8 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
@@ -1170,6 +1176,72 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 {
   "type": "object",
   "properties": {},
+  "additionalProperties": false
+}
+```
+
+### `parties_get`
+
+**Get a client or supplier.** Get one party by id. Fails with parties.not_found when there is none. Find valid ids: id with parties_list.
+
+- Capability: `parties.get`, permission `read:parties`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `parties_list`
+- Untrusted text at: `notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `parties_list`
+
+**List clients and suppliers.** List the fiscal directory (clients and suppliers), one page at a time. Filter by role and search by text in the legal name, trade name or tax ID.
+
+- Capability: `parties.list`, permission `read:parties`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Untrusted text at: `items[].notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "client",
+        "supplier"
+      ]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    }
+  },
   "additionalProperties": false
 }
 ```

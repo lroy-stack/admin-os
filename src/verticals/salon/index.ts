@@ -45,7 +45,7 @@ const nav = [
 
 export const salon = {
   id: "salon",
-  modules: ["bookings", "customers", "notifications", "resources", "staff", "catalog"],
+  modules: ["bookings", "customers", "notifications", "resources", "staff", "catalog", "parties"],
   nav,
   roles: DEFAULT_ROLES,
   extensions: {

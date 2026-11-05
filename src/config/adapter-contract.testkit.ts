@@ -11,6 +11,7 @@ const capabilityIds = Object.keys(CATALOG);
 const quiet = { retryDelayMs: 0, logger: () => undefined } as const;
 
 const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", workshop: "cust-carmen" } as const;
+const firstParty = { hospitality: "servicios-levante", salon: "hotel-spa", workshop: "fleet-company" } as const;
 
 /** Per preset: a confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, a bookable slot. */
 const bookable = {
@@ -26,6 +27,7 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
   const inputs: Record<string, Record<string, unknown>> = {
     "customers.get": customer,
     "customers.search": { text: "ab" },
+    "parties.get": { id: firstParty[vertical] },
     "approvals.get": { approvalId: "held" },
     "approvals.approve": { approvalId: "held" },
     "approvals.reject": { approvalId: "held" },

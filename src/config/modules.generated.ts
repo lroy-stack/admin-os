@@ -4,6 +4,7 @@ import { bookingsModule } from "@/modules/bookings";
 import { catalogModule } from "@/modules/catalog";
 import { customersModule } from "@/modules/customers";
 import { notificationsModule } from "@/modules/notifications";
+import { partiesModule } from "@/modules/parties";
 import { resourcesModule } from "@/modules/resources";
 import { staffModule } from "@/modules/staff";
 
@@ -13,6 +14,7 @@ export const MODULES = [
   catalogModule,
   customersModule,
   notificationsModule,
+  partiesModule,
   resourcesModule,
   staffModule,
 ] as const;
@@ -25,9 +27,18 @@ export const MODULE_GRAPH = {
   catalog: [],
   customers: [],
   notifications: ["bookings"],
+  parties: [],
   resources: [],
   staff: [],
 } as const satisfies Readonly<Record<InstalledModuleId, readonly InstalledModuleId[]>>;
 
 /** Entities whose `ext` slot a preset may type (ADR 0004): the `ext` entities of the modules' seed collections. */
-export type ExtensionEntity = "area" | "asset" | "booking" | "catalogItem" | "customer" | "resource" | "staff";
+export type ExtensionEntity =
+  | "area"
+  | "asset"
+  | "booking"
+  | "catalogItem"
+  | "customer"
+  | "party"
+  | "resource"
+  | "staff";

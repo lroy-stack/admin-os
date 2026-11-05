@@ -1,6 +1,7 @@
 import type { BookingInput } from "@/modules/bookings";
 import type { CatalogItem } from "@/modules/catalog";
 import type { Customer } from "@/modules/customers";
+import type { Party } from "@/modules/parties";
 import type { Area, Resource } from "@/modules/resources";
 import type { Shift, StaffMember } from "@/modules/staff";
 
@@ -624,4 +625,60 @@ export const bookings: BookingInput[] = [
   },
 ];
 
-export const hospitalitySeed = { areas, resources, customers, catalog, staff, shifts, bookings } as const;
+/** Fictitious fiscal directory (ADR 0019 §5): tax IDs that cannot be real and `.example` addresses. */
+export const parties: Party[] = [
+  {
+    id: "servicios-levante",
+    kind: "company",
+    legalName: "Servicios Corporativos Levante S.L.",
+    taxId: "B00000201",
+    addressLines: ["Calle del Comercio 12", "46002 Valencia", "Spain"],
+    countryCode: "ES",
+    email: "facturas@servicios-levante.example",
+    roles: ["client"],
+  },
+  {
+    id: "mediterranea-eventos",
+    kind: "company",
+    legalName: "Mediterránea de Eventos S.A.",
+    taxId: "A00000202",
+    addressLines: ["Avenida del Puerto 45", "03001 Alicante", "Spain"],
+    countryCode: "ES",
+    email: "administracion@mediterranea-eventos.example",
+    roles: ["client"],
+  },
+  {
+    id: "laura-gomez",
+    kind: "person",
+    legalName: "Laura Gómez Ruiz",
+    taxId: "00000203Z",
+    addressLines: ["Calle Mayor 3", "30001 Murcia", "Spain"],
+    countryCode: "ES",
+    email: "laura.gomez@correo.example",
+    roles: ["client"],
+  },
+  {
+    id: "food-distributor",
+    kind: "company",
+    legalName: "Distribuciones Alimentarias del Mediterráneo S.L.",
+    tradeName: "Alimentarias del Mediterráneo",
+    taxId: "B00000204",
+    addressLines: ["Polígono Industrial Norte 8", "46930 Quart de Poblet", "Spain"],
+    countryCode: "ES",
+    email: "pedidos@alimentarias-mediterraneo.example",
+    roles: ["supplier"],
+  },
+  {
+    id: "winery",
+    kind: "company",
+    legalName: "Bodegas Sierra Alta S.L.",
+    tradeName: "Bodegas Sierra Alta",
+    taxId: "B00000205",
+    addressLines: ["Camino de la Viña 2", "46340 Requena", "Spain"],
+    countryCode: "ES",
+    email: "ventas@bodegas-sierra-alta.example",
+    roles: ["supplier"],
+  },
+];
+
+export const hospitalitySeed = { areas, resources, customers, parties, catalog, staff, shifts, bookings } as const;

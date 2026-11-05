@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingSchema } from "@/modules/bookings";
+import { partySchema } from "@/modules/parties";
 
 import { bookingExtSchema } from "./extensions";
 import { workshopSeed } from "./seed";
@@ -43,5 +44,27 @@ describe("workshop seed", () => {
       "product",
       "product",
     ]);
+  });
+});
+
+describe("workshop parties seed", () => {
+  it("parses with the module schema", () => {
+    expect(workshopSeed.parties.map((party) => partySchema.safeParse(party).success)).toEqual(
+      workshopSeed.parties.map(() => true),
+    );
+  });
+
+  it("has unique ids", () => {
+    expect(new Set(workshopSeed.parties.map((party) => party.id)).size).toBe(workshopSeed.parties.length);
+  });
+
+  it("uses only fictitious addresses ending in .example", () => {
+    expect(workshopSeed.parties.filter((party) => !party.email.endsWith(".example"))).toEqual([]);
+  });
+
+  it("names as suppliers the ones its parts' ext.supplier uses", () => {
+    const named = new Set(workshopSeed.catalog.map((item) => item.ext?.supplier).filter((name) => name !== undefined));
+    const suppliers = workshopSeed.parties.filter((party) => party.roles.includes("supplier"));
+    expect(new Set(suppliers.map((party) => party.legalName))).toEqual(named);
   });
 });

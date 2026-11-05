@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { partySchema } from "@/modules/parties";
+
 import { catalogItemExtSchema, customerExtSchema } from "./extensions";
 import { hospitalitySeed } from "./seed";
 
@@ -81,5 +83,21 @@ describe("hospitality seed", () => {
 
   it("includes a dish of the day", () => {
     expect(catalog.filter((item) => catalogItemExtSchema.parse(item.ext).dishOfTheDay)).toHaveLength(1);
+  });
+});
+
+describe("hospitality parties seed", () => {
+  it("parses with the module schema", () => {
+    expect(hospitalitySeed.parties.map((party) => partySchema.safeParse(party).success)).toEqual(
+      hospitalitySeed.parties.map(() => true),
+    );
+  });
+
+  it("has unique ids", () => {
+    expect(new Set(hospitalitySeed.parties.map((party) => party.id)).size).toBe(hospitalitySeed.parties.length);
+  });
+
+  it("uses only fictitious addresses ending in .example", () => {
+    expect(hospitalitySeed.parties.filter((party) => !party.email.endsWith(".example"))).toEqual([]);
   });
 });

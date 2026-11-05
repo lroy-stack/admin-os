@@ -97,6 +97,9 @@ German statuses are participles without gender in these positions and need no ru
 | Hot deals | Hot deals | Oportunidades calientes | Heiße Deals | Affaires chaudes | |
 | Lead | Lead | Lead | Lead | Prospect | |
 | Customer (one) | Customer | Cliente | Kunde | Client | |
+| Party (fiscal directory) | Party | Tercero | Geschäftspartner | Tiers | A client or a supplier with a tax ID (ADR 0019); not a customer of the agenda |
+| Client (billing) | Client | Cliente | Kunde | Client | Whom the business invoices; "Cliente" in es is shared with "Customer" |
+| Supplier | Supplier | Proveedor | Lieferant | Fournisseur | Whom the business buys from |
 | Contact | Contact | Contacto | Kontakt | Contact | |
 | Company | Company | Empresa | Unternehmen | Entreprise | Company names are proper nouns |
 | Segment | Segment | Segmento | Segment | Segment | |

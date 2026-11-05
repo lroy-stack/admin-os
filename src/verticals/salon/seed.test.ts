@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingSchema } from "@/modules/bookings";
+import { partySchema } from "@/modules/parties";
 
 import { salonSeed } from "./seed";
 
@@ -67,5 +68,21 @@ describe("salon seed", () => {
 
   it("has two clients", () => {
     expect(salonSeed.customers).toHaveLength(2);
+  });
+});
+
+describe("salon parties seed", () => {
+  it("parses with the module schema", () => {
+    expect(salonSeed.parties.map((party) => partySchema.safeParse(party).success)).toEqual(
+      salonSeed.parties.map(() => true),
+    );
+  });
+
+  it("has unique ids", () => {
+    expect(new Set(salonSeed.parties.map((party) => party.id)).size).toBe(salonSeed.parties.length);
+  });
+
+  it("uses only fictitious addresses ending in .example", () => {
+    expect(salonSeed.parties.filter((party) => !party.email.endsWith(".example"))).toEqual([]);
   });
 });

@@ -52,7 +52,7 @@ const nav = [
 
 export const hospitality = {
   id: "hospitality",
-  modules: ["bookings", "customers", "notifications", "resources", "staff", "catalog"],
+  modules: ["bookings", "customers", "notifications", "resources", "staff", "catalog", "parties"],
   nav,
   roles: DEFAULT_ROLES,
   extensions: {
