@@ -41,6 +41,14 @@ const nav = [
     group: "operations",
     requiredPermission: "read:catalog",
   },
+  {
+    id: "parties",
+    href: "/dashboard/parties",
+    labelKey: "parties.title",
+    placement: "area",
+    group: "operations",
+    requiredPermission: "read:parties",
+  },
 ] as const satisfies NavManifest;
 
 export const workshop = {
