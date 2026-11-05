@@ -63,8 +63,9 @@ They are fictitious, with tax IDs that cannot be real (`B000002…`) and `.examp
 
 ### 6. It is born in the module seam
 
-`parties` is created as a module folder with its manifest once ADR 0017's manifests and generator exist, like
-`inventory` (ADR 0018 §6).
+`parties` is a module folder with its manifest, composed by ADR 0017's generator like `inventory` (ADR 0018 §6). The
+invoice route reads `parties.list` and belongs to `parties` (its `owns`, ADR 0017 §4); it reads catalog items by
+capability id with a local schema, so `parties` gains no dependency on `catalog`.
 
 ## Consequences
 
@@ -77,9 +78,11 @@ They are fictitious, with tax IDs that cannot be real (`B000002…`) and `.examp
 ## Alternatives considered
 
 - **Fiscal fields on `customers`.** Rejected: it mixes people who book with fiscal entities. Many parties never book
-  (an insurer, a corporate client), suppliers do not fit, and it is the confusion the owner rejected.
-- **Billing clients inside the invoice only.** Rejected: no screen, no MCP tools and no reuse for suppliers; the issue
-  would return with purchase orders.
+  (an insurer, a corporate client), suppliers do not fit, and it is the confusion the owner rejected. §4 leaves one
+  door open: a view of parties may live inside the customers page, as a view of its directory; the fiscal data
+  stays in `parties`.
+- **Billing clients inside the invoice only.** Rejected: no MCP tools and no reuse for suppliers; the issue would
+  return with purchase orders. The reason is not the lack of a screen, since §4 gives parties none either.
 - **A `Supplier` in `inventory` and a client list elsewhere.** Rejected: it gives two directories for the same kind of
   fiscal identity, and a company that is both a client and a supplier would be entered twice.
 

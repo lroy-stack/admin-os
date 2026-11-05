@@ -28,14 +28,22 @@ data of its own for each visitor.
 - **Customers.** A directory with search, a VIP filter, CSV export and a new-contact window that warns about a
   duplicate phone.
 - **Business settings and invoices.** The owner sets the business details once in Settings; the invoice prints them,
-  bills the customers and starts from the catalog.
+  bills a client from the business's fiscal directory and starts from the catalog.
+- **Products by business type.** The Products page, in the tools rail, shows each preset its own views: the menu and
+  the shop for hospitality, the shop and the stock for the salon, the parts and the supplier orders for the workshop.
+- **Clients and suppliers.** A `parties` module keeps who a business invoices and buys from, with a tax ID and a fiscal
+  address, apart from the customers who book. It has no screen of its own: the invoice reads it and the MCP tools list,
+  read, create and update it.
+- **A module is a folder.** Each module declares a manifest (capabilities, settings, seeds, references, views, bell
+  feeds, route slots) and `npm run generate:modules` composes the app, the MCP server and the bell from the folders
+  that are present, so a module can be taken out and put back.
 - **Presets.** Hospitality, salon and workshop run the same generic modules with their own vocabulary, navigation and
   seed data.
 - **Liquid-glass interface.** Five themes in light and dark, checked against WCAG contrast, on desktop, tablet and
   phone.
 - **Four languages, three currencies.** English, Spanish, German and French from typed dictionaries; USD, EUR or GBP.
 - **Roles, permissions and approvals.** Owner, manager and staff; a policy holds an assistant's writes for a person
-  to approve.
+  to approve from the bell, which also shows the notifications each installed module feeds it.
 - **MCP server.** Its own Worker over Streamable HTTP with OAuth and separate read and write grants, plus stdio for
   local clients.
 - **Swappable data layer.** A mock adapter ships for the demo; a real backend implements one interface.
@@ -123,7 +131,7 @@ Every image is captured from the running app by `npm run media`, so it stays in 
 | Guide | Covers |
 | --- | --- |
 | [Development](docs/guides/development.md) | Setup, environment, commands, quality gates, the three Workers locally |
-| [Architecture](docs/guides/architecture.md) | Layers, the data seam, presets, who owns a control |
+| [Architecture](docs/guides/architecture.md) | Layers, the module seam, the data seam, presets, who owns a control |
 | [Building on the template](docs/guides/extending.md) | Modules, presets, controls, adapters, MCP tools |
 | [Deployment](docs/guides/deployment.md) | Deploying to Cloudflare and checking a deployment |
 | [MCP](docs/guides/mcp.md) | Connecting assistants, access, limits, agent evals |
@@ -138,8 +146,8 @@ Biome, dependency-cruiser, Vitest and Playwright keep it in shape; it deploys to
 
 ## Project status
 
-The current release is [v0.2.0](CHANGELOG.md). Next is v1: the product Home, the customer record, an agenda with
-layers and rooms for every preset.
+The current release is [v0.2.0](CHANGELOG.md). The unreleased work toward v0.3 is listed in the changelog: business
+settings, products by business type, the clients and suppliers directory, and the module seam.
 
 ## Contributing
 
