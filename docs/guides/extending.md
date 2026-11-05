@@ -82,6 +82,31 @@ the parts) and `inventory.stock` and `inventory.orders`.
    - The contract test checks unique ids, a module the preset enables, the parameters, the label in the four
      languages, and categories the seed holds.
 
+## Fill a route slot
+
+Decision record: [ADR 0017](../adr/0017-a-module-is-a-folder.md) §4 and §5. The example is `customers`, which fills three
+slots of the bookings route (`bookings.guests`, `bookings.guest-search`, `bookings.contact-fields`), so the route works
+without it.
+
+1. **Declare the slot in the route.**
+   - The route names it, `<route module>.<name>`, in a file of its own (`guest-slots.ts` for bookings) and types what
+     a fill must be there, as a local contract. The route imports nothing from the module that fills it.
+2. **Fill it in the module.**
+   - In `module.ts`, add `{ slot, write? }` to `slots`. `write` names one of the module's own capabilities that changes
+     something, which the route's Server Action runs for a fill that writes.
+   - The server half (`server.ts`) gives the loader of a reading slot in `slotLoaders`, the dictionary of a client fill
+     in `slotBundles` and the texts of the module's error codes in `errors`.
+   - The client half (`ui.ts`, `<module>ModuleUi`) gives the component of a client fill in `slots`. A module with shared
+     components in a `ui/` folder keeps its `ui.ts` beside it and re-exports the names it shares.
+3. **Use it in the route.**
+   - Read through the generated server list (`MODULE_SERVERS`) and write through the descriptor's `write`. A Server
+     Action stays in the route and dispatches by slot, because a module never imports `@/config`.
+   - Take client fills from `SLOT_FILLS` with an assignment, `const fills: Partial<BookingSlots> = SLOT_FILLS`, so a
+     fill that does not meet the contract fails `tsc` in the route.
+   - An unfilled slot loads and renders nothing. Hide the controls that need it, as the New reservation openers do.
+4. **Compose.** Run `npm run generate:modules`. It refuses a `write` the module does not declare or that only reads, and a
+   slot with two fillers. The route's `guest-slots.test.ts` checks that every slot a module fills is declared.
+
 ## Configure your business
 
 Decision record: [ADR 0006](../adr/0006-registries-permissions-navigation.md) (the spec 008 amendment).

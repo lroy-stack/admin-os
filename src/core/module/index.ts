@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { KERNEL_MODULES } from "@/core/access";
 import type { AnyCapability, Catalog } from "@/core/capability";
-import type { Locale, MessageBundle } from "@/core/i18n";
+import type { ErrorMessages, Locale, MessageBundle } from "@/core/i18n";
 // Types only: they are erased, so a client bundle that reads a manifest never reaches the server-only entry.
 import type { InputField, ManifestEntry, McpManifest, ToolManifest } from "@/core/mcp/server";
 import type { MockHandler } from "@/core/mock";
@@ -37,6 +37,16 @@ export interface ModuleReference {
   readonly required: boolean;
 }
 
+/**
+ * A route slot the module fills (ADR 0017 §4): the slot's id, `<route module>.<name>`, and for a slot whose fill
+ * writes, the module's own non-read capability the route's Server Action runs. The component is in the module's
+ * `ui.ts`, the loaders in its `server.ts`.
+ */
+export interface SlotDescriptor {
+  readonly slot: `${string}.${string}`;
+  readonly write?: string;
+}
+
 /** One seed collection of the module: its row schema, and whether every preset that enables the module seeds rows. */
 export interface SeedCollection {
   readonly schema: z.ZodType;
@@ -58,6 +68,7 @@ export interface ModuleManifest<
   T extends ToolManifest<C, CapabilityRef> = ToolManifest<C, CapabilityRef>,
   S extends IdSources = IdSources,
   V extends readonly ViewKind[] = readonly ViewKind[],
+  L extends readonly SlotDescriptor[] = readonly SlotDescriptor[],
 > {
   /** The folder's name, and the first segment of every capability id and setting key. */
   readonly id: Id;
@@ -79,6 +90,8 @@ export interface ModuleManifest<
   readonly owns: readonly string[];
   /** The product view kinds it declares (ADR 0018 §3); a preset lists views of these kinds. */
   readonly views?: V;
+  /** The route slots it fills (ADR 0017 §4); each slot has one filler. */
+  readonly slots?: L;
 }
 
 /** Keys that must not be there: each one is typed `never`, so a value under it does not compile. */
@@ -94,7 +107,8 @@ type UnknownHintFields<C extends Catalog, T> = {
 /**
  * Identity helper that keeps the literal id, capability ids and hints the composition root type-checks. None of these
  * compile: a capability outside the module's prefix, an MCP entry for no capability, a capability without an entry,
- * an id hint for a field the capability has no input for, and an id source naming a tool the module does not declare.
+ * an id hint for a field the capability has no input for, an id source naming a tool the module does not declare,
+ * and a slot whose write is not one of the module's capabilities.
  */
 export const defineModule = <
   const Id extends string,
@@ -102,15 +116,17 @@ export const defineModule = <
   const T extends ToolManifest<C, CapabilityRef>,
   const S extends IdSources,
   const V extends readonly ViewKind[] = readonly [],
+  const L extends readonly SlotDescriptor[] = readonly [],
 >(
-  manifest: ModuleManifest<Id, C, T, S, V> & {
+  manifest: ModuleManifest<Id, C, T, S, V, L> & {
     readonly capabilities: Refused<Exclude<keyof C, `${Id}.${string}`>>;
     readonly mcp: {
       readonly tools: Refused<Exclude<keyof T, keyof C>> & UnknownHintFields<C, T>;
       readonly idSources: readonly (readonly [string, readonly (keyof C & string)[]])[];
     };
+    readonly slots?: readonly { readonly slot: string; readonly write?: keyof C & string }[];
   },
-): ModuleManifest<Id, C, T, S, V> => manifest;
+): ModuleManifest<Id, C, T, S, V, L> => manifest;
 
 /**
  * The server half of a module (ADR 0017 §1), exported from its `server.ts` as `<module>ModuleServer`: the messages of
@@ -127,6 +143,12 @@ export interface ModuleServer<Id extends string = string> {
   readonly viewLoaders?: Readonly<Record<string, ViewLoader>>;
   /** The dictionary each of its view renderers reads, by kind id, so a route delivers the words of the views it shows. */
   readonly viewBundles?: Readonly<Record<string, MessageBundle<unknown>>>;
+  /** A loader for each route slot it fills that reads, by slot id (ADR 0017 §4); the route calls it with its params. */
+  readonly slotLoaders?: Readonly<Record<string, ViewLoader>>;
+  /** The dictionary each of its slot fills reads, by slot id, so a route delivers the words of the fills it shows. */
+  readonly slotBundles?: Readonly<Record<string, MessageBundle<unknown>>>;
+  /** The texts of its own error codes, which a route that runs the module's slot write shows (`errorText` takes it). */
+  readonly errors?: Readonly<Record<Locale, ErrorMessages>>;
 }
 
 /**
@@ -382,6 +404,29 @@ function hintProblems(modules: readonly InstalledModule[]): Problem[] {
   });
 }
 
+/** A slot's write is the filler's own capability that changes something; a slot has one filler (ADR 0017 §4). */
+function slotProblems(modules: readonly InstalledModule[]): Problem[] {
+  const fills = modules.flatMap(({ manifest }) =>
+    (manifest.slots ?? []).map((fill) => ({ id: manifest.id, capabilities: manifest.capabilities, ...fill })),
+  );
+  const writes = fills.flatMap(({ id, capabilities, slot, write }) => {
+    if (write === undefined) return [];
+    const capability = capabilities[write];
+    if (capability === undefined)
+      return about(id, [`${id}'s slot ${slot} writes ${write}, which ${id} does not declare`]);
+    return capability.effect === "read"
+      ? about(id, [`${id}'s slot ${slot} writes ${write}, which only reads; name a capability that changes something`])
+      : [];
+  });
+  const filledTwice = fills.flatMap((a, index) =>
+    fills
+      .slice(index + 1)
+      .filter((b) => b.slot === a.slot)
+      .map((b) => about([a.id, b.id], [`the slot ${a.slot} is filled by ${a.id} and ${b.id}; one module fills it`])),
+  );
+  return [...writes, ...filledTwice.flat()];
+}
+
 const byCode = (a: string, b: string): number => Number(a > b) - Number(a < b);
 
 /** An import of one module's code or owned paths by another's: `from` needs `to` installed (ADR 0017 §2). */
@@ -508,6 +553,7 @@ export const compositionProblems = (
     ...referenceProblems(modules),
     ...hintProblems(modules),
     ...idSourceProblems(modules),
+    ...slotProblems(modules),
   ].filter(({ modules: about }) => about.some((id) => !quiet(id)));
   return [
     ...requirements.map(

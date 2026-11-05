@@ -1,17 +1,19 @@
 "use server";
 
+import { z } from "zod";
+
 import { getRuntime } from "@/config/runtime";
 import { runWrite } from "@/config/write-action.server";
+import { serializeCallResult } from "@/core/client";
 import { ErrorCodes } from "@/core/errors";
 import { errorText } from "@/core/i18n";
-import { pageOutput } from "@/core/pagination";
-import { isAwaitingApproval } from "@/core/result";
+import { err, isAwaitingApproval } from "@/core/result";
 import { availabilitySchema } from "@/modules/bookings";
 import { bookingsErrors } from "@/modules/bookings/server";
-import { customerSummarySchema } from "@/modules/customers";
-import { customersErrors } from "@/modules/customers/server";
 
-import { GUEST_SEARCH_LIMIT, type GuestSearchAnswer } from "./_components/guest-search";
+import { GUEST_SEARCH_LIMIT, type GuestSearchAnswer, guestRowSchema } from "./_components/guest-search";
+import { BOOKING_SLOTS } from "./_components/guest-slots";
+import { loadSlot, slotWriteOf } from "./_components/guest-slots.server";
 import type { AvailabilityAnswer } from "./_components/new-reservation-slots";
 
 /** Moves a booking one step forward: `{ id, to }` (`bookings.status.advance`). */
@@ -49,9 +51,15 @@ export async function createReservation(input: unknown, attemptKey: unknown) {
   return runWrite("bookings.create", input, attemptKey);
 }
 
-/** Adds the new contact a reservation is for, before the booking: `{ name, phone?, email? }` (`customers.create`). */
+/**
+ * Adds the new contact a reservation is for, before the booking, through the write of the module that fills the
+ * `bookings.contact-fields` slot (ADR 0017 §4): `{ name, phone?, email? }` for customers. With no filler it is refused.
+ */
 export async function createGuest(input: unknown, attemptKey: unknown) {
-  return runWrite("customers.create", input, attemptKey);
+  const write = slotWriteOf(BOOKING_SLOTS.contactFields);
+  if (write === undefined)
+    return serializeCallResult(err(ErrorCodes.unavailable, "No module fills bookings.contact-fields"));
+  return runWrite(write, input, attemptKey);
 }
 
 /**
@@ -73,20 +81,22 @@ export async function findAvailability(input: unknown): Promise<AvailabilityAnsw
 }
 
 /**
- * The customers whose name or phone contain `text`, concise rows only, for the guest field of the New reservation
- * panel. A read (`customers.search`, `read:customers`); only the id, name and phone reach the browser.
+ * The guests whose name or phone contain `text`, concise rows only, for the guest field of the New reservation panel.
+ * A read through the module that fills the `bookings.guest-search` slot (ADR 0017 §4): only the id, name and phone reach
+ * the browser, and a failure answers with the filler's translated text.
  */
 export async function searchGuests(text: unknown): Promise<GuestSearchAnswer> {
   const { client, locale } = await getRuntime();
-  const answer = await client.call("customers.search", { text, limit: GUEST_SEARCH_LIMIT } as never);
-  const failed = (code: string): GuestSearchAnswer => ({
-    status: "error",
-    text: errorText({ code }, customersErrors, locale),
-  });
-  if (isAwaitingApproval(answer)) return failed(ErrorCodes.unavailable);
-  if (!answer.ok) return failed(answer.error.code);
-  const found = pageOutput(customerSummarySchema).safeParse(answer.value);
-  return found.success
-    ? { status: "ok", rows: found.data.items.map(({ id, name, phone }) => ({ id, name, phone: phone ?? null })) }
-    : failed(ErrorCodes.invalidOutput);
+  const context = { locale, call: (capability: string, input: unknown) => client.call(capability, input) };
+  const found = await loadSlot(BOOKING_SLOTS.guestSearch, context, { text, limit: GUEST_SEARCH_LIMIT });
+  if (found.state.status !== "ready" && found.state.status !== "empty") {
+    return {
+      status: "error",
+      text: found.reason ?? errorText({ code: ErrorCodes.unavailable }, bookingsErrors, locale),
+    };
+  }
+  const rows = z.array(guestRowSchema).safeParse(found.rows);
+  return rows.success
+    ? { status: "ok", rows: rows.data }
+    : { status: "error", text: errorText({ code: ErrorCodes.invalidOutput }, bookingsErrors, locale) };
 }

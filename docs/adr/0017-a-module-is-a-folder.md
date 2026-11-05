@@ -138,22 +138,54 @@ A required reference makes the generator refuse when its target is absent.
 
 | File | Owner, and why |
 | --- | --- |
-| The bookings route | `bookings`, which therefore requires `resources` and, until M9, `customers`. |
+| The bookings route | `bookings`, which therefore requires `resources`. It names a guest through slots (below), so it does not require `customers`. |
 | The customers route | `customers`. |
 | The invoice | `catalog` until `parties` exists (ADR 0019); then `parties`. Its catalog types become local (M2b) and it reads `catalog.list` by id, so the starting lines are optional. |
 | The bell (`layout.tsx`, `notification-actions.ts`, `notification-view.ts`) | The shell. The layout imports no module. The bell shows the kernel's approvals plus the `feeds` the generated lists give it (ADR 0006's notification types). `notifications` owns its feed; removing it leaves the bell with approvals only (task M10). |
 | The Products route (ADR 0018) | `catalog`. It renders view kinds through a generated client map, so it imports no other module's views. |
 
-**Slots (M9).** A route declares named slots with a local props type. A module fills one through its manifest's
-`slots` descriptor, with the component from its `ui.ts` and the loader from its `server.ts`. The generated maps give
-the route what is filled, and an unfilled slot renders and loads nothing.
+**Slots (M9).** A route declares named slots, `<route module>.<name>`, with a local contract. A module fills one through
+its manifest's `slots` descriptor, with the component from its `ui.ts` and the loader from its `server.ts`. The generated
+maps give the route what is filled, and an unfilled slot renders and loads nothing.
 
-M9 moves the guest picker, the guest search, the contact fields and the guest loading into `customers`, filling the
-bookings route's slots. The files it changes are:
+- **Descriptor.** `slots: { slot, write? }[]`. `write` is a non-read capability of the module's own, which the route's Server
+  Action runs for a slot whose fill writes. The generator refuses a `write` the module does not declare or that only
+  reads, and a slot with two fillers.
+- **Server half.** `ModuleServer` gains `slotLoaders` (a `ViewLoader` per slot, as the view kinds' loaders are),
+  `slotBundles` (the dictionary a fill reads) and `errors` (the texts of the module's own error codes). The route builds
+  the loader's `{ locale, call }` and finds the filler over the generated server list, as the Products route does for
+  view kinds.
+- **Client half.** `ModuleUi` gains `slots`, and `views` becomes optional. The generated slot list holds `SLOT_FILLS`,
+  in a file apart from `VIEW_RENDERERS`, so a route that takes a fill does not bundle the view renderers (the bookings page
+  grew 84 KB when both were in one file). A fill cannot import the route's props type: that would add an edge from the module to the
+  route's owner, against the layers. The route checks the contract by assignment instead,
+  `const fills: Partial<BookingSlots> = SLOT_FILLS`, so a fill that does not meet it fails `tsc` in the route.
+- **Server Actions stay in the route.** A module never imports `@/config`, where `getRuntime` and `runWrite` live, so a
+  Server Action cannot live in a module. `searchGuests` and `createGuest` keep their names in the route and dispatch by
+  slot: the first through the slot's loader, the second through the descriptor's `write`. The inventory of Server Actions
+  needs no change.
+- **A module's `ui.ts` and its `ui/` folder.** `@/modules/<module>/ui` resolves to `ui.ts` before `ui/index.ts`, so a
+  module with shared components in `ui/` replaces `ui/index.ts` with a `ui.ts` that re-exports the same names and adds
+  `<module>ModuleUi`.
+
+M9 fills three slots of the bookings route from `customers`:
+
+- `bookings.guests`: the loader that reads the records a day's bookings name. An id that is not in the directory fails the
+  day with the translated `customers.not_found`, as today. §3's "unknown, never a throw" for this case is a follow-up.
+- `bookings.guest-search`: the loader behind the guest field.
+- `bookings.contact-fields`: the fields of a new contact, the schema that judges them, the input of `customers.create`
+  (the descriptor's `write`), the dictionary and the error texts.
+
+The guest picker stays in the route: it imports nothing from `customers` and has one consumer, so moving it would break
+the extraction rule (ADR 0003). Only the server read behind it moves. With no filler the New reservation window cannot
+name a guest, so its two openers show only when the role may create bookings and the three slots are filled
+(`reserve`). With the fill present it renders at the same tree position as before: the screen is the same.
+
+The files M9 changes are:
 
 - `page.tsx`, `actions.ts`, `load-bookings.server.ts` and `view-model.ts`;
-- `new-reservation-dialog.tsx` and `new-reservation-form.ts`;
-- `guest-picker.tsx` and `guest-search.ts`;
+- `new-reservation-dialog.tsx`, `new-reservation-form.ts`, `abilities.ts` and `reservations.tsx`;
+- `guest-slots.ts` and `guest-slots.server.ts`, the route's slot contract and its lookup over the generated lists;
 - their tests.
 
 **Verify:** removing `customers` and regenerating keeps `bookings` building.
@@ -181,8 +213,10 @@ is static.
   - `src/config/modules.generated.ts`: manifests, `MODULE_GRAPH`, `InstalledModuleId` (the union of installed ids;
     `src/core/nav`'s `ModuleId` stays `string`, as core cannot import config), `ExtensionEntity`, the view kinds' ids;
   - `src/config/modules.server.generated.ts`: server halves, including feed and slot loaders;
-  - `src/config/modules.client.generated.ts`: each module's `ui.ts` (view renderers, bell feeds, slot fills). It is
-    the only importer of `ui.ts`.
+  - `src/config/modules.client.generated.ts`: each module's `ui.ts` (view renderers, bell feeds). It and the next file are
+    the only importers of `ui.ts` outside the module;
+  - `src/config/modules.slots.generated.ts`: the slot fills of each module's `ui.ts`, apart so that a route that takes a fill
+    does not bundle the renderers.
 - **Form of the output.**
   - Static imports in static typed arrays, formatted by Biome. There is no runtime registration and no glob import
     (ADR 0006 chose option 3).
@@ -255,7 +289,7 @@ their diffs.
 - **v2's Pro modules** are folders the generator picks up. Merging v1 tags conflicts only in the generated files, and
   regenerating resolves it.
 - **The cost:**
-  - three generated files and a generator with its staleness test;
+  - four generated files and a generator with its staleness test;
   - the manifest type in `src/core`;
   - `collectionOf` and its contract run;
   - the slots of M9 and the bell's feeds (M10).

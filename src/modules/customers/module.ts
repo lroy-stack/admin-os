@@ -64,6 +64,11 @@ export const customersModule = defineModule({
     assets: { schema: assetSchema, required: false, ext: { entity: "asset", optional: false } },
   },
   references: [],
+  slots: [
+    { slot: "bookings.guests" },
+    { slot: "bookings.guest-search" },
+    { slot: "bookings.contact-fields", write: "customers.create" },
+  ],
   owns: [
     "evals/mcp/tasks/customers.json",
     "evals/mcp/fixtures/customers",

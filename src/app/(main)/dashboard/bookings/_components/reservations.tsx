@@ -616,7 +616,7 @@ function ServiceScreen({
                     {text.actions.walkIn}
                   </Button>
                 ) : null}
-                {can.seat && compact ? (
+                {can.reserve && compact ? (
                   <Button
                     size="icon"
                     aria-label={text.actions.newReservation}
@@ -626,7 +626,7 @@ function ServiceScreen({
                     <Plus />
                   </Button>
                 ) : null}
-                {can.seat && !compact ? (
+                {can.reserve && !compact ? (
                   <Button className="liquid-glass-brand h-9 rounded-full px-4" onClick={openNewReservation}>
                     <Plus data-icon="inline-start" />
                     {text.actions.newReservation}

@@ -25,7 +25,7 @@ export type InstalledModuleId = (typeof MODULES)[number]["id"];
 
 /** What each installed module requires, from every import between module folders (ADR 0017 §2). */
 export const MODULE_GRAPH = {
-  bookings: ["customers", "resources"],
+  bookings: ["resources"],
   catalog: [],
   customers: [],
   inventory: [],

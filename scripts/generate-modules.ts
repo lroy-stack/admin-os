@@ -4,7 +4,9 @@
  * - `src/config/modules.generated.ts`: the manifests, the import graph between modules and the extension entities of
  *   their seeds;
  * - `src/config/modules.server.generated.ts`: the server halves (messages, mock answers and view loaders), server-only;
- * - `src/config/modules.client.generated.ts`: the view renderers of the modules that have a `ui.ts`, by view kind id.
+ * - `src/config/modules.client.generated.ts`: the view renderers of the modules that have a `ui.ts`, by view kind id;
+ * - `src/config/modules.slots.generated.ts`: their route slot fills, by slot id, in a file of its own so a route that
+ *   takes a fill does not bundle the view renderers (ADR 0017 §4).
  * Run it with `npm run generate:modules` after adding, removing or re-wiring a module; `scripts/generate-modules.test.ts`
  * fails while any file is stale. It exits 1, naming the module and the fix, when the folders cannot be composed.
  */
@@ -31,6 +33,7 @@ export const ROOT = fileURLToPath(new URL("..", import.meta.url));
 export const MODULES_PATH = "src/config/modules.generated.ts";
 export const MODULE_SERVERS_PATH = "src/config/modules.server.generated.ts";
 export const MODULE_UIS_PATH = "src/config/modules.client.generated.ts";
+export const MODULE_SLOTS_PATH = "src/config/modules.slots.generated.ts";
 /** The paths modules own outside their folders, which `.dependency-cruiser.cjs` allows to import them (ADR 0017 §4). */
 export const MODULE_OWNS_PATH = "src/config/modules.owns.generated.json";
 
@@ -61,8 +64,7 @@ export const manifestExportOf = (folder: string): string | undefined =>
 
 /**
  * `file-manager` → `fileManagerModuleUi`, the export of the folder's `ui.ts` (ADR 0017 §1). A folder joins the client
- * list only when it has a file named `ui.ts`: `customers/ui/` is a folder of shared components, not a module UI, so
- * it stays out without a special case.
+ * list only when it has a file named `ui.ts`: a folder named `ui/` of shared components is not a module UI, so it stays out without a special case.
  */
 export const uiExportOf = (folder: string): string | undefined => {
   const manifest = manifestExportOf(folder);
@@ -171,11 +173,12 @@ const uiFolders = (root: string, modules: readonly InstalledModule[]): string[] 
   modules.map(({ folder }) => folder).filter((folder) => existsSync(join(root, "src/modules", folder, "ui.ts")));
 
 /**
- * The client list before Biome formats it: one map from view kind id to renderer. `satisfies` makes a kind with no
- * renderer fail `tsc`, naming it, and a renderer for an undeclared kind fail too.
+ * The client list before Biome formats it: a map from view kind id to renderer, from the `ui.ts` of the modules whose
+ * manifest declares views. `satisfies` makes a kind with no renderer fail `tsc`, naming it, and a renderer for an
+ * undeclared kind fail too.
  */
-function renderClient(folders: readonly string[]): string {
-  const names = folders.map((folder) => [folder, uiExportOf(folder)] as const);
+function renderClient(modules: readonly InstalledModule[], folders: readonly string[]): string {
+  const names = declaring(modules, folders, "views");
   return [
     HEADER,
     "",
@@ -188,6 +191,30 @@ function renderClient(folders: readonly string[]): string {
     `export const VIEW_RENDERERS = {${names.map(([, name]) => `...${name}.views`).join(", ")}} as const satisfies Readonly<Record<ProductViewKindId, ViewRenderer>>;`,
     "",
   ].join("\n");
+}
+
+/**
+ * The slot list before Biome formats it: a map from slot id to fill, from the `ui.ts` of the modules whose manifest
+ * declares slots. A route checks the fills it takes by assignment (ADR 0017 §4).
+ */
+function renderSlots(modules: readonly InstalledModule[], folders: readonly string[]): string {
+  const names = declaring(modules, folders, "slots");
+  return [
+    HEADER,
+    "",
+    ...names.map(([folder, name]) => `import { ${name} } from "@/modules/${folder}/ui";`),
+    "",
+    "/** The fill of each route slot, from the `ui.ts` of the modules that fill it; a route takes the ones it declares. */",
+    `export const SLOT_FILLS = {${names.map(([, name]) => `...${name}.slots`).join(", ")}} as const;`,
+    "",
+  ].join("\n");
+}
+
+/** The `ui.ts` exports of the folders whose manifest declares `key`, in id order. */
+function declaring(modules: readonly InstalledModule[], folders: readonly string[], key: "views" | "slots") {
+  return folders
+    .filter((folder) => modules.some(({ folder: own, manifest }) => own === folder && (manifest[key]?.length ?? 0) > 0))
+    .map((folder) => [folder, uiExportOf(folder)] as const);
 }
 
 /** The owned paths before Biome formats them: sorted, so the file changes only when an `owns` list does. */
@@ -255,7 +282,8 @@ export async function generate(root: string = ROOT): Promise<Generated> {
           files: {
             [MODULES_PATH]: formatted(root, MODULES_PATH, render(modules, graph)),
             [MODULE_SERVERS_PATH]: formatted(root, MODULE_SERVERS_PATH, renderServers(modules)),
-            [MODULE_UIS_PATH]: formatted(root, MODULE_UIS_PATH, renderClient(uiFolders(root, modules))),
+            [MODULE_UIS_PATH]: formatted(root, MODULE_UIS_PATH, renderClient(modules, uiFolders(root, modules))),
+            [MODULE_SLOTS_PATH]: formatted(root, MODULE_SLOTS_PATH, renderSlots(modules, uiFolders(root, modules))),
             [MODULE_OWNS_PATH]: formatted(root, MODULE_OWNS_PATH, renderOwns(modules)),
           },
         }

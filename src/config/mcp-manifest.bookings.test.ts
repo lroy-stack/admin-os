@@ -32,10 +32,13 @@ describe("the bookings entries of the MCP manifest (spec 004 D5)", () => {
 
 /**
  * The composition as it would be with the customers module removed (ADR 0017 §5, the amendment to ADR 0009). The
- * generator refuses that tree today, since bookings requires customers until M9 composes them by slot; this fixture
- * tests the composition functions on their own. It belongs to bookings, which holds the hints to customers' tools.
+ * generator composes that tree since M9 (customers fills the bookings route's slots); this fixture tests the composition
+ * functions on their own, in a tree where customers is still installed. It belongs to bookings, which holds the hints to
+ * customers' tools.
  */
-const withoutCustomers = MODULES.filter(({ id }) => id !== "customers");
+/** An id typed as text, so a tree without the customers module still compiles this comparison. */
+const CUSTOMERS: string = "customers";
+const withoutCustomers = MODULES.filter(({ id }) => id !== CUSTOMERS);
 const catalogWithoutCustomers = mergeCatalogs(
   ...KERNEL_CATALOGS,
   ...withoutCustomers.map(({ capabilities }) => capabilities),

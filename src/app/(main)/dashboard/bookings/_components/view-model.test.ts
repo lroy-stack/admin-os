@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { type Booking, bookingSchema } from "@/modules/bookings";
-import type { Customer } from "@/modules/customers";
 
 import {
   bookingStatusFor,
   businessDayFrom,
   customerIdsOf,
   daysBetween,
+  type GuestRecord,
+  guestRecordSchema,
   hourMarks,
   noLocalChanges,
   nowMinFor,
@@ -33,7 +34,7 @@ const context = (overrides: Partial<ReservationContext> = {}): ReservationContex
   ...overrides,
 });
 
-const withCustomers = (...customers: Customer[]) =>
+const withCustomers = (...customers: GuestRecord[]) =>
   context({ customers: new Map(customers.map((record) => [record.id, record])) });
 
 const booking = (overrides: Record<string, unknown> = {}): Booking =>
@@ -53,21 +54,16 @@ const booking = (overrides: Record<string, unknown> = {}): Booking =>
     ...overrides,
   });
 
-const customer = (overrides: Partial<Customer> = {}): Customer => ({
+const customer = (overrides: Partial<GuestRecord> = {}): GuestRecord => ({
   id: "C-1",
   name: "Ortega",
   phone: "+34600000102",
   email: "ortega@example.com",
   locale: "es",
-  tags: [],
-  vip: false,
-  blocked: false,
-  notes: [],
   figures: {
     visits: 6,
-    spend: { amountMinor: 31_200, currency: "EUR" },
+    spend: { amountMinor: 31_200 },
     lastVisit: "2026-09-30T00:00:00Z",
-    noShows: 0,
   },
   ext: { allergens: ["gluten"], dietaryRestrictions: ["Gluten-free"] },
   ...overrides,
@@ -166,7 +162,7 @@ describe("toReservation", () => {
   });
 
   it("is a first visit when the customer has none on record", () => {
-    const first = customer({ figures: { visits: 0, spend: null, lastVisit: null, noShows: 0 } });
+    const first = customer({ figures: { visits: 0, spend: null, lastVisit: null } });
 
     expect(toReservation(booking({ customerId: "C-1" }), withCustomers(first)).profile).toMatchObject({
       visits: 0,
@@ -176,7 +172,7 @@ describe("toReservation", () => {
   });
 
   it("counts a visit today as zero days ago", () => {
-    const visited = customer({ figures: { visits: 1, spend: null, lastVisit: `${TODAY}T10:00:00Z`, noShows: 0 } });
+    const visited = customer({ figures: { visits: 1, spend: null, lastVisit: `${TODAY}T10:00:00Z` } });
 
     expect(toReservation(booking({ customerId: "C-1" }), withCustomers(visited)).profile?.lastVisitDaysAgo).toBe(0);
   });
@@ -382,5 +378,17 @@ describe("the agenda's axis", () => {
 
   it("puts 9:30 PM in the middle of a 7 PM to midnight window at 50%", () => {
     expect(percentInWindow(window, 21 * 60 + 30)).toBe("50%");
+  });
+});
+
+describe("guestRecordSchema", () => {
+  it("keeps what the screen reads of a record and drops the rest", () => {
+    const record = { ...customer(), notes: [{ text: "private" }], figures: { ...customer().figures, noShows: 2 } };
+
+    expect(guestRecordSchema.parse(record)).toEqual(customer());
+  });
+
+  it("refuses a record without figures", () => {
+    expect(guestRecordSchema.safeParse({ id: "C-1", name: "Ortega" }).success).toBe(false);
   });
 });

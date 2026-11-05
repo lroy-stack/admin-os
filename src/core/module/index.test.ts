@@ -46,6 +46,15 @@ const otherList = defineCapability({
   effect: "read",
   riskTier: 0,
 });
+const plantedMake = defineCapability({
+  id: "planted.make",
+  summary: "Make a planted item.",
+  input: z.object({}),
+  output: z.object({}),
+  permission: "create:planted",
+  effect: "write",
+  riskTier: 1,
+});
 const capabilities = { "planted.item.get": plantedGet, "planted.list": plantedList } as const;
 
 /** A product view kind of the planted module (ADR 0018 §3). */
@@ -257,6 +266,13 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
     expect(problems(installed(optional), exists)).toEqual([]);
   });
 
+  it("accepts a slot whose write is a capability of the module that changes something", () => {
+    const filler = { ...planted, capabilities: { ...capabilities, "planted.make": plantedMake } };
+    expect(
+      problems(installed({ ...filler, slots: [{ slot: "shelf.picker", write: "planted.make" }] }, other), exists),
+    ).toEqual([]);
+  });
+
   it("accepts a hint to a kernel tool without a reference, since the kernel is always installed", () => {
     expect(problems(installed(kernelHint, other), exists)).toEqual([]);
   });
@@ -382,6 +398,21 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
         other,
       ),
       "planted's reference planted.lines[].quantity → other: lines[].quantity is not a string field of planted's rows",
+    ],
+    [
+      "a slot whose write the module does not declare",
+      installed({ ...planted, slots: [{ slot: "shelf.picker", write: "planted.make" }] }, other),
+      "planted's slot shelf.picker writes planted.make, which planted does not declare",
+    ],
+    [
+      "a slot whose write only reads",
+      installed({ ...planted, slots: [{ slot: "shelf.picker", write: "planted.list" }] }, other),
+      "planted's slot shelf.picker writes planted.list, which only reads; name a capability that changes something",
+    ],
+    [
+      "a slot filled by two modules",
+      installed({ ...planted, slots: [{ slot: "shelf.picker" }] }, { ...other, slots: [{ slot: "shelf.picker" }] }),
+      "the slot shelf.picker is filled by planted and other; one module fills it",
     ],
     [
       "a hint to an own tool the module does not declare",

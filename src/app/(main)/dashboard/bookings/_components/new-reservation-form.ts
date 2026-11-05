@@ -2,7 +2,8 @@ import { z } from "zod";
 
 import { type Channel, channelSchema } from "@/core/channels";
 import type { ActionOutcome } from "@/ds/forms";
-import { type ContactFormInput, type ContactFormValues, contactFormSchema } from "@/modules/customers/ui";
+
+import type { ContactInput, ContactSchema, ContactValues } from "./guest-slots";
 
 /** Most guests the panel's stepper offers; the capability itself allows more, for a booking on joined tables. */
 export const MAX_RESERVATION_COVERS = 40;
@@ -15,7 +16,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 export type GuestMode = "existing" | "new";
 
 /** What the panel's controls hold while a person works: every value is text or a count. */
-export interface ReservationFormInput extends ContactFormInput {
+export interface ReservationFormInput extends ContactInput {
   mode: GuestMode;
   /** The customer picked by the search; blank until one is. */
   customerId: string;
@@ -33,7 +34,7 @@ export interface ReservationFormInput extends ContactFormInput {
 
 export type ReservationGuest =
   | { readonly kind: "existing"; readonly customerId: string }
-  | { readonly kind: "new"; readonly contact: ContactFormValues };
+  | { readonly kind: "new"; readonly contact: ContactValues };
 
 /** What a valid form yields. */
 export interface ReservationFormValues {
@@ -110,15 +111,13 @@ const fields = (text: ReservationFormText) =>
 
 /**
  * The form schema of the New reservation panel. The guest is either a customer picked from the search or a new contact,
- * judged by the shared contact schema (`contactFormSchema`); the other fields follow `bookings.create`. The capability
+ * judged by the schema the filler of `bookings.contact-fields` gives; the other fields follow `bookings.create`. The capability
  * validates the same bounds again on the server (ADR 0005).
  */
 export function reservationFormSchema(
   text: ReservationFormText,
-  contactInvalid: Parameters<typeof contactFormSchema>[0],
+  contact: ContactSchema,
 ): z.ZodType<ReservationFormValues, ReservationFormInput> {
-  const contact = contactFormSchema(contactInvalid);
-
   /** Who the booking is for, or the issues that say why not. */
   const guestOf = (input: z.infer<ReturnType<typeof fields>>): GuestResult => {
     if (input.mode === "existing") {

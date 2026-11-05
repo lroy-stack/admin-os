@@ -1064,7 +1064,7 @@ describe("booking permissions by role", () => {
 });
 
 describe("booking reads: get and search", () => {
-  const customer = hospitalitySeed.customers[0];
+  const customer = (hospitalitySeed as { customers?: readonly { id: string; name: string }[] }).customers?.[0];
   const stored = (id: string, extra: Partial<BookingInput>): BookingInput => ({
     ...booking("confirmed", id),
     ...extra,
@@ -1293,8 +1293,11 @@ describe("the bookings settings", () => {
   });
 });
 
+/** An id typed as text, so a tree without the customers module still compiles this comparison. */
+const CUSTOMERS: string = "customers";
+
 describe("a booking for a customer when the customers module is absent (ADR 0017 §3)", () => {
-  const customersCollections = new Set(Object.keys(MODULES.find(({ id }) => id === "customers")?.seed ?? {}));
+  const customersCollections = new Set(Object.keys(MODULES.find(({ id }) => id === CUSTOMERS)?.seed ?? {}));
 
   it.each(Object.keys(VERTICALS) as VerticalId[])(
     "refuses a booking for a customer on %s when no customer exists",

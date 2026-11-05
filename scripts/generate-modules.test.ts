@@ -3,13 +3,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { VIEW_RENDERERS } from "@/config/modules.client.generated";
 import { MODULE_GRAPH, MODULES } from "@/config/modules.generated";
 import { MODULE_SERVERS } from "@/config/modules.server.generated";
-import { compositionProblems, type ModuleServer } from "@/core/module";
+import { SLOT_FILLS } from "@/config/modules.slots.generated";
+import { compositionProblems, type ModuleManifest, type ModuleServer } from "@/core/module";
 
 import {
   type Generated,
   generate,
   MODULE_OWNS_PATH,
   MODULE_SERVERS_PATH,
+  MODULE_SLOTS_PATH,
   MODULE_UIS_PATH,
   MODULES_PATH,
   manifestExportOf,
@@ -27,7 +29,8 @@ let generated: Generated;
  * census still holds after a removal.
  */
 const C0: Readonly<Record<string, readonly string[]>> = {
-  bookings: ["customers", "resources"],
+  // M9 (plan 006) changed this row: customers fills the bookings route's slots, so the route no longer imports it.
+  bookings: ["resources"],
   catalog: [],
   customers: [],
   notifications: ["bookings"],
@@ -75,7 +78,7 @@ describe("the generated module list (ADR 0017 §5)", () => {
     expect(generated.problems).toEqual([]);
   });
 
-  it.each([MODULES_PATH, MODULE_SERVERS_PATH, MODULE_UIS_PATH, MODULE_OWNS_PATH])(
+  it.each([MODULES_PATH, MODULE_SERVERS_PATH, MODULE_UIS_PATH, MODULE_SLOTS_PATH, MODULE_OWNS_PATH])(
     "%s matches the module folders",
     (path) => {
       expect(readFileSync(join(ROOT, path), "utf8"), `${path} is stale: run npm run generate:modules`).toBe(
@@ -125,7 +128,7 @@ describe("the UI export a folder names", () => {
 });
 
 describe("the generated client map (ADR 0017 §5)", () => {
-  const text = () => generated.files?.[MODULE_UIS_PATH] ?? "";
+  const text = () => `${generated.files?.[MODULE_UIS_PATH]}${generated.files?.[MODULE_SLOTS_PATH]}`;
 
   // From the installed modules' folders, so removing one leaves these cases standing (ADR 0017 §7).
   const withUiFile = MODULES.map(({ id }) => id).filter((id) => existsSync(join(ROOT, "src/modules", id, "ui.ts")));
@@ -151,5 +154,29 @@ describe("the generated client map (ADR 0017 §5)", () => {
   it.each(declared)("%s has a loader and a dictionary in its module's server half", (kind) => {
     expect(servers.filter(({ viewLoaders }) => viewLoaders !== undefined && kind in viewLoaders)).toHaveLength(1);
     expect(servers.filter(({ viewBundles }) => viewBundles !== undefined && kind in viewBundles)).toHaveLength(1);
+  });
+});
+
+describe("the route slots modules fill (ADR 0017 §4)", () => {
+  const servers: readonly ModuleServer[] = MODULE_SERVERS;
+  const manifests: readonly ModuleManifest[] = MODULES;
+  const filled = manifests.flatMap((module) => (module.slots ?? []).map((fill) => ({ module: module.id, ...fill })));
+  const serverHalfOf = (id: string) => servers.find((server) => server.id === id);
+
+  it.each(filled)("$slot, filled by $module, has a loader or a dictionary in its module's server half", (fill) => {
+    const half = serverHalfOf(fill.module);
+    expect(fill.slot in (half?.slotLoaders ?? {}) || fill.slot in (half?.slotBundles ?? {})).toBe(true);
+  });
+
+  it("holds a client fill for each slot whose server half has a dictionary, and no other", () => {
+    const withBundle = servers.flatMap(({ slotBundles }) => Object.keys(slotBundles ?? {})).sort();
+    expect(Object.keys(SLOT_FILLS).sort()).toEqual(withBundle);
+  });
+
+  it("generates the slot fills, apart from the view renderers, from the ui.ts of the modules that declare slots", () => {
+    const text = generated.files?.[MODULE_SLOTS_PATH] ?? "";
+    for (const id of new Set(filled.map(({ module }) => module))) {
+      expect(text).toContain(`...${uiExportOf(id)}.slots`);
+    }
   });
 });

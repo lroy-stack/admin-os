@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
+import type { ContactSchema } from "./guest-slots";
 import {
   createdBooking,
   emptyReservation,
@@ -17,8 +19,20 @@ const text = {
   noteTooLong: "Too long.",
   tagsInvalid: "Bad tags.",
 };
-const contactInvalid = { name: "Name?", phone: "Phone?", email: "Email?" };
-const schema = reservationFormSchema(text, contactInvalid);
+
+/** A stand-in for the schema the filler of `bookings.contact-fields` gives: the form judges the contact by it, whatever it is. */
+const contact: ContactSchema = z.object({
+  name: z.string().min(1, "Name?"),
+  phone: z.string().transform((typed, ctx) => {
+    const phone = typed.replaceAll(" ", "");
+    if (phone === "") return undefined;
+    if (/^\+\d{8,}$/.test(phone)) return phone;
+    ctx.issues.push({ code: "custom", message: "Phone?", input: typed });
+    return z.NEVER;
+  }),
+  email: z.string().transform((typed) => (typed === "" ? undefined : typed)),
+});
+const schema = reservationFormSchema(text, contact);
 
 const filled = { ...emptyReservation("2026-11-01", 4), customerId: "cu-1", startMin: "1200" };
 const messagesOf = (input: unknown) => schema.safeParse(input).error?.issues.map((issue) => issue.message);
@@ -41,7 +55,7 @@ describe("reservationFormSchema", () => {
     expect(messagesOf(emptyReservation("", 2))).toEqual(["Pick a date.", "Pick a time.", "Pick a guest."]);
   });
 
-  it("judges a new contact by the shared contact rules", () => {
+  it("judges a new contact by the schema it is given", () => {
     const parsed = schema.parse({ ...filled, mode: "new", name: "Rey", phone: "+34 600 000 101", email: "" });
     expect(parsed.guest).toEqual({ kind: "new", contact: { name: "Rey", phone: "+34600000101", email: undefined } });
     expect(messagesOf({ ...filled, mode: "new", name: "", phone: "12", email: "" })).toEqual(["Name?", "Phone?"]);

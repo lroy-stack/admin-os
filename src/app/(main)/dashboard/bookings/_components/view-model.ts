@@ -3,7 +3,26 @@ import { z } from "zod";
 import type { Channel as MediumId } from "@/core/channels";
 import type { BusinessClock } from "@/core/clock";
 import type { Booking, BookingStatus } from "@/modules/bookings";
-import type { Customer } from "@/modules/customers";
+
+/**
+ * What this screen reads of a guest's record, whichever module fills the `bookings.guests` slot: the contact and the
+ * figures of the profile (ADR 0017 §4). Rows that do not match it fail the read.
+ */
+export const guestRecordSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  locale: z.string().optional(),
+  figures: z.object({
+    visits: z.number(),
+    spend: z.object({ amountMinor: z.number() }).nullable(),
+    lastVisit: z.string().nullable(),
+  }),
+  ext: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type GuestRecord = z.infer<typeof guestRecordSchema>;
 
 /**
  * The bookings screen's view model: what the list, the agenda, the drawer, the floor and the rail draw. It is the
@@ -127,7 +146,7 @@ export function nowMinFor(day: string, clock: Pick<BusinessClock, "businessDay" 
 
 const allergensSchema = z.array(z.string());
 
-function profileOf(customer: Customer, today: string): GuestProfile {
+function profileOf(customer: GuestRecord, today: string): GuestProfile {
   const { visits, spend, lastVisit } = customer.figures;
   const ext = z.object({ allergens: allergensSchema }).safeParse(customer.ext);
   return {
@@ -148,7 +167,7 @@ export function customerIdsOf(bookings: readonly Booking[]): string[] {
 export type ReservationContext = {
   readonly today: string;
   /** Customers by id; a booking whose customer is missing reads as a guest without a record. */
-  readonly customers: ReadonlyMap<string, Customer>;
+  readonly customers: ReadonlyMap<string, GuestRecord>;
   /** Resource labels by id; a resource that is missing is called by its id. */
   readonly resourceLabels: ReadonlyMap<string, string>;
 };

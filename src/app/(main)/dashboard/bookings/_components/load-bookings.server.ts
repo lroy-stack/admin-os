@@ -10,14 +10,16 @@ import { pageOutput } from "@/core/pagination";
 import { type CallResult, err, isAwaitingApproval, ok, type ReadStatus, type Result, readStateOf } from "@/core/result";
 import { bookingSchema, lateAfterMinutes, serviceWindow, walkInStayMinutes } from "@/modules/bookings";
 import { bookingsErrors } from "@/modules/bookings/server";
-import { type Customer, customerSchema } from "@/modules/customers";
-import { customersErrors } from "@/modules/customers/server";
 import { resourceSchema } from "@/modules/resources";
 
+import { BOOKING_SLOTS } from "./guest-slots";
+import { loadSlot } from "./guest-slots.server";
 import { PAGE_LIMIT, readAllPages } from "./read-pages";
 import {
   businessDayFrom,
   customerIdsOf,
+  type GuestRecord,
+  guestRecordSchema,
   nowMinFor,
   type Reservation,
   type ServiceDay,
@@ -38,7 +40,6 @@ const SETTING_KEYS = [lateAfterMinutes.key, walkInStayMinutes.key, serviceWindow
 const settingsSchema = z.object({ values: z.record(z.string(), z.unknown()) });
 const bookingsPage = pageOutput(bookingSchema);
 const resourcesPage = pageOutput(resourceSchema);
-const customersPage = pageOutput(customerSchema);
 
 const withCursor = (cursor: string | undefined) => (cursor === undefined ? {} : { cursor });
 
@@ -61,7 +62,7 @@ export async function loadBookings(dayParam: string | undefined): Promise<Loaded
     const code = answer.ok ? "" : answer.error.code;
     return {
       state: readStateOf(answer, () => false),
-      reason: errorText({ code }, code.startsWith("customers.") ? customersErrors : bookingsErrors, locale),
+      reason: errorText({ code }, bookingsErrors, locale),
       service,
       reservations: [],
     };
@@ -100,33 +101,39 @@ export async function loadBookings(dayParam: string | undefined): Promise<Loaded
   if (!resources.ok) return failed(resources, service);
 
   const guests = await readGuests(customerIdsOf(bookings.value));
-  if (!guests.ok) return failed(guests, service);
+  if (!guests.ok) return { state: guests.state, reason: guests.reason, service, reservations: [] };
 
   const reservations = toReservations(bookings.value, {
     today: clock.value.today,
-    customers: guests.value,
+    customers: guests.guests,
     resourceLabels: new Map(resources.value.map((resource) => [resource.id, resource.label])),
   });
   return { state: readStateOf(ok(reservations), (list) => list.length === 0), service, reservations };
 }
 
 /**
- * The customer records of the guests a day's bookings name, from one list read instead of one read per guest. A
- * booking whose guest is not in the directory fails the day with `customers.not_found`, as a single read would.
+ * The records of the guests a day's bookings name, from the module that fills the `bookings.guests` slot (ADR 0017
+ * §4), as one read instead of one per guest. Its failure (a guest that is not in the directory, a refusal) fails the
+ * day with the filler's own translated reason; with no filler there are no records and a booking names its contact.
  */
-async function readGuests(ids: readonly string[]): Promise<Result<Map<string, Customer>>> {
-  const guests = new Map<string, Customer>();
-  if (ids.length === 0) return ok(guests);
-  const { client } = await getRuntime();
-  const directory = await readAllPages(async (cursor) =>
-    answerOf(await client.call("customers.list", { limit: PAGE_LIMIT, ...withCursor(cursor) }), customersPage),
-  );
-  if (!directory.ok) return directory;
-  const byId = new Map(directory.value.map((customer) => [customer.id, customer]));
-  for (const id of ids) {
-    const customer = byId.get(id);
-    if (customer === undefined) return err("customers.not_found", `Customer ${id} is not in the directory`);
-    guests.set(id, customer);
+async function readGuests(ids: readonly string[]): Promise<Guests> {
+  const { client, locale } = await getRuntime();
+  const context = { locale, call: (capability: string, input: unknown) => client.call(capability, input) };
+  const loaded = await loadSlot(BOOKING_SLOTS.guests, context, { ids });
+  if (loaded.state.status !== "ready" && loaded.state.status !== "empty") {
+    return { ok: false, state: loaded.state, ...(loaded.reason === undefined ? {} : { reason: loaded.reason }) };
   }
-  return ok(guests);
+  const rows = z.array(guestRecordSchema).safeParse(loaded.rows);
+  if (!rows.success) {
+    return {
+      ok: false,
+      state: { status: "error", code: ErrorCodes.invalidOutput },
+      reason: errorText({ code: ErrorCodes.invalidOutput }, bookingsErrors, locale),
+    };
+  }
+  return { ok: true, guests: new Map(rows.data.map((guest) => [guest.id, guest])) };
 }
+
+type Guests =
+  | { readonly ok: true; readonly guests: Map<string, GuestRecord> }
+  | { readonly ok: false; readonly state: ReadStatus; readonly reason?: string };

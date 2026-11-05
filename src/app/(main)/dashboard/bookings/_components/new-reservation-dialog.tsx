@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 
-import { Controller, useWatch } from "react-hook-form";
+import { type Control, Controller, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -10,12 +10,12 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { SLOT_FILLS } from "@/config/modules.slots.generated";
 import { CHANNELS } from "@/core/channels";
 import { format, formatCalendarDate, useLocale, useMessages } from "@/core/i18n/client";
 import { SegmentedControl, type SegmentedOption } from "@/ds/components";
 import { type CapabilityActionOptions, FormField, FormFooter, useCapabilityAction, useWindowForm } from "@/ds/forms";
 import { FormDialog } from "@/ds/overlays";
-import { ContactFields, type ContactFieldsProps, contactFieldsMessageKey, toCreateInput } from "@/modules/customers/ui";
 
 import { createGuest, createReservation, findAvailability } from "../actions";
 import { CoversStepper } from "./covers-stepper";
@@ -23,6 +23,7 @@ import type { TableLocation } from "./floor/floor-model";
 import { zoneName } from "./floor/plan-names";
 import { GuestPicker } from "./guest-picker";
 import type { GuestRow } from "./guest-search";
+import type { BookingSlots, ContactFieldsFill, ContactInput, ContactValues } from "./guest-slots";
 import { bookingsMessageKey } from "./messages";
 import {
   createdBooking,
@@ -58,6 +59,13 @@ interface ReservationContext {
   readonly onShowDay: (day: string) => void;
 }
 
+/**
+ * The fill of `bookings.contact-fields`, if some module fills it. Checked by assignment, so a fill that does not meet the
+ * route's contract fails `tsc` here, in the route (ADR 0017 §4).
+ */
+const fills: Partial<BookingSlots> = SLOT_FILLS;
+const contactFill = fills["bookings.contact-fields"];
+
 /** The value of the "Automatic" choice; the form holds a blank table for it. */
 const AUTOMATIC = "automatic";
 
@@ -65,14 +73,17 @@ function ReservationWindow({
   request,
   onOpenChange,
   context,
+  contact,
 }: {
   request: ReservationRequest;
   onOpenChange: (open: boolean) => void;
   context: ReservationContext;
+  contact: ContactFieldsFill;
 }) {
   const text = useMessages(bookingsMessageKey);
   const copy = text.newReservation;
-  const fieldText = useMessages(contactFieldsMessageKey);
+  const contactSchema = contact.useSchema();
+  const { Fields: ContactFields } = contact;
   const locale = useLocale();
   const { locations, service, errors, onShowDay } = context;
   const withErrors = errors === undefined ? {} : { errors };
@@ -95,9 +106,9 @@ function ReservationWindow({
           noteTooLong: copy.note.tooLong,
           tagsInvalid: copy.tags.invalid,
         },
-        fieldText.invalid,
+        contactSchema,
       ),
-    [copy, fieldText.invalid],
+    [copy, contactSchema],
   );
 
   const windowForm = useWindowForm<ReservationFormInput, ReservationFormValues>(schema, {
@@ -113,7 +124,7 @@ function ReservationWindow({
         if (made.current?.fingerprint === fingerprint) {
           customerId = made.current.id;
         } else {
-          const created = await makeGuest.run(toCreateInput(values.guest.contact));
+          const created = await makeGuest.run(contact.toCreateInput(values.guest.contact));
           if (created?.status !== "ok") return created;
           const id = recordId(created.value);
           if (id === null) return { status: "error", text: copy.guest.searchFailed, code: "client.no_customer" };
@@ -226,7 +237,7 @@ function ReservationWindow({
         ) : (
           <ContactFields
             // The form's values extend the contact's three text fields, which is all ContactFields reads.
-            control={form.control as unknown as ContactFieldsProps["control"]}
+            control={form.control as unknown as Control<ContactInput, unknown, ContactValues>}
             readOnly={windowForm.awaiting}
           />
         )}
@@ -405,7 +416,13 @@ export function NewReservationDialog({
   onOpenChange,
   ...context
 }: { request: ReservationRequest | null; onOpenChange: (open: boolean) => void } & ReservationContext) {
-  return request === null ? null : (
-    <ReservationWindow key={request.opening} request={request} onOpenChange={onOpenChange} context={context} />
+  return request === null || contactFill === undefined ? null : (
+    <ReservationWindow
+      key={request.opening}
+      request={request}
+      onOpenChange={onOpenChange}
+      context={context}
+      contact={contactFill}
+    />
   );
 }

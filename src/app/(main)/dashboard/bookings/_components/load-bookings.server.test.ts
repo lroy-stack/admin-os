@@ -27,10 +27,15 @@ vi.mock("@/config/runtime", async () => {
 
   return {
     getRuntime: async () => {
-      const seed = {
-        ...hospitalitySeed,
-        customers: hospitalitySeed.customers.filter((customer) => customer.id !== world.missingCustomer),
-      };
+      // The preset's customers (none in a tree without the customers module) less the one the directory should lack.
+      const customers = (hospitalitySeed as { customers?: readonly { id: string }[] }).customers;
+      const seed =
+        customers === undefined
+          ? hospitalitySeed
+          : ({
+              ...hospitalitySeed,
+              customers: customers.filter((customer) => customer.id !== world.missingCustomer),
+            } as typeof hospitalitySeed);
       const kernel = kernelFor(seed);
       // The web app's adapter over a store that records each request and runs the same kernel.
       const adapter = durableAdapter({
