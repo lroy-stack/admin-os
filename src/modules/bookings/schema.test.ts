@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { shiftObject } from "@/modules/staff";
-
 import { bookingObject, bookingSchema } from "./schema";
 
 describe("booking schema composition", () => {
@@ -11,10 +9,6 @@ describe("booking schema composition", () => {
 
   it("lets the unrefined object make fields optional with partial", () => {
     expect(bookingObject.partial().safeParse({}).error).toBeUndefined();
-  });
-
-  it("lets the unrefined shift object pick a field", () => {
-    expect(Object.keys(shiftObject.pick({ id: true }).shape)).toEqual(["id"]);
   });
 
   it("still rejects a booking that ends before it starts", () => {

@@ -1,9 +1,11 @@
 import { addDays, format, parseISO } from "date-fns";
 
 import type { BusinessDetails, InvoiceTaxId } from "@/core/business";
+// Types only from the core barrels: they are erased, so the client components that import this file stay free of zod.
+import type { LocalizedText } from "@/core/i18n";
 import type { Locale } from "@/core/i18n/client";
+import type { Money } from "@/core/money";
 import { type Currency, isCurrency, majorUnits } from "@/core/money/client";
-import type { CatalogItem } from "@/modules/catalog";
 
 export type { InvoiceTaxId } from "@/core/business";
 
@@ -146,8 +148,15 @@ export const billingClients: readonly InvoiceToDetails[] = [
   },
 ];
 
+/** The fields of a catalog item an invoice line reads, declared here so the invoice names no catalog type (ADR 0017 §2). */
+export interface InvoiceCatalogItem {
+  readonly id: string;
+  readonly name: LocalizedText;
+  readonly price: Money;
+}
+
 /** A catalog item as one line: its name in the request's language and its price in its currency's major units. */
-export const lineItemOf = (item: Pick<CatalogItem, "id" | "name" | "price">, locale: Locale): InvoiceLineItem => ({
+export const lineItemOf = (item: InvoiceCatalogItem, locale: Locale): InvoiceLineItem => ({
   id: item.id,
   description: item.name.translations[locale] ?? item.name.source,
   quantity: 1,
@@ -160,7 +169,7 @@ export const lineItemOf = (item: Pick<CatalogItem, "id" | "name" | "price">, loc
  * another; with none it keeps `preferred`. Nothing converts: there are no exchange rates (`src/core/money`).
  */
 export function startingLines(
-  items: readonly Pick<CatalogItem, "id" | "name" | "price">[],
+  items: readonly InvoiceCatalogItem[],
   preferred: Currency,
   locale: Locale,
 ): { currency: Currency; items: InvoiceLineItem[] } {

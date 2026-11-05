@@ -1,11 +1,14 @@
 import "server-only";
 
+import { z } from "zod";
+
 import { getRuntime } from "@/config/runtime";
 import { businessClockSchema } from "@/core/clock";
+import { localizedTextSchema } from "@/core/i18n";
+import { moneySchema } from "@/core/money";
 import type { Currency } from "@/core/money/client";
 import { pageOutput } from "@/core/pagination";
 import { type CallResult, isAwaitingApproval } from "@/core/result";
-import { catalogItemSchema } from "@/modules/catalog";
 
 import { loadBusinessDetails } from "../../_components/load-business.server";
 import { billingClients, type InvoiceSeed, startingLines } from "./data";
@@ -14,7 +17,13 @@ import { billingClients, type InvoiceSeed, startingLines } from "./data";
 const STARTING_LINES = 3;
 const LIST_LIMIT = 50;
 
-const catalogPage = pageOutput(catalogItemSchema);
+/**
+ * The fields of `catalog.list`'s rows the invoice reads, declared here so the invoice names no catalog type (ADR 0017
+ * §2). The client is typed with the wide catalogue, so the answer is parsed; the object strips the other fields.
+ */
+const catalogPage = pageOutput(
+  z.object({ id: z.string().min(1), name: localizedTextSchema, price: moneySchema, status: z.string() }),
+);
 
 const answeredValue = (answer: CallResult<unknown>) =>
   !isAwaitingApproval(answer) && answer.ok ? answer.value : undefined;

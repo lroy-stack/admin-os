@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { BusinessDetails } from "@/core/business";
-import type { CatalogItem } from "@/modules/catalog";
 
 import {
   billingClients,
   createDefaultInvoice,
   getInvoiceSubtotal,
   getInvoiceTax,
+  type InvoiceCatalogItem,
   type InvoiceSeed,
   lineItemOf,
   startingLines,
@@ -126,7 +126,7 @@ describe("the invoice's client and lines (spec 008, AC8; spec 011, H0)", () => {
       id: "dish-flan",
       name: { source: "House flan", translations: { en: "House flan", es: "Flan de la casa" } },
       price: { amountMinor: 750, currency: "EUR" },
-    } as CatalogItem;
+    } satisfies InvoiceCatalogItem;
     expect(lineItemOf(flan, "es")).toEqual({
       id: "dish-flan",
       description: "Flan de la casa",
@@ -140,13 +140,16 @@ describe("the invoice's client and lines (spec 008, AC8; spec 011, H0)", () => {
       id: "dish-flan",
       name: { source: "House flan", translations: { en: "House flan" } },
       price: { amountMinor: 750, currency: "EUR" },
-    } as CatalogItem;
+    } satisfies InvoiceCatalogItem;
     expect(lineItemOf(flan, "de").description).toBe("House flan");
   });
 });
 
-const priced = (id: string, amountMinor: number, currency: string) =>
-  ({ id, name: { source: id, translations: {} }, price: { amountMinor, currency } }) as CatalogItem;
+const priced = (id: string, amountMinor: number, currency: string): InvoiceCatalogItem => ({
+  id,
+  name: { source: id, translations: {} },
+  price: { amountMinor, currency },
+});
 
 describe("the lines an invoice starts with, in their own currency", () => {
   it("starts the document in the catalog's currency, whatever the visitor's preference", () => {

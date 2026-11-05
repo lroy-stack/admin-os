@@ -2,7 +2,6 @@ import { type MockContext, mockHandler } from "@/core/mock";
 import { paginate } from "@/core/pagination";
 import { err, ok, type Result } from "@/core/result";
 import { foldText } from "@/core/text";
-import type { Resource } from "@/modules/resources";
 
 import {
   bookingsAvailabilityGet,
@@ -41,7 +40,8 @@ import { lateAfterMinutes, serviceWindow, slotMinutes, walkInStayMinutes, walkIn
  */
 interface BookingsData {
   readonly bookings: BookingInput[];
-  readonly resources: readonly Pick<Resource, "id" | "capacity" | "active">[];
+  /** The resource fields bookings reads; the rows are resources' own (ADR 0017 §2). */
+  readonly resources: readonly { readonly id: string; readonly capacity?: number; readonly active: boolean }[];
   readonly customers: readonly { readonly id: string; readonly name: string }[];
 }
 
