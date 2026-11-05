@@ -114,12 +114,16 @@ of `npm run test:e2e` or of CI; set `E2E_WEB_PORT` and `E2E_MCP_PORT` when ports
 ### Consistency probes
 
 `npm run probe:consistency` checks a running deployment of the durable demo: one write, then `READS` reads (12 by
-default), each over a fresh connection, all of which must see the write.
+default), each over a fresh connection, all of which must see the write. The write is a kernel one, never a module's.
 
-- `-- web` writes through the real UI in Chromium.
-- `-- mcp` writes and reads through the MCP Worker; it needs `MCP_TOKEN`.
-- `-- consent` checks that the web and MCP Workers sign `demo_sid` with the same `DEMO_SESSION_SECRET`, a trailing
-  newline included. It registers one OAuth client on each run, so it only runs when asked for by name.
+- `-- web` changes the business trade name on the Settings page (`/dashboard/settings`, Edit, Trade name) through the
+  real UI in Chromium, then reads the page back.
+- `-- mcp` calls `settings_values_update`, which the default policy holds (`awaiting_approval`), then reads the hold
+  back with `approvals_get`; it needs `MCP_TOKEN`, an owner token, and the Worker must not be read-only. Nothing is
+  applied: the hold expires.
+- `-- consent` opens its session with the same trade-name change, and checks that the web and MCP Workers sign
+  `demo_sid` with the same `DEMO_SESSION_SECRET`, a trailing newline included. It registers one OAuth client on each
+  run, so it only runs when asked for by name.
 
 `BASE_URL` (default `http://localhost:8788`) and `MCP_URL` (default `http://localhost:8789/mcp`) point it at a
 deployment, for example:

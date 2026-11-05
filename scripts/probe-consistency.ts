@@ -1,11 +1,13 @@
 /**
  * The consistency probe (spec 004, AC6): one write, then N reads each over a fresh connection, counting how many
- * reads see the write. On Cloudflare Workers the demo's state once lived in isolate memory, and a write was seen by
+ * reads see the write. The write goes through the kernel, never a module: the web and consent modes change the
+ * business trade name on the Settings page, and the mcp mode calls `settings_values_update`, which the default
+ * policy holds for approval (ADR 0017 §7). On Cloudflare Workers the demo's state once lived in isolate memory, and a write was seen by
  * 1 read in 12; with the Durable Object store every read must see it.
  *
  * Run it with `npm run probe:consistency [-- web|mcp|consent]`; `BASE_URL` (default http://localhost:8788), `MCP_URL`
  * (default http://localhost:8789/mcp, the MCP Worker under `npm run dev:mcp`), `READS`
- * (default 12) and `MCP_TOKEN` (optional, enables the MCP mode) come from the environment. The web mode drives the
+ * (default 12) and `MCP_TOKEN` (optional, an owner token; enables the MCP mode) come from the environment. The web mode drives the
  * real UI in Chromium, so the visitor gets a signed `demo_sid` and no Server Action id is hand-crafted.
  *
  * The `consent` mode (plan 005-D3) checks that the two Workers sign with the same `DEMO_SESSION_SECRET`: a web write
@@ -29,7 +31,7 @@ import {
   parseModes,
   sessionLabel,
 } from "./probe-consistency-report";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 const DEMO_SESSION_COOKIE = "demo_sid";
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -44,7 +46,7 @@ const freshConnectionFetch = (url: string | URL, init?: RequestInit): Promise<Re
 
 const bodyOf = async (response: Response): Promise<string> => (response.ok ? response.text() : "");
 
-/** Adds a contact through the New contact window, as a visitor would; returns the signed session cookie value. */
+/** Changes the trade name in the Edit business details window, as the owner would; returns the signed session cookie. */
 async function writeThroughTheUi(config: ProbeConfig, marker: string): Promise<string> {
   const browser = await chromium.launch();
   try {
@@ -52,15 +54,12 @@ async function writeThroughTheUi(config: ProbeConfig, marker: string): Promise<s
     await context.addCookies([{ name: "locale", value: "en", url: config.baseUrl }]);
     const page = await context.newPage();
     page.setDefaultTimeout(UI_TIMEOUT_MS);
-    await page.goto("/dashboard/customers", { waitUntil: "networkidle" });
-    await page.getByRole("main").getByRole("button", { name: "Add contact" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add contact" });
-    await dialog.getByRole("textbox", { name: "Name" }).fill(marker);
-    await dialog.getByRole("button", { name: "Add contact" }).click();
-    await page
-      .locator("[data-sonner-toast]")
-      .filter({ hasText: `Contact added: ${marker}` })
-      .waitFor();
+    await page.goto("/dashboard/settings", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Edit" }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit business details" });
+    await dialog.getByRole("textbox", { name: "Trade name" }).fill(marker);
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await page.locator("[data-sonner-toast]").filter({ hasText: "Business details saved." }).waitFor();
     const session = (await context.cookies()).find((cookie) => cookie.name === DEMO_SESSION_COOKIE);
     if (session === undefined) {
       throw new Error(
@@ -76,7 +75,7 @@ async function writeThroughTheUi(config: ProbeConfig, marker: string): Promise<s
 async function probeWeb(config: ProbeConfig): Promise<ProbeOutcome> {
   const marker = `Probe ${Date.now()}`;
   const cookie = await writeThroughTheUi(config, marker);
-  const url = `${config.baseUrl}/dashboard/customers?q=${encodeURIComponent(marker)}`;
+  const url = `${config.baseUrl}/dashboard/settings`;
   const bodies: string[] = [];
   for (let read = 0; read < config.reads; read += 1) {
     const response = await freshConnectionFetch(url, {
@@ -111,28 +110,33 @@ async function connectMcp(config: ProbeConfig, token: string): Promise<Client> {
 /** The server's own label for the token's demo session (`mcp-` and a SHA-256 prefix), so the line names the same one. */
 const mcpSessionOf = (token: string): string => createHash("sha256").update(token).digest("hex").slice(0, 32);
 
+/** `business.profile` with every field blank: the held change names only the trade name it probes with. */
+const BLANK_PROFILE = { legalName: "", taxId: "", email: "", phone: "", website: "", addressLines: [] };
+
 async function probeMcp(config: ProbeConfig, token: string): Promise<ProbeOutcome> {
-  const marker = `Probe ${Date.now()}`;
   const writer = await connectMcp(config, token);
   try {
     const { tools } = await writer.listTools();
-    if (!tools.some((tool) => tool.name === "customers_create")) {
+    if (!tools.some((tool) => tool.name === "settings_values_update")) {
       return { mode: "mcp", status: "skipped", reason: "server is read-only" };
     }
-    const created = await writer.callTool({
-      name: "customers_create",
-      arguments: { name: marker, idempotencyKey: randomUUID() },
+    // Held for a person, never applied: the hold is the write, and it carries the id the reads look for.
+    const held = await writer.callTool({
+      name: "settings_values_update",
+      arguments: { values: { "business.profile": { ...BLANK_PROFILE, tradeName: `Probe ${Date.now()}` } } },
     });
-    const customer = created.structuredContent as { id?: unknown } | undefined;
-    if (created.isError === true || typeof customer?.id !== "string") {
-      throw new Error(`customers_create failed: ${JSON.stringify(created.structuredContent ?? created.content)}`);
+    const hold = held.structuredContent as { status?: unknown; approvalId?: unknown } | undefined;
+    if (held.isError === true || hold?.status !== "awaiting_approval" || typeof hold.approvalId !== "string") {
+      throw new Error(
+        `settings_values_update did not answer awaiting_approval (is MCP_TOKEN an owner token?): ${JSON.stringify(held.structuredContent ?? held.content)}`,
+      );
     }
-    const id = customer.id;
+    const approvalId = hold.approvalId;
     const bodies: string[] = [];
     for (let read = 0; read < config.reads; read += 1) {
       const reader = await connectMcp(config, token);
       try {
-        const got = await reader.callTool({ name: "customers_get", arguments: { id } });
+        const got = await reader.callTool({ name: "approvals_get", arguments: { approvalId } });
         bodies.push(got.isError === true ? "" : JSON.stringify(got.structuredContent));
       } finally {
         await reader.close();
@@ -141,7 +145,7 @@ async function probeMcp(config: ProbeConfig, token: string): Promise<ProbeOutcom
     return {
       mode: "mcp",
       status: "ran",
-      seen: countSeen(bodies, marker),
+      seen: countSeen(bodies, approvalId),
       reads: config.reads,
       session: sessionLabel(mcpSessionOf(token)),
     };

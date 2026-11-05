@@ -47,15 +47,30 @@ const taskSchema = z.strictObject({
 
 export type GoldenTask = z.infer<typeof taskSchema>;
 
-export const goldenSchema = z.strictObject({
+/** `evals/mcp/golden.json`: the kernel's part of the set, and any task about a kernel tool. */
+export const goldenFileSchema = z.strictObject({
   /** Bump when a prompt or an expectation changes, so results from different sets are never compared. */
   version: z.string().min(1),
   /** Appended to Claude Code's system prompt for every trial. */
   appendSystemPrompt: z.string().min(1),
-  tasks: z.array(taskSchema).min(1),
+  tasks: z.array(taskSchema).default([]),
 });
 
+/** `evals/mcp/tasks/<module>.json`: the tasks one module owns (ADR 0017 §7). */
+export const taskFileSchema = z.strictObject({ tasks: z.array(taskSchema).min(1) });
+
+export const goldenSchema = goldenFileSchema.extend({ tasks: z.array(taskSchema).min(1) });
+
 export type GoldenSet = z.infer<typeof goldenSchema>;
+
+/** The golden set of the installed modules: the kernel's tasks, then each present task file's, in the order given. */
+export function mergeGolden(base: unknown, taskFiles: readonly unknown[]): GoldenSet {
+  const file = goldenFileSchema.parse(base);
+  const tasks = [...file.tasks, ...taskFiles.flatMap((content) => taskFileSchema.parse(content).tasks)];
+  const duplicate = tasks.find((task, index) => tasks.findIndex((other) => other.id === task.id) !== index);
+  if (duplicate !== undefined) throw new Error(`Golden task "${duplicate.id}" is defined twice.`);
+  return goldenSchema.parse({ ...file, tasks });
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Configuration

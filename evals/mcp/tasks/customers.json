@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "id": "find-guest",
+      "endpoint": "write",
+      "prompt": "What is the phone number of our guest Ortega?",
+      "expect": {
+        "kind": "find_guest",
+        "customerId": "C-ortega"
+      }
+    }
+  ]
+}

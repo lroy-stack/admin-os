@@ -65,6 +65,9 @@ export const customersModule = defineModule({
   },
   references: [],
   owns: [
+    "evals/mcp/tasks/customers.json",
+    "evals/mcp/fixtures/customers",
+    "scripts/eval-mcp.customers.test.ts",
     "src/app/(main)/dashboard/customers",
     "src/config/approvals.customers.test.ts",
     "src/config/customers.test.ts",
