@@ -75,10 +75,10 @@ test.describe("hospitality products", () => {
     await expect(rowNames(page)).toHaveText(["Seafood rice"]);
   });
 
-  test("the nav entry leads to the page", async ({ page }) => {
+  test("the rail entry leads to the page", async ({ page }) => {
     await page.goto("/dashboard/default");
     await page
-      .getByRole("navigation", { name: "Sections" })
+      .getByRole("complementary", { name: "Quick access" })
       .getByRole("link", { name: "Products", exact: true })
       .click();
 

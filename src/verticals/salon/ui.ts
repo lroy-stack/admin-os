@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, House, type LucideIcon, Package, UsersRound } from "lucide-react";
+import { CalendarDays, House, type LucideIcon, Package, UsersRound } from "lucide-react";
 
 import type { salon } from "./index";
 
@@ -10,5 +10,4 @@ export const salonNavIcons = {
   bookings: CalendarDays,
   customers: UsersRound,
   products: Package,
-  parties: Building2,
 } as const satisfies Readonly<Record<NavId, LucideIcon>>;

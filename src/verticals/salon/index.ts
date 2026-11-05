@@ -37,17 +37,9 @@ const nav = [
     id: "products",
     href: "/dashboard/products",
     labelKey: "catalog.products",
-    placement: "area",
+    placement: "tool",
     group: "operations",
     requiredPermission: "read:catalog",
-  },
-  {
-    id: "parties",
-    href: "/dashboard/parties",
-    labelKey: "parties.title",
-    placement: "area",
-    group: "operations",
-    requiredPermission: "read:parties",
   },
 ] as const satisfies NavManifest;
 

@@ -44,10 +44,12 @@ and email. The fixed list of d1f0dcc is removed.
 ADR 0018's `Supplier` leaves `inventory`. Purchase orders and stock items name a party with the `supplier` role
 through an optional reference, `supplierId → parties`. `inventory` reads parties and never writes them.
 
-### 4. A screen keeps them
+### 4. No screen of its own
 
-The screen lists clients and suppliers with a filter by role. A party opens in the kit's record panel, and creating or
-editing one uses `FormDialog` (ADR 0015). Every word is in the four languages.
+Parties get no page and no navigation entry (owner's decision, 2026-11-05; the `/dashboard/parties` page of f1a7327
+duplicated the customers directory and is removed). The invoice's "Bill to" reads client parties, and the MCP tools
+read and write them. If people need to keep them on screen, they do it inside the existing customers page, as one
+more view of its directory, never as a new route.
 
 ### 5. Each preset seeds its own parties
 
