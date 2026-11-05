@@ -193,10 +193,13 @@ The files M9 changes are:
 **The bell (M10).**
 
 - **Approvals move to the kernel.** The approval items left `notifications/derive.ts`. `src/core/approvals/bell.ts`
-  derives one row per pending record of `approvals.list`, oldest first, and their sentences live in the kernel's
-  `approvalsMessages.bell`. The bell asks for them only when the actor holds `decide:approvals`, as the feed did. So
-  `notifications.list` no longer carries `approval.requested` (its `kind` enum lost the value, which changes the MCP
-  reference's schema hash), and the rule that an agent cannot mark a waiting write read is moot: it is not in a feed.
+  derives one row per pending record of `approvals.list`, oldest first. The kernel words only the title and a
+  generic sentence (`approvalsMessages.bell`); the module that owns a held write's capability words it, in
+  `ModuleServer.approvals` (capability id to sentence, per locale, `{target}` the record's id), and the bell reads
+  them from the installed servers. A capability no module words reads with the generic sentence. The bell asks for the
+  rows only when the actor holds `review:approvals`, as the feed did. So `notifications.list` no longer carries
+  `approval.requested` (its `kind` enum lost the value, which changes the MCP reference's schema hash), and the
+  rule that an agent cannot mark a waiting write read is moot: it is not in a feed.
 - **A descriptor, not code.** The `feeds` entry of the manifest names four of the module's own capabilities:
   `list` and `unread` (reads) and `read` and `readAll` (writes), under a feed id. `unread` answers `{ unreadCount }`,
   `list` takes a `limit`, `read` takes `{ ids }` and `readAll` takes `{ upTo? }`. The generator's checks refuse a

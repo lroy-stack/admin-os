@@ -34,3 +34,27 @@ export const customersErrors = defineMessages<ErrorMessages>({
     "customers.not_found": "Ce contact n’existe plus.",
   },
 });
+
+/** What an assistant asks for when it holds a write of the module (ADR 0017 "The bell"); `{target}` is the customer id. */
+export const customersApprovals = defineMessages<Readonly<Record<string, string>>>({
+  en: {
+    "customers.block": "An assistant asks to block customer {target}.",
+    "customers.unblock": "An assistant asks to unblock customer {target}.",
+    "customers.contact.update": "An assistant asks to change the contact details of customer {target}.",
+  },
+  es: {
+    "customers.block": "Un asistente pide bloquear al cliente {target}.",
+    "customers.unblock": "Un asistente pide desbloquear al cliente {target}.",
+    "customers.contact.update": "Un asistente pide cambiar los datos de contacto del cliente {target}.",
+  },
+  de: {
+    "customers.block": "Ein Assistent möchte den Kunden {target} sperren.",
+    "customers.unblock": "Ein Assistent möchte die Sperre des Kunden {target} aufheben.",
+    "customers.contact.update": "Ein Assistent möchte die Kontaktdaten des Kunden {target} ändern.",
+  },
+  fr: {
+    "customers.block": "Un assistant demande de bloquer le client {target}.",
+    "customers.unblock": "Un assistant demande de débloquer le client {target}.",
+    "customers.contact.update": "Un assistant demande de modifier les coordonnées du client {target}.",
+  },
+});

@@ -203,6 +203,12 @@ export interface ModuleServer<Id extends string = string> {
   readonly feeds?: Readonly<Record<string, FeedServer>>;
   /** The texts of its own error codes, which a route that runs the module's slot write shows (`errorText` takes it). */
   readonly errors?: Readonly<Record<Locale, ErrorMessages>>;
+  /**
+   * The sentence the bell shows for a write of its own that an assistant asked for and waits for a person (ADR 0017
+   * "The bell"), by capability id; `{target}` is the id of the record, which may be empty. A capability it leaves out
+   * reads with the kernel's generic sentence.
+   */
+  readonly approvals?: Readonly<Record<Locale, Readonly<Record<string, string>>>>;
 }
 
 /**

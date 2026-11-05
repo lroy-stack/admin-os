@@ -134,6 +134,10 @@ export async function bellUnread(
   return answered.length === 0 ? undefined : answered.reduce((sum, count) => sum + count, 0);
 }
 
+/** The sentences the installed modules gave for the writes an assistant asks for, by capability id, in `locale`. */
+const approvalSentences = (servers: readonly ModuleServer[], locale: Locale): Readonly<Record<string, string>> =>
+  Object.assign({}, ...servers.map(({ approvals }) => approvals?.[locale]));
+
 /**
  * The panel's rows: the approvals that wait for the actor to review, then each feed's page, in module order. A feed
  * that cannot answer adds its worded error to `failures` and keeps the others' rows: a failure is never an empty list.
@@ -150,8 +154,10 @@ export async function loadBell(runtime: BellRuntime, installed: BellModules = IN
   const fail = (error: { readonly code: string }) => failures.push(errorText(error, dictionary, runtime.locale));
   if (approvals !== undefined) {
     const page = answerOf(approvals, approvalsPage, "approvals.list");
-    if (page.ok) items.push(...approvalRows(page.value.items, approvalsMessages[runtime.locale].bell, runtime.locale));
-    else fail(page.error);
+    if (page.ok) {
+      const sentences = approvalSentences(installed.servers, runtime.locale);
+      items.push(...approvalRows(page.value.items, approvalsMessages[runtime.locale].bell, runtime.locale, sentences));
+    } else fail(page.error);
   }
   for (const [index, feed] of feeds.entries()) {
     const answer = pages[index];

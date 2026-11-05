@@ -190,3 +190,31 @@ export const bookingsErrors = defineMessages<ErrorMessages>({
     "bookings.status_undo_expired": "Il est trop tard pour annuler cette étape.",
   },
 });
+
+/** What an assistant asks for when it holds a write of the module (ADR 0017 "The bell"); `{target}` is the booking id. */
+export const bookingsApprovals = defineMessages<Readonly<Record<string, string>>>({
+  en: {
+    "bookings.cancel": "An assistant asks to cancel booking {target}.",
+    "bookings.no_show.mark": "An assistant asks to mark booking {target} as a no-show.",
+    "bookings.reschedule": "An assistant asks to reschedule booking {target}.",
+    "bookings.table.assign": "An assistant asks to change the resources of booking {target}.",
+  },
+  es: {
+    "bookings.cancel": "Un asistente pide cancelar la reserva {target}.",
+    "bookings.no_show.mark": "Un asistente pide marcar la reserva {target} como no presentada.",
+    "bookings.reschedule": "Un asistente pide cambiar la hora de la reserva {target}.",
+    "bookings.table.assign": "Un asistente pide cambiar los recursos de la reserva {target}.",
+  },
+  de: {
+    "bookings.cancel": "Ein Assistent möchte die Buchung {target} stornieren.",
+    "bookings.no_show.mark": "Ein Assistent möchte die Buchung {target} als nicht erschienen markieren.",
+    "bookings.reschedule": "Ein Assistent möchte die Buchung {target} verschieben.",
+    "bookings.table.assign": "Ein Assistent möchte die Ressourcen der Buchung {target} ändern.",
+  },
+  fr: {
+    "bookings.cancel": "Un assistant demande d’annuler la réservation {target}.",
+    "bookings.no_show.mark": "Un assistant demande de marquer la réservation {target} comme absente.",
+    "bookings.reschedule": "Un assistant demande de déplacer la réservation {target}.",
+    "bookings.table.assign": "Un assistant demande de changer les ressources de la réservation {target}.",
+  },
+});

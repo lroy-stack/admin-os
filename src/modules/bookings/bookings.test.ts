@@ -5,7 +5,7 @@ import { assertDictionaryParity, errorText } from "@/core/i18n";
 import { createSettingsReader } from "@/core/settings";
 
 import { bookingsCapabilities } from "./capabilities";
-import { bookingsErrors } from "./messages";
+import { bookingsApprovals, bookingsErrors } from "./messages";
 import { overlaps, serviceMinute, slotStarts, stayEnd } from "./rules";
 import {
   bookingCancelInput,
@@ -195,6 +195,12 @@ describe("booking settings", () => {
   it("keeps the dinner service window as the default", () => {
     const registry = Object.fromEntries(bookingsSettings.map((setting) => [setting.key, setting]));
     expect(createSettingsReader(registry).get(serviceWindow)).toEqual({ startMin: 1140, endMin: 1440 });
+  });
+});
+
+describe("booking approval texts", () => {
+  it("passes the dictionary parity check in four languages", () => {
+    expect(() => assertDictionaryParity(bookingsApprovals)).not.toThrow();
   });
 });
 

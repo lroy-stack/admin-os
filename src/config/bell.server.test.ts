@@ -207,3 +207,48 @@ describe("the error dictionary of the panel", () => {
     ]).toEqual(["A", "W", undefined, true]);
   });
 });
+
+describe("the words of a waiting write (ADR 0017 'The bell')", () => {
+  const held = (capabilityId: string) => ({
+    items: [
+      {
+        approvalId: "apr-1",
+        capabilityId,
+        status: "pending",
+        requestedBy: { actorId: "a", role: "owner", via: "mcp" },
+        requestedAt: "2026-10-31T12:00:00.000Z",
+        expiresAt: "2026-11-01T12:00:00.000Z",
+        input: { id: "W-7" },
+      },
+    ],
+    nextCursor: null,
+  });
+  const reviewer = (capabilityId: string): BellRuntime => ({
+    call: async () => ok(held(capabilityId)),
+    permissions: ["review:approvals"],
+    locale: "es",
+  });
+  const widgetServer = {
+    id: "widgets",
+    approvals: {
+      en: { "widgets.retire": "An assistant asks to retire widget {target}." },
+      es: { "widgets.retire": "Un asistente pide retirar el widget {target}." },
+      de: { "widgets.retire": "Ein Assistent möchte das Widget {target} stilllegen." },
+      fr: { "widgets.retire": "Un assistant demande de retirer le widget {target}." },
+    },
+  } as unknown as ModuleServer;
+  const installed: BellModules = { manifests: [], servers: [widgetServer] };
+
+  it("words a held write of a module capability with the sentence of the module that owns it", async () => {
+    const panel = await loadBell(reviewer("widgets.retire"), installed);
+    expect(panel).toMatchObject({ ok: true, value: { items: [{ body: "Un asistente pide retirar el widget W-7." }] } });
+  });
+
+  it("words a held write no installed module has a sentence for with the generic text", async () => {
+    const panel = await loadBell(reviewer("gadgets.scrap"), installed);
+    expect(panel).toMatchObject({
+      ok: true,
+      value: { items: [{ body: "Un asistente pide hacer un cambio en W-7." }] },
+    });
+  });
+});

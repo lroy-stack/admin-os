@@ -4,7 +4,7 @@ import { assertDictionaryParity, errorText } from "@/core/i18n";
 
 import { customersCapabilities } from "./capabilities";
 import { matchedFields, normalisePhone } from "./contact";
-import { customersErrors } from "./messages";
+import { customersApprovals, customersErrors } from "./messages";
 import { customerContactUpdateInput, customerCreateInput, customerSchema } from "./schema";
 
 const customer = customerSchema.parse({
@@ -111,6 +111,12 @@ describe("customers capabilities", () => {
 
   it.each(["customers.create", "customers.notes.add"] as const)("%s requires an idempotency key", (id) => {
     expect(customersCapabilities[id]).toMatchObject({ requiresIdempotencyKey: true });
+  });
+});
+
+describe("customers approval texts", () => {
+  it("passes the dictionary parity check in four languages", () => {
+    expect(() => assertDictionaryParity(customersApprovals)).not.toThrow();
   });
 });
 

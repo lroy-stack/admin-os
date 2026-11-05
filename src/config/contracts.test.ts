@@ -12,7 +12,7 @@ import {
   placeholderSignature,
   type Vocabulary,
 } from "@/core/i18n";
-import { compositionProblems, type InstalledModule, valuesAt } from "@/core/module";
+import { compositionProblems, type InstalledModule, type ModuleServer, valuesAt } from "@/core/module";
 import type { NavEntry } from "@/core/nav";
 import { hospitality } from "@/verticals/hospitality";
 import { hospitalitySeed, hospitalityVocabulary } from "@/verticals/hospitality/server";
@@ -353,6 +353,20 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
 describe("module messages", () => {
   it.each(Object.entries(MODULE_MESSAGES))("%s passes the dictionary parity check", (_module, dictionary) => {
     expect(() => assertDictionaryParity(dictionary)).not.toThrow();
+  });
+});
+
+const approvalSentences = MODULE_SERVERS.flatMap(({ id, approvals }: ModuleServer) =>
+  LOCALES.flatMap((locale) => Object.keys(approvals?.[locale] ?? {}).map((key) => [id, locale, key] as const)),
+);
+const manifestOf: ReadonlyMap<string, (typeof MODULES)[number]> = new Map(
+  MODULES.map((manifest) => [manifest.id, manifest]),
+);
+
+describe("module approval sentences", () => {
+  it.each(approvalSentences)("%s words in %s a write of its own, %s", (module, _locale, key) => {
+    const capabilities = manifestOf.get(module)?.capabilities as Record<string, { effect: string }> | undefined;
+    expect(capabilities?.[key]?.effect).toMatch(/^(write|destructive)$/);
   });
 });
 
