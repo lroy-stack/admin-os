@@ -2,7 +2,7 @@ import "server-only";
 
 import { CATALOG } from "@/config/catalog";
 import { MODULES } from "@/config/modules.generated";
-import type { ViewEntry } from "@/core/views";
+import type { ViewEntry, ViewKind } from "@/core/views";
 
 /** What decides whether a view is shown (ADR 0018 §3): the installed kinds, the preset's modules and the actor. */
 export interface ViewAccess {
@@ -35,7 +35,7 @@ export const readableViews = (
   permissions: readonly string[],
 ): ViewEntry[] =>
   visibleViews(entries, {
-    kinds: MODULES.flatMap((module) => module.views ?? []),
+    kinds: MODULES.flatMap((module): readonly ViewKind[] => module.views ?? []),
     modules,
     permissions,
     permissionOf: (capability) => CATALOG[capability]?.permission,

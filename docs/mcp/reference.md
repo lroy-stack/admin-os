@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `1a81d5a4918563` | `144d34b8ba5295` |
-| salon | `1a81d5a4918563` | `144d34b8ba5295` |
-| workshop | `1a81d5a4918563` | `144d34b8ba5295` |
+| hospitality | `10694702b9c0cb` | `10fbcae4fae775` |
+| salon | `10694702b9c0cb` | `10fbcae4fae775` |
+| workshop | `10694702b9c0cb` | `10fbcae4fae775` |
 
 ## Tools by preset
 
@@ -60,6 +60,8 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
 | [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`inventory_orders_list`](#inventory_orders_list) | List purchase orders | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
+| [`inventory_stock_list`](#inventory_stock_list) | List stock | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
@@ -100,6 +102,8 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
 | [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`inventory_orders_list`](#inventory_orders_list) | List purchase orders | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
+| [`inventory_stock_list`](#inventory_stock_list) | List stock | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
@@ -140,6 +144,8 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
 | [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`inventory_orders_list`](#inventory_orders_list) | List purchase orders | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
+| [`inventory_stock_list`](#inventory_stock_list) | List stock | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
@@ -1082,6 +1088,72 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
   "required": [
     "id"
   ],
+  "additionalProperties": false
+}
+```
+
+### `inventory_orders_list`
+
+**List purchase orders.** List purchase orders, one page at a time, optionally by status. Each row names its supplier (supplierName) when it has one.
+
+- Capability: `inventory.orders.list`, permission `read:inventory`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "received",
+        "cancelled"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+### `inventory_stock_list`
+
+**List stock.** List the stock the business keeps, one page at a time. Each row names its supplier (supplierName) when it has one. Set belowReorder to see only what is at or under its reorder point.
+
+- Capability: `inventory.stock.list`, permission `read:inventory`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "belowReorder": {
+      "type": "boolean"
+    }
+  },
   "additionalProperties": false
 }
 ```

@@ -48,7 +48,7 @@ const customersCollections = new Set(Object.keys(MODULES.find(({ id }) => id ===
 
 describe("optional references with their targets absent (ADR 0017 §3)", () => {
   it("covers the modules that reference another optionally", () => {
-    expect(withoutOptionalTargets.map(({ id }) => id)).toEqual(["bookings", "notifications"]);
+    expect(withoutOptionalTargets.map(({ id }) => id)).toEqual(["bookings", "inventory", "notifications"]);
   });
 
   it.each(cases)("%s answers on %s without throwing", async (capability, vertical, absent) => {

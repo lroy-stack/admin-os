@@ -27,7 +27,7 @@ export const catalogModule = defineModule({
     },
   },
   seed: {
-    catalog: { schema: catalogItemSchema, required: true, ext: { entity: "catalogItem", optional: false } },
+    catalog: { schema: catalogItemSchema, required: true, ext: { entity: "catalogItem", optional: true } },
   },
   references: [],
   owns: [

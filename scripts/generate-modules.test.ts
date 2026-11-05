@@ -47,6 +47,7 @@ describe("the generated module list (ADR 0017 §5)", () => {
       bookings: ["customers", "resources"],
       catalog: [],
       customers: [],
+      inventory: [],
       notifications: ["bookings"],
       parties: [],
       resources: [],

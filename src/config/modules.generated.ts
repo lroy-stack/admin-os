@@ -3,6 +3,7 @@
 import { bookingsModule } from "@/modules/bookings";
 import { catalogModule } from "@/modules/catalog";
 import { customersModule } from "@/modules/customers";
+import { inventoryModule } from "@/modules/inventory";
 import { notificationsModule } from "@/modules/notifications";
 import { partiesModule } from "@/modules/parties";
 import { resourcesModule } from "@/modules/resources";
@@ -13,6 +14,7 @@ export const MODULES = [
   bookingsModule,
   catalogModule,
   customersModule,
+  inventoryModule,
   notificationsModule,
   partiesModule,
   resourcesModule,
@@ -26,6 +28,7 @@ export const MODULE_GRAPH = {
   bookings: ["customers", "resources"],
   catalog: [],
   customers: [],
+  inventory: [],
   notifications: ["bookings"],
   parties: [],
   resources: [],
@@ -40,5 +43,7 @@ export type ExtensionEntity =
   | "catalogItem"
   | "customer"
   | "party"
+  | "purchaseOrder"
   | "resource"
-  | "staff";
+  | "staff"
+  | "stockItem";
