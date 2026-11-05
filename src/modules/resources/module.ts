@@ -9,6 +9,8 @@ export const resourcesModule = defineModule({
   capabilities: resourcesCapabilities,
   settings: [],
   mcp: {
+    noun: "resources (tables, chairs or bays)",
+    idSources: [["resource ids", ["resources.list"]]],
     tools: {
       "resources.list": { expose: true, title: "List resources" },
     },

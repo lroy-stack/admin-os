@@ -13,6 +13,8 @@ export const staffModule = defineModule({
   capabilities: staffCapabilities,
   settings: [],
   mcp: {
+    noun: "staff",
+    idSources: [],
     tools: {
       "staff.list": { expose: true, title: "List staff", concise: pageOutput(staffRow) },
     },

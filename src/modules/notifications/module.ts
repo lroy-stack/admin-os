@@ -9,6 +9,8 @@ export const notificationsModule = defineModule({
   capabilities: notificationsCapabilities,
   settings: notificationsSettings,
   mcp: {
+    noun: "notifications",
+    idSources: [["notification ids", ["notifications.list"]]],
     tools: {
       "notifications.list": { expose: true, title: "List notifications" },
       "notifications.unread.count": { expose: true, title: "Count unread notifications" },

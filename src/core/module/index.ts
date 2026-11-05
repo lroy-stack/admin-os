@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 import { KERNEL_MODULES } from "@/core/access";
-import type { Catalog } from "@/core/capability";
+import type { AnyCapability, Catalog } from "@/core/capability";
 import type { Locale } from "@/core/i18n";
 // Types only: they are erased, so a client bundle that reads a manifest never reaches the server-only entry.
-import type { ManifestEntry, ToolManifest } from "@/core/mcp/server";
+import type { InputField, ManifestEntry, McpManifest, ToolManifest } from "@/core/mcp/server";
 import type { MockHandler } from "@/core/mock";
 import type { ModuleId } from "@/core/nav";
 import type { AnySetting } from "@/core/settings";
@@ -44,10 +44,18 @@ export interface SeedCollection {
   readonly ext?: { readonly entity: string; readonly optional: boolean };
 }
 
+/**
+ * Where an assistant finds a kind of id, as the MCP server's instructions name it: a label and the module's own tools
+ * that list those ids (ADR 0017 §1). Modules that list the same kind are merged by label, so a removed module takes
+ * only its own tools with it.
+ */
+export type IdSources = readonly (readonly [label: string, tools: readonly CapabilityRef[]])[];
+
 export interface ModuleManifest<
   Id extends string = string,
   C extends Catalog = Catalog,
   T extends ToolManifest<C, CapabilityRef> = ToolManifest<C, CapabilityRef>,
+  S extends IdSources = IdSources,
 > {
   /** The folder's name, and the first segment of every capability id and setting key. */
   readonly id: Id;
@@ -55,8 +63,12 @@ export interface ModuleManifest<
   /** The settings it declares (ADR 0006). */
   readonly settings: readonly AnySetting[];
   readonly mcp: {
+    /** What the module keeps, as the server's instructions name it ("catalog items"). */
+    readonly noun: string;
     /** One entry per capability (spec 004 D5); an id hint names this module's tool or a referenced module's. */
     readonly tools: T;
+    /** The kinds of id its own tools list, and those tools. */
+    readonly idSources: S;
   };
   /** The seed collections it owns, by name. */
   readonly seed: Readonly<Record<string, SeedCollection>>;
@@ -68,20 +80,32 @@ export interface ModuleManifest<
 /** Keys that must not be there: each one is typed `never`, so a value under it does not compile. */
 type Refused<K extends PropertyKey> = { readonly [P in K]: never };
 
+/** Per exposed entry, the id-hint fields its capability has no input for. */
+type UnknownHintFields<C extends Catalog, T> = {
+  readonly [K in keyof T & keyof C]: T[K] extends { readonly ids: infer I }
+    ? { readonly ids: Refused<Exclude<keyof I, C[K] extends AnyCapability ? InputField<C[K]> : never>> }
+    : unknown;
+};
+
 /**
- * Identity helper that keeps the literal id, capability ids and hints the composition root type-checks. A capability
- * outside the module's prefix, an MCP entry for no capability and a capability without an entry do not compile.
+ * Identity helper that keeps the literal id, capability ids and hints the composition root type-checks. None of these
+ * compile: a capability outside the module's prefix, an MCP entry for no capability, a capability without an entry,
+ * an id hint for a field the capability has no input for, and an id source naming a tool the module does not declare.
  */
 export const defineModule = <
   const Id extends string,
   const C extends Catalog,
   const T extends ToolManifest<C, CapabilityRef>,
+  const S extends IdSources,
 >(
-  manifest: ModuleManifest<Id, C, T> & {
+  manifest: ModuleManifest<Id, C, T, S> & {
     readonly capabilities: Refused<Exclude<keyof C, `${Id}.${string}`>>;
-    readonly mcp: { readonly tools: Refused<Exclude<keyof T, keyof C>> };
+    readonly mcp: {
+      readonly tools: Refused<Exclude<keyof T, keyof C>> & UnknownHintFields<C, T>;
+      readonly idSources: readonly (readonly [string, readonly (keyof C & string)[]])[];
+    };
   },
-): ModuleManifest<Id, C, T> => manifest;
+): ModuleManifest<Id, C, T, S> => manifest;
 
 /**
  * The server half of a module (ADR 0017 §1), exported from its `server.ts` as `<module>ModuleServer`: the messages of
@@ -270,6 +294,20 @@ function referenceProblems(modules: readonly InstalledModule[]): Problem[] {
   );
 }
 
+/** A module's id sources name its own tools only, so removing a module never leaves a source naming its tools. */
+function idSourceProblems(modules: readonly InstalledModule[]): Problem[] {
+  return modules.flatMap(({ manifest: { id, capabilities, mcp } }) =>
+    mcp.idSources.flatMap(([label, tools]) =>
+      about(
+        id,
+        tools
+          .filter((tool) => !Object.hasOwn(capabilities, tool))
+          .map((tool) => `${id}'s source of ${label} names ${tool}, which ${id} does not declare; list its own tools`),
+      ),
+    ),
+  );
+}
+
 function hintProblems(modules: readonly InstalledModule[]): Problem[] {
   const catalogs = new Map(modules.map(({ manifest }) => [manifest.id, manifest.capabilities]));
   return modules.flatMap(({ manifest: { id, capabilities, references, mcp } }) => {
@@ -284,7 +322,7 @@ function hintProblems(modules: readonly InstalledModule[]): Problem[] {
             Object.hasOwn(capabilities, hint) ? [] : [`${tool} hints ${hint}, which ${id} does not declare`],
           );
         }
-        // A kernel tool exists in every composition; the composition root's `satisfies` checks its name.
+        // A kernel tool exists in every composition; the composition root's guards check its name.
         if (KERNEL.has(owner)) return [];
         if (!referenced.has(owner)) {
           return about(id, [`${tool} hints ${hint}, but ${id} declares no reference to ${owner}; add the reference`]);
@@ -426,6 +464,7 @@ export const compositionProblems = (
     ...seedProblems(modules),
     ...referenceProblems(modules),
     ...hintProblems(modules),
+    ...idSourceProblems(modules),
   ].filter(({ modules: about }) => about.some((id) => !quiet(id)));
   return [
     ...requirements.map(
@@ -434,4 +473,38 @@ export const compositionProblems = (
     ...unloaded.filter(({ folder }) => !refused.has(folder)).map(({ problem }) => problem),
     ...rest.map(({ message }) => message),
   ];
+};
+
+/**
+ * The entry without the id hints that name a tool of a module that is not installed. A field that loses all its hints
+ * goes, and so does `ids` when no field is left; an entry that loses nothing is returned as it is.
+ */
+const withoutAbsentHints = (entry: ManifestEntry, installed: ReadonlySet<string>): ManifestEntry => {
+  if (!("ids" in entry) || entry.ids === undefined) return entry;
+  const fields = Object.entries(entry.ids).map(
+    ([field, hints]) => [field, hints, hints.filter((hint) => installed.has(prefixOf(hint)))] as const,
+  );
+  if (fields.every(([, hints, kept]) => kept.length === hints.length)) return entry;
+  const kept = fields
+    .filter(([, hints, installedHints]) => installedHints.length > 0 || hints.length === 0)
+    .map(([field, , installedHints]) => [field, installedHints] as const);
+  const { ids: _dropped, ...rest } = entry;
+  return kept.length === 0 ? rest : { ...rest, ids: Object.fromEntries(kept) };
+};
+
+/**
+ * The MCP manifest of a composition (ADR 0017 §5, the amendment to ADR 0009 and 0016): the kernel's entries, then each
+ * installed module's in the order given, with the id hints that name a tool of a module that is not installed dropped.
+ * Compose it once, at module level: the server caches its tool list per manifest object.
+ */
+export const composeMcpManifest = (
+  kernel: McpManifest,
+  modules: readonly { readonly id: string; readonly mcp: { readonly tools: McpManifest } }[],
+): McpManifest => {
+  const installed = new Set([...Object.keys(kernel).map(prefixOf), ...modules.map(({ id }) => id)]);
+  return Object.fromEntries(
+    [kernel, ...modules.map(({ mcp }) => mcp.tools)]
+      .flatMap((tools) => Object.entries(tools))
+      .map(([id, entry]) => [id, withoutAbsentHints(entry, installed)]),
+  );
 };

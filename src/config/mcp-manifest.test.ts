@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { exposedCapabilities, type ToolManifest } from "@/core/mcp/server";
+import { mergeCatalogs } from "@/core/capability";
+import { exposedCapabilities, type McpManifest, type ToolManifest } from "@/core/mcp/server";
+import { composeMcpManifest } from "@/core/module";
 
-import { CATALOG, type CatalogById } from "./catalog";
-import { MCP_MANIFEST } from "./mcp-manifest";
+import { CATALOG, type CatalogById, KERNEL_CATALOGS, type KernelCatalogById } from "./catalog";
+import { instructionsFor } from "./mcp-instructions";
+import { KERNEL_TOOLS, MCP_MANIFEST, type StrayHintOf } from "./mcp-manifest";
+import { MODULES } from "./modules.generated";
 
 const exposedWrites = exposedCapabilities(CATALOG, MCP_MANIFEST).filter((capability) => capability.effect !== "read");
 
@@ -64,8 +68,87 @@ describe("the MCP manifest (spec 004 D5)", () => {
   it.each(["tags[]", "tags", "name", "phone", "email"])(
     "leaves %s plain in every booking and customer path, since an agent needs it unwrapped",
     (path) => {
-      const marked = Object.values(MCP_MANIFEST).flatMap((entry) => ("untrusted" in entry ? entry.untrusted : []));
+      const marked = Object.values(MCP_MANIFEST).flatMap((entry) =>
+        "untrusted" in entry ? (entry.untrusted ?? []) : [],
+      );
       expect(marked.filter((marking) => marking.endsWith(path))).toEqual([]);
     },
   );
+});
+
+describe("the kernel's MCP entries (ADR 0017 §1)", () => {
+  it("does not compile when a kernel capability is left unclassified", () => {
+    const { "clock.get": _omitted, ...unclassified } = KERNEL_TOOLS;
+    // @ts-expect-error `clock.get` has no entry, so the kernel's entries do not cover the kernel's catalogue.
+    const incomplete: ToolManifest<KernelCatalogById> = unclassified;
+    expect(Object.keys(incomplete)).not.toContain("clock.get");
+  });
+
+  it("names a hint to a missing tool of an installed module as stray, and a hint to an absent module as not", () => {
+    type Entries = {
+      readonly x: { readonly ids: { readonly id: readonly ["bookings.find", "gone.list", "bookings.list"] } };
+    };
+    const stray: StrayHintOf<Entries> = "bookings.find";
+    // @ts-expect-error a tool of a module that is not installed is dropped by composition, not stray.
+    const absent: StrayHintOf<Entries> = "gone.list";
+    expect([stray, absent]).toEqual(["bookings.find", "gone.list"]);
+  });
+});
+
+/**
+ * The composition as it would be with the customers module removed (ADR 0017 §5, the amendment to ADR 0009). The
+ * generator refuses that tree today, since bookings requires customers until M9 composes them by slot; this fixture
+ * tests the composition functions on their own.
+ */
+const withoutCustomers = MODULES.filter(({ id }) => id !== "customers");
+const catalogWithoutCustomers = mergeCatalogs(
+  ...KERNEL_CATALOGS,
+  ...withoutCustomers.map(({ capabilities }) => capabilities),
+);
+const manifestWithoutCustomers = composeMcpManifest(KERNEL_TOOLS, withoutCustomers);
+const hintsKeptWithoutCustomers: McpManifest = Object.fromEntries(
+  [KERNEL_TOOLS, ...withoutCustomers.map(({ mcp }) => mcp.tools)].flatMap((tools) => Object.entries(tools)),
+);
+const instructionsWithoutCustomers = instructionsFor(
+  withoutCustomers,
+  catalogWithoutCustomers,
+)({
+  toolIds: new Set(exposedCapabilities(catalogWithoutCustomers, manifestWithoutCustomers).map(({ id }) => id)),
+  readOnly: false,
+});
+
+describe("a composition without the customers module", () => {
+  it("drops bookings' hints to customers' tools, and keeps the others", () => {
+    expect([manifestWithoutCustomers["bookings.search"], manifestWithoutCustomers["bookings.create"]]).toEqual([
+      { expose: true, title: "Search bookings", untrusted: ["items[].contactName"] },
+      expect.objectContaining({ ids: { resourceIds: ["bookings.availability.get", "resources.list"] } }),
+    ]);
+  });
+
+  it("classifies its catalogue, which it could not with those hints kept", () => {
+    expect(() => exposedCapabilities(catalogWithoutCustomers, manifestWithoutCustomers)).not.toThrow();
+    expect(() => exposedCapabilities(catalogWithoutCustomers, hintsKeptWithoutCustomers)).toThrow(
+      /id hints that name no exposed tool/,
+    );
+  });
+
+  it("leaves customers out of the instructions", () => {
+    expect(instructionsWithoutCustomers).toMatch(
+      /^admin-OS runs one small business: bookings, catalog items, notifications, resources \(tables, chairs or bays\) and staff\. /,
+    );
+    expect(instructionsWithoutCustomers).not.toMatch(/customer/);
+  });
+});
+
+describe("the instructions of a composition (ADR 0017 §5)", () => {
+  const ask = { toolIds: new Set<string>(), readOnly: false };
+  const staffOnly = MODULES.filter(({ id }) => id === "staff");
+
+  it("name no business words when no module is installed", () => {
+    expect(instructionsFor([], CATALOG)(ask)).toMatch(/^admin-OS runs one small business\. An error names/);
+  });
+
+  it("name the one module installed alone", () => {
+    expect(instructionsFor(staffOnly, CATALOG)(ask)).toMatch(/^admin-OS runs one small business: staff\. /);
+  });
 });

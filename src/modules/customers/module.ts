@@ -20,6 +20,8 @@ export const customersModule = defineModule({
   capabilities: customersCapabilities,
   settings: [],
   mcp: {
+    noun: "customers",
+    idSources: [["customer ids", ["customers.list", "customers.duplicates.check"]]],
     tools: {
       "customers.list": { expose: true, title: "List customers", concise: pageOutput(customerSummarySchema) },
       "customers.search": { expose: true, title: "Search customers" },

@@ -40,7 +40,8 @@ export type ManifestEntry = ExposedEntry | UiOnlyEntry;
 /** The manifest as the projection reads it; `ToolManifest` is the typed form a composition root declares. */
 export type McpManifest = Readonly<Record<string, ManifestEntry>>;
 
-type InputField<C extends AnyCapability> = keyof z.input<C["input"]> & string;
+/** The input fields of a capability, which its id hints may name. */
+export type InputField<C extends AnyCapability> = keyof z.input<C["input"]> & string;
 
 /** An exposed entry whose id hints name the capability's own input fields and, as `Hint`, the tools that list them. */
 type TypedExposedEntry<C extends AnyCapability, Hint extends string> = Omit<ExposedEntry, "ids"> & {
@@ -50,7 +51,7 @@ type TypedExposedEntry<C extends AnyCapability, Hint extends string> = Omit<Expo
 /**
  * One entry per capability of the catalogue `M`: a capability added to `M` does not compile until it is classified.
  * An id hint names a capability of `M` by default. A module's own manifest widens `Hint`, since a hint may name
- * another module's tool; the composition root narrows it again (ADR 0017).
+ * another module's tool; the composition root checks those hints against the installed catalogue (ADR 0017).
  */
 export type ToolManifest<M extends Catalog, Hint extends string = keyof M & string> = {
   readonly [Id in keyof M]: UiOnlyEntry | TypedExposedEntry<M[Id], Hint>;

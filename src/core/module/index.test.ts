@@ -5,6 +5,8 @@ import { defineCapability } from "@/core/capability";
 import { defineSetting } from "@/core/settings";
 
 import {
+  type CapabilityRef,
+  composeMcpManifest,
   compositionProblems,
   defineModule,
   type InstalledModule,
@@ -56,6 +58,8 @@ const planted = defineModule({
   capabilities,
   settings: [],
   mcp: {
+    noun: "planted items",
+    idSources: [["planted item ids", ["planted.list"]]],
     tools: {
       "planted.item.get": { expose: true, title: "Get an item", ids: { id: ["planted.list", "other.list"] } },
       "planted.list": { uiOnly: "Not for assistants" },
@@ -73,7 +77,7 @@ const other = defineModule({
   id: "other",
   capabilities: { "other.list": otherList },
   settings: [],
-  mcp: { tools: { "other.list": { expose: true, title: "List other items" } } },
+  mcp: { noun: "other items", idSources: [], tools: { "other.list": { expose: true, title: "List other items" } } },
   seed: { others: { schema: z.object({ id: z.string() }), required: false } },
   references: [],
   owns: [],
@@ -145,6 +149,37 @@ describe("defineModule (ADR 0017 §1)", () => {
     });
     expect(manifest.id).toBe("plants");
   });
+
+  it("does not compile when an id hint names a field the capability has no input for, beside one it has", () => {
+    const manifest = defineModule({
+      ...planted,
+      mcp: {
+        ...planted.mcp,
+        tools: {
+          "planted.item.get": {
+            expose: true,
+            title: "Get an item",
+            // @ts-expect-error `itemId` is not an input field of `planted.item.get`, even next to `id`, which is.
+            ids: { id: ["planted.list"], itemId: ["planted.list"] },
+          },
+          "planted.list": { expose: true, title: "List items" },
+        },
+      },
+    });
+    expect(manifest.mcp.tools["planted.item.get"]).toHaveProperty("ids.itemId");
+  });
+
+  it("does not compile when an id source names a tool the module does not declare", () => {
+    const manifest = defineModule({
+      ...planted,
+      mcp: {
+        ...planted.mcp,
+        // @ts-expect-error `other.list` is another module's tool, and `planted.lst` a typo: a module lists its own.
+        idSources: [["planted item ids", ["planted.list", "other.list", "planted.lst"]]],
+      },
+    });
+    expect(manifest.mcp.idSources).toHaveLength(1);
+  });
 });
 
 describe("isStringField (ADR 0017 §3)", () => {
@@ -199,6 +234,7 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
   const kernelHint = {
     ...planted,
     mcp: {
+      ...planted.mcp,
       tools: { ...planted.mcp.tools, "planted.item.get": { expose: true, title: "Get", ids: { id: ["clock.get"] } } },
     },
   } as const;
@@ -232,17 +268,17 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
   it.each([
     [
       "a module named like the kernel's messages namespace",
-      installed({ ...other, id: "nav", capabilities: {}, mcp: { tools: {} } }),
+      installed({ ...other, id: "nav", capabilities: {}, mcp: { noun: "nothing", idSources: [], tools: {} } }),
       'src/modules/nav: "nav" is a kernel namespace; rename the module',
     ],
     [
       "a module named like the kernel's settings namespace",
-      installed({ ...other, id: "business", capabilities: {}, mcp: { tools: {} } }),
+      installed({ ...other, id: "business", capabilities: {}, mcp: { noun: "nothing", idSources: [], tools: {} } }),
       'src/modules/business: "business" is a kernel namespace; rename the module',
     ],
     [
       "a module named like a kernel capability prefix",
-      installed({ ...other, id: "access", capabilities: {}, mcp: { tools: {} } }),
+      installed({ ...other, id: "access", capabilities: {}, mcp: { noun: "nothing", idSources: [], tools: {} } }),
       'src/modules/access: "access" is a kernel namespace; rename the module',
     ],
     [
@@ -351,7 +387,7 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
     ],
     [
       "a hint to an installed module's tool it does not declare",
-      installed(planted, { ...other, capabilities: {}, mcp: { tools: {} } }),
+      installed(planted, { ...other, capabilities: {}, mcp: { noun: "nothing", idSources: [], tools: {} } }),
       "planted.item.get hints other.list, which other does not declare",
     ],
   ] as const)("reports %s, and only that", (_case, modules, problem) => {
@@ -442,6 +478,88 @@ describe("compositionProblems with folders whose manifest does not load (ADR 001
       "planted requires deleted; restore src/modules/deleted or remove planted",
       "src/app/planted (planted) and src/app/planted (other) overlap; a path has one owner",
     ]);
+  });
+});
+
+describe("compositionProblems for id sources (ADR 0017 §1)", () => {
+  const sourcing = (...tools: readonly CapabilityRef[]) => ({
+    ...other,
+    mcp: { ...other.mcp, idSources: [["other ids", tools]] as const },
+  });
+
+  it("accepts its own tools", () => {
+    expect(compositionProblems(installed(planted, sourcing("other.list")), [], exists)).toEqual([]);
+  });
+
+  it.each([
+    ["its own tool it does not declare", "other.find"],
+    ["a kernel tool", "clock.get"],
+    ["a tool of a module that is not installed", "gone.list"],
+    ["an installed module's tool", "planted.list"],
+  ] as const)("refuses %s, since a module lists its own tools", (_case, tool) => {
+    expect(compositionProblems(installed(planted, sourcing(tool)), [], exists)).toEqual([
+      `other's source of other ids names ${tool}, which other does not declare; list its own tools`,
+    ]);
+  });
+});
+
+describe("composeMcpManifest (ADR 0017 §5)", () => {
+  const kernel = { "clock.get": { expose: true, title: "Business clock" } } as const;
+  const hinting = {
+    id: "planted",
+    mcp: {
+      tools: {
+        "planted.item.get": {
+          expose: true,
+          title: "Get",
+          ids: { id: ["planted.list", "other.list"], at: ["clock.get"] },
+        },
+        "planted.item.find": { expose: true, title: "Find", ids: { otherId: ["other.list"] } },
+        "planted.list": { uiOnly: "Not for assistants" },
+      },
+    },
+  } as const;
+  const others = { id: "other", mcp: { tools: { "other.list": { expose: true, title: "List" } } } } as const;
+
+  it("keeps every hint of an installed tool", () => {
+    expect(composeMcpManifest(kernel, [hinting, others])).toEqual({
+      ...kernel,
+      ...hinting.mcp.tools,
+      ...others.mcp.tools,
+    });
+  });
+
+  it("lists the kernel's entries first, then each module's in the order given", () => {
+    expect(Object.keys(composeMcpManifest(kernel, [others, hinting]))).toEqual([
+      "clock.get",
+      "other.list",
+      "planted.item.get",
+      "planted.item.find",
+      "planted.list",
+    ]);
+  });
+
+  it("keeps a field that had no hints, beside one that loses its hints", () => {
+    const sparse = {
+      id: "planted",
+      mcp: { tools: { "planted.x": { expose: true, title: "X", ids: { a: [], b: ["gone.list"] } } } },
+    } as const;
+    expect(composeMcpManifest(kernel, [sparse])["planted.x"]).toEqual({ expose: true, title: "X", ids: { a: [] } });
+  });
+
+  it("drops the hints to a module that is not installed, and a field or `ids` left with none", () => {
+    expect(composeMcpManifest(kernel, [hinting])).toEqual({
+      ...kernel,
+      "planted.item.get": { expose: true, title: "Get", ids: { id: ["planted.list"], at: ["clock.get"] } },
+      "planted.item.find": { expose: true, title: "Find" },
+      "planted.list": { uiOnly: "Not for assistants" },
+    });
+  });
+
+  it("keeps an entry unchanged, by reference, when every hint is installed", () => {
+    expect(composeMcpManifest(kernel, [hinting, others])["planted.item.get"]).toBe(
+      hinting.mcp.tools["planted.item.get"],
+    );
   });
 });
 

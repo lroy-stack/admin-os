@@ -4,6 +4,7 @@ export { effectivePermissions, needsWriteScope, SCOPES, type Scope, scopesOf } f
 export {
   type ExposedEntry,
   exposedCapabilities,
+  type InputField,
   type ManifestEntry,
   type McpManifest,
   type ToolManifest,

@@ -116,7 +116,15 @@ const kernelNamespaces = [
   .sort();
 const named = (id: string): InstalledModule => ({
   folder: id,
-  manifest: { id, capabilities: {}, settings: [], mcp: { tools: {} }, seed: {}, references: [], owns: [] },
+  manifest: {
+    id,
+    capabilities: {},
+    settings: [],
+    mcp: { noun: "nothing", idSources: [], tools: {} },
+    seed: {},
+    references: [],
+    owns: [],
+  },
 });
 
 describe("kernel namespaces (ADR 0017 §5)", () => {

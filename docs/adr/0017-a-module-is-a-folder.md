@@ -77,7 +77,7 @@ The owner approved the direction (O1): manifests, a generator, a registry for `d
 | `id` | The folder name, and the first segment of every capability id |
 | `capabilities` | The module's capability record |
 | `settings` | The settings it declares (ADR 0006) |
-| `mcp` | `noun`; `tools`, one entry per capability, as `MCP_MANIFEST` requires today; `idSources`, the list tools that give each kind of id it owns (today's `ID_SOURCES` lines) |
+| `mcp` | `noun`; `tools`, one entry per capability, as `MCP_MANIFEST` requires today; `idSources`, each kind of id its own tools list, with those tools (today's `ID_SOURCES` lines; modules that list one kind are merged by label, so a removed module takes only its tools) |
 | `seed` | Its seed collections: row schema, whether a preset that enables it must seed rows, and the `ext` entity a preset may type |
 | `references` | Data fields that hold another module's ids: field, target module, `required` or optional |
 | `views` | The view kinds it declares (ADR 0018), as serialisable descriptors |

@@ -9,6 +9,8 @@ export const catalogModule = defineModule({
   capabilities: catalogCapabilities,
   settings: [],
   mcp: {
+    noun: "catalog items",
+    idSources: [],
     tools: {
       "catalog.list": { expose: true, title: "List catalog items" },
     },

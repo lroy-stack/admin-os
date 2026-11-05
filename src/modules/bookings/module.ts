@@ -25,6 +25,11 @@ export const bookingsModule = defineModule({
   capabilities: bookingsCapabilities,
   settings: bookingsSettings,
   mcp: {
+    noun: "bookings",
+    idSources: [
+      ["booking ids", ["bookings.list"]],
+      ["resource ids", ["bookings.availability.get"]],
+    ],
     tools: {
       "bookings.list": {
         expose: true,
