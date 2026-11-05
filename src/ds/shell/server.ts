@@ -14,8 +14,6 @@ const en: ShellMessages = {
     label: "Account: {name}",
     account: "Account",
     businessSettings: "Business settings",
-    notifications: "Notifications",
-    logOut: "Log out",
     demo: {
       title: "Demo",
       role: "View as",
@@ -64,8 +62,6 @@ const es: ShellMessages = {
     label: "Cuenta: {name}",
     account: "Cuenta",
     businessSettings: "Ajustes del negocio",
-    notifications: "Notificaciones",
-    logOut: "Cerrar sesión",
     demo: {
       title: "Demo",
       role: "Ver como",
@@ -114,8 +110,6 @@ const de: ShellMessages = {
     label: "Konto: {name}",
     account: "Konto",
     businessSettings: "Unternehmenseinstellungen",
-    notifications: "Benachrichtigungen",
-    logOut: "Abmelden",
     demo: {
       title: "Demo",
       role: "Ansicht als",
@@ -164,8 +158,6 @@ const fr: ShellMessages = {
     label: "Compte : {name}",
     account: "Compte",
     businessSettings: "Paramètres de l’entreprise",
-    notifications: "Notifications",
-    logOut: "Se déconnecter",
     demo: {
       title: "Démo",
       role: "Afficher en tant que",

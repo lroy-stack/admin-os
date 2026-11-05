@@ -4,7 +4,7 @@ import { useOptimistic, useTransition } from "react";
 
 import Link from "next/link";
 
-import { BadgeCheck, Bell, Building2, LogOut, RotateCcw } from "lucide-react";
+import { BadgeCheck, Building2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -59,11 +59,14 @@ function DemoSwitch({ label, control, failed }: { label: string; control: ShellS
 export function AccountMenu({
   account,
   demo,
+  accountHref,
   settingsHref,
 }: {
   account: ShellAccount;
   demo?: ShellDemo;
-  /** Where the business settings live; the app owns its routes. */
+  /** The signed-in person's own page; the app owns its routes. */
+  accountHref: string;
+  /** Where the business settings live. */
   settingsHref: string;
 }) {
   const { account: text } = useMessages(shellMessageKey);
@@ -105,19 +108,17 @@ export function AccountMenu({
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <BadgeCheck />
-            {text.account}
+          <DropdownMenuItem asChild>
+            <Link prefetch={false} href={accountHref} onNavigate={guardLink(accountHref)}>
+              <BadgeCheck />
+              {text.account}
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link prefetch={false} href={settingsHref} onNavigate={guardLink(settingsHref)}>
               <Building2 />
               {text.businessSettings}
             </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Bell />
-            {text.notifications}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         {demo && (
@@ -133,11 +134,6 @@ export function AccountMenu({
             </DropdownMenuItem>
           </>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <LogOut />
-          {text.logOut}
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

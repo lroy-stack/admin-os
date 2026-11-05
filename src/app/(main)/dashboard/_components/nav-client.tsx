@@ -55,6 +55,7 @@ export function DashboardTopNav({
         }
       }
       inboxHref="/dashboard/mail"
+      accountHref="/dashboard/profile"
       settingsHref="/dashboard/settings"
       notifications={
         unreadNotifications === undefined

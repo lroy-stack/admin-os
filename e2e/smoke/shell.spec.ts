@@ -165,6 +165,35 @@ test("the account menu resets the demo data", async ({ page, context, baseURL })
   await expect(page.getByText("Demo data reset.")).toBeVisible();
 });
 
+/**
+ * Every item of the account menu has a destination (ADR 0015: a control with no destination is removed; spec 012 R8):
+ * a link to a page that exists, or an action the demo answers. The demo's role and preset switches are radio items.
+ */
+test("the account menu offers only items with a destination", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+  await page.goto("/dashboard/default");
+
+  await openAccountMenu(page);
+
+  await expect(page.getByRole("menuitem")).toHaveText(["Account", "Business settings", "Reset demo data"]);
+  await expect(page.getByRole("menuitem", { name: "Account" })).toHaveAttribute("href", "/dashboard/profile");
+  await expect(page.getByRole("menuitem", { name: "Business settings" })).toHaveAttribute(
+    "href",
+    "/dashboard/settings",
+  );
+});
+
+test("the account menu's Account item opens the signed-in person's profile", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+  await page.goto("/dashboard/default");
+
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: "Account" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard\/profile$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Alex Morgan" })).toBeVisible();
+});
+
 test("a section far to the right scrolls the nav row, never the page", async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
   await page.goto("/dashboard/kanban");
