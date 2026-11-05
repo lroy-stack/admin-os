@@ -28,22 +28,19 @@ const actorOf = (roleId: RoleId): Actor => {
   };
 };
 
+const hospitalitySession = () => createSessionStore(DEMO.hospitality.seed);
+
 interface SetupOptions {
   readonly policy?: ApprovalPolicy;
   /** A role whose permissions have been taken away since the write was asked for. */
   readonly revokedRole?: string;
   /** Another harness's demo session, to decide there what was asked there. */
-  readonly store?: ReturnType<typeof createSessionStore>;
+  readonly store?: ReturnType<typeof hospitalitySession>;
   /** The business minute of the demo clock, when it has moved on since the seed. */
   readonly nowMin?: number;
 }
 
-const setup = ({
-  policy,
-  revokedRole,
-  store = createSessionStore(DEMO.hospitality.seed),
-  nowMin,
-}: SetupOptions = {}) => {
+const setup = ({ policy, revokedRole, store = hospitalitySession(), nowMin }: SetupOptions = {}) => {
   const time = { ms: START };
   const held = heldWritesFor("hospitality");
   const adapter = createMockAdapter({
