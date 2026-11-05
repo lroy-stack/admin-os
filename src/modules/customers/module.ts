@@ -62,5 +62,10 @@ export const customersModule = defineModule({
     assets: { schema: assetSchema, required: false, ext: { entity: "asset", optional: false } },
   },
   references: [],
-  owns: ["src/app/(main)/dashboard/customers", "src/config/customers.test.ts", "e2e/smoke/customers.spec.ts"],
+  owns: [
+    "src/app/(main)/dashboard/customers",
+    "src/config/customers.test.ts",
+    "e2e/smoke/customers.spec.ts",
+    "e2e/smoke/customer-record.spec.ts",
+  ],
 });

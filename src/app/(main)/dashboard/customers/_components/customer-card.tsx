@@ -1,14 +1,16 @@
+import Link from "next/link";
+
 import { cn } from "cn";
 import { Mail, Phone } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { format, formatCalendarDate, formatCurrency, useLocale, useMessages } from "@/core/i18n/client";
+import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { CardIconButton, StatTiles } from "@/ds/components";
 import { getInitials } from "@/lib/utils";
 
-import type { CustomerRow } from "./directory-model";
+import { type CustomerRow, lastVisitText, spendText } from "./directory-model";
 import { customerDirectoryMessageKey } from "./messages";
 
 const avatarTones = ["bg-azure", "bg-salmon", "bg-brand", "bg-foreground/85"] as const;
@@ -16,6 +18,24 @@ const avatarTones = ["bg-azure", "bg-salmon", "bg-brand", "bg-foreground/85"] as
 export function customerAvatarTone(id: string) {
   const hash = [...id].reduce((total, char) => total + char.charCodeAt(0), 0);
   return avatarTones[hash % avatarTones.length];
+}
+
+/** Where a customer's record page lives (ADR 0020). */
+export const customerHref = (id: string) => `/dashboard/customers/${encodeURIComponent(id)}`;
+
+/** The customer's name as a link to the record page; the focus ring shows on keyboard focus only. */
+export function CustomerNameLink({ customer, className }: { customer: CustomerRow; className?: string }) {
+  return (
+    <Link
+      href={customerHref(customer.id)}
+      className={cn(
+        "focus-visible:ring-ring/50 rounded-sm break-words outline-none hover:underline focus-visible:ring-3",
+        className,
+      )}
+    >
+      {customer.name}
+    </Link>
+  );
 }
 
 export function CustomerAvatar({ customer, className }: { customer: CustomerRow; className?: string }) {
@@ -74,15 +94,11 @@ export function CustomerTags({ customer }: { customer: CustomerRow }) {
 /** The last visit as a calendar date, or the "no visits yet" text. */
 export function useLastVisitText(customer: CustomerRow): string {
   const text = useMessages(customerDirectoryMessageKey);
-  const locale = useLocale();
-  return customer.lastVisit === null
-    ? text.card.never
-    : formatCalendarDate(customer.lastVisit.slice(0, 10), locale, { dateStyle: "medium" });
+  return lastVisitText(customer, useLocale(), text.card.never);
 }
 
 export function useSpendText(customer: CustomerRow): string {
-  const locale = useLocale();
-  return customer.spend === null ? "–" : formatCurrency(customer.spend.amountMinor, customer.spend.currency, locale);
+  return spendText(customer, useLocale());
 }
 
 export function CustomerCard({ customer }: { customer: CustomerRow }) {
@@ -98,7 +114,9 @@ export function CustomerCard({ customer }: { customer: CustomerRow }) {
       </div>
 
       <div className="flex flex-col gap-0.5 px-(--card-spacing)">
-        <h3 className="text-sm font-medium break-words">{customer.name}</h3>
+        <h3 className="text-sm font-medium break-words">
+          <CustomerNameLink customer={customer} />
+        </h3>
       </div>
 
       <StatTiles

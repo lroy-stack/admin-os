@@ -109,6 +109,8 @@ German statuses are participles without gender in these positions and need no ru
 | Weighted value | Weighted value | Valor ponderado | Gewichteter Wert | Valeur pondérée | |
 | Closing (stage) | Closing | Cierre | Abschluss | Conclusion | |
 | Stage | Stage | Fase | Phase | Étape | |
+| Note (on a customer) | Note | Nota | Notiz | Note | Dated, signed by the team member who wrote it |
+| Marketing messages (consent) | Marketing messages | Mensajes comerciales | Werbenachrichten | Messages commerciaux | Whether the customer agreed to receive them |
 
 ### Pipeline stages and statuses
 
@@ -140,6 +142,7 @@ German statuses are participles without gender in these positions and need no ru
 | Booking, reservation | Reservation | Reserva | Reservierung | Réservation | "Booking" and "reservation" are one concept |
 | Table | Table | Mesa | Tisch | Table | |
 | Party size, covers | Covers | Comensales | Gedecke | Couverts | Restaurant preset vocabulary |
+| No-show | No-show | No presentada | Nicht erschienen | Non honorée | A booking the guest did not keep; a count is plural ("No presentadas", "Non honorées") |
 | Walk-in | Walk-in | Walk-in | Walk-in | Walk-in | Never translated (owner): the term staff use; the button, the booking channel and a walk-in guest all say "Walk-in" |
 | Floor plan | Floor plan | Plano de sala | Raumplan | Plan de salle | |
 | Arrivals (the rail) | Arrivals | Llegadas | Ankünfte | Arrivées | The rail of upcoming bookings by time slot |
@@ -236,6 +239,7 @@ German statuses are participles without gender in these positions and need no ru
 | Not found | Page not found | Página no encontrada | Seite nicht gefunden | Page introuvable | |
 | No permission | You do not have permission | No tienes permiso | Du hast keine Berechtigung | Vous n’avez pas l’autorisation | |
 | Required field | Enter a value. | Introduce un valor. | Gib einen Wert ein. | Saisissez une valeur. | |
+| Not given | Not given | Sin indicar | Nicht angegeben | Non renseigné | A field the record does not hold |
 
 ### Product and platform
 

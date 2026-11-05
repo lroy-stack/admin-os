@@ -19,6 +19,7 @@ export {
   formatPercent,
   formatRelative,
   formatTime,
+  languageName,
   monthNames,
   type NameStyle,
   type PercentOptions,

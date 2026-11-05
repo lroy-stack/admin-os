@@ -17,7 +17,7 @@ import {
   formatList,
   formatNumber,
   formatRelative,
-  type Locale,
+  languageName,
   useCurrency,
   useLocale,
   useMessages,
@@ -44,15 +44,6 @@ import { ReservationTags } from "./reservation-tags";
 import type { GuestProfile, Reservation, ServiceDay } from "./view-model";
 
 const DAY_MS = 86_400_000;
-
-/** The language a customer record names by its code ("es"), written in the active language; the code if unknown. */
-function languageName(code: string, locale: Locale) {
-  try {
-    return new Intl.DisplayNames(locale, { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (

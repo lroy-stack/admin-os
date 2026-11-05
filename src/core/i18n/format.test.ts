@@ -8,6 +8,7 @@ import {
   formatNumber,
   formatRelative,
   formatTime,
+  languageName,
 } from "@/core/i18n";
 
 const instant = new Date("2026-03-15T23:30:00Z");
@@ -84,5 +85,19 @@ describe("formatList", () => {
     ["fr", "a, b et c"],
   ] as const)("joins with the %s conjunction", (locale, expected) => {
     expect(formatList(["a", "b", "c"], locale)).toBe(expected);
+  });
+});
+
+describe("languageName", () => {
+  it.each([
+    ["es", "en", "Spanish"],
+    ["es", "de", "Spanisch"],
+    ["fr", "es", "francés"],
+  ] as const)("names %s in %s as %s", (code, locale, expected) => {
+    expect(languageName(code, locale)).toBe(expected);
+  });
+
+  it("falls back to the code when it is not a language", () => {
+    expect(languageName("not a code", "en")).toBe("not a code");
   });
 });

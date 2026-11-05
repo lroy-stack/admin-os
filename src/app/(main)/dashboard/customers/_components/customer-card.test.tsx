@@ -46,6 +46,10 @@ describe("CustomerCard", () => {
     expect(render(withoutPhone)).not.toContain("tel:");
   });
 
+  it("links the name to the customer's record page", () => {
+    expect(render(customer)).toMatch(/<h3[^>]*><a [^>]*href="\/dashboard\/customers\/c1"[^>]*>Nora Vidal<\/a><\/h3>/);
+  });
+
   it("is not a button or a link to anything else, so it has no dead control", () => {
     expect(render(customer)).not.toContain("<button");
   });

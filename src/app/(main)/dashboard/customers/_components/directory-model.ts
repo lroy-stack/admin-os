@@ -1,3 +1,4 @@
+import { formatCalendarDate, formatCurrency, type Locale } from "@/core/i18n/client";
 import { majorUnits } from "@/core/money/client";
 import type { CsvColumn } from "@/lib/csv";
 import type { Customer } from "@/modules/customers";
@@ -38,6 +39,21 @@ export function toRow(customer: Customer): CustomerRow {
     spend: customer.figures.spend,
     lastVisit: customer.figures.lastVisit,
   };
+}
+
+/** What the figures show for a customer with no recorded spend. */
+const NO_SPEND = "–";
+
+/** The spend in the customer's currency, or a dash before there is any. */
+export function spendText(row: Pick<CustomerRow, "spend">, locale: Locale): string {
+  return row.spend === null ? NO_SPEND : formatCurrency(row.spend.amountMinor, row.spend.currency, locale);
+}
+
+/** The last visit as a calendar date, or the "no visits yet" text. */
+export function lastVisitText(row: Pick<CustomerRow, "lastVisit">, locale: Locale, never: string): string {
+  return row.lastVisit === null
+    ? never
+    : formatCalendarDate(row.lastVisit.slice(0, 10), locale, { dateStyle: "medium" });
 }
 
 export const isSortKey = (value: string): value is SortKey => SORT_KEYS.some((key) => key === value);

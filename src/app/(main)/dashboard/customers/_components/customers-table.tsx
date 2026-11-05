@@ -1,7 +1,14 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMessages } from "@/core/i18n/client";
 
-import { ContactLinks, CustomerAvatar, CustomerTags, useLastVisitText, useSpendText } from "./customer-card";
+import {
+  ContactLinks,
+  CustomerAvatar,
+  CustomerNameLink,
+  CustomerTags,
+  useLastVisitText,
+  useSpendText,
+} from "./customer-card";
 import type { CustomerRow } from "./directory-model";
 import { customerDirectoryMessageKey } from "./messages";
 
@@ -15,7 +22,7 @@ function CustomerTableRow({ customer }: { customer: CustomerRow }) {
         <div className="flex items-center gap-3">
           <CustomerAvatar customer={customer} className="size-8" />
           <div className="flex min-w-0 flex-col gap-1">
-            <span className="font-medium break-words">{customer.name}</span>
+            <CustomerNameLink customer={customer} className="w-fit font-medium" />
             <div className="flex flex-wrap items-center gap-1.5">
               <CustomerTags customer={customer} />
             </div>
