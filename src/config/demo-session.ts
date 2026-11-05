@@ -39,7 +39,7 @@ function secretOf(env: DemoSessionEnv): string {
   if (configured === undefined || configured === "") {
     if (env.DATA_STORE === "durable") {
       throw new Error(
-        "DEMO_SESSION_SECRET is required with DATA_STORE=durable: it signs the demo_sid cookie. Generate one with `openssl rand -base64 32` and set it as a secret (`wrangler secret put DEMO_SESSION_SECRET`) or in .dev.vars.",
+        "DEMO_SESSION_SECRET is required with DATA_STORE=durable: it signs the demo_sid cookie. Generate one with `openssl rand -base64 32` and set it as a secret (`wrangler secret put DEMO_SESSION_SECRET`) or, locally, in the repository root's `.dev.vars` (the web Worker's), with the same value in `workers/mcp/.dev.vars`.",
       );
     }
     processSecret ??= `${crypto.randomUUID()}${crypto.randomUUID()}`;

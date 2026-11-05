@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `0f7e4c555d525f` | `042822ba6d1a85` |
-| salon | `0f7e4c555d525f` | `042822ba6d1a85` |
-| workshop | `0f7e4c555d525f` | `042822ba6d1a85` |
+| hospitality | `1a3e54f7bcd723` | `042822ba6d1a85` |
+| salon | `1a3e54f7bcd723` | `042822ba6d1a85` |
+| workshop | `1a3e54f7bcd723` | `042822ba6d1a85` |
 
 ## Tools by preset
 
@@ -348,9 +348,9 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
     },
     "idempotencyKey": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
     }
   },
   "required": [
@@ -576,9 +576,9 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
     },
     "idempotencyKey": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
     }
   },
   "required": [
@@ -704,9 +704,9 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
     },
     "idempotencyKey": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
     }
   },
   "required": [
@@ -906,9 +906,9 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
     },
     "idempotencyKey": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
     }
   },
   "required": [
@@ -1023,9 +1023,9 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
     },
     "idempotencyKey": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
     }
   },
   "required": [
@@ -1327,9 +1327,9 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
     },
     "idempotencyKey": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "A new UUID for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
     }
   },
   "required": [

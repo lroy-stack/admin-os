@@ -239,7 +239,11 @@ describe("a writable token (MCP_READ_ONLY=false)", () => {
     const read = await reader.callTool({ name: "approvals_get", arguments: { approvalId } });
 
     expect([held.structuredContent, read.structuredContent, new Set(names)]).toEqual([
-      { status: "awaiting_approval", approvalId: expect.any(String) },
+      {
+        status: "awaiting_approval",
+        approvalId: expect.any(String),
+        message: "Held for a person to approve. Do not retry.",
+      },
       expect.objectContaining({ approvalId, capabilityId: "settings.values.update", status: "pending" }),
       new Set([`hospitality:${await demoSessionOf("writer-token-0001")}`]),
     ]);
