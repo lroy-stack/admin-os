@@ -2,13 +2,17 @@ import { z } from "zod";
 
 import type { RolePreset } from "@/core/access";
 import type { NavManifest } from "@/core/nav";
+import type { ViewEntry } from "@/core/views";
 import { hospitality } from "@/verticals/hospitality";
 import { salon } from "@/verticals/salon";
 import { workshop } from "@/verticals/workshop";
 
-import type { ExtensionEntity, InstalledModuleId } from "./modules.generated";
+import type { ExtensionEntity, InstalledModuleId, MODULES } from "./modules.generated";
 
 export type { ExtensionEntity } from "./modules.generated";
+
+/** The product view kinds the installed modules declare (ADR 0018 §3); a preset entry of another kind does not compile. */
+export type ProductViewKindId = NonNullable<(typeof MODULES)[number]["views"]>[number]["id"];
 
 /** The isomorphic half of a preset (ADR 0004); `server.ts` of each preset holds the vocabulary and the seed. */
 export interface VerticalPreset {
@@ -17,6 +21,8 @@ export interface VerticalPreset {
   readonly nav: NavManifest;
   readonly roles: readonly RolePreset[];
   readonly extensions: Readonly<Partial<Record<ExtensionEntity, z.ZodType>>>;
+  /** The product views it offers, in order (ADR 0018 §3); checked by the contract test. */
+  readonly productViews: readonly ViewEntry<ProductViewKindId>[];
   /** Overrides of the setting defaults where this business really differs; keys and values are checked by the contract test. */
   readonly settingsDefaults: Readonly<Record<string, unknown>>;
   /** Words that must never appear in the generic layers (ADR 0008). */

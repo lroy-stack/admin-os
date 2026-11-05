@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { purchaseOrderSchema, stockItemSchema } from "@/modules/inventory";
+import { partySchema } from "@/modules/parties";
+
 import { catalogItemExtSchema, customerExtSchema } from "./extensions";
 import { hospitalitySeed } from "./seed";
 
@@ -81,5 +84,57 @@ describe("hospitality seed", () => {
 
   it("includes a dish of the day", () => {
     expect(catalog.filter((item) => catalogItemExtSchema.parse(item.ext).dishOfTheDay)).toHaveLength(1);
+  });
+});
+
+describe("hospitality parties seed", () => {
+  it("parses with the module schema", () => {
+    expect(hospitalitySeed.parties.map((party) => partySchema.safeParse(party).success)).toEqual(
+      hospitalitySeed.parties.map(() => true),
+    );
+  });
+
+  it("has unique ids", () => {
+    expect(new Set(hospitalitySeed.parties.map((party) => party.id)).size).toBe(hospitalitySeed.parties.length);
+  });
+
+  it("uses only fictitious addresses ending in .example", () => {
+    expect(hospitalitySeed.parties.filter((party) => !party.email.endsWith(".example"))).toEqual([]);
+  });
+});
+
+describe("hospitality inventory seed", () => {
+  it("parses stock items and orders with the module schemas", () => {
+    expect([
+      hospitalitySeed.stockItems.map((item) => stockItemSchema.safeParse(item).success),
+      hospitalitySeed.purchaseOrders.map((order) => purchaseOrderSchema.safeParse(order).success),
+    ]).toEqual([hospitalitySeed.stockItems.map(() => true), hospitalitySeed.purchaseOrders.map(() => true)]);
+  });
+
+  it("has unique ids", () => {
+    expect([
+      new Set(hospitalitySeed.stockItems.map((item) => item.id)).size,
+      new Set(hospitalitySeed.purchaseOrders.map((order) => order.id)).size,
+    ]).toEqual([hospitalitySeed.stockItems.length, hospitalitySeed.purchaseOrders.length]);
+  });
+
+  it("points every reference at a row that exists", () => {
+    const parties = hospitalitySeed.parties.map((party) => party.id);
+    const catalogIds = hospitalitySeed.catalog.map((item) => item.id);
+    const stockIds = hospitalitySeed.stockItems.map((item) => item.id);
+    expect([
+      hospitalitySeed.stockItems.filter((item) => !parties.includes(item.supplierId ?? "")),
+      hospitalitySeed.stockItems.filter(
+        (item) => item.catalogItemId !== undefined && !catalogIds.includes(item.catalogItemId),
+      ),
+      hospitalitySeed.purchaseOrders.filter((order) => !parties.includes(order.supplierId ?? "")),
+      hospitalitySeed.purchaseOrders.filter((order) =>
+        order.lines.some((line) => !stockIds.includes(line.stockItemId)),
+      ),
+    ]).toEqual([[], [], [], []]);
+  });
+
+  it("keeps at least one item below its reorder point", () => {
+    expect(hospitalitySeed.stockItems.filter((item) => item.onHand <= item.reorderPoint).length).toBeGreaterThan(0);
   });
 });

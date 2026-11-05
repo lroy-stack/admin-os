@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { defineCapability } from "@/core/capability";
 import { defineSetting } from "@/core/settings";
+import { defineViewKind } from "@/core/views";
 
 import {
   type CapabilityRef,
@@ -46,6 +47,14 @@ const otherList = defineCapability({
   riskTier: 0,
 });
 const capabilities = { "planted.item.get": plantedGet, "planted.list": plantedList } as const;
+
+/** A product view kind of the planted module (ADR 0018 §3). */
+const plantedView = defineViewKind({
+  id: "planted.collection",
+  module: "planted",
+  capability: "planted.list",
+  params: z.object({}),
+});
 
 const plantedRow = z.object({
   id: z.string(),
@@ -301,6 +310,16 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
       "a setting outside the module's prefix",
       installed({ ...planted, settings: [strayPrefix] }, other),
       'planted: settings plants.stay must start with "planted."',
+    ],
+    [
+      "a view kind under another module",
+      installed({ ...planted, views: [{ ...plantedView, id: "other.collection", module: "other" }] }, other),
+      'planted: views other.collection must start with "planted.", name planted and call one of its read capabilities',
+    ],
+    [
+      "a view kind that calls a capability the module does not declare",
+      installed({ ...planted, views: [{ ...plantedView, capability: "planted.find" }] }, other),
+      'planted: views planted.collection must start with "planted.", name planted and call one of its read capabilities',
     ],
     [
       "an owned path that does not exist",

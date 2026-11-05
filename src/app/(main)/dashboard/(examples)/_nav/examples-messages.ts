@@ -15,7 +15,6 @@ export type ExampleLabelId =
   | "infrastructure"
   | "file-manager"
   | "patient-monitoring"
-  | "products"
   | "email"
   | "chat"
   | "calendar"

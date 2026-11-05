@@ -35,7 +35,7 @@ describe("buildShellNav", () => {
   it.each([
     ["only the first area", shownIds.slice(0, 1), shownTitles.slice(0, 1)],
     ["nothing", [], []],
-    ["an id the preset does not define", ["not-an-area"], []],
+    ["an id the preset does not define", ["staff"], []],
   ])("hides entries that are not visible: %s", (_name, visibleIds, expected) => {
     expect(titles(buildShellNav(data({ visibleIds }), examples).top)).toEqual(expected);
   });

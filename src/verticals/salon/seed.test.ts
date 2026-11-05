@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingSchema } from "@/modules/bookings";
+import { purchaseOrderSchema, stockItemSchema } from "@/modules/inventory";
+import { partySchema } from "@/modules/parties";
 
 import { salonSeed } from "./seed";
 
@@ -67,5 +69,55 @@ describe("salon seed", () => {
 
   it("has two clients", () => {
     expect(salonSeed.customers).toHaveLength(2);
+  });
+});
+
+describe("salon parties seed", () => {
+  it("parses with the module schema", () => {
+    expect(salonSeed.parties.map((party) => partySchema.safeParse(party).success)).toEqual(
+      salonSeed.parties.map(() => true),
+    );
+  });
+
+  it("has unique ids", () => {
+    expect(new Set(salonSeed.parties.map((party) => party.id)).size).toBe(salonSeed.parties.length);
+  });
+
+  it("uses only fictitious addresses ending in .example", () => {
+    expect(salonSeed.parties.filter((party) => !party.email.endsWith(".example"))).toEqual([]);
+  });
+});
+
+describe("salon inventory seed", () => {
+  it("parses stock items and orders with the module schemas", () => {
+    expect([
+      salonSeed.stockItems.map((item) => stockItemSchema.safeParse(item).success),
+      salonSeed.purchaseOrders.map((order) => purchaseOrderSchema.safeParse(order).success),
+    ]).toEqual([salonSeed.stockItems.map(() => true), salonSeed.purchaseOrders.map(() => true)]);
+  });
+
+  it("has unique ids", () => {
+    expect([
+      new Set(salonSeed.stockItems.map((item) => item.id)).size,
+      new Set(salonSeed.purchaseOrders.map((order) => order.id)).size,
+    ]).toEqual([salonSeed.stockItems.length, salonSeed.purchaseOrders.length]);
+  });
+
+  it("points every reference at a row that exists", () => {
+    const parties = salonSeed.parties.map((party) => party.id);
+    const catalogIds = salonSeed.catalog.map((item) => item.id);
+    const stockIds = salonSeed.stockItems.map((item) => item.id);
+    expect([
+      salonSeed.stockItems.filter((item) => !parties.includes(item.supplierId ?? "")),
+      salonSeed.stockItems.filter(
+        (item) => item.catalogItemId !== undefined && !catalogIds.includes(item.catalogItemId),
+      ),
+      salonSeed.purchaseOrders.filter((order) => !parties.includes(order.supplierId ?? "")),
+      salonSeed.purchaseOrders.filter((order) => order.lines.some((line) => !stockIds.includes(line.stockItemId))),
+    ]).toEqual([[], [], [], []]);
+  });
+
+  it("keeps at least one item below its reorder point", () => {
+    expect(salonSeed.stockItems.filter((item) => item.onHand <= item.reorderPoint).length).toBeGreaterThan(0);
   });
 });

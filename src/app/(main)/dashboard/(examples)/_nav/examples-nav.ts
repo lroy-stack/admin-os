@@ -14,7 +14,6 @@ import {
   type LucideIcon,
   Mail,
   MessageSquare,
-  Package,
   PanelTop,
   ReceiptText,
   Server,
@@ -69,7 +68,6 @@ export const examplesNav: readonly ExampleGroup[] = [
   {
     id: "pages",
     items: [
-      { id: "products", title: "Products", url: "/dashboard/products", icon: Package, placement: "tool" },
       { id: "email", title: "Email", url: "/dashboard/mail", icon: Mail, placement: "tool" },
       { id: "chat", title: "Chat", url: "/dashboard/chat", icon: MessageSquare, placement: "tool" },
       { id: "calendar", title: "Schedule", url: "/dashboard/calendar", icon: Calendar, placement: "area" },

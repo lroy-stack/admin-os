@@ -10,7 +10,7 @@ describe("SCHEMA_VERSION", () => {
     // A saved session was written against one seed structure. When this fails, the seeds changed shape: bump
     // SCHEMA_VERSION in src/demo-store.ts so saved sessions reset, then update both numbers here.
     const seeds = Object.fromEntries(Object.entries(DEMO).map(([vertical, { seed }]) => [vertical, seed]));
-    expect([SCHEMA_VERSION, seedShapeHash(seeds)]).toEqual([4, "8493f197"]);
+    expect([SCHEMA_VERSION, seedShapeHash(seeds)]).toEqual([6, "1aefe55a"]);
   });
 
   it("changes the fingerprint when a collection gains a field", () => {

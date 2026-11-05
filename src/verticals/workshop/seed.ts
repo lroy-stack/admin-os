@@ -1,6 +1,8 @@
 import type { BookingInput } from "@/modules/bookings";
 import type { CatalogItem } from "@/modules/catalog";
 import type { Asset, Customer } from "@/modules/customers";
+import type { PurchaseOrder, StockItem } from "@/modules/inventory";
+import type { Party } from "@/modules/parties";
 import type { Area, Resource } from "@/modules/resources";
 import type { StaffMember } from "@/modules/staff";
 
@@ -48,7 +50,6 @@ export const catalog: CatalogItem[] = [
     status: "active",
     media: [],
     tags: [],
-    ext: { sku: "BP-F-118", stock: 6, supplier: "Distribuciones Levante" },
   },
   {
     id: "labour-brakes",
@@ -71,7 +72,6 @@ export const catalog: CatalogItem[] = [
     status: "active",
     media: [],
     tags: [],
-    ext: { sku: "OF-204", stock: 14, supplier: "Distribuciones Levante" },
   },
   {
     id: "part-air-filter",
@@ -82,7 +82,6 @@ export const catalog: CatalogItem[] = [
     status: "active",
     media: [],
     tags: [],
-    ext: { sku: "AF-311", stock: 9, supplier: "Recambios Norte" },
   },
   {
     id: "part-wiper-blades",
@@ -98,7 +97,6 @@ export const catalog: CatalogItem[] = [
     status: "active",
     media: [],
     tags: [],
-    ext: { sku: "WB-450", stock: 4, supplier: "Recambios Norte" },
   },
 ];
 
@@ -137,4 +135,150 @@ export const bookings: BookingInput[] = [
   },
 ];
 
-export const workshopSeed = { areas, resources, customers, assets, catalog, staff, bookings } as const;
+/** Fictitious fiscal directory (ADR 0019 §5): tax IDs that cannot be real and `.example` addresses. */
+export const parties: Party[] = [
+  {
+    id: "fleet-company",
+    kind: "company",
+    legalName: "Transportes Rápidos del Sur S.L.",
+    tradeName: "Rápidos del Sur",
+    taxId: "B00000209",
+    addressLines: ["Polígono Las Salinas 4", "30169 San Ginés", "Spain"],
+    countryCode: "ES",
+    email: "flota@rapidos-del-sur.example",
+    roles: ["client"],
+  },
+  {
+    id: "insurer",
+    kind: "company",
+    legalName: "Aseguradora Mediterránea S.A.",
+    taxId: "A00000210",
+    addressLines: ["Avenida de la Constitución 30", "46009 Valencia", "Spain"],
+    countryCode: "ES",
+    email: "siniestros@aseguradora-mediterranea.example",
+    roles: ["client"],
+  },
+  {
+    id: "distribuciones-levante",
+    kind: "company",
+    legalName: "Distribuciones Levante",
+    taxId: "B00000211",
+    addressLines: ["Calle del Recambio 9", "46013 Valencia", "Spain"],
+    countryCode: "ES",
+    email: "pedidos@distribuciones-levante.example",
+    roles: ["supplier"],
+  },
+  {
+    id: "recambios-norte",
+    kind: "company",
+    legalName: "Recambios Norte",
+    taxId: "B00000212",
+    addressLines: ["Polígono Industrial Ebro 21", "50014 Zaragoza", "Spain"],
+    countryCode: "ES",
+    email: "ventas@recambios-norte.example",
+    roles: ["supplier"],
+  },
+];
+
+/** What the business keeps (ADR 0018 §1); `supplierId` names a supplier in `parties`. */
+/** A catalog item's name, so a stock item bought as the part it is sold as carries the same words. */
+const catalogName = (id: string) => {
+  const item = catalog.find((candidate) => candidate.id === id);
+  if (item === undefined) throw new Error(`No catalog item ${id}`);
+  return item.name;
+};
+
+export const stockItems: StockItem[] = [
+  {
+    id: "stock-brake-pads",
+    name: catalogName("part-brake-pads"),
+    sku: "BP-F-118",
+    catalogItemId: "part-brake-pads",
+    unit: "set",
+    onHand: 6,
+    reorderPoint: 3,
+    supplierId: "distribuciones-levante",
+  },
+  {
+    id: "stock-oil-filter",
+    name: catalogName("part-oil-filter"),
+    sku: "OF-204",
+    catalogItemId: "part-oil-filter",
+    unit: "unit",
+    onHand: 14,
+    reorderPoint: 5,
+    supplierId: "distribuciones-levante",
+  },
+  {
+    id: "stock-air-filter",
+    name: catalogName("part-air-filter"),
+    sku: "AF-311",
+    catalogItemId: "part-air-filter",
+    unit: "unit",
+    onHand: 9,
+    reorderPoint: 4,
+    supplierId: "recambios-norte",
+  },
+  {
+    id: "stock-wiper-blades",
+    name: catalogName("part-wiper-blades"),
+    sku: "WB-450",
+    catalogItemId: "part-wiper-blades",
+    unit: "pair",
+    onHand: 4,
+    reorderPoint: 6,
+    supplierId: "recambios-norte",
+  },
+];
+
+export const purchaseOrders: PurchaseOrder[] = [
+  {
+    id: "PO-W-1",
+    supplierId: "distribuciones-levante",
+    status: "received",
+    lines: [
+      { stockItemId: "stock-brake-pads", qty: 4, unitCost: eur(2800) },
+      { stockItemId: "stock-oil-filter", qty: 10, unitCost: eur(650) },
+    ],
+    orderedOn: "2026-10-12",
+    expectedOn: "2026-10-16",
+  },
+  {
+    id: "PO-W-2",
+    supplierId: "recambios-norte",
+    status: "sent",
+    lines: [
+      { stockItemId: "stock-wiper-blades", qty: 8, unitCost: eur(1100) },
+      { stockItemId: "stock-air-filter", qty: 6, unitCost: eur(900) },
+    ],
+    orderedOn: "2026-10-29",
+    expectedOn: "2026-11-03",
+  },
+  {
+    id: "PO-W-3",
+    supplierId: "distribuciones-levante",
+    status: "draft",
+    lines: [{ stockItemId: "stock-brake-pads", qty: 6, unitCost: eur(2800) }],
+    orderedOn: "2026-10-31",
+  },
+  {
+    id: "PO-W-4",
+    supplierId: "recambios-norte",
+    status: "cancelled",
+    lines: [{ stockItemId: "stock-air-filter", qty: 12, unitCost: eur(950) }],
+    orderedOn: "2026-10-05",
+  },
+];
+
+export const workshopSeed = {
+  areas,
+  resources,
+  customers,
+  assets,
+  parties,
+  catalog,
+  stockItems,
+  purchaseOrders,
+  staff,
+  bookings,
+} as const;

@@ -3,9 +3,10 @@
  * id order, formatted by Biome like the files lint-staged checks:
  * - `src/config/modules.generated.ts`: the manifests, the import graph between modules and the extension entities of
  *   their seeds;
- * - `src/config/modules.server.generated.ts`: the server halves (messages and mock answers), server-only.
+ * - `src/config/modules.server.generated.ts`: the server halves (messages, mock answers and view loaders), server-only;
+ * - `src/config/modules.client.generated.ts`: the view renderers of the modules that have a `ui.ts`, by view kind id.
  * Run it with `npm run generate:modules` after adding, removing or re-wiring a module; `scripts/generate-modules.test.ts`
- * fails while either file is stale. It exits 1, naming the module and the fix, when the folders cannot be composed.
+ * fails while any file is stale. It exits 1, naming the module and the fix, when the folders cannot be composed.
  */
 
 import {
@@ -29,6 +30,7 @@ export const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 export const MODULES_PATH = "src/config/modules.generated.ts";
 export const MODULE_SERVERS_PATH = "src/config/modules.server.generated.ts";
+export const MODULE_UIS_PATH = "src/config/modules.client.generated.ts";
 
 const HEADER =
   "// Written by `npm run generate:modules` from the folders of src/modules; do not edit. A test fails when it is stale (ADR 0017 §5).";
@@ -54,6 +56,16 @@ export const manifestExportOf = (folder: string): string | undefined =>
   KEBAB.test(folder)
     ? `${folder.replace(/-([a-z0-9])/g, (_match, letter: string) => letter.toUpperCase())}Module`
     : undefined;
+
+/**
+ * `file-manager` → `fileManagerModuleUi`, the export of the folder's `ui.ts` (ADR 0017 §1). A folder joins the client
+ * list only when it has a file named `ui.ts`: `customers/ui/` is a folder of shared components, not a module UI, so
+ * it stays out without a special case.
+ */
+export const uiExportOf = (folder: string): string | undefined => {
+  const manifest = manifestExportOf(folder);
+  return manifest === undefined ? undefined : `${manifest}Ui`;
+};
 
 const moduleFolders = (root: string): string[] =>
   readdirSync(join(root, "src/modules"), { withFileTypes: true })
@@ -152,6 +164,30 @@ function renderServers(modules: readonly InstalledModule[]): string {
   ].join("\n");
 }
 
+/** The folders of the modules that have a `ui.ts`, in id order. */
+const uiFolders = (root: string, modules: readonly InstalledModule[]): string[] =>
+  modules.map(({ folder }) => folder).filter((folder) => existsSync(join(root, "src/modules", folder, "ui.ts")));
+
+/**
+ * The client list before Biome formats it: one map from view kind id to renderer. `satisfies` makes a kind with no
+ * renderer fail `tsc`, naming it, and a renderer for an undeclared kind fail too.
+ */
+function renderClient(folders: readonly string[]): string {
+  const names = folders.map((folder) => [folder, uiExportOf(folder)] as const);
+  return [
+    HEADER,
+    "",
+    'import type { ViewRenderer } from "@/core/views/ui";',
+    ...names.map(([folder, name]) => `import { ${name} } from "@/modules/${folder}/ui";`),
+    "",
+    'import type { ProductViewKindId } from "./vertical";',
+    "",
+    "/** The renderer of each product view kind, from the `ui.ts` of the modules that declare it (ADR 0018 §3). */",
+    `export const VIEW_RENDERERS = {${names.map(([, name]) => `...${name}.views`).join(", ")}} as const satisfies Readonly<Record<ProductViewKindId, ViewRenderer>>;`,
+    "",
+  ].join("\n");
+}
+
 /** The module list before Biome formats it. */
 function render(modules: readonly InstalledModule[], graph: Readonly<Record<string, readonly string[]>>): string {
   const names = modules.map(({ folder }) => [folder, manifestExportOf(folder)] as const);
@@ -211,6 +247,7 @@ export async function generate(root: string = ROOT): Promise<Generated> {
           files: {
             [MODULES_PATH]: formatted(root, MODULES_PATH, render(modules, graph)),
             [MODULE_SERVERS_PATH]: formatted(root, MODULE_SERVERS_PATH, renderServers(modules)),
+            [MODULE_UIS_PATH]: formatted(root, MODULE_UIS_PATH, renderClient(uiFolders(root, modules))),
           },
         }
       : {}),

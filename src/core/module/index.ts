@@ -2,12 +2,13 @@ import { z } from "zod";
 
 import { KERNEL_MODULES } from "@/core/access";
 import type { AnyCapability, Catalog } from "@/core/capability";
-import type { Locale } from "@/core/i18n";
+import type { Locale, MessageBundle } from "@/core/i18n";
 // Types only: they are erased, so a client bundle that reads a manifest never reaches the server-only entry.
 import type { InputField, ManifestEntry, McpManifest, ToolManifest } from "@/core/mcp/server";
 import type { MockHandler } from "@/core/mock";
 import type { ModuleId } from "@/core/nav";
 import type { AnySetting } from "@/core/settings";
+import type { ViewKind, ViewLoader } from "@/core/views";
 
 /**
  * A module's manifest (ADR 0017 §1): what the composition root needs from a module folder, as data and descriptors
@@ -56,6 +57,7 @@ export interface ModuleManifest<
   C extends Catalog = Catalog,
   T extends ToolManifest<C, CapabilityRef> = ToolManifest<C, CapabilityRef>,
   S extends IdSources = IdSources,
+  V extends readonly ViewKind[] = readonly ViewKind[],
 > {
   /** The folder's name, and the first segment of every capability id and setting key. */
   readonly id: Id;
@@ -75,6 +77,8 @@ export interface ModuleManifest<
   readonly references: readonly ModuleReference[];
   /** Repository paths outside the folder that go with it: its routes, config tests and e2e specs. One owner each. */
   readonly owns: readonly string[];
+  /** The product view kinds it declares (ADR 0018 §3); a preset lists views of these kinds. */
+  readonly views?: V;
 }
 
 /** Keys that must not be there: each one is typed `never`, so a value under it does not compile. */
@@ -97,15 +101,16 @@ export const defineModule = <
   const C extends Catalog,
   const T extends ToolManifest<C, CapabilityRef>,
   const S extends IdSources,
+  const V extends readonly ViewKind[] = readonly [],
 >(
-  manifest: ModuleManifest<Id, C, T, S> & {
+  manifest: ModuleManifest<Id, C, T, S, V> & {
     readonly capabilities: Refused<Exclude<keyof C, `${Id}.${string}`>>;
     readonly mcp: {
       readonly tools: Refused<Exclude<keyof T, keyof C>> & UnknownHintFields<C, T>;
       readonly idSources: readonly (readonly [string, readonly (keyof C & string)[]])[];
     };
   },
-): ModuleManifest<Id, C, T, S> => manifest;
+): ModuleManifest<Id, C, T, S, V> => manifest;
 
 /**
  * The server half of a module (ADR 0017 §1), exported from its `server.ts` as `<module>ModuleServer`: the messages of
@@ -118,6 +123,10 @@ export interface ModuleServer<Id extends string = string> {
   readonly id: Id;
   readonly messages: Readonly<Record<Locale, unknown>>;
   readonly mockHandlers: Readonly<Record<string, MockHandler<never>>>;
+  /** A loader for each view kind it declares, by kind id (ADR 0018 §3); the Products route calls the one a preset lists. */
+  readonly viewLoaders?: Readonly<Record<string, ViewLoader>>;
+  /** The dictionary each of its view renderers reads, by kind id, so a route delivers the words of the views it shows. */
+  readonly viewBundles?: Readonly<Record<string, MessageBundle<unknown>>>;
 }
 
 /**
@@ -239,6 +248,14 @@ function identityProblems({ folder, manifest }: InstalledModule): Problem[] {
     .filter(([key, capability]) => !key.startsWith(`${id}.`) || capability.id !== key)
     .map(([key]) => key);
   const straySettings = manifest.settings.map(({ key }) => key).filter((key) => !key.startsWith(`${id}.`));
+  const strayViews = (manifest.views ?? [])
+    .filter(
+      (view) =>
+        !view.id.startsWith(`${id}.`) ||
+        view.module !== id ||
+        manifest.capabilities[view.capability]?.effect !== "read",
+    )
+    .map(({ id: viewId }) => viewId);
   return about(id, [
     ...(id === folder ? [] : [`src/modules/${folder}: the manifest's id is "${id}"; set it to "${folder}"`]),
     ...(KERNEL_NAMESPACES.has(id) ? [`src/modules/${folder}: "${id}" is a kernel namespace; rename the module`] : []),
@@ -246,6 +263,11 @@ function identityProblems({ folder, manifest }: InstalledModule): Problem[] {
       ? [`${id}: capabilities ${strayCapabilities.join(", ")} must be keyed by their own id, under "${id}."`]
       : []),
     ...(straySettings.length > 0 ? [`${id}: settings ${straySettings.join(", ")} must start with "${id}."`] : []),
+    ...(strayViews.length > 0
+      ? [
+          `${id}: views ${strayViews.join(", ")} must start with "${id}.", name ${id} and call one of its read capabilities`,
+        ]
+      : []),
   ]);
 }
 

@@ -22,7 +22,7 @@ import { DurableObject } from "cloudflare:workers";
  * Bump when the shape of the persisted session changes: a mismatch resets the object to the seed. A test pins it to
  * a fingerprint of the seeds' structure, so a seed change without a bump fails there.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 6;
 /** A session is deleted this long after its last write; the demo cookie is renewed on each write for as long. */
 const IDLE_MS = 2 * 60 * 60 * 1000;
 

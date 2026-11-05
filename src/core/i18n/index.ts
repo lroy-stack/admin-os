@@ -19,7 +19,6 @@ export {
   formatPercent,
   formatRelative,
   formatTime,
-  languageName,
   monthNames,
   type NameStyle,
   type PercentOptions,
@@ -36,8 +35,6 @@ export {
   type MessageParams,
   type Plural,
   placeholdersOf,
-  type TermFamily,
-  type Terms,
   type Vocabulary,
 } from "./messages";
 export { type MessageBundle, type MessageKey, messageKey, type ResolvedMessages, resolveMessages } from "./namespace";

@@ -57,6 +57,7 @@ export function DashboardTopNav({
       inboxHref="/dashboard/mail"
       accountHref="/dashboard/profile"
       settingsHref="/dashboard/settings"
+      logoutHref="/auth/v1/login"
       notifications={
         unreadNotifications === undefined
           ? undefined

@@ -4,7 +4,7 @@ import { useOptimistic, useTransition } from "react";
 
 import Link from "next/link";
 
-import { BadgeCheck, Building2, RotateCcw } from "lucide-react";
+import { BadgeCheck, Bell, Building2, LogOut, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -61,6 +61,8 @@ export function AccountMenu({
   demo,
   accountHref,
   settingsHref,
+  logoutHref,
+  onOpenNotifications,
 }: {
   account: ShellAccount;
   demo?: ShellDemo;
@@ -68,6 +70,10 @@ export function AccountMenu({
   accountHref: string;
   /** Where the business settings live. */
   settingsHref: string;
+  /** Where signing out leads. */
+  logoutHref: string;
+  /** Opens the bell's inbox; absent when the actor cannot read notifications, which hides the item. */
+  onOpenNotifications?: () => void;
 }) {
   const { account: text } = useMessages(shellMessageKey);
   const guardLink = useGuardedLink();
@@ -120,6 +126,12 @@ export function AccountMenu({
               {text.businessSettings}
             </Link>
           </DropdownMenuItem>
+          {onOpenNotifications ? (
+            <DropdownMenuItem onSelect={onOpenNotifications}>
+              <Bell />
+              {text.notifications}
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuGroup>
         {demo && (
           <>
@@ -134,6 +146,13 @@ export function AccountMenu({
             </DropdownMenuItem>
           </>
         )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link prefetch={false} href={logoutHref} onNavigate={guardLink(logoutHref)}>
+            <LogOut />
+            {text.logOut}
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

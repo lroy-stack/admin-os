@@ -72,10 +72,6 @@ Option 3.
 > default of a business setting (`bookings.walk_in.stay_minutes`, ...) where the business really differs. Keys and
 > values are checked against the settings registry (`src/config/settings.ts`) by the contract tests.
 
-> **Amended 2026-11-05 (ADR 0020, proposed):** a preset's `server.ts` also carries `terms`: words for data a
-> business types, by family and id (`terms.skills.sommelier`), in the four locales. A screen shows the preset's word,
-> or the id as typed when there is none (`termLabel`). `vocabulary` stays an override of module messages only.
-
 > **Amended 2026-11-05 (ADR 0017):** a preset's seed is split per module (`seed/<module>.ts`, with `seed/index.ts`),
 > and a module's manifest `seed` field replaces `extends` and the required-collections list. The bullet below about
 > `server.ts` seeds reads as `seed/*.ts` from then on.

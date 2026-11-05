@@ -71,6 +71,5 @@ export const customersModule = defineModule({
     "src/config/mcp-manifest.customers.test.ts",
     "src/config/mcp.server.customers.test.ts",
     "e2e/smoke/customers.spec.ts",
-    "e2e/smoke/customer-record.spec.ts",
   ],
 });

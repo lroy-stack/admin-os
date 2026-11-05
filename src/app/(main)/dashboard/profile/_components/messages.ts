@@ -5,10 +5,11 @@ export type ProfileDocumentId = "doc-1" | "doc-2" | "doc-4";
 /** Text of /dashboard/profile: labels, enum values and the demo employee's business text. */
 export interface ProfileMessages {
   readonly meta: PageMeta;
-  /** The page trail (ADR 0020 §2): its accessible name and the current page; its home level is the nav's. */
   readonly breadcrumb: {
-    readonly label: string;
-    readonly profile: string;
+    readonly dashboard: string;
+    readonly people: string;
+    readonly directory: string;
+    readonly details: string;
   };
   readonly tabs: {
     readonly overview: string;

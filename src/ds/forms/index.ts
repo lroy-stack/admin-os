@@ -1,4 +1,3 @@
-export { failureMessage } from "./failure-message";
 export { type FormControlProps, FormField, type FormFieldProps } from "./form-field";
 export { FormFooter, type FormFooterProps } from "./form-footer";
 export type { ActionOutcome, FieldIssue } from "./outcome";

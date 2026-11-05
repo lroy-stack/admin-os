@@ -66,6 +66,8 @@ German statuses are participles without gender in these positions and need no ru
 | Reservations | Reservations | Reservas | Reservierungen | Réservations | See booking |
 | Customers (the list) | Customers | Clientes | Kunden | Clients | |
 | Products | Products | Productos | Produkte | Produits | |
+| Shop (a product view) | Shop | Tienda | Shop | Boutique | Goods sold over the counter; a preset may rename it |
+| Parts (a product view) | Parts | Piezas | Teile | Pièces | Spare parts a business sells and fits |
 | Finance | Finance | Finanzas | Finanzen | Finance | |
 | Growth (analytics) | Growth | Crecimiento | Wachstum | Croissance | Nav label of the analytics screen |
 | Projects | Projects | Proyectos | Projekte | Projets | |
@@ -78,7 +80,6 @@ German statuses are participles without gender in these positions and need no ru
 | Preferences | Preferences | Preferencias | Einstellungen | Préférences | The personal panel in the shell |
 | Account | Account | Cuenta | Konto | Compte | |
 | Profile | Profile | Perfil | Profil | Profil | |
-| Breadcrumb | Breadcrumb | Ruta de navegación | Brotkrümelnavigation | Fil d’Ariane | The page trail's accessible name (ADR 0020); never shown |
 | Roles | Roles | Roles | Rollen | Rôles | |
 | Notifications | Notifications | Notificaciones | Benachrichtigungen | Notifications | |
 | Search | Search | Buscar | Suchen | Rechercher | Button and placeholder |
@@ -96,13 +97,19 @@ German statuses are participles without gender in these positions and need no ru
 | Hot deals | Hot deals | Oportunidades calientes | Heiße Deals | Affaires chaudes | |
 | Lead | Lead | Lead | Lead | Prospect | |
 | Customer (one) | Customer | Cliente | Kunde | Client | |
+| Party (fiscal directory) | Party | Tercero | Geschäftspartner | Tiers | A client or a supplier with a tax ID (ADR 0019); not a customer of the agenda |
+| Client (billing) | Client | Cliente | Kunde | Client | Whom the business invoices; "Cliente" in es is shared with "Customer" |
+| Stock (a product view) | Stock | Existencias | Bestand | Stock | What the business keeps; a preset may rename it |
+| Stock item | Stock item | Artículo en stock | Lagerartikel | Article en stock | What the business keeps, sold or not (ADR 0018) |
+| Purchase order | Purchase order | Pedido de compra | Bestellung | Commande d’achat | A buy from a supplier; not a sales order |
+| Reorder point | Reorder point | Punto de pedido | Meldebestand | Seuil de réapprovisionnement | Stock at or under it needs re-ordering |
+| Supplier | Supplier | Proveedor | Lieferant | Fournisseur | Whom the business buys from |
+| Supplier orders (a product view) | Supplier orders | Pedidos a proveedores | Lieferantenbestellungen | Commandes fournisseurs | The purchase orders a business places; a preset may rename it |
 | Contact | Contact | Contacto | Kontakt | Contact | |
 | Company | Company | Empresa | Unternehmen | Entreprise | Company names are proper nouns |
 | Segment | Segment | Segmento | Segment | Segment | |
 | Owner (of a deal) | Owner | Responsable | Verantwortlich | Responsable | |
 | Team | Team | Equipo | Team | Équipe | |
-| Team member | Team member | Miembro del equipo | Teammitglied | Membre de l’équipe | A person who works in the business; the preset words the group (Team, Stylists, Mechanics) |
-| Skill | Skill | Habilidad | Fähigkeit | Compétence | A free-text tag on a team member; shown as the data holds it |
 | Quota | Quota | Cuota | Quote | Quota | |
 | Target | Target | Objetivo | Ziel | Objectif | |
 | Win rate | Win rate | Tasa de éxito | Abschlussquote | Taux de réussite | |
@@ -111,8 +118,6 @@ German statuses are participles without gender in these positions and need no ru
 | Weighted value | Weighted value | Valor ponderado | Gewichteter Wert | Valeur pondérée | |
 | Closing (stage) | Closing | Cierre | Abschluss | Conclusion | |
 | Stage | Stage | Fase | Phase | Étape | |
-| Note (on a customer) | Note | Nota | Notiz | Note | Dated, signed by the team member who wrote it |
-| Marketing messages (consent) | Marketing messages | Mensajes comerciales | Werbenachrichten | Messages commerciaux | Whether the customer agreed to receive them |
 
 ### Pipeline stages and statuses
 
@@ -144,7 +149,6 @@ German statuses are participles without gender in these positions and need no ru
 | Booking, reservation | Reservation | Reserva | Reservierung | Réservation | "Booking" and "reservation" are one concept |
 | Table | Table | Mesa | Tisch | Table | |
 | Party size, covers | Covers | Comensales | Gedecke | Couverts | Restaurant preset vocabulary |
-| No-show | No-show | No presentada | Nicht erschienen | Non honorée | A booking the guest did not keep; a count is plural ("No presentadas", "Non honorées") |
 | Walk-in | Walk-in | Walk-in | Walk-in | Walk-in | Never translated (owner): the term staff use; the button, the booking channel and a walk-in guest all say "Walk-in" |
 | Floor plan | Floor plan | Plano de sala | Raumplan | Plan de salle | |
 | Arrivals (the rail) | Arrivals | Llegadas | Ankünfte | Arrivées | The rail of upcoming bookings by time slot |
@@ -241,7 +245,6 @@ German statuses are participles without gender in these positions and need no ru
 | Not found | Page not found | Página no encontrada | Seite nicht gefunden | Page introuvable | |
 | No permission | You do not have permission | No tienes permiso | Du hast keine Berechtigung | Vous n’avez pas l’autorisation | |
 | Required field | Enter a value. | Introduce un valor. | Gib einen Wert ein. | Saisissez une valeur. | |
-| Not given | Not given | Sin indicar | Nicht angegeben | Non renseigné | A field the record does not hold |
 
 ### Product and platform
 

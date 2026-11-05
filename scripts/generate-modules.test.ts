@@ -1,15 +1,19 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { MODULE_GRAPH } from "@/config/modules.generated";
-import { compositionProblems } from "@/core/module";
+import { VIEW_RENDERERS } from "@/config/modules.client.generated";
+import { MODULE_GRAPH, MODULES } from "@/config/modules.generated";
+import { MODULE_SERVERS } from "@/config/modules.server.generated";
+import { compositionProblems, type ModuleServer } from "@/core/module";
 
 import {
   type Generated,
   generate,
   MODULE_SERVERS_PATH,
+  MODULE_UIS_PATH,
   MODULES_PATH,
   manifestExportOf,
   ROOT,
+  uiExportOf,
 } from "./generate-modules";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -70,7 +74,7 @@ describe("the generated module list (ADR 0017 §5)", () => {
     expect(generated.problems).toEqual([]);
   });
 
-  it.each([MODULES_PATH, MODULE_SERVERS_PATH])("%s matches the module folders", (path) => {
+  it.each([MODULES_PATH, MODULE_SERVERS_PATH, MODULE_UIS_PATH])("%s matches the module folders", (path) => {
     expect(readFileSync(join(ROOT, path), "utf8"), `${path} is stale: run npm run generate:modules`).toBe(
       generated.files?.[path],
     );
@@ -103,5 +107,45 @@ describe("the manifest export a folder names", () => {
     ["-x", undefined],
   ])("%s → %s", (folder, name) => {
     expect(manifestExportOf(folder)).toBe(name);
+  });
+});
+
+describe("the UI export a folder names", () => {
+  it.each([
+    ["catalog", "catalogModuleUi"],
+    ["file-manager", "fileManagerModuleUi"],
+    ["File-manager", undefined],
+  ])("%s → %s", (folder, name) => {
+    expect(uiExportOf(folder)).toBe(name);
+  });
+});
+
+describe("the generated client map (ADR 0017 §5)", () => {
+  const text = () => generated.files?.[MODULE_UIS_PATH] ?? "";
+
+  // From the installed modules' folders, so removing one leaves these cases standing (ADR 0017 §7).
+  const withUiFile = MODULES.map(({ id }) => id).filter((id) => existsSync(join(ROOT, "src/modules", id, "ui.ts")));
+  const withUiFolder = MODULES.map(({ id }) => id).filter(
+    (id) => existsSync(join(ROOT, "src/modules", id, "ui")) && !withUiFile.includes(id),
+  );
+
+  it.each(withUiFile)("imports the ui.ts of %s", (id) => {
+    expect(text()).toContain(`import { ${uiExportOf(id)} } from "@/modules/${id}/ui";`);
+  });
+
+  it.each(withUiFolder)("leaves out %s, whose ui is a folder of shared components, not a ui.ts", (id) => {
+    expect(text()).not.toContain(`@/modules/${id}`);
+  });
+
+  const declared = MODULES.flatMap((module) => (module.views ?? []).map(({ id }) => id)).sort();
+  const servers: readonly ModuleServer[] = MODULE_SERVERS;
+
+  it("holds a renderer for every view kind a module declares, and no other", () => {
+    expect(Object.keys(VIEW_RENDERERS).sort()).toEqual(declared);
+  });
+
+  it.each(declared)("%s has a loader and a dictionary in its module's server half", (kind) => {
+    expect(servers.filter(({ viewLoaders }) => viewLoaders !== undefined && kind in viewLoaders)).toHaveLength(1);
+    expect(servers.filter(({ viewBundles }) => viewBundles !== undefined && kind in viewBundles)).toHaveLength(1);
   });
 });

@@ -34,18 +34,18 @@ const nav = [
     requiredPermission: "read:customers",
   },
   {
-    id: "staff",
-    href: "/dashboard/staff",
-    labelKey: "staff.title",
+    id: "products",
+    href: "/dashboard/products",
+    labelKey: "catalog.products",
     placement: "area",
     group: "operations",
-    requiredPermission: "read:staff",
+    requiredPermission: "read:catalog",
   },
 ] as const satisfies NavManifest;
 
 export const salon = {
   id: "salon",
-  modules: ["bookings", "customers", "notifications", "resources", "staff", "catalog"],
+  modules: ["bookings", "customers", "notifications", "resources", "staff", "catalog", "parties", "inventory"],
   nav,
   roles: DEFAULT_ROLES,
   extensions: {
@@ -59,6 +59,11 @@ export const salon = {
     "bookings.walk_in.stay_minutes": 45,
     "bookings.service_window": { startMin: 9 * 60, endMin: 18 * 60 },
   },
+  /** The product views it offers, in order (ADR 0018 §3): the shop and its stock. */
+  productViews: [
+    { id: "shop", kind: "catalog.collection", labelKey: "catalog.collections.shop", params: { categoryIds: ["shop"] } },
+    { id: "stock", kind: "inventory.stock", labelKey: "inventory.views.stock", params: {} },
+  ],
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["stylist", "haircut"],
 } as const;

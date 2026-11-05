@@ -13,10 +13,7 @@ export const assetExtSchema = z
   })
   .strict();
 
-/** Parts carry stock data; labour carries a rate class. Exactly one of the two groups is set per item. */
-export const catalogItemExtSchema = z.union([
-  z.object({ sku: z.string().min(1), stock: z.number().int().nonnegative(), supplier: z.string().min(1) }).strict(),
-  z.object({ rateClass: z.string().min(1) }).strict(),
-]);
+/** Labour carries a rate class. A part keeps its stock in `inventory` (ADR 0018 §1) and has no `ext`. */
+export const catalogItemExtSchema = z.object({ rateClass: z.string().min(1) }).strict();
 
 export const staffExtSchema = z.object({ certifications: z.array(z.string().min(1)) }).strict();

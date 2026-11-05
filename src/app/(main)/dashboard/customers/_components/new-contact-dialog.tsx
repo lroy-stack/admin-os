@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useMemo, useRef } from "react";
+import { type RefObject, useMemo, useRef, useState } from "react";
 
 import { Plus } from "lucide-react";
 import { useWatch } from "react-hook-form";
@@ -25,7 +25,6 @@ import { createContact, findDuplicateContacts } from "../actions";
 import { DuplicateNotice } from "./duplicate-notice";
 import { customerDirectoryMessageKey } from "./messages";
 import { useDuplicateMatches } from "./use-duplicate-matches";
-import { useOpening } from "./use-opening";
 
 interface ContactWindowProps {
   open: boolean;
@@ -89,7 +88,9 @@ function ContactWindow({ open, onOpenChange, errors, returnFocus }: ContactWindo
 /** The "Add contact" button of the directory and the window it opens (plan 003, C3). */
 export function NewContactDialog({ errors }: { errors: CapabilityActionOptions["errors"] }) {
   const text = useMessages(customerDirectoryMessageKey).newContact;
-  const { open, setOpen, opening, opener, show } = useOpening();
+  const [open, setOpen] = useState(false);
+  const [opening, setOpening] = useState(0);
+  const opener = useRef<HTMLButtonElement>(null);
 
   return (
     <>
@@ -97,7 +98,10 @@ export function NewContactDialog({ errors }: { errors: CapabilityActionOptions["
         ref={opener}
         variant="ghost"
         className="liquid-glass hover:bg-foreground/10 h-8 rounded-full px-3 text-xs"
-        onClick={show}
+        onClick={() => {
+          setOpening((count) => count + 1);
+          setOpen(true);
+        }}
       >
         <Plus data-icon="inline-start" />
         {text.verb}

@@ -6,6 +6,7 @@ Read [Architecture](architecture.md) first for the layers and the data seam.
 
 - [Add a module](#add-a-module)
 - [Add a preset](#add-a-preset)
+- [Add a product view](#add-a-product-view)
 - [Configure your business](#configure-your-business)
 - [Wire a control](#wire-a-control)
 - [Swap the adapter](#swap-the-adapter)
@@ -28,9 +29,11 @@ example is `src/modules/notifications`.
    Collect them in one `<domain>Capabilities` record; `index.ts` re-exports the capabilities and the schemas.
 3. **Mock handlers.** `mock.ts` has a `mockHandler` per capability over the demo data. `server.ts` exports them with
    `messages.ts`, the module's error and label texts in en, es, de and fr.
-4. **Registration.** Register a new module in `src/config`: its `<domain>Capabilities` in `SOURCE_CATALOGS`
-   (`catalog.ts`) and its handlers in `MOCK_HANDLERS` (`demo-kernel.ts`).
-   - A capability added to an existing module needs neither, since the module's record is already there.
+4. **Manifest and registration** ([ADR 0017](../adr/0017-a-module-is-a-folder.md)).
+   - `module.ts` exports `<domain>Module = defineModule({ … })`, and `server.ts` exports `<domain>ModuleServer` with
+     its messages and mock handlers.
+   - Run `npm run generate:modules`. It writes the composition root in `src/config/*.generated.ts`, and a test fails
+     while those files are stale.
    - A capability that takes required input also gives its smallest valid input to `inputFor`
      (`src/config/adapter-contract.testkit.ts`), so the adapter contract can call it.
 5. **MCP.** Classify every capability, as [Expose a capability to MCP](#expose-a-capability-to-mcp) says. Until you
@@ -54,6 +57,30 @@ Decision record: [ADR 0004](../adr/0004-vertical-presets-and-generic-domains.md)
 2. Add it to `VERTICALS` (`src/config/vertical.ts`) and `DEMO` (`src/config/demo-kernel.ts`).
 
 The leak test and the seed tests check it.
+
+## Add a product view
+
+Decision records: [ADR 0018](../adr/0018-product-views-and-inventory.md) §3 and
+[ADR 0017](../adr/0017-a-module-is-a-folder.md) §1 and §5. The examples are `catalog.collection` (the menu, the shop,
+the parts) and `inventory.stock` and `inventory.orders`.
+
+1. **Declare the kind in the module.** In `module.ts`, add a `defineViewKind` (`src/core/views`) to `views`:
+   - its id, `<module>.<view>`;
+   - the module;
+   - the read capability it calls, whose permission the viewer needs;
+   - the schema of its parameters.
+2. **Render it.**
+   - The module's `ui.ts` exports `<module>ModuleUi`, which maps the kind id to its client component.
+   - Its server half gives the kind's loader in `viewLoaders`, which reads through the capability, and the
+     component's words in `viewBundles`.
+3. **Compose.** Run `npm run generate:modules`. The Products page renders kinds through the generated client map
+   and imports no module's views.
+4. **List it in a preset.** Add `{ id, kind, labelKey, params }` to the preset's `productViews`, in the order the
+   toggle shows.
+   - The label is a message key the preset's vocabulary may override.
+   - A kind no installed module declares does not compile.
+   - The contract test checks unique ids, a module the preset enables, the parameters, the label in the four
+     languages, and categories the seed holds.
 
 ## Configure your business
 

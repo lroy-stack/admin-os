@@ -14,9 +14,7 @@ const capabilityIds = Object.keys(CATALOG);
 const quiet = { retryDelayMs: 0, logger: () => undefined } as const;
 
 const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", workshop: "cust-carmen" } as const;
-
-/** Per preset, a seeded team member with a contract on record. */
-const firstStaff = { hospitality: "staff-marta", salon: "stylist-ines", workshop: "mech-rafa" } as const;
+const firstParty = { hospitality: "servicios-levante", salon: "hotel-spa", workshop: "fleet-company" } as const;
 
 /** Per preset: a confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, a bookable slot. */
 const bookable = {
@@ -29,13 +27,10 @@ const bookable = {
 export const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
   const customer = { id: firstCustomer[vertical] };
   const { booking, resource, startMin } = bookable[vertical];
-  const staffId = firstStaff[vertical];
   const inputs: Record<string, Record<string, unknown>> = {
     "customers.get": customer,
     "customers.search": { text: "ab" },
-    "staff.get": { id: staffId },
-    "staff.shifts.list": { staffId, from: "2026-10-26", to: "2026-11-01" },
-    "staff.contract.get": { staffId },
+    "parties.get": { id: firstParty[vertical] },
     "approvals.get": { approvalId: "held" },
     "approvals.approve": { approvalId: "held" },
     "approvals.reject": { approvalId: "held" },
@@ -53,6 +48,16 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
     // `bookings.search` by text and `bookings.create` by customer id read the customers collection (ADR 0017 §3).
     "bookings.search": { text: "a" },
     "customers.create": { name: "Contract Test", phone: "+34611111111" },
+    "parties.create": {
+      kind: "company",
+      legalName: "Contract Test S.L.",
+      taxId: "B00000990",
+      addressLines: ["Calle Contrato 1"],
+      countryCode: "ES",
+      email: "contract@demo.example",
+      roles: ["client"],
+    },
+    "parties.update": { id: firstParty[vertical], email: "contract@demo.example" },
     "customers.contact.update": { ...customer, name: "Contract Test" },
     "customers.notes.add": { ...customer, text: "Called back" },
     "customers.block": { ...customer, reason: "No-show twice" },

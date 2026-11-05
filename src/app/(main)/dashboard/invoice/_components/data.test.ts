@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { BusinessDetails } from "@/core/business";
 
 import {
-  billingClients,
   createDefaultInvoice,
   getInvoiceSubtotal,
   getInvoiceTax,
   type InvoiceCatalogItem,
+  type InvoiceClientParty,
   type InvoiceSeed,
   lineItemOf,
+  recipientOf,
   startingLines,
 } from "./data";
 
@@ -105,20 +106,21 @@ describe("the invoice's client and lines (spec 008, AC8; spec 011, H0)", () => {
     expect(createDefaultInvoice(seed()).items).toEqual([item]);
   });
 
-  it("offers billing clients with a tax ID and a fiscal address, never the agenda's customers", () => {
-    expect(billingClients.map((option) => [option.name, option.taxId, option.addressLines.length])).toEqual([
-      ["Servicios Corporativos Levante S.L.", "B00000201", 3],
-      ["Mediterránea de Eventos S.A.", "A00000202", 3],
-      ["Laura Gómez Ruiz", "00000203Z", 3],
-    ]);
-  });
-
-  it("gives every billing client an email the invoice is sent to", () => {
-    expect(billingClients.map((option) => option.email)).toEqual([
-      "facturas@servicios-levante.example",
-      "administracion@mediterranea-eventos.example",
-      "laura.gomez@correo.example",
-    ]);
+  it("bills a client party by its legal name, tax ID, fiscal address and email", () => {
+    const party = {
+      id: "fleet-company",
+      legalName: "Transportes Rápidos del Sur S.L.",
+      taxId: "B00000209",
+      addressLines: ["Polígono Las Salinas 4", "30169 San Ginés", "Spain"],
+      email: "flota@rapidos-del-sur.example",
+    } satisfies InvoiceClientParty;
+    expect(recipientOf(party)).toEqual({
+      id: "fleet-company",
+      name: "Transportes Rápidos del Sur S.L.",
+      email: "flota@rapidos-del-sur.example",
+      addressLines: ["Polígono Las Salinas 4", "30169 San Ginés", "Spain"],
+      taxId: "B00000209",
+    });
   });
 
   it("writes a catalog item in the request's language, at its price in major units", () => {

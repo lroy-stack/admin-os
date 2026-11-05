@@ -200,18 +200,6 @@ export interface CurrencyOption {
   readonly label: string;
 }
 
-/** A language named by its code ("es") in the active locale ("Spanish"); the code itself when it is not a language. */
-export function languageName(code: string, locale: Locale): string {
-  try {
-    return (
-      memo("language-names", locale, undefined, () => new Intl.DisplayNames(locale, { type: "language" })).of(code) ??
-      code
-    );
-  } catch {
-    return code;
-  }
-}
-
 /** The currency picker's options: exactly `CURRENCIES`, named by `Intl.DisplayNames` in the active locale. */
 export function currencyOptions(locale: Locale): CurrencyOption[] {
   const names = memo("currency-names", locale, undefined, () => new Intl.DisplayNames(locale, { type: "currency" }));

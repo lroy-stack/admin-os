@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `16b8aef583b022` | `1751a078cf749b` |
-| salon | `16b8aef583b022` | `1751a078cf749b` |
-| workshop | `16b8aef583b022` | `1751a078cf749b` |
+| hospitality | `0f7e4c555d525f` | `042822ba6d1a85` |
+| salon | `0f7e4c555d525f` | `042822ba6d1a85` |
+| workshop | `0f7e4c555d525f` | `042822ba6d1a85` |
 
 ## Tools by preset
 
@@ -60,16 +60,20 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
 | [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`inventory_orders_list`](#inventory_orders_list) | List purchase orders | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
+| [`inventory_stock_list`](#inventory_stock_list) | List stock | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_create`](#parties_create) | Create a client or supplier | write | 2 | key | false | `manage:parties` | owner, manager |
+| [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_update`](#parties_update) | Change a client or supplier | write | 2 | target-state | true | `manage:parties` | owner, manager |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
-| [`staff_get`](#staff_get) | Get a team member | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
-| [`staff_shifts_list`](#staff_shifts_list) | List a team member's shifts | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ### salon
 
@@ -100,16 +104,20 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
 | [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`inventory_orders_list`](#inventory_orders_list) | List purchase orders | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
+| [`inventory_stock_list`](#inventory_stock_list) | List stock | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_create`](#parties_create) | Create a client or supplier | write | 2 | key | false | `manage:parties` | owner, manager |
+| [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_update`](#parties_update) | Change a client or supplier | write | 2 | target-state | true | `manage:parties` | owner, manager |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
-| [`staff_get`](#staff_get) | Get a team member | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
-| [`staff_shifts_list`](#staff_shifts_list) | List a team member's shifts | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ### workshop
 
@@ -140,16 +148,20 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`customers_notes_add`](#customers_notes_add) | Add a customer note | write | 2 | key | false | `update:customers` | owner, manager, staff |
 | [`customers_search`](#customers_search) | Search customers | read | 1 | n/a (read) | false | `read:customers` | owner, manager, staff |
 | [`customers_unblock`](#customers_unblock) | Unblock a customer | write | 2 | target-state | true | `block:customers` | owner, manager, staff |
+| [`inventory_orders_list`](#inventory_orders_list) | List purchase orders | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
+| [`inventory_stock_list`](#inventory_stock_list) | List stock | read | 1 | n/a (read) | false | `read:inventory` | owner, manager, staff |
 | [`notifications_list`](#notifications_list) | List notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
 | [`notifications_read`](#notifications_read) | Mark notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_read_all`](#notifications_read_all) | Mark all notifications read | write | 1 | target-state | false | `update:notifications` | owner, manager, staff |
 | [`notifications_unread_count`](#notifications_unread_count) | Count unread notifications | read | 1 | n/a (read) | false | `read:notifications` | owner, manager, staff |
+| [`parties_create`](#parties_create) | Create a client or supplier | write | 2 | key | false | `manage:parties` | owner, manager |
+| [`parties_get`](#parties_get) | Get a client or supplier | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_list`](#parties_list) | List clients and suppliers | read | 1 | n/a (read) | false | `read:parties` | owner, manager, staff |
+| [`parties_update`](#parties_update) | Change a client or supplier | write | 2 | target-state | true | `manage:parties` | owner, manager |
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
-| [`staff_get`](#staff_get) | Get a team member | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
-| [`staff_shifts_list`](#staff_shifts_list) | List a team member's shifts | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ## Tools
 
@@ -1086,6 +1098,72 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
+### `inventory_orders_list`
+
+**List purchase orders.** List purchase orders, one page at a time, optionally by status. Each row names its supplier (supplierName) when it has one.
+
+- Capability: `inventory.orders.list`, permission `read:inventory`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "received",
+        "cancelled"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+### `inventory_stock_list`
+
+**List stock.** List the stock the business keeps, one page at a time. Each row names its supplier (supplierName) when it has one. Set belowReorder to see only what is at or under its reorder point.
+
+- Capability: `inventory.stock.list`, permission `read:inventory`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "belowReorder": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
 ### `notifications_list`
 
 **List notifications.** The acting user's notifications, newest first, one page at a time, with the unread count of the whole feed. Titles and bodies are message keys with params, not text; links name the record each one concerns.
@@ -1180,6 +1258,262 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
+### `parties_create`
+
+**Create a client or supplier.** Create a client or supplier: kind (person or company), legal name, tax ID, fiscal address lines, country (ISO 3166-1 alpha-2, ES), email and at least one role (client, supplier). Phone must be E.164 (+34600000101).
+
+- Capability: `parties.create`, permission `manage:parties`, tier 2, idempotency key.
+- Annotations: `readOnlyHint` false, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Untrusted text at: `notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "person",
+        "company"
+      ]
+    },
+    "legalName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tradeName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "taxId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "addressLines": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+    },
+    "phone": {
+      "type": "string",
+      "format": "e164",
+      "pattern": "^\\+[1-9]\\d{6,14}$"
+    },
+    "roles": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "client",
+          "supplier"
+        ]
+      }
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "A new unique string (a UUID works) for each distinct operation. Retrying with the same key and the same arguments returns the first result instead of applying it twice; the same key with other arguments fails with client.idempotency_conflict."
+    }
+  },
+  "required": [
+    "kind",
+    "legalName",
+    "taxId",
+    "addressLines",
+    "countryCode",
+    "email",
+    "roles",
+    "idempotencyKey"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `parties_get`
+
+**Get a client or supplier.** Get one party by id. Fails with parties.not_found when there is none. Find valid ids: id with parties_list.
+
+- Capability: `parties.get`, permission `read:parties`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `parties_list`
+- Untrusted text at: `notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `parties_list`
+
+**List clients and suppliers.** List the fiscal directory (clients and suppliers), one page at a time. Filter by role and search by text in the legal name, trade name or tax ID.
+
+- Capability: `parties.list`, permission `read:parties`, tier 1, idempotency n/a (read).
+- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Untrusted text at: `items[].notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "limit": {
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "client",
+        "supplier"
+      ]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+### `parties_update`
+
+**Change a client or supplier.** Change a client's or supplier's data. Omitted fields stay as they are and a null trade name, phone or notes clears it. Fails with parties.not_found for an unknown id. Find valid ids: id with parties_list.
+
+- Capability: `parties.update`, permission `manage:parties`, tier 2, idempotency target-state.
+- Annotations: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` true, `openWorldHint` false.
+- Id hints (field: tools that list valid values):
+  - `id`: `parties_list`
+- Untrusted text at: `notes`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "person",
+        "company"
+      ]
+    },
+    "legalName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tradeName": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "taxId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "addressLines": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+    },
+    "phone": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "e164",
+          "pattern": "^\\+[1-9]\\d{6,14}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "roles": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "client",
+          "supplier"
+        ]
+      }
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
 ### `resources_list`
 
 **List resources.** List resources, one page at a time.
@@ -1257,38 +1591,13 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
-### `staff_get`
-
-**Get a team member.** Get one team member by id: name, roles, status, locations and skills, without employment terms. Fails with staff.not_found when there is none. Find valid ids: id with staff_list.
-
-- Capability: `staff.get`, permission `read:staff`, tier 1, idempotency n/a (read).
-- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
-- Id hints (field: tools that list valid values):
-  - `id`: `staff_list`
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128
-    }
-  },
-  "required": [
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
 ### `staff_list`
 
-**List staff.** List team members, one page at a time. Employment terms are not included.
+**List staff.** List staff members, one page at a time.
 
 - Capability: `staff.list`, permission `read:staff`, tier 1, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Result: concise rows; the full record is one get tool away.
 
 ```json
 {
@@ -1310,53 +1619,6 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
-### `staff_shifts_list`
-
-**List a team member's shifts.** List one team member's planned shifts from one business day to another, covering at most 31 days, both ends included (to at most 30 days after from), ordered by day and start time, one page at a time. Times are minutes from midnight of the shift's business day. Empty when the business plans no shifts. Fails with staff.not_found for an unknown staffId. Find valid ids: staffId with staff_list.
-
-- Capability: `staff.shifts.list`, permission `read:staff`, tier 1, idempotency n/a (read).
-- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
-- Id hints (field: tools that list valid values):
-  - `staffId`: `staff_list`
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "cursor": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 512
-    },
-    "limit": {
-      "default": 50,
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 100
-    },
-    "staffId": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128
-    },
-    "from": {
-      "type": "string",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-    },
-    "to": {
-      "type": "string",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-    }
-  },
-  "required": [
-    "staffId",
-    "from",
-    "to"
-  ],
-  "additionalProperties": false
-}
-```
-
 ## UI-only capabilities
 
 Capabilities only the web app calls; they are never tools.
@@ -1369,4 +1631,3 @@ Capabilities only the web app calls; they are never tools.
 | `approvals.reject` | Rejecting is a person's decision, taken in the web app (D7) |
 | `bookings.status.undo` | The undo affordance of the person who just advanced a status; agents use the forward capabilities (ADR 0016, resolution 3) |
 | `bookings.walk_in.undo` | The undo affordance of the person who just seated a walk-in; agents use the forward capabilities (ADR 0016, resolution 3) |
-| `staff.contract.get` | Employment terms; no assistant job needs them (spec 012) |

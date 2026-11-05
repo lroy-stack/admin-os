@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { contactFieldsMessages } from "../contact-fields-messages";
 import { customerCreateInput } from "../schema";
-import { contactFormSchema, contactQuery, toCreateInput, toUpdateInput } from "./contact-form";
+import { contactFormSchema, contactQuery, toCreateInput } from "./contact-form";
 
 const invalid = contactFieldsMessages.en.invalid;
 const schema = contactFormSchema(invalid);
@@ -83,28 +83,6 @@ describe("contactQuery", () => {
   it("holds the email alone when the phone is a national number", () => {
     expect(contactQuery({ name: "", phone: "600000101", email: "ada@example.com" })).toEqual({
       email: "ada@example.com",
-    });
-  });
-});
-
-const CUSTOMER_ID = "C-ortega";
-
-describe("toUpdateInput", () => {
-  it("sends a cleared phone and email as null, which clears them", () => {
-    expect(toUpdateInput(CUSTOMER_ID, { name: "Ortega" })).toEqual({
-      id: CUSTOMER_ID,
-      name: "Ortega",
-      phone: null,
-      email: null,
-    });
-  });
-
-  it("sends the details that are filled in", () => {
-    expect(toUpdateInput(CUSTOMER_ID, { name: "Ortega", phone: "+34600000102", email: "o@example.com" })).toEqual({
-      id: CUSTOMER_ID,
-      name: "Ortega",
-      phone: "+34600000102",
-      email: "o@example.com",
     });
   });
 });

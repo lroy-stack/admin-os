@@ -25,10 +25,6 @@ export const customerNoteSchema = z.object({
   minute: minuteOfDaySchema,
 });
 
-/** A note to add, and a block with its reason: the capabilities' inputs, whose limits the windows read. */
-export const customerNoteAddInput = z.strictObject({ id: z.string().min(1), text: z.string().trim().min(1).max(2000) });
-export const customerBlockInput = z.strictObject({ id: z.string().min(1), reason: z.string().trim().min(1).max(500) });
-
 export const customerSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),

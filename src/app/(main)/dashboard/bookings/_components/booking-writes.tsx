@@ -6,13 +6,14 @@ import { toast } from "sonner";
 
 import { format, useLocale, useMessages } from "@/core/i18n/client";
 import { useToastWithUndo } from "@/ds/feedback";
-import { type CapabilityActionOptions, failureMessage, useCapabilityAction } from "@/ds/forms";
+import { type CapabilityActionOptions, useCapabilityAction } from "@/ds/forms";
 
 import { advanceStatus, undoStatus } from "../actions";
 import type { BookingAbilities } from "./abilities";
 import { bookingsMessageKey } from "./messages";
 import { guestName, tableLabel } from "./reservation-status";
 import { bookingStatusFor, type Reservation, type ReservationStatus, withStatus } from "./view-model";
+import { failureMessage } from "./write-outcome";
 
 /** What the controls of the screen need to write: the role's abilities, the error texts and whether a write is open. */
 export interface BookingWritesValue {

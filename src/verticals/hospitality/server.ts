@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ClockSeed } from "@/core/clock";
-import type { Terms, Vocabulary } from "@/core/i18n";
+import type { Vocabulary } from "@/core/i18n";
 
 import { BUSINESS_DAY } from "./seed";
 
@@ -54,17 +54,3 @@ export const hospitalityVocabulary = {
     fr: { one: "{count} plat", other: "{count} plats" },
   },
 } as const satisfies Vocabulary;
-
-/**
- * The words for the data this preset's business types, keyed by family and id as the data holds it. The skills are the
- * ones its seed gives the team; an id with no words here shows as typed (`termLabel`).
- */
-export const hospitalityTerms = {
-  skills: {
-    host: { en: "Host", es: "Anfitrión", de: "Empfang", fr: "Accueil" },
-    sommelier: { en: "Sommelier", es: "Sumiller", de: "Sommelier", fr: "Sommelier" },
-    waiter: { en: "Waiter", es: "Camarero", de: "Kellner", fr: "Serveur" },
-    grill: { en: "Grill", es: "Parrilla", de: "Grill", fr: "Grill" },
-    pastry: { en: "Pastry", es: "Repostería", de: "Konditorei", fr: "Pâtisserie" },
-  },
-} as const satisfies Terms;
