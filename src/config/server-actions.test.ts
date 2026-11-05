@@ -47,12 +47,67 @@ const exportsOf = (path: string) =>
     .map((match) => match[1])
     .sort();
 
+type Actions = Readonly<Record<string, readonly string[]>>;
+
+/**
+ * What the inventory finds (spec 006 D12): a use-server module nobody reviewed and a module whose exports differ from
+ * its reviewed list fail; a reviewed module whose file is gone is only reported (stale), so removing a module never
+ * fails it. `main` carries no stale entry at release.
+ */
+function inventoryReport(present: Actions, reviewed: Actions) {
+  const sorted = (names: readonly string[]) => [...names].sort().join(",");
+  return {
+    unreviewed: Object.keys(present).filter((path) => !(path in reviewed)),
+    mismatched: Object.keys(present).filter(
+      (path) => path in reviewed && sorted(present[path] ?? []) !== sorted(reviewed[path] ?? []),
+    ),
+    stale: Object.keys(reviewed).filter((path) => !(path in present)),
+  };
+}
+
+const report = inventoryReport(
+  Object.fromEntries(actionModules.map((path) => [path, exportsOf(path)])),
+  REVIEWED_ACTIONS,
+);
+
 describe("Server Actions inventory", () => {
   it("has no unreviewed use-server module", () => {
-    expect(actionModules).toEqual(Object.keys(REVIEWED_ACTIONS).sort());
+    expect(report.unreviewed).toEqual([]);
   });
 
-  it.each(Object.entries(REVIEWED_ACTIONS))("%s exports only its reviewed actions", (path, reviewed) => {
-    expect(exportsOf(path)).toEqual([...reviewed].sort());
+  it("has each reviewed module export only its reviewed actions", () => {
+    expect(report.mismatched).toEqual([]);
+  });
+
+  // The release check: `RELEASE=1 npx vitest run src/config/server-actions.test.ts` must show stale = 0.
+  it.skipIf(process.env.RELEASE !== "1")(
+    `has no stale entry at release (stale = ${report.stale.length}${report.stale.length > 0 ? `: ${report.stale.join(", ")}` : ""})`,
+    () => {
+      expect(report.stale).toEqual([]);
+    },
+  );
+});
+
+describe("the inventory rule (spec 006 D12), on a fixture tree", () => {
+  const reviewed: Actions = { "kept.ts": ["one"], "gone.ts": ["two"] };
+
+  it("reports a listed file that no longer exists, and passes", () => {
+    expect(inventoryReport({ "kept.ts": ["one"] }, reviewed)).toEqual({
+      unreviewed: [],
+      mismatched: [],
+      stale: ["gone.ts"],
+    });
+  });
+
+  it("fails a present export that is not listed", () => {
+    expect(inventoryReport({ "kept.ts": ["one", "extra"] }, reviewed).mismatched).toEqual(["kept.ts"]);
+  });
+
+  it("fails a renamed export", () => {
+    expect(inventoryReport({ "kept.ts": ["uno"] }, reviewed).mismatched).toEqual(["kept.ts"]);
+  });
+
+  it("fails a use-server module nobody reviewed", () => {
+    expect(inventoryReport({ "kept.ts": ["one"], "new.ts": ["three"] }, reviewed).unreviewed).toEqual(["new.ts"]);
   });
 });
