@@ -89,7 +89,8 @@ BASE_URL=https://admin-os.example.com npm run probe:consistency -- web
 BASE_URL=https://admin-os.example.com MCP_URL=https://mcp.admin-os.example.com/mcp npm run probe:consistency -- consent
 ```
 
-- The web probe should report that every read saw the write (12 of 12 by default).
+- The web probe changes the business trade name on the Settings page and should report that every read saw it (12 of
+  12 by default).
 - The consent probe confirms that both Workers sign with the same secret. It registers one OAuth client per run.
 - The MCP endpoint should answer `401` with a `WWW-Authenticate` header that names its resource metadata.
 

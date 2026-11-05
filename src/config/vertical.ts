@@ -27,6 +27,11 @@ export interface VerticalPreset {
   readonly settingsDefaults: Readonly<Record<string, unknown>>;
   /** Words that must never appear in the generic layers (ADR 0008). */
   readonly leakTerms: readonly string[];
+  /**
+   * Ids in this preset's seed that the contract tests reach for, by module (ADR 0017 §7): like `leakTerms`, test data
+   * the preset owns, so a removed module takes its line with it and no module knows a preset.
+   */
+  readonly contractIds: { readonly [M in InstalledModuleId]?: Readonly<Record<string, string | number>> };
 }
 
 export const VERTICALS = { hospitality, salon, workshop } as const satisfies Record<string, VerticalPreset>;

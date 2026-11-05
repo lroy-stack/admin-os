@@ -1,9 +1,10 @@
 /**
- * Agent evals for the MCP server (spec 004, AC11; plan E1): each golden task in `evals/mcp/golden.json` runs N times
- * through a real Claude client, headless Claude Code (`claude -p`), against the MCP Worker under `wrangler dev`. A
- * trial is graded from its transcript's tool calls and results and from follow-up MCP reads of the state it left,
- * never from what the model says. Results go to `evals/mcp/results/` (gitignored). On demand, not in CI: a run spends
- * the Claude usage of whoever runs it.
+ * Agent evals for the MCP server (spec 004, AC11; plan E1): each golden task (one file per module in
+ * `evals/mcp/tasks/`, plus the kernel's in `evals/mcp/golden.json`) runs N times through a real Claude client,
+ * headless Claude Code (`claude -p`), against the MCP Worker under `wrangler dev`. A trial is graded from its
+ * transcript's tool calls and results and from follow-up MCP reads of the state it left, never from what the model
+ * says. Results go to `evals/mcp/results/` (gitignored). On demand, not in CI: a run spends the Claude usage of
+ * whoever runs it.
  *
  * It starts nothing. Before `npm run eval:mcp`, build once (`npx opennextjs-cloudflare build`), then run these three
  * processes, each in its own terminal (docs/guides/mcp.md, "Agent evals"):
@@ -20,13 +21,13 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { z } from "zod";
 
+import { loadGolden } from "./eval-mcp-golden";
 import {
   EVAL_NAME_PREFIX,
   type EvalConfig,
   formatSummary,
   type GoldenSet,
   type GoldenTask,
-  goldenSchema,
   gradeTrial,
   needsFreshSession,
   type Outcome,
@@ -52,7 +53,6 @@ import { join, relative } from "node:path";
 import { promisify } from "node:util";
 
 const ROOT = join(import.meta.dirname, "..");
-const GOLDEN_PATH = join(ROOT, "evals/mcp/golden.json");
 const RESULTS_DIR = join(ROOT, "evals/mcp/results");
 const REQUEST_TIMEOUT_MS = 30_000;
 const STDERR_TAIL_CHARS = 2_000;
@@ -291,7 +291,7 @@ function regradedTrials(golden: GoldenSet, previous: z.infer<typeof previousRunS
 async function main(): Promise<number> {
   const config = parseEvalConfig(process.env);
   const { regrade } = parseEvalArgs(process.argv.slice(2));
-  const golden = goldenSchema.parse(JSON.parse(await readFile(GOLDEN_PATH, "utf8")));
+  const golden = loadGolden(ROOT);
   const previous =
     regrade === undefined ? undefined : previousRunSchema.parse(JSON.parse(await readFile(regrade, "utf8")));
   const tasks = selectTasks(golden, previous === undefined ? config.tasks : previous.trials.map((t) => t.taskId));

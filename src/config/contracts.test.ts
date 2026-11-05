@@ -254,6 +254,12 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
     });
   });
 
+  it("names contract ids only for its enabled modules, so a removed module names the preset line to edit", () => {
+    expect(
+      Object.keys(preset.contractIds).filter((module) => !(preset.modules as readonly string[]).includes(module)),
+    ).toEqual([]);
+  });
+
   describe("registries", () => {
     const entries = preset.nav.map((entry) => [entry.id, entry] as const);
 

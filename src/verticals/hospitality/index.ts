@@ -76,4 +76,10 @@ export const hospitality = {
   ],
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["diner", "dining", "covers", "waiter", "allergen", "dish", "restaurant", "mesa", "comensal", "carta"],
+  // A confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, the first customer and party.
+  contractIds: {
+    bookings: { lateConfirmed: "R-1046", free: "S8", freeAt: 22 * 60 },
+    customers: { customer: "C-iglesias" },
+    parties: { party: "servicios-levante" },
+  },
 } as const;

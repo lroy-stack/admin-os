@@ -109,7 +109,8 @@ grant's scopes over HTTP: `read` by default, `read write` for the role's writes 
 
 ## Agent evals
 
-`npm run eval:mcp` runs the golden tasks in [`evals/mcp/golden.json`](../../evals/mcp/golden.json) through headless
+`npm run eval:mcp` runs the golden tasks, one file per module in [`evals/mcp/tasks/`](../../evals/mcp/tasks) (the kernel's own, if any, in
+[`evals/mcp/golden.json`](../../evals/mcp/golden.json)), through headless
 Claude Code (`EVAL_MODEL`, default `sonnet`). It grades each trial from its tool results and a follow-up read of the
 state, and writes pass rates and cost to `evals/mcp/results/`.
 

@@ -109,6 +109,9 @@ export const bookingsModule = defineModule({
     { collection: "bookings", field: "resourceIds[]", module: "resources", required: true },
   ],
   owns: [
+    "evals/mcp/tasks/bookings.json",
+    "evals/mcp/fixtures/bookings",
+    "scripts/eval-mcp.bookings.test.ts",
     "src/app/(main)/dashboard/bookings",
     "src/config/approvals.bookings.test.ts",
     "src/config/bookings.test.ts",

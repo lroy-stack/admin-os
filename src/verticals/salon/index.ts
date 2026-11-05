@@ -66,4 +66,10 @@ export const salon = {
   ],
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["stylist", "haircut"],
+  // A confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, the first customer and party.
+  contractIds: {
+    bookings: { lateConfirmed: "A-201", free: "chair-3", freeAt: 15 * 60 },
+    customers: { customer: "client-nora" },
+    parties: { party: "hotel-spa" },
+  },
 } as const;

@@ -17,7 +17,7 @@ import { hospitalityClock, hospitalitySeed } from "@/verticals/hospitality/serve
 import { salonClock, salonSeed } from "@/verticals/salon/server";
 import { workshopClock, workshopSeed } from "@/verticals/workshop/server";
 
-import { inputBeforeCall, sessionWithout } from "./adapter-contract.testkit";
+import { idOf, inputBeforeCall, minuteOf, sessionWithout } from "./adapter-contract.testkit";
 import { CATALOG } from "./catalog";
 import { MOCK_HANDLERS, settingsFor } from "./data.server";
 import { MODULES } from "./modules.generated";
@@ -30,19 +30,18 @@ const DAY = "2026-10-31";
 const SEEDS = { hospitality: hospitalitySeed, salon: salonSeed, workshop: workshopSeed } as const;
 const CLOCKS = { hospitality: hospitalityClock, salon: salonClock, workshop: workshopClock } as const;
 
-/** What each preset's seeded day offers, so one set of tests runs on all three. */
-const presets = [
+/**
+ * What each preset's seeded day offers, so one set of tests runs on all three. The ids the adapter contract also uses
+ * (a late confirmed booking, a resource free at `freeAt`, a customer) come from the preset's `contractIds`.
+ */
+const presetDays = [
   {
     vertical: "hospitality",
     stay: 90,
-    free: "S8",
-    freeAt: 22 * 60,
     tooSmall: { resourceId: "S2", partySize: 3 },
     busy: { resourceId: "S2", at: 19 * 60 + 30 },
     offGrid: 19 * 60 + 10,
     outside: 18 * 60,
-    customerId: "C-iglesias",
-    lateConfirmed: "R-1046",
     slotCount: 20,
     beforeService: 12 * 60,
     passed: 20 * 60,
@@ -52,14 +51,10 @@ const presets = [
   {
     vertical: "salon",
     stay: 45,
-    free: "chair-3",
-    freeAt: 15 * 60,
     tooSmall: { resourceId: "chair-3", partySize: 2 },
     busy: { resourceId: "chair-1", at: 10 * 60 + 30 },
     offGrid: 15 * 60 + 5,
     outside: 8 * 60,
-    customerId: "client-nora",
-    lateConfirmed: "A-201",
     slotCount: 36,
     beforeService: 8 * 60,
     passed: 10 * 60,
@@ -69,21 +64,29 @@ const presets = [
   {
     vertical: "workshop",
     stay: 90,
-    free: "bay-1",
-    freeAt: 15 * 60,
     tooSmall: { resourceId: "bay-1", partySize: 2 },
     busy: { resourceId: "bay-1", at: 8 * 60 + 30 },
     offGrid: 15 * 60 + 15,
     outside: 7 * 60,
-    customerId: "cust-carmen",
-    lateConfirmed: "W-301",
     slotCount: 20,
     beforeService: 7 * 60,
     passed: 9 * 60,
     firstAhead: 9 * 60 + 30,
     aheadCount: 17,
   },
-].map((preset) => [preset.vertical as VerticalId, preset] as const);
+];
+
+const presets = presetDays.map((day) => {
+  const vertical = day.vertical as VerticalId;
+  const preset = {
+    ...day,
+    free: idOf(vertical, "bookings", "free"),
+    freeAt: minuteOf(vertical, "bookings", "freeAt"),
+    customerId: idOf(vertical, "customers", "customer"),
+    lateConfirmed: idOf(vertical, "bookings", "lateConfirmed"),
+  };
+  return [vertical, preset] as const;
+});
 
 const ownerPermissions = (vertical: VerticalId) =>
   permissionsOf(DEFAULT_ROLES[0], CATALOG, VERTICALS[vertical].modules);

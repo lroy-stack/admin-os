@@ -72,4 +72,10 @@ export const workshop = {
     { id: "orders", kind: "inventory.orders", labelKey: "inventory.views.orders", params: {} },
   ],
   leakTerms: ["vehicle", "mechanic"],
+  // A confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, the first customer and party.
+  contractIds: {
+    bookings: { lateConfirmed: "W-301", free: "bay-1", freeAt: 15 * 60 },
+    customers: { customer: "cust-carmen" },
+    parties: { party: "fleet-company" },
+  },
 } as const;

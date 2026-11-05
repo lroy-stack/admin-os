@@ -13,29 +13,37 @@ const verticalIds = Object.keys(VERTICALS) as VerticalId[];
 const capabilityIds = Object.keys(CATALOG);
 const quiet = { retryDelayMs: 0, logger: () => undefined } as const;
 
-const firstCustomer = { hospitality: "C-iglesias", salon: "client-nora", workshop: "cust-carmen" } as const;
-const firstParty = { hospitality: "servicios-levante", salon: "hotel-spa", workshop: "fleet-company" } as const;
+/** A seed id the preset names for a module's contract cases (`contractIds`); a missing one fails, naming the line to add. */
+const contractValueOf = (vertical: VerticalId, module: string, key: string): string | number => {
+  const ids: Readonly<Record<string, Readonly<Record<string, string | number>> | undefined>> =
+    VERTICALS[vertical].contractIds;
+  const value = ids[module]?.[key];
+  if (value === undefined) throw new Error(`The ${vertical} preset names no contract id ${module}.${key}`);
+  return value;
+};
 
-/** Per preset: a confirmed booking that counts as late on the seeded clock, a resource free at `freeAt`, a bookable slot. */
-const bookable = {
-  hospitality: { booking: "R-1046", resource: "S8", startMin: 22 * 60 },
-  salon: { booking: "A-201", resource: "chair-3", startMin: 15 * 60 },
-  workshop: { booking: "W-301", resource: "bay-1", startMin: 15 * 60 },
-} as const;
+export const idOf = (vertical: VerticalId, module: string, key: string): string =>
+  String(contractValueOf(vertical, module, key));
+export const minuteOf = (vertical: VerticalId, module: string, key: string): number =>
+  Number(contractValueOf(vertical, module, key));
 
 /** The smallest valid input of each capability that needs one; the rest accept `{}`. */
 export const inputFor = (id: string, vertical: VerticalId): Record<string, unknown> => {
-  const customer = { id: firstCustomer[vertical] };
-  const { booking, resource, startMin } = bookable[vertical];
-  const inputs: Record<string, Record<string, unknown>> = {
+  // Read on demand, so a capability's input needs only its own module's ids.
+  const customer = () => ({ id: idOf(vertical, "customers", "customer") });
+  const party = () => idOf(vertical, "parties", "party");
+  const booking = () => idOf(vertical, "bookings", "lateConfirmed");
+  const resource = () => idOf(vertical, "bookings", "free");
+  const startMin = () => minuteOf(vertical, "bookings", "freeAt");
+  const inputs: Record<string, () => Record<string, unknown>> = {
     "customers.get": customer,
-    "customers.search": { text: "ab" },
-    "parties.get": { id: firstParty[vertical] },
-    "approvals.get": { approvalId: "held" },
-    "approvals.approve": { approvalId: "held" },
-    "approvals.reject": { approvalId: "held" },
-    "approvals.policy.set": { policy: "none" },
-    "settings.values.update": {
+    "customers.search": () => ({ text: "ab" }),
+    "parties.get": () => ({ id: party() }),
+    "approvals.get": () => ({ approvalId: "held" }),
+    "approvals.approve": () => ({ approvalId: "held" }),
+    "approvals.reject": () => ({ approvalId: "held" }),
+    "approvals.policy.set": () => ({ policy: "none" }),
+    "settings.values.update": () => ({
       values: {
         "business.invoicing": {
           defaultTax: "vat",
@@ -43,12 +51,12 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
           paymentTermsDays: 45,
         },
       },
-    },
-    "bookings.get": { id: booking },
+    }),
+    "bookings.get": () => ({ id: booking() }),
     // `bookings.search` by text and `bookings.create` by customer id read the customers collection (ADR 0017 §3).
-    "bookings.search": { text: "a" },
-    "customers.create": { name: "Contract Test", phone: "+34611111111" },
-    "parties.create": {
+    "bookings.search": () => ({ text: "a" }),
+    "customers.create": () => ({ name: "Contract Test", phone: "+34611111111" }),
+    "parties.create": () => ({
       kind: "company",
       legalName: "Contract Test S.L.",
       taxId: "B00000990",
@@ -56,33 +64,33 @@ export const inputFor = (id: string, vertical: VerticalId): Record<string, unkno
       countryCode: "ES",
       email: "contract@demo.example",
       roles: ["client"],
-    },
-    "parties.update": { id: firstParty[vertical], email: "contract@demo.example" },
-    "customers.contact.update": { ...customer, name: "Contract Test" },
-    "customers.notes.add": { ...customer, text: "Called back" },
-    "customers.block": { ...customer, reason: "No-show twice" },
+    }),
+    "parties.update": () => ({ id: party(), email: "contract@demo.example" }),
+    "customers.contact.update": () => ({ ...customer(), name: "Contract Test" }),
+    "customers.notes.add": () => ({ ...customer(), text: "Called back" }),
+    "customers.block": () => ({ ...customer(), reason: "No-show twice" }),
     "customers.unblock": customer,
-    "notifications.read": { ids: [`booking.late:${booking}`] },
-    "bookings.availability.get": { businessDay: "2026-10-31", partySize: 2 },
-    "bookings.create": {
+    "notifications.read": () => ({ ids: [`booking.late:${booking()}`] }),
+    "bookings.availability.get": () => ({ businessDay: "2026-10-31", partySize: 2 }),
+    "bookings.create": () => ({
       businessDay: "2026-10-31",
-      startMin,
+      startMin: startMin(),
       partySize: 1,
-      resourceIds: [resource],
-      customerId: customer.id,
+      resourceIds: [resource()],
+      customerId: customer().id,
       channel: "phone",
-    },
-    "bookings.reschedule": { id: booking, partySize: 1 },
-    "bookings.table.assign": { id: booking, resourceIds: [resource] },
-    "bookings.staff_note.add": { id: booking, text: "Checked" },
-    "bookings.status.advance": { id: booking, to: "in_progress" },
-    "bookings.status.undo": { id: booking },
-    "bookings.cancel": { id: booking, reason: "Guest called" },
-    "bookings.no_show.mark": { id: booking },
-    "bookings.walk_in.seat": { partySize: 1, resourceIds: [resource] },
-    "bookings.walk_in.undo": { id: "bk-undo" },
+    }),
+    "bookings.reschedule": () => ({ id: booking(), partySize: 1 }),
+    "bookings.table.assign": () => ({ id: booking(), resourceIds: [resource()] }),
+    "bookings.staff_note.add": () => ({ id: booking(), text: "Checked" }),
+    "bookings.status.advance": () => ({ id: booking(), to: "in_progress" }),
+    "bookings.status.undo": () => ({ id: booking() }),
+    "bookings.cancel": () => ({ id: booking(), reason: "Guest called" }),
+    "bookings.no_show.mark": () => ({ id: booking() }),
+    "bookings.walk_in.seat": () => ({ partySize: 1, resourceIds: [resource()] }),
+    "bookings.walk_in.undo": () => ({ id: "bk-undo" }),
   };
-  return inputs[id] ?? {};
+  return inputs[id]?.() ?? {};
 };
 
 /** Undo needs a walk-in seated a moment ago, so the contract test seats one in the same session first. */
