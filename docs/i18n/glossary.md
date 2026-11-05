@@ -66,6 +66,8 @@ German statuses are participles without gender in these positions and need no ru
 | Reservations | Reservations | Reservas | Reservierungen | Réservations | See booking |
 | Customers (the list) | Customers | Clientes | Kunden | Clients | |
 | Products | Products | Productos | Produkte | Produits | |
+| Shop (a product view) | Shop | Tienda | Shop | Boutique | Goods sold over the counter; a preset may rename it |
+| Parts (a product view) | Parts | Piezas | Teile | Pièces | Spare parts a business sells and fits |
 | Finance | Finance | Finanzas | Finanzen | Finance | |
 | Growth (analytics) | Growth | Crecimiento | Wachstum | Croissance | Nav label of the analytics screen |
 | Projects | Projects | Proyectos | Projekte | Projets | |

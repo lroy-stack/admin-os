@@ -51,6 +51,10 @@ export const salon = {
     "bookings.walk_in.stay_minutes": 45,
     "bookings.service_window": { startMin: 9 * 60, endMin: 18 * 60 },
   },
+  /** The product views it offers, in order (ADR 0018 §3): the shop; stock joins with `inventory`. */
+  productViews: [
+    { id: "shop", kind: "catalog.collection", labelKey: "catalog.collections.shop", params: { categoryIds: ["shop"] } },
+  ],
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["stylist", "haircut"],
 } as const;

@@ -56,6 +56,16 @@ export const hospitality = {
     staff: staffExtSchema,
   },
   settingsDefaults: { ...hospitalityBusiness },
+  /** The product views it offers, in order (ADR 0018 §3): the menu and the shop. */
+  productViews: [
+    {
+      id: "menu",
+      kind: "catalog.collection",
+      labelKey: "catalog.title",
+      params: { categoryIds: ["starters", "mains", "desserts", "menus"] },
+    },
+    { id: "shop", kind: "catalog.collection", labelKey: "catalog.collections.shop", params: { categoryIds: ["shop"] } },
+  ],
   /** Words that must never appear in the generic layers (ADR 0008). */
   leakTerms: ["diner", "dining", "covers", "waiter", "allergen", "dish", "restaurant", "mesa", "comensal", "carta"],
 } as const;

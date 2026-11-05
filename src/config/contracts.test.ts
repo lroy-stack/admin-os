@@ -217,6 +217,40 @@ describe.each(presets)("$id preset", ({ preset, seed, vocabulary }) => {
     });
   });
 
+  describe("product views (ADR 0018 §3)", () => {
+    const kinds = new Map(MODULES.flatMap(({ views }) => (views ?? []).map((kind) => [kind.id, kind] as const)));
+    const views = preset.productViews.map((view) => [view.id, view] as const);
+    const seededCategories = (seed.catalog ?? []).map((item) => (item as { categoryId: string }).categoryId);
+    const labels = views.flatMap(([id, view]) => LOCALES.map((locale) => [id, locale, view.labelKey] as const));
+    const categories = preset.productViews.flatMap((view) =>
+      view.kind === "catalog.collection"
+        ? (view.params as { categoryIds: readonly string[] }).categoryIds.map(
+            (category) => [view.id, category] as const,
+          )
+        : [],
+    );
+
+    it("has unique view ids", () => {
+      expect(duplicates(preset.productViews.map(({ id }) => id))).toEqual([]);
+    });
+
+    it.each(views)("%s names a declared kind of a module the preset enables", (_id, view) => {
+      expect(enabled).toContain(kinds.get(view.kind)?.module);
+    });
+
+    it.each(views)("%s gives parameters its kind accepts", (_id, view) => {
+      expect(kinds.get(view.kind)?.params.safeParse(view.params).error).toBeUndefined();
+    });
+
+    it.each(labels)("%s has a label in %s", (_id, locale, key) => {
+      expect(typeof (vocabulary[key]?.[locale] ?? knownMessages[locale].get(key))).toBe("string");
+    });
+
+    it.each(categories)("%s lists category %s, which the seed's catalog holds", (_id, category) => {
+      expect(seededCategories).toContain(category);
+    });
+  });
+
   describe("registries", () => {
     const entries = preset.nav.map((entry) => [entry.id, entry] as const);
 
