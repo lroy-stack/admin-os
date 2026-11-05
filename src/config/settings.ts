@@ -1,13 +1,15 @@
 import { approvalsSettings } from "@/core/approvals";
 import { businessSettings } from "@/core/business";
 import { mergeSettings } from "@/core/settings";
-import { bookingsSettings } from "@/modules/bookings";
-import { notificationsSettings } from "@/modules/notifications";
 
-/** Every setting the kit ships; a preset overrides defaults through `settingsDefaults` (ADR 0004). */
+import { MODULES } from "./modules.generated";
+
+/**
+ * Every setting the kit ships: the kernel's, then the installed modules' in id order (ADR 0017 §5). A preset overrides
+ * defaults through `settingsDefaults` (ADR 0004).
+ */
 export const SETTINGS = mergeSettings(
   ...approvalsSettings,
   ...businessSettings,
-  ...bookingsSettings,
-  ...notificationsSettings,
+  ...MODULES.flatMap(({ settings }) => settings),
 );

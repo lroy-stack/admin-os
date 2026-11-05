@@ -231,6 +231,21 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
 
   it.each([
     [
+      "a module named like the kernel's messages namespace",
+      installed({ ...other, id: "nav", capabilities: {}, mcp: { tools: {} } }),
+      'src/modules/nav: "nav" is a kernel namespace; rename the module',
+    ],
+    [
+      "a module named like the kernel's settings namespace",
+      installed({ ...other, id: "business", capabilities: {}, mcp: { tools: {} } }),
+      'src/modules/business: "business" is a kernel namespace; rename the module',
+    ],
+    [
+      "a module named like a kernel capability prefix",
+      installed({ ...other, id: "access", capabilities: {}, mcp: { tools: {} } }),
+      'src/modules/access: "access" is a kernel namespace; rename the module',
+    ],
+    [
       "an id that differs from its folder",
       [{ folder: "plants", manifest: planted }, ...installed(other)],
       'src/modules/plants: the manifest\'s id is "planted"; set it to "plants"',

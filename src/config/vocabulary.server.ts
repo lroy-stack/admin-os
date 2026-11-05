@@ -4,29 +4,22 @@ import { accessMessages } from "@/core/access/server";
 import { approvalsMessages } from "@/core/approvals/server";
 import { flattenMessages, type Locale, type Message, type Vocabulary } from "@/core/i18n";
 import { navigationMessages } from "@/core/nav/server";
-import { bookingsMessages } from "@/modules/bookings/server";
-import { catalogMessages } from "@/modules/catalog/server";
-import { customersMessages } from "@/modules/customers/server";
-import { notificationsMessages } from "@/modules/notifications/server";
-import { resourcesMessages } from "@/modules/resources/server";
-import { staffMessages } from "@/modules/staff/server";
 import { hospitalityVocabulary } from "@/verticals/hospitality/server";
 import { salonVocabulary } from "@/verticals/salon/server";
 import { workshopVocabulary } from "@/verticals/workshop/server";
 
+import { MODULE_SERVERS } from "./modules.server.generated";
 import type { VerticalId } from "./vertical";
 
-/** The default messages of each module and of the kernel (`access`, `nav`), keyed by the first segment of a message key. */
+/**
+ * The default messages of the kernel (`access`, `approvals`, `nav`) and of each installed module, keyed by the first
+ * segment of a message key (ADR 0017 §5).
+ */
 export const MODULE_MESSAGES: Readonly<Record<string, Readonly<Record<Locale, unknown>>>> = {
   access: accessMessages,
   approvals: approvalsMessages,
   nav: navigationMessages,
-  bookings: bookingsMessages,
-  catalog: catalogMessages,
-  customers: customersMessages,
-  notifications: notificationsMessages,
-  resources: resourcesMessages,
-  staff: staffMessages,
+  ...Object.fromEntries(MODULE_SERVERS.map(({ id, messages }) => [id, messages])),
 };
 
 const VOCABULARIES = {

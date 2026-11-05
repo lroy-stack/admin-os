@@ -2,7 +2,14 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { compositionProblems } from "@/core/module";
 
-import { type Generated, generate, MODULES_PATH, manifestExportOf, ROOT } from "./generate-modules";
+import {
+  type Generated,
+  generate,
+  MODULE_SERVERS_PATH,
+  MODULES_PATH,
+  manifestExportOf,
+  ROOT,
+} from "./generate-modules";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -29,11 +36,10 @@ describe("the generated module list (ADR 0017 §5)", () => {
     expect(generated.problems).toEqual([]);
   });
 
-  it(`${MODULES_PATH} matches the module folders`, () => {
-    expect(
-      readFileSync(join(ROOT, MODULES_PATH), "utf8"),
-      `${MODULES_PATH} is stale: run npm run generate:modules`,
-    ).toBe(generated.text);
+  it.each([MODULES_PATH, MODULE_SERVERS_PATH])("%s matches the module folders", (path) => {
+    expect(readFileSync(join(ROOT, path), "utf8"), `${path} is stale: run npm run generate:modules`).toBe(
+      generated.files?.[path],
+    );
   });
 
   it("requires what the import graph shows (ADR 0017's first test, against census C0)", () => {

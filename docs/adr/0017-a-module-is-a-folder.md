@@ -201,8 +201,8 @@ is static.
   - a module requires an absent one ("notifications requires bookings; restore `src/modules/bookings` or remove
     notifications");
   - a required reference has no target;
-  - a folder has no manifest;
-  - an `id` differs from its folder;
+  - a folder has no manifest, or no server half (`server.ts`);
+  - an `id` differs from its folder, or names a kernel namespace (a kernel capability prefix, `nav` or `business`);
   - an owned path is missing.
 
 ### 6. Installed and enabled stay apart

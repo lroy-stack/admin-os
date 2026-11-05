@@ -3,25 +3,19 @@ import { approvalsCapabilities } from "@/core/approvals";
 import { mergeCatalogs } from "@/core/capability";
 import { clockCapabilities } from "@/core/clock";
 import { settingsCapabilities } from "@/core/settings";
-import { bookingsCapabilities } from "@/modules/bookings";
-import { catalogCapabilities } from "@/modules/catalog";
-import { customersCapabilities } from "@/modules/customers";
-import { notificationsCapabilities } from "@/modules/notifications";
-import { resourcesCapabilities } from "@/modules/resources";
-import { staffCapabilities } from "@/modules/staff";
 
-/** The catalogues the kit merges, kept with their literal ids and effects (`mergeCatalogs` returns a wide `Catalog`). */
+import { MODULES } from "./modules.generated";
+
+/**
+ * The catalogues the kit merges, kept with their literal ids and effects (`mergeCatalogs` returns a wide `Catalog`):
+ * the kernel's first, then the installed modules' in id order (ADR 0017 §5).
+ */
 export const SOURCE_CATALOGS = [
   accessCapabilities,
   approvalsCapabilities,
   clockCapabilities,
   settingsCapabilities,
-  bookingsCapabilities,
-  catalogCapabilities,
-  customersCapabilities,
-  notificationsCapabilities,
-  resourcesCapabilities,
-  staffCapabilities,
+  ...MODULES.map(({ capabilities }) => capabilities),
 ] as const;
 
 /** Every capability the kit ships. A preset enables a subset of its modules; kernel modules are always on (ADR 0004). */

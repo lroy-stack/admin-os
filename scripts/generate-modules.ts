@@ -1,9 +1,11 @@
 /**
- * Writes the composition root's module list (ADR 0017 §5) from the folders of `src/modules`:
- * `src/config/modules.generated.ts`, with static imports in id order, the import graph between modules and the
- * extension entities of their seeds, formatted by Biome like the files lint-staged checks. Run it with
- * `npm run generate:modules` after adding, removing or re-wiring a module; `scripts/generate-modules.test.ts` fails
- * while the file is stale. It exits 1, naming the module and the fix, when the folders cannot be composed.
+ * Writes the composition root's module lists (ADR 0017 §5) from the folders of `src/modules`, with static imports in
+ * id order, formatted by Biome like the files lint-staged checks:
+ * - `src/config/modules.generated.ts`: the manifests, the import graph between modules and the extension entities of
+ *   their seeds;
+ * - `src/config/modules.server.generated.ts`: the server halves (messages and mock answers), server-only.
+ * Run it with `npm run generate:modules` after adding, removing or re-wiring a module; `scripts/generate-modules.test.ts`
+ * fails while either file is stale. It exits 1, naming the module and the fix, when the folders cannot be composed.
  */
 
 import {
@@ -26,15 +28,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 export const MODULES_PATH = "src/config/modules.generated.ts";
+export const MODULE_SERVERS_PATH = "src/config/modules.server.generated.ts";
 
 const HEADER =
   "// Written by `npm run generate:modules` from the folders of src/modules; do not edit. A test fails when it is stale (ADR 0017 §5).";
 
-/** What `generate` found: the problems that refuse the composition, or the file's text when there are none. */
+/** What `generate` found: the problems that refuse the composition, or the files' text when there are none. */
 export interface Generated {
   readonly problems: readonly string[];
-  /** The file as `npm run generate:modules` writes it; absent while there are problems. */
-  readonly text?: string;
+  /** Each file, by path, as `npm run generate:modules` writes it; absent while there are problems. */
+  readonly files?: Readonly<Record<string, string>>;
   readonly modules: readonly InstalledModule[];
   readonly edges: readonly ModuleEdge[];
   /** What each module requires, whether or not it is installed. */
@@ -72,7 +75,16 @@ async function loadManifest(root: string, folder: string): Promise<Loaded> {
       pathToFileURL(join(root, "src/modules", folder, "index.ts")).href
     );
     const manifest = entry[name] as ModuleManifest | undefined;
-    return manifest === undefined ? { folder, problem: refusal } : { folder, manifest };
+    if (manifest === undefined) return { folder, problem: refusal };
+    // `server.ts` is server-only, so it is not imported here: a missing export fails `tsc` in the generated list.
+    if (!existsSync(join(root, "src/modules", folder, "server.ts"))) {
+      const server = `${name}Server`;
+      return {
+        folder,
+        problem: `src/modules/${folder} has no server half: export ${server} = { id: ${name}.id, messages, mockHandlers } satisfies ModuleServer<typeof ${name}.id> from its server.ts`,
+      };
+    }
+    return { folder, manifest };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { folder, problem: `${refusal}; it failed to load: ${reason}` };
@@ -122,7 +134,25 @@ const extensionEntities = (modules: readonly InstalledModule[]): string[] =>
     ),
   ].sort(byCode);
 
-/** The file before Biome formats it. */
+/** The server halves' list before Biome formats it; `satisfies` pins each half to its manifest's id, in order. */
+function renderServers(modules: readonly InstalledModule[]): string {
+  const names = modules.map(({ folder }) => [folder, `${manifestExportOf(folder)}Server`] as const);
+  return [
+    HEADER,
+    'import "server-only";',
+    "",
+    'import type { ServersOf } from "@/core/module";',
+    ...names.map(([folder, name]) => `import { ${name} } from "@/modules/${folder}/server";`),
+    "",
+    'import type { MODULES } from "./modules.generated";',
+    "",
+    "/** The server halves of the installed modules, in the order of `MODULES`: their messages and mock answers. */",
+    `export const MODULE_SERVERS = [${names.map(([, name]) => name).join(", ")}] as const satisfies ServersOf<typeof MODULES>;`,
+    "",
+  ].join("\n");
+}
+
+/** The module list before Biome formats it. */
 function render(modules: readonly InstalledModule[], graph: Readonly<Record<string, readonly string[]>>): string {
   const names = modules.map(({ folder }) => [folder, manifestExportOf(folder)] as const);
   const entities = extensionEntities(modules);
@@ -157,7 +187,7 @@ function formatted(root: string, path: string, text: string): string {
   });
 }
 
-/** Cruises the module folders, loads their manifests and checks them together; the file's text when nothing refuses. */
+/** Cruises the module folders, loads their manifests and checks them together; each file's text when nothing refuses. */
 export async function generate(root: string = ROOT): Promise<Generated> {
   const folders = moduleFolders(root);
   const loaded = await Promise.all(folders.map((folder) => loadManifest(root, folder)));
@@ -176,7 +206,14 @@ export async function generate(root: string = ROOT): Promise<Generated> {
   const problems = compositionProblems(modules, edges, (path) => existsSync(join(root, path)), unloaded);
   return {
     problems,
-    ...(problems.length === 0 ? { text: formatted(root, MODULES_PATH, render(modules, graph)) } : {}),
+    ...(problems.length === 0
+      ? {
+          files: {
+            [MODULES_PATH]: formatted(root, MODULES_PATH, render(modules, graph)),
+            [MODULE_SERVERS_PATH]: formatted(root, MODULE_SERVERS_PATH, renderServers(modules)),
+          },
+        }
+      : {}),
     modules,
     edges,
     graph,
@@ -184,17 +221,19 @@ export async function generate(root: string = ROOT): Promise<Generated> {
 }
 
 async function main(): Promise<void> {
-  const { problems, text } = await generate();
-  if (text === undefined) {
+  const { problems, files } = await generate();
+  if (files === undefined) {
     process.stderr.write(`${problems.join("\n")}\n`);
     process.exit(1);
   }
-  const target = join(ROOT, MODULES_PATH);
-  if (existsSync(target) && readFileSync(target, "utf8") === text) {
-    process.stderr.write(`No changes in ${MODULES_PATH}\n`);
-  } else {
-    writeFileSync(target, text);
-    process.stderr.write(`Wrote ${MODULES_PATH}\n`);
+  for (const [path, text] of Object.entries(files)) {
+    const target = join(ROOT, path);
+    if (existsSync(target) && readFileSync(target, "utf8") === text) {
+      process.stderr.write(`No changes in ${path}\n`);
+    } else {
+      writeFileSync(target, text);
+      process.stderr.write(`Wrote ${path}\n`);
+    }
   }
 }
 

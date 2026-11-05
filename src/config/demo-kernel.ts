@@ -4,17 +4,12 @@ import { permissionsOf } from "@/core/access";
 import type { ClockSeed } from "@/core/clock";
 import { type HeldWrites, kernelMockHandlers, type MockHandler } from "@/core/mock";
 import { createSettingsReader, type SettingsReader } from "@/core/settings";
-import { bookingsMockHandlers } from "@/modules/bookings/server";
-import { catalogMockHandlers } from "@/modules/catalog/server";
-import { customersMockHandlers } from "@/modules/customers/server";
-import { notificationsMockHandlers } from "@/modules/notifications/server";
-import { resourcesMockHandlers } from "@/modules/resources/server";
-import { staffMockHandlers } from "@/modules/staff/server";
 import { hospitalityClock, hospitalitySeed } from "@/verticals/hospitality/server";
 import { salonClock, salonSeed } from "@/verticals/salon/server";
 import { workshopClock, workshopSeed } from "@/verticals/workshop/server";
 
 import { CATALOG } from "./catalog";
+import { MODULE_SERVERS } from "./modules.server.generated";
 import { SETTINGS } from "./settings";
 import { VERTICALS, type VerticalId } from "./vertical";
 
@@ -41,13 +36,15 @@ export const DEMO = {
 
 export type DemoSeed = (typeof DEMO)[VerticalId]["seed"];
 
+/**
+ * Each installed module's mock answers, typed against every preset's seed: a handler that reads a collection or a
+ * field no seed has does not compile (the annotation is the check, so no cast belongs here).
+ */
+const moduleHandlers: readonly Readonly<Record<string, MockHandler<DemoSeed>>>[] = MODULE_SERVERS.map(
+  ({ mockHandlers }) => mockHandlers,
+);
+
 /** Every capability's mock answer; a contract test checks that the catalogue has no capability without one. */
-export const MOCK_HANDLERS: Readonly<Record<string, MockHandler<DemoSeed>>> = {
-  ...kernelMockHandlers,
-  ...bookingsMockHandlers,
-  ...catalogMockHandlers,
-  ...customersMockHandlers,
-  ...notificationsMockHandlers,
-  ...resourcesMockHandlers,
-  ...staffMockHandlers,
-};
+export const MOCK_HANDLERS: Readonly<Record<string, MockHandler<DemoSeed>>> = Object.fromEntries(
+  [kernelMockHandlers, ...moduleHandlers].flatMap((handlers) => Object.entries(handlers)),
+);

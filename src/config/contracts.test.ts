@@ -12,6 +12,7 @@ import {
   placeholderSignature,
   type Vocabulary,
 } from "@/core/i18n";
+import { compositionProblems, type InstalledModule } from "@/core/module";
 import type { NavEntry } from "@/core/nav";
 import { hospitality } from "@/verticals/hospitality";
 import { hospitalitySeed, hospitalityVocabulary } from "@/verticals/hospitality/server";
@@ -22,6 +23,8 @@ import { workshopSeed, workshopVocabulary } from "@/verticals/workshop/server";
 
 import { CATALOG } from "./catalog";
 import { MODULES } from "./modules.generated";
+import { MODULE_SERVERS } from "./modules.server.generated";
+import { SETTINGS } from "./settings";
 import { type ExtensionEntity, VERTICALS, type VerticalId, type VerticalPreset } from "./vertical";
 import { MODULE_MESSAGES } from "./vocabulary.server";
 
@@ -87,6 +90,42 @@ function driftsFrom(vocabulary: Vocabulary, key: string, locale: Locale): boolea
     placeholderSignature(base) !== placeholderSignature(override)
   );
 }
+
+/** Each server half's mock answers and its manifest's capabilities, by module id. */
+const capabilitiesOf = new Map(MODULES.map(({ id, capabilities }) => [id, Object.keys(capabilities).sort()]));
+const serverHalves = MODULE_SERVERS.map(
+  ({ id, mockHandlers }) => [id, Object.keys(mockHandlers).sort(), capabilitiesOf.get(id)] as const,
+);
+
+describe("module server halves (ADR 0017 §1)", () => {
+  it.each(serverHalves)("%s answers exactly its own capabilities", (_id, handlers, capabilities) => {
+    expect(handlers).toEqual(capabilities);
+  });
+});
+
+/** Every namespace the kernel takes in the composition: capability prefixes, message namespaces, setting prefixes. */
+const moduleIds: ReadonlySet<string> = new Set(MODULES.map(({ id }) => id));
+const kernelNamespaces = [
+  ...new Set([
+    ...Object.keys(CATALOG).map(moduleOf),
+    ...Object.keys(MODULE_MESSAGES),
+    ...Object.keys(SETTINGS).map(moduleOf),
+  ]),
+]
+  .filter((namespace) => !moduleIds.has(namespace))
+  .sort();
+const named = (id: string): InstalledModule => ({
+  folder: id,
+  manifest: { id, capabilities: {}, settings: [], mcp: { tools: {} }, seed: {}, references: [], owns: [] },
+});
+
+describe("kernel namespaces (ADR 0017 §5)", () => {
+  it.each(kernelNamespaces)("refuses a module named %s, which would overwrite the kernel's", (namespace) => {
+    expect(compositionProblems([named(namespace)], [], () => true)).toEqual([
+      `src/modules/${namespace}: "${namespace}" is a kernel namespace; rename the module`,
+    ]);
+  });
+});
 
 describe("presets under test", () => {
   it("are exactly the registered verticals", () => {

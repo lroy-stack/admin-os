@@ -2,8 +2,10 @@ import { z } from "zod";
 
 import { KERNEL_MODULES } from "@/core/access";
 import type { Catalog } from "@/core/capability";
+import type { Locale } from "@/core/i18n";
 // Types only: they are erased, so a client bundle that reads a manifest never reaches the server-only entry.
 import type { ManifestEntry, ToolManifest } from "@/core/mcp/server";
+import type { MockHandler } from "@/core/mock";
 import type { ModuleId } from "@/core/nav";
 import type { AnySetting } from "@/core/settings";
 
@@ -81,6 +83,27 @@ export const defineModule = <
   },
 ): ModuleManifest<Id, C, T> => manifest;
 
+/**
+ * The server half of a module (ADR 0017 §1), exported from its `server.ts` as `<module>ModuleServer`: the messages of
+ * its namespace and its mock answers. Declare it with `satisfies ModuleServer` and `id: <module>Module.id`, never with
+ * a type annotation: `satisfies` keeps the literal id and each handler's own seed type, which the composition root
+ * checks against every preset's seed. `MockHandler<never>` only bounds the handlers; read through it, they accept
+ * nothing.
+ */
+export interface ModuleServer<Id extends string = string> {
+  readonly id: Id;
+  readonly messages: Readonly<Record<Locale, unknown>>;
+  readonly mockHandlers: Readonly<Record<string, MockHandler<never>>>;
+}
+
+/**
+ * The server halves a list of manifests needs, in its order, each pinned to its manifest's id. Generic so that it maps
+ * a tuple to a tuple; the generated server list `satisfies` it.
+ */
+export type ServersOf<M extends readonly { readonly id: string }[]> = {
+  readonly [I in keyof M]: ModuleServer<M[I] extends { readonly id: infer Id extends string } ? Id : never>;
+};
+
 /** A manifest as the module folder that exports it was found. */
 export interface InstalledModule {
   readonly folder: string;
@@ -143,6 +166,13 @@ const prefixOf = (id: string) => id.split(".")[0] ?? id;
 /** The kernel is always installed (ADR 0004), so a hint may name its tools without a reference. */
 const KERNEL: ReadonlySet<string> = new Set(KERNEL_MODULES);
 
+/**
+ * Names a module cannot take: the kernel's capability prefixes, plus the namespaces of its messages (`nav`) and
+ * settings (`business`). The composition merges messages and settings by namespace, so a module named like one would
+ * overwrite the kernel's silently.
+ */
+const KERNEL_NAMESPACES: ReadonlySet<string> = new Set([...KERNEL_MODULES, "nav", "business"]);
+
 /** The tools an entry's id hints name; a UI-only entry has none. */
 const hintsOf = (entry: ManifestEntry): string[] => Object.values("ids" in entry ? (entry.ids ?? {}) : {}).flat();
 
@@ -166,6 +196,7 @@ function identityProblems({ folder, manifest }: InstalledModule): Problem[] {
   const straySettings = manifest.settings.map(({ key }) => key).filter((key) => !key.startsWith(`${id}.`));
   return about(id, [
     ...(id === folder ? [] : [`src/modules/${folder}: the manifest's id is "${id}"; set it to "${folder}"`]),
+    ...(KERNEL_NAMESPACES.has(id) ? [`src/modules/${folder}: "${id}" is a kernel namespace; rename the module`] : []),
     ...(strayCapabilities.length > 0
       ? [`${id}: capabilities ${strayCapabilities.join(", ")} must be keyed by their own id, under "${id}."`]
       : []),
