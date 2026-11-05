@@ -24,5 +24,5 @@ export const staffModule = defineModule({
     shifts: { schema: shiftSchema, required: false },
   },
   references: [],
-  owns: [],
+  owns: ["src/config/mcp.server.staff.test.ts"],
 });

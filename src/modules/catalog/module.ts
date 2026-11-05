@@ -34,6 +34,7 @@ export const catalogModule = defineModule({
     "src/app/(main)/dashboard/invoice",
     "src/app/(main)/dashboard/products",
     "src/config/catalog-collections.test.ts",
+    "src/config/mcp.server.catalog.test.ts",
     "e2e/smoke/invoice.spec.ts",
     "e2e/smoke/products.spec.ts",
   ],

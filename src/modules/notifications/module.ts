@@ -22,5 +22,10 @@ export const notificationsModule = defineModule({
   // A derived item names the customer of the booking it comes from, so the field is read from bookings' rows and
   // repeats bookings' own reference on purpose; notifications requires bookings (ADR 0017 §2).
   references: [{ collection: "bookings", field: "customerId", module: "customers", required: false }],
-  owns: ["src/config/notifications.test.ts", "e2e/smoke/notifications.spec.ts"],
+  owns: [
+    "src/config/approvals.notifications.test.ts",
+    "src/config/mcp.server.notifications.test.ts",
+    "src/config/notifications.test.ts",
+    "e2e/smoke/notifications.spec.ts",
+  ],
 });

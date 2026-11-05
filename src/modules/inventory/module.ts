@@ -44,6 +44,6 @@ export const inventoryModule = defineModule({
     { collection: "stockItems", field: "supplierId", module: "parties", required: false },
     { collection: "purchaseOrders", field: "supplierId", module: "parties", required: false },
   ],
-  owns: ["src/config/inventory-units.test.ts"],
+  owns: ["src/config/inventory-units.test.ts", "src/config/mcp.server.inventory.test.ts"],
   views: [inventoryStockView, inventoryOrdersView],
 });

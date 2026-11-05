@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { businessProfile } from "@/core/business";
 import { createSettingsReader } from "@/core/settings";
-import { walkInStayMinutes } from "@/modules/bookings";
 
 import { SETTINGS } from "./settings";
 import { VERTICALS, type VerticalId } from "./vertical";
@@ -12,7 +11,6 @@ const presets = (Object.keys(VERTICALS) as VerticalId[]).map((id) => [id, VERTIC
 const overrides = presets.flatMap(([id, preset]) =>
   Object.entries(preset.settingsDefaults).map(([key, value]) => [id, key, value] as const),
 );
-const bookingKeys = ["bookings.walk_in.stay_minutes", "bookings.late_after_minutes", "bookings.slot_minutes"];
 
 describe("the settings registry", () => {
   it.each(settings)("%s has a default that parses against its schema", (_key, setting) => {
@@ -21,13 +19,6 @@ describe("the settings registry", () => {
 
   it.each(settings)("%s is registered under its own key", (key, setting) => {
     expect(setting.key).toBe(key);
-  });
-
-  it("keeps the bookings literals as defaults", () => {
-    expect(createSettingsReader(SETTINGS).values(bookingKeys)).toEqual({
-      ok: true,
-      value: { "bookings.walk_in.stay_minutes": 90, "bookings.late_after_minutes": 10, "bookings.slot_minutes": 15 },
-    });
   });
 });
 
@@ -52,10 +43,5 @@ describe("preset settings overrides", () => {
       createSettingsReader(SETTINGS, preset.settingsDefaults).get(businessProfile),
     );
     expect(names.filter(({ tradeName }) => tradeName === "")).toEqual([]);
-  });
-
-  it("lets the salon expect shorter walk-in stays than the default", () => {
-    const reader = createSettingsReader(SETTINGS, VERTICALS.salon.settingsDefaults);
-    expect(reader.get(walkInStayMinutes)).toBe(45);
   });
 });

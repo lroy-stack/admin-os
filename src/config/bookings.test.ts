@@ -5,13 +5,23 @@ import { type Actor, createClient } from "@/core/client";
 import { fixedClock } from "@/core/clock";
 import { createMockAdapter, createSessionStore } from "@/core/mock";
 import type { CallResult } from "@/core/result";
-import { type BookingInput, type BookingStatus, bookingSchema, bookingStatuses } from "@/modules/bookings";
+import { createSettingsReader } from "@/core/settings";
+import {
+  type BookingInput,
+  type BookingStatus,
+  bookingSchema,
+  bookingStatuses,
+  walkInStayMinutes,
+} from "@/modules/bookings";
 import { hospitalityClock, hospitalitySeed } from "@/verticals/hospitality/server";
 import { salonClock, salonSeed } from "@/verticals/salon/server";
 import { workshopClock, workshopSeed } from "@/verticals/workshop/server";
 
+import { inputBeforeCall, sessionWithout } from "./adapter-contract.testkit";
 import { CATALOG } from "./catalog";
 import { MOCK_HANDLERS, settingsFor } from "./data.server";
+import { MODULES } from "./modules.generated";
+import { SETTINGS } from "./settings";
 import { VERTICALS, type VerticalId } from "./vertical";
 
 const quiet = { retryDelayMs: 0, logger: () => undefined, mode: "production" } as const;
@@ -1262,4 +1272,34 @@ describe("staff notes are bounded and applied once", () => {
     await c.call("bookings.staff_note.add", { id: "noted", text: "Regular" }, options);
     expect(bookingOf(await c.call("bookings.get", { id: "noted" })).staffNote).toBe("Regular");
   });
+});
+
+describe("the bookings settings", () => {
+  const bookingKeys = ["bookings.walk_in.stay_minutes", "bookings.late_after_minutes", "bookings.slot_minutes"];
+
+  it("keeps the bookings literals as defaults", () => {
+    expect(createSettingsReader(SETTINGS).values(bookingKeys)).toEqual({
+      ok: true,
+      value: { "bookings.walk_in.stay_minutes": 90, "bookings.late_after_minutes": 10, "bookings.slot_minutes": 15 },
+    });
+  });
+
+  it("lets the salon expect shorter walk-in stays than the default", () => {
+    const reader = createSettingsReader(SETTINGS, VERTICALS.salon.settingsDefaults);
+    expect(reader.get(walkInStayMinutes)).toBe(45);
+  });
+});
+
+describe("a booking for a customer when the customers module is absent (ADR 0017 §3)", () => {
+  const customersCollections = new Set(Object.keys(MODULES.find(({ id }) => id === "customers")?.seed ?? {}));
+
+  it.each(Object.keys(VERTICALS) as VerticalId[])(
+    "refuses a booking for a customer on %s when no customer exists",
+    async (vertical) => {
+      const { adapter, client } = sessionWithout(vertical, customersCollections);
+      const input = await inputBeforeCall(client, "bookings.create", vertical, adapter);
+      const result = await client.call("bookings.create", input as never, { idempotencyKey: crypto.randomUUID() });
+      expect(result).toMatchObject({ ok: false, error: { code: "bookings.not_found" } });
+    },
+  );
 });

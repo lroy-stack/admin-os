@@ -20,5 +20,5 @@ export const resourcesModule = defineModule({
     resources: { schema: resourceSchema, required: true, ext: { entity: "resource", optional: false } },
   },
   references: [],
-  owns: [],
+  owns: ["src/config/mcp.server.resources.test.ts"],
 });

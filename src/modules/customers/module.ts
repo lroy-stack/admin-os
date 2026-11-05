@@ -64,5 +64,12 @@ export const customersModule = defineModule({
     assets: { schema: assetSchema, required: false, ext: { entity: "asset", optional: false } },
   },
   references: [],
-  owns: ["src/app/(main)/dashboard/customers", "src/config/customers.test.ts", "e2e/smoke/customers.spec.ts"],
+  owns: [
+    "src/app/(main)/dashboard/customers",
+    "src/config/approvals.customers.test.ts",
+    "src/config/customers.test.ts",
+    "src/config/mcp-manifest.customers.test.ts",
+    "src/config/mcp.server.customers.test.ts",
+    "e2e/smoke/customers.spec.ts",
+  ],
 });

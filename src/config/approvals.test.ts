@@ -1,164 +1,109 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_ROLES, permissionsOf, type RoleId } from "@/core/access";
-import { APPROVAL_TTL_MS, type ApprovalPolicy, holdsForApproval, policyOf } from "@/core/approvals";
-import type { ApprovalContext } from "@/core/capability";
-import { type Actor, createClient } from "@/core/client";
-import { fixedClock } from "@/core/clock";
-import { exposedCapabilities } from "@/core/mcp/server";
-import { createMockAdapter, createSessionStore, MAX_APPROVALS } from "@/core/mock";
+import { APPROVAL_TTL_MS, policyOf } from "@/core/approvals";
+import type { Actor } from "@/core/client";
+import { MAX_APPROVALS } from "@/core/mock";
 import type { Result } from "@/core/result";
 import { createSettingsReader } from "@/core/settings";
 
-import { CATALOG } from "./catalog";
-import { DEMO, heldWritesFor, MOCK_HANDLERS } from "./demo-kernel";
-import { MCP_MANIFEST } from "./mcp-manifest";
-import { SETTINGS } from "./settings";
-import { VERTICALS } from "./vertical";
+import {
+  actorOf,
+  type Harness,
+  heldThroughMcp,
+  idOf,
+  itAppliesOnceWhenApprovedTwiceInOneTick,
+  itHoldsAsThePolicySays,
+  START,
+  setup,
+} from "./approvals.testkit";
+import { MODULES } from "./modules.generated";
 
-const START = Date.UTC(2026, 9, 31, 12, 0, 0);
-const BOOKING = "R-1046";
+/**
+ * The approval mechanism, on the one write the kernel owns that the default policy holds through MCP:
+ * `settings.values.update`. The cases about a module's own writes live in `approvals.<module>.test.ts` (ADR 0017 §7).
+ */
+const SETTING = "business.payment";
+const paymentAt = (bank: string) => ({ accountHolder: "Test Business", accountNumber: "ES0000000000", bank });
 
-const actorOf = (roleId: RoleId): Actor => {
-  const role = DEFAULT_ROLES.find((preset) => preset.id === roleId) ?? DEFAULT_ROLES[0];
-  return {
-    actorId: `demo-${roleId}`,
-    roleId,
-    permissions: permissionsOf(role, CATALOG, VERTICALS.hospitality.modules),
-  };
-};
+const change = (client: Harness["assistant"], bank = "Bank A") =>
+  client.call("settings.values.update", { values: { [SETTING]: paymentAt(bank) } });
 
-const hospitalitySession = () => createSessionStore(DEMO.hospitality.seed);
-
-interface SetupOptions {
-  readonly policy?: ApprovalPolicy;
-  /** A role whose permissions have been taken away since the write was asked for. */
-  readonly revokedRole?: string;
-  /** Another harness's demo session, to decide there what was asked there. */
-  readonly store?: ReturnType<typeof hospitalitySession>;
-  /** The business minute of the demo clock, when it has moved on since the seed. */
-  readonly nowMin?: number;
-}
-
-const setup = ({ policy, revokedRole, store = hospitalitySession(), nowMin }: SetupOptions = {}) => {
-  const time = { ms: START };
-  const held = heldWritesFor("hospitality");
-  const adapter = createMockAdapter({
-    handlers: MOCK_HANDLERS,
-    store,
-    sessionId: "visitor",
-    clock: fixedClock(nowMin === undefined ? DEMO.hospitality.clock : { ...DEMO.hospitality.clock, nowMin }),
-    settings: createSettingsReader(SETTINGS, {
-      ...VERTICALS.hospitality.settingsDefaults,
-      ...(policy === undefined ? {} : { "approvals.policy": policy }),
-    }),
-    heldWrites: {
-      ...held,
-      permissionsOfRole: (roleId) => (roleId === revokedRole ? [] : held.permissionsOfRole(roleId)),
-    },
-    now: () => time.ms,
-  });
-  const as = (roleId: RoleId, via: ApprovalContext["via"], actor: Actor = actorOf(roleId)) =>
-    createClient(CATALOG, adapter, {
-      actor,
-      via,
-      retryDelayMs: 0,
-      logger: () => undefined,
-      mode: "production",
-    });
-  return { time, as, store, assistant: as("owner", "mcp"), person: as("owner", "ui") };
-};
-
-type Harness = ReturnType<typeof setup>;
-
-const note = (client: Harness["assistant"], text: string) =>
-  client.call("bookings.staff_note.add", { id: BOOKING, text }, { idempotencyKey: crypto.randomUUID() });
-
-const cancel = (client: Harness["assistant"], id = BOOKING, reason = "Guest called") =>
-  client.call("bookings.cancel", { id, reason });
-
-const capabilityOf = (id: string) => {
-  const found = CATALOG[id];
-  if (found === undefined) throw new Error(`The catalogue has no capability "${id}"`);
-  return found;
-};
-
-const idOf = (held: unknown): string => (held as { approvalId: string }).approvalId;
-
-const statusOfBooking = async (client: Harness["person"]) => {
-  const fetched = (await client.call("bookings.get", { id: BOOKING })) as Result<{ status: string }>;
-  return fetched.ok ? fetched.value.status : fetched.error.code;
+const bankOf = async (client: Harness["person"]) => {
+  const read = (await client.call("settings.values.get", { keys: [SETTING] })) as Result<{
+    values: { [SETTING]: { bank: string } };
+  }>;
+  return read.ok ? read.value.values[SETTING].bank : read.error.code;
 };
 
 describe("which writes wait (spec 004, D7)", () => {
-  const cases: readonly (readonly [ApprovalPolicy, string, ApprovalContext["via"], boolean])[] = [
-    ["destructive_and_sensitive", "bookings.cancel", "mcp", true],
-    ["destructive_and_sensitive", "bookings.no_show.mark", "mcp", true],
-    ["destructive_and_sensitive", "customers.block", "mcp", true],
-    ["destructive_and_sensitive", "bookings.create", "mcp", false],
-    ["destructive_and_sensitive", "bookings.staff_note.add", "mcp", false],
-    ["destructive_and_sensitive", "bookings.cancel", "ui", false],
-    ["destructive_and_sensitive", "bookings.cancel", "system", false],
-    ["all", "bookings.create", "mcp", true],
-    ["all", "bookings.create", "ui", false],
-    ["all", "bookings.list", "mcp", false],
-    ["none", "bookings.cancel", "mcp", false],
-  ];
-
-  it.each(cases)("under %s, %s via %s waits: %s", (policy, capabilityId, via, waits) => {
-    expect(holdsForApproval(policy, capabilityOf(capabilityId), via)).toBe(waits);
-  });
+  itHoldsAsThePolicySays([
+    ["destructive_and_sensitive", "settings.values.update", "mcp", true],
+    ["destructive_and_sensitive", "settings.values.update", "ui", false],
+    ["destructive_and_sensitive", "settings.values.update", "system", false],
+    ["destructive_and_sensitive", "settings.values.get", "mcp", false],
+    ["all", "settings.values.update", "mcp", true],
+    ["all", "settings.values.update", "ui", false],
+    ["all", "settings.values.get", "mcp", false],
+    ["none", "settings.values.update", "mcp", false],
+  ]);
 });
 
 describe("the approvals kernel (AC5)", () => {
-  it("holds an assistant's cancel, and a person's approval cancels the booking as the requester", async () => {
+  it("holds an assistant's change, and a person's approval makes it as the requester", async () => {
     const { assistant, person } = setup();
+    const before = await bankOf(person);
+    // The held change writes "Bank A"; a preset already on it would make "untouched" prove nothing.
+    expect(before).not.toBe("Bank A");
 
-    const held = await cancel(assistant);
+    const held = await change(assistant);
     const waiting = await assistant.call("approvals.get", { approvalId: idOf(held) });
-    const untouched = await statusOfBooking(person);
+    const untouched = await bankOf(person);
     const approved = await person.call("approvals.approve", { approvalId: idOf(held) });
     const after = await assistant.call("approvals.get", { approvalId: idOf(held) });
 
-    expect([held, waiting, untouched, approved, await statusOfBooking(person)]).toMatchObject([
+    expect([held, waiting, untouched, approved, await bankOf(person)]).toMatchObject([
       { status: "awaiting_approval", approvalId: expect.any(String) },
-      { ok: true, value: { status: "pending", capabilityId: "bookings.cancel", requestedByYou: true } },
-      "confirmed",
-      { ok: true, value: { status: "approved", result: { id: BOOKING, status: "cancelled" } } },
-      "cancelled",
+      { ok: true, value: { status: "pending", capabilityId: "settings.values.update", requestedByYou: true } },
+      before,
+      { ok: true, value: { status: "approved", result: { values: { [SETTING]: { bank: "Bank A" } } } } },
+      "Bank A",
     ]);
     expect(after).toMatchObject({
       ok: true,
-      value: { status: "approved", result: { id: BOOKING, status: "cancelled" }, decidedAt: expect.any(String) },
+      value: {
+        status: "approved",
+        result: { values: { [SETTING]: { bank: "Bank A" } } },
+        decidedAt: expect.any(String),
+      },
     });
   });
 
   it("never returns the held input from approvals.get", async () => {
     const { assistant } = setup();
-    const held = await cancel(assistant, BOOKING, "a private reason");
+    const held = await change(assistant, "a private bank");
     expect(JSON.stringify(await assistant.call("approvals.get", { approvalId: idOf(held) }))).not.toContain("private");
   });
 
   it("answers the same approvalId to a retried hold, and queues one approval", async () => {
     const { assistant, person } = setup();
-    const first = await cancel(assistant);
-    const retry = await cancel(assistant);
+    const first = await change(assistant);
+    const retry = await change(assistant);
     const listed = await person.call("approvals.list", {});
     expect([idOf(retry), listed]).toMatchObject([idOf(first), { ok: true, value: { items: [{}] } }]);
   });
 
   it("queues a second approval for a different input", async () => {
     const { assistant, person } = setup();
-    await cancel(assistant, BOOKING, "one reason");
-    await cancel(assistant, BOOKING, "another reason");
+    await change(assistant, "one bank");
+    await change(assistant, "another bank");
     expect(await person.call("approvals.list", {})).toMatchObject({ ok: true, value: { items: [{}, {}] } });
   });
 
   it("lists pending first with the input and who asked, and hides what the decider needs not see", async () => {
     const { assistant, person } = setup();
-    const rejected = await cancel(assistant, BOOKING, "first");
+    const rejected = await change(assistant, "first");
     await person.call("approvals.reject", { approvalId: idOf(rejected) });
-    await cancel(assistant, BOOKING, "second");
+    await change(assistant, "second");
     const listed = await person.call("approvals.list", {});
     expect(listed).toMatchObject({
       ok: true,
@@ -166,8 +111,8 @@ describe("the approvals kernel (AC5)", () => {
         items: [
           {
             status: "pending",
-            capabilityId: "bookings.cancel",
-            input: { id: BOOKING, reason: "second" },
+            capabilityId: "settings.values.update",
+            input: { values: { [SETTING]: { bank: "second" } } },
             requestedBy: { actorId: "demo-owner", role: "owner", via: "mcp" },
           },
           { status: "rejected" },
@@ -179,22 +124,23 @@ describe("the approvals kernel (AC5)", () => {
 
   it("expires after 24 hours: the read says so, and approving is refused and runs nothing", async () => {
     const { assistant, person, time } = setup();
-    const held = await cancel(assistant);
+    const before = await bankOf(person);
+    const held = await change(assistant);
 
     time.ms = START + APPROVAL_TTL_MS;
     const read = await assistant.call("approvals.get", { approvalId: idOf(held) });
     const approved = await person.call("approvals.approve", { approvalId: idOf(held) });
 
-    expect([read, approved, await statusOfBooking(person)]).toMatchObject([
+    expect([read, approved, await bankOf(person)]).toMatchObject([
       { ok: true, value: { status: "expired", decidedAt: new Date(START + APPROVAL_TTL_MS).toISOString() } },
       { ok: false, error: { code: "approvals.expired" } },
-      "confirmed",
+      before,
     ]);
   });
 
   it("is still pending a moment before the deadline", async () => {
     const { assistant, time } = setup();
-    const held = await cancel(assistant);
+    const held = await change(assistant);
     time.ms = START + APPROVAL_TTL_MS - 1;
     expect(await assistant.call("approvals.get", { approvalId: idOf(held) })).toMatchObject({
       ok: true,
@@ -202,31 +148,50 @@ describe("the approvals kernel (AC5)", () => {
     });
   });
 
-  it("answers conflict, and records it, when a person changed the booking meanwhile", async () => {
+  it("answers conflict, and records it, when a person changed the same setting meanwhile", async () => {
     const { assistant, person } = setup();
-    const held = await cancel(assistant, BOOKING, "assistant reason");
-    await person.call("bookings.cancel", { id: BOOKING, reason: "person reason" });
+    const held = await change(assistant, "assistant bank");
+    await change(person, "person bank");
 
     const approved = await person.call("approvals.approve", { approvalId: idOf(held) });
     const read = await assistant.call("approvals.get", { approvalId: idOf(held) });
 
-    expect([approved, read]).toMatchObject([
+    expect([approved, read, await bankOf(person)]).toMatchObject([
       { ok: false, error: { code: "approvals.conflict" } },
       { ok: true, value: { status: "conflict", error: { code: "approvals.conflict" } } },
+      "person bank",
     ]);
-    const booking = await person.call("bookings.get", { id: BOOKING });
-    expect(booking).toMatchObject({ ok: true, value: { cancelReason: "person reason" } });
+  });
+
+  it("approves a change although a person changed another setting meanwhile", async () => {
+    const { assistant, person } = setup();
+    const held = await change(assistant);
+    await person.call("settings.values.update", {
+      values: {
+        "business.invoicing": {
+          defaultTax: "gst",
+          taxRates: { gst: 1, vat: 2, "service-tax": 3 },
+          paymentTermsDays: 7,
+        },
+      },
+    });
+
+    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
+      ok: true,
+      value: { status: "approved" },
+    });
   });
 
   it("refuses a write whose requester no longer holds the permission, and records it", async () => {
     const { assistant, person } = setup({ revokedRole: "owner" });
-    const held = await cancel(assistant);
+    const before = await bankOf(person);
+    const held = await change(assistant);
 
     const approved = await person.call("approvals.approve", { approvalId: idOf(held) });
 
-    expect([approved, await statusOfBooking(person)]).toMatchObject([
+    expect([approved, await bankOf(person)]).toMatchObject([
       { ok: false, error: { code: "approvals.requester_forbidden" } },
-      "confirmed",
+      before,
     ]);
     expect(await assistant.call("approvals.get", { approvalId: idOf(held) })).toMatchObject({
       ok: true,
@@ -236,17 +201,18 @@ describe("the approvals kernel (AC5)", () => {
 
   it("rejects with a reason the requester sees, and never runs the write", async () => {
     const { assistant, person } = setup();
-    const held = await cancel(assistant);
+    const before = await bankOf(person);
+    const held = await change(assistant);
 
-    const rejected = await person.call("approvals.reject", { approvalId: idOf(held), reason: "Guest is on the phone" });
+    const rejected = await person.call("approvals.reject", { approvalId: idOf(held), reason: "Wrong bank" });
     const read = await assistant.call("approvals.get", { approvalId: idOf(held) });
     const again = await person.call("approvals.approve", { approvalId: idOf(held) });
 
-    expect([rejected, read, again, await statusOfBooking(person)]).toMatchObject([
+    expect([rejected, read, again, await bankOf(person)]).toMatchObject([
       { ok: true, value: { status: "rejected" } },
-      { ok: true, value: { status: "rejected", reason: "Guest is on the phone", decidedAt: expect.any(String) } },
+      { ok: true, value: { status: "rejected", reason: "Wrong bank", decidedAt: expect.any(String) } },
       { ok: false, error: { code: "approvals.not_pending" } },
-      "confirmed",
+      before,
     ]);
   });
 
@@ -261,37 +227,50 @@ describe("the approvals kernel (AC5)", () => {
     });
   });
 
-  it.each(["owner", "manager"] as const)("lets the %s approve a held write", async (roleId) => {
+  it("lets the owner approve a held write", async () => {
     const { assistant, as } = setup();
-    const held = await cancel(assistant);
-    expect(await as(roleId, "ui").call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({ ok: true });
+    const held = await change(assistant);
+    expect(await as("owner", "ui").call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({ ok: true });
   });
 
   it.each(["approvals.approve", "approvals.reject"] as const)("refuses staff on %s", async (id) => {
     const { assistant, as } = setup();
-    const held = await cancel(assistant);
+    const held = await change(assistant);
     expect(await as("staff", "ui").call(id, { approvalId: idOf(held) })).toMatchObject({
       ok: false,
       error: { code: "access.forbidden" },
     });
   });
 
-  it("refuses a decider who may decide but may not do the write, and leaves the request pending", async () => {
-    const { assistant, as } = setup();
-    const held = await cancel(assistant);
-    const clerk: Actor = { actorId: "demo-clerk", roleId: "manager", permissions: ["decide:approvals"] };
+  const clerk: Actor = { actorId: "demo-clerk", roleId: "manager", permissions: ["decide:approvals"] };
 
-    const approved = await as("manager", "ui", clerk).call("approvals.approve", { approvalId: idOf(held) });
+  it.each([
+    ["a manager, who lacks manage:settings", actorOf("manager")],
+    ["a clerk who holds only decide:approvals", clerk],
+  ] as const)(
+    "refuses %s: may decide but may not do the write, and leaves the request pending",
+    async (_label, decider) => {
+      const { assistant, as, person } = setup();
+      const before = await bankOf(person);
+      const held = await change(assistant);
 
-    expect([approved, await assistant.call("approvals.get", { approvalId: idOf(held) })]).toMatchObject([
-      { ok: false, error: { code: "access.forbidden" } },
-      { ok: true, value: { status: "pending" } },
-    ]);
-  });
+      const approved = await as("manager", "ui", decider).call("approvals.approve", { approvalId: idOf(held) });
+
+      expect([
+        approved,
+        await assistant.call("approvals.get", { approvalId: idOf(held) }),
+        await bankOf(person),
+      ]).toMatchObject([
+        { ok: false, error: { code: "access.forbidden" } },
+        { ok: true, value: { status: "pending" } },
+        before,
+      ]);
+    },
+  );
 
   it("lets one actor see that a write is not another's", async () => {
     const { assistant, as } = setup();
-    const held = await cancel(assistant);
+    const held = await change(assistant);
     expect(await as("manager", "ui").call("approvals.get", { approvalId: idOf(held) })).toMatchObject({
       ok: true,
       value: { requestedByYou: false },
@@ -300,8 +279,8 @@ describe("the approvals kernel (AC5)", () => {
 
   it("keeps two actors' identical requests apart, and the second is a conflict once the first applies", async () => {
     const { assistant, as, person } = setup();
-    const first = await cancel(assistant);
-    const second = await cancel(as("manager", "mcp"));
+    const first = await change(assistant);
+    const second = await change(as("owner", "mcp", { ...actorOf("owner"), actorId: "demo-owner-two" }));
 
     const approvedFirst = await person.call("approvals.approve", { approvalId: idOf(first) });
     const approvedSecond = await person.call("approvals.approve", { approvalId: idOf(second) });
@@ -312,85 +291,22 @@ describe("the approvals kernel (AC5)", () => {
       { ok: false, error: { code: "approvals.conflict" } },
     ]);
   });
-
-  it("replays a held keyed write retried with the same key, as one approval", async () => {
-    const { assistant, person } = setup({ policy: "all" });
-    const create = () =>
-      assistant.call("customers.create", { name: "Keyed Guest", phone: "+34611222333" }, { idempotencyKey: "k-held" });
-
-    const first = await create();
-    const retry = await create();
-
-    expect([idOf(retry), await person.call("approvals.list", {})]).toMatchObject([
-      idOf(first),
-      { ok: true, value: { items: [{}] } },
-    ]);
-  });
 });
 
 describe("deciding at the same moment", () => {
-  const customerNamed = async (person: Harness["person"], name: string) => {
-    const listed = (await person.call("customers.list", { limit: 200 })) as Result<{ items: { name: string }[] }>;
-    return listed.ok ? listed.value.items.filter((customer) => customer.name === name).length : -1;
-  };
-
-  const cases = [
+  itAppliesOnceWhenApprovedTwiceInOneTick([
     {
-      label: "bookings.cancel",
+      label: "settings.values.update",
       policy: "destructive_and_sensitive",
-      hold: (assistant: Harness["assistant"]) => cancel(assistant),
-      applied: async (person: Harness["person"]) => ({ cancelled: await statusOfBooking(person) }),
-      expected: { cancelled: "cancelled" },
+      hold: (assistant) => change(assistant),
+      applied: async (person) => ({ bank: await bankOf(person) }),
+      expected: { bank: "Bank A" },
     },
-    {
-      label: "bookings.staff_note.add",
-      policy: "all",
-      hold: (assistant: Harness["assistant"]) => note(assistant, "Window seat"),
-      applied: async (person: Harness["person"]) => {
-        const fetched = (await person.call("bookings.get", { id: BOOKING })) as Result<{ staffNote?: string }>;
-        return { times: fetched.ok ? (fetched.value.staffNote ?? "").split("Window seat").length - 1 : -1 };
-      },
-      expected: { times: 1 },
-    },
-    {
-      label: "customers.create",
-      policy: "all",
-      hold: (assistant: Harness["assistant"]) =>
-        assistant.call(
-          "customers.create",
-          { name: "Parallel Guest", phone: "+34611999888" },
-          { idempotencyKey: crypto.randomUUID() },
-        ),
-      applied: async (person: Harness["person"]) => ({ created: await customerNamed(person, "Parallel Guest") }),
-      expected: { created: 1 },
-    },
-  ] as const;
-
-  it.each(cases)("applies $label once when it is approved twice in the same tick", async (scenario) => {
-    const { assistant, person } = setup({ policy: scenario.policy });
-    const held = await scenario.hold(assistant);
-
-    const answers = await Promise.all([
-      person.call("approvals.approve", { approvalId: idOf(held) }),
-      person.call("approvals.approve", { approvalId: idOf(held) }),
-    ]);
-
-    expect(answers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ ok: true }),
-        expect.objectContaining({ ok: false, error: expect.objectContaining({ code: "approvals.not_pending" }) }),
-      ]),
-    );
-    expect(await scenario.applied(person)).toEqual(scenario.expected);
-    expect(await assistant.call("approvals.get", { approvalId: idOf(held) })).toMatchObject({
-      ok: true,
-      value: { status: "approved" },
-    });
-  });
+  ]);
 
   it("refuses a rejection that arrives while the approval runs, so the audit stays whole", async () => {
     const { assistant, person } = setup();
-    const held = await cancel(assistant);
+    const held = await change(assistant);
 
     const [approved, rejected] = await Promise.all([
       person.call("approvals.approve", { approvalId: idOf(held) }),
@@ -401,63 +317,6 @@ describe("deciding at the same moment", () => {
   });
 });
 
-describe("what moved since the write was asked for", () => {
-  it("approves a cancel although someone added a staff note to the same booking meanwhile", async () => {
-    const { assistant, person } = setup();
-    const held = await cancel(assistant);
-    await person.call("bookings.staff_note.add", { id: BOOKING, text: "Seen" }, { idempotencyKey: "k-note" });
-
-    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
-      ok: true,
-      value: { status: "approved" },
-    });
-  });
-
-  it("approves a cancel although the party size of the booking changed meanwhile", async () => {
-    const { assistant, person } = setup();
-    const held = await cancel(assistant);
-    await person.call("bookings.reschedule", { id: BOOKING, partySize: 1 });
-
-    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
-      ok: true,
-      value: { status: "approved" },
-    });
-  });
-
-  it("answers the write's own rule when it can no longer run: a booking approved after its start (D3)", async () => {
-    const asked = setup({ policy: "all" });
-    const held = await asked.assistant.call(
-      "bookings.create",
-      {
-        businessDay: "2026-10-31",
-        startMin: 22 * 60,
-        partySize: 1,
-        resourceIds: ["S8"],
-        customerId: "C-iglesias",
-        channel: "phone",
-      },
-      { idempotencyKey: "d3-late" },
-    );
-    const later = setup({ policy: "all", store: asked.store, nowMin: 22 * 60 + 15 });
-
-    expect([held, await later.person.call("approvals.approve", { approvalId: idOf(held) })]).toMatchObject([
-      { status: "awaiting_approval" },
-      { ok: false, error: { code: "bookings.start_passed" } },
-    ]);
-  });
-
-  it("answers conflict when the booking lost its table meanwhile", async () => {
-    const { assistant, person } = setup();
-    const held = await cancel(assistant);
-    await person.call("bookings.table.assign", { id: BOOKING, resourceIds: ["S8"] });
-
-    expect(await person.call("approvals.approve", { approvalId: idOf(held) })).toMatchObject({
-      ok: false,
-      error: { code: "approvals.conflict" },
-    });
-  });
-});
-
 describe("failing closed", () => {
   it("holds destructive writes when the registry has no approval setting", () => {
     expect(policyOf(createSettingsReader({}))).toBe("destructive_and_sensitive");
@@ -465,33 +324,28 @@ describe("failing closed", () => {
 });
 
 describe("what the default policy holds through MCP (AC5, pinned)", () => {
-  const heldTools = exposedCapabilities(CATALOG, MCP_MANIFEST)
-    .filter((capability) => holdsForApproval("destructive_and_sensitive", capability, "mcp"))
-    .map((capability) => capability.id)
-    .sort();
-
-  it("is exactly these nine writes; a change to the list is a decision, not an accident", () => {
-    expect(heldTools).toEqual([
-      "bookings.cancel",
-      "bookings.no_show.mark",
-      "bookings.reschedule",
-      "bookings.table.assign",
-      "customers.block",
-      "customers.contact.update",
-      "customers.unblock",
-      "parties.update",
-      "settings.values.update",
-    ]);
+  it("holds exactly these kernel writes; a change to the list is a decision, not an accident", () => {
+    expect(heldThroughMcp()).toEqual(["settings.values.update"]);
   });
+
+  const holders = MODULES.filter(({ id }) => heldThroughMcp(id).length > 0);
+
+  // This checks that each module owns a file for its held writes; that file pins them with `heldThroughMcp`.
+  it.each(holders.map(({ id, owns }) => ({ id, owns })))(
+    "$id holds writes, so it owns its approvals.<module>.test.ts, where they are pinned",
+    ({ id, owns }) => {
+      expect(owns).toContain(`src/config/approvals.${id}.test.ts`);
+    },
+  );
 });
 
 describe("who reads the queue", () => {
   it.each(["owner", "manager"] as const)("lets the %s list the held writes", async (roleId) => {
     const { assistant, as } = setup();
-    await cancel(assistant);
+    await change(assistant);
     expect(await as(roleId, "ui").call("approvals.list", {})).toMatchObject({
       ok: true,
-      value: { items: [{ input: { id: BOOKING } }] },
+      value: { items: [{ input: { values: { [SETTING]: { bank: "Bank A" } } } }] },
     });
   });
 
@@ -504,61 +358,25 @@ describe("who reads the queue", () => {
   });
 });
 
-describe("who is named on an approved write", () => {
-  it("signs a customer note with the name the requester was shown", async () => {
-    const { as, person } = setup({ policy: "all" });
-    const requester: Actor = { ...actorOf("owner"), displayName: "Alex Morgan" };
-    const held = await as("owner", "mcp", requester).call(
-      "customers.notes.add",
-      { id: "C-iglesias", text: "Prefers the terrace" },
-      { idempotencyKey: crypto.randomUUID() },
-    );
-
-    await person.call("approvals.approve", { approvalId: idOf(held) });
-
-    const customer = (await person.call("customers.get", { id: "C-iglesias" })) as Result<{
-      notes: { authorName: string; authorId: string }[];
-    }>;
-    expect(customer).toMatchObject({
-      ok: true,
-      value: { notes: expect.arrayContaining([expect.objectContaining({ authorName: "Alex Morgan" })]) },
-    });
-  });
-});
-
 describe("the policy", () => {
-  it("lets a cancel run when no write waits", async () => {
-    const { assistant } = setup({ policy: "none" });
-    expect(await cancel(assistant)).toMatchObject({ ok: true, value: { status: "cancelled" } });
+  it("lets a change run when no write waits", async () => {
+    const { assistant, person } = setup({ policy: "none" });
+    expect([await change(assistant), await bankOf(person)]).toMatchObject([{ ok: true }, "Bank A"]);
   });
 
   it("never holds a person's own write", async () => {
     const { person } = setup();
-    expect(await cancel(person)).toMatchObject({ ok: true, value: { status: "cancelled" } });
-  });
-
-  it("holds even a harmless write when every assistant write waits", async () => {
-    const { assistant } = setup({ policy: "all" });
-    expect(await note(assistant, "Window seat")).toMatchObject({
-      status: "awaiting_approval",
-    });
-  });
-
-  it("does not hold a harmless write under the default policy", async () => {
-    const { assistant } = setup();
-    expect(await note(assistant, "Window seat")).toMatchObject({
-      ok: true,
-    });
+    expect([await change(person), await bankOf(person)]).toMatchObject([{ ok: true }, "Bank A"]);
   });
 
   it("changes in the session when the owner sets it, and settings.values.get shows the choice", async () => {
     const { assistant, person } = setup();
     const set = await person.call("approvals.policy.set", { policy: "none" });
     const shown = await person.call("settings.values.get", { keys: ["approvals.policy"] });
-    expect([set, shown, await cancel(assistant)]).toMatchObject([
+    expect([set, shown, await change(assistant)]).toMatchObject([
       { ok: true, value: { policy: "none" } },
       { ok: true, value: { values: { "approvals.policy": "none" } } },
-      { ok: true, value: { status: "cancelled" } },
+      { ok: true, value: { values: { [SETTING]: { bank: "Bank A" } } } },
     ]);
   });
 
@@ -573,24 +391,24 @@ describe("the policy", () => {
 
 describe("the queue", () => {
   const holdMany = (client: Harness["assistant"], count: number) =>
-    Promise.all(Array.from({ length: count }, (_unused, n) => note(client, `note ${n}`)));
+    Promise.all(Array.from({ length: count }, (_unused, n) => change(client, `bank ${n}`)));
 
   it("refuses a new hold with approvals.queue_full when every record is pending", async () => {
-    const { assistant } = setup({ policy: "all" });
+    const { assistant } = setup();
     await holdMany(assistant, MAX_APPROVALS);
 
-    expect(await note(assistant, "one too many")).toMatchObject({
+    expect(await change(assistant, "one too many")).toMatchObject({
       ok: false,
       error: { code: "approvals.queue_full" },
     });
   });
 
   it("makes room by dropping a decided record, never a pending one", async () => {
-    const { assistant, person } = setup({ policy: "all" });
+    const { assistant, person } = setup();
     const held = await holdMany(assistant, MAX_APPROVALS);
     await person.call("approvals.reject", { approvalId: idOf(held[0]) });
 
-    const next = await note(assistant, "fits now");
+    const next = await change(assistant, "fits now");
     const dropped = await assistant.call("approvals.get", { approvalId: idOf(held[0]) });
     const kept = await assistant.call("approvals.get", { approvalId: idOf(held[1]) });
 
@@ -598,60 +416,6 @@ describe("the queue", () => {
       { status: "awaiting_approval" },
       { ok: false, error: { code: "approvals.not_found" } },
       { ok: true, value: { status: "pending" } },
-    ]);
-  });
-});
-
-describe("the notification", () => {
-  const approvalItems = async (client: Harness["person"]) => {
-    const listed = await client.call("notifications.list", { limit: 100 });
-    expect(listed).toMatchObject({ ok: true });
-    const { items } = (
-      listed as Result<{ items: { kind: string; id: string }[] }> & { value: { items: { kind: string; id: string }[] } }
-    ).value;
-    return items.filter((item) => item.kind === "approval.requested");
-  };
-
-  it("tells the people who decide that a write waits, until it is decided", async () => {
-    const { assistant, person } = setup();
-    const held = await cancel(assistant);
-
-    const waiting = await approvalItems(person);
-    await person.call("approvals.reject", { approvalId: idOf(held) });
-    const decided = await approvalItems(person);
-
-    expect([waiting, decided]).toMatchObject([
-      [
-        {
-          bodyKey: "notifications.kinds.approvalRequested.body.bookingsCancel",
-          params: { target: BOOKING },
-          createdAt: { day: "2026-10-31", minute: 13 * 60 },
-          link: { entity: "approval" },
-        },
-      ],
-      [],
-    ]);
-  });
-
-  it("does not tell staff, who cannot decide", async () => {
-    const { assistant, as } = setup();
-    await cancel(assistant);
-    expect(await approvalItems(as("staff", "ui"))).toEqual([]);
-  });
-
-  it.each([
-    ["notifications.read_all", () => ({})],
-    ["notifications.read", (ids: string[]) => ({ ids })],
-  ] as const)("stays unread after an agent calls %s", async (id, inputFor) => {
-    const { assistant, person } = setup();
-    const held = await cancel(assistant);
-    const ids = (await approvalItems(person)).map((item) => item.id);
-
-    await assistant.call(id, inputFor(ids));
-
-    expect([idOf(held), await approvalItems(person)]).toMatchObject([
-      idOf(held),
-      [{ id: `approval.requested:${idOf(held)}` }],
     ]);
   });
 });

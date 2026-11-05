@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { VIEW_RENDERERS } from "@/config/modules.client.generated";
-import { MODULES } from "@/config/modules.generated";
+import { MODULE_GRAPH, MODULES } from "@/config/modules.generated";
 import { MODULE_SERVERS } from "@/config/modules.server.generated";
 import { compositionProblems, type ModuleServer } from "@/core/module";
 
@@ -19,6 +19,39 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 let generated: Generated;
+
+/**
+ * Census C0 (ADR 0017): what each of the first six modules required when the import graph was first counted. A module
+ * that is not installed has no row, and a target that is not installed is dropped from the rows that name it, so the
+ * census still holds after a removal.
+ */
+const C0: Readonly<Record<string, readonly string[]>> = {
+  bookings: ["customers", "resources"],
+  catalog: [],
+  customers: [],
+  notifications: ["bookings"],
+  resources: [],
+  staff: [],
+};
+
+const c0Of = (installed: readonly string[]) =>
+  Object.fromEntries(
+    Object.entries(C0)
+      .filter(([id]) => installed.includes(id))
+      .map(([id, targets]) => [id, targets.filter((target) => installed.includes(target))]),
+  );
+
+/** The graph's rows for the modules the census knows. */
+const censusOf = (graph: Readonly<Record<string, readonly string[]>>) =>
+  Object.fromEntries(Object.entries(graph).filter(([id]) => id in C0));
+
+/** Each installed module, with the refusal that removing it must cause: one line per module that imports it. */
+const removals = Object.keys(MODULE_GRAPH).map((removed) => ({
+  removed,
+  refusals: Object.entries(MODULE_GRAPH)
+    .filter(([, targets]) => (targets as readonly string[]).includes(removed))
+    .map(([id]) => `${id} requires ${removed}; restore src/modules/${removed} or remove ${id}`),
+}));
 
 beforeAll(async () => {
   generated = await generate(ROOT);
@@ -48,24 +81,14 @@ describe("the generated module list (ADR 0017 §5)", () => {
   });
 
   it("requires what the import graph shows (ADR 0017's first test, against census C0)", () => {
-    expect(generated.graph).toEqual({
-      bookings: ["customers", "resources"],
-      catalog: [],
-      customers: [],
-      inventory: [],
-      notifications: ["bookings"],
-      parties: [],
-      resources: [],
-      staff: [],
-    });
+    const installed = Object.keys(generated.graph);
+    expect(censusOf(generated.graph)).toEqual(c0Of(installed));
   });
 });
 
 describe("removing a module from the installed list (ADR 0017 §5, §9)", () => {
-  it("refuses a module that imports the one removed, and says nothing else", () => {
-    expect(without("bookings")()).toEqual([
-      "notifications requires bookings; restore src/modules/bookings or remove notifications",
-    ]);
+  it.each(removals)("refuses the modules that import $removed, and says nothing else", ({ removed, refusals }) => {
+    expect(without(removed)()).toEqual(refusals);
   });
 
   it("composes without the catalog (walk W1)", () => {
@@ -100,14 +123,18 @@ describe("the UI export a folder names", () => {
 describe("the generated client map (ADR 0017 §5)", () => {
   const text = () => generated.files?.[MODULE_UIS_PATH] ?? "";
 
-  it("imports the ui.ts of the modules that have one", () => {
-    expect(text()).toContain('import { catalogModuleUi } from "@/modules/catalog/ui";');
-    expect(text()).toContain('import { inventoryModuleUi } from "@/modules/inventory/ui";');
+  // From the installed modules' folders, so removing one leaves these cases standing (ADR 0017 §7).
+  const withUiFile = MODULES.map(({ id }) => id).filter((id) => existsSync(join(ROOT, "src/modules", id, "ui.ts")));
+  const withUiFolder = MODULES.map(({ id }) => id).filter(
+    (id) => existsSync(join(ROOT, "src/modules", id, "ui")) && !withUiFile.includes(id),
+  );
+
+  it.each(withUiFile)("imports the ui.ts of %s", (id) => {
+    expect(text()).toContain(`import { ${uiExportOf(id)} } from "@/modules/${id}/ui";`);
   });
 
-  it("leaves out a module whose ui is a folder of shared components, not a ui.ts (customers)", () => {
-    expect(existsSync(join(ROOT, "src/modules/customers/ui"))).toBe(true);
-    expect(text()).not.toContain("customers");
+  it.each(withUiFolder)("leaves out %s, whose ui is a folder of shared components, not a ui.ts", (id) => {
+    expect(text()).not.toContain(`@/modules/${id}`);
   });
 
   const declared = MODULES.flatMap((module) => (module.views ?? []).map(({ id }) => id)).sort();
