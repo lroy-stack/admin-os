@@ -146,8 +146,8 @@ Biome, dependency-cruiser, Vitest and Playwright keep it in shape; it deploys to
 
 ## Project status
 
-The current release is [v0.2.0](CHANGELOG.md). The unreleased work toward v0.3 is listed in the changelog: business
-settings, products by business type, the clients and suppliers directory, and the module seam.
+The current release is [v0.3.0](CHANGELOG.md): business settings, products by business type, the clients and suppliers
+directory behind the invoice, and the module seam. The changelog lists what each release brings.
 
 ## Contributing
 

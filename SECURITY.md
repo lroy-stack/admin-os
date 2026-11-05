@@ -6,7 +6,7 @@ Security fixes go into `main` and the latest release.
 
 | Version | Supported |
 | --- | --- |
-| 0.2.x | Yes |
+| 0.3.x | Yes |
 | Earlier | No |
 
 ## Reporting a vulnerability

@@ -5,6 +5,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-06
+
 ### Added
 
 - **Business settings a session changes.** The kernel capability `settings.values.update` (owner only) sets
@@ -156,5 +158,6 @@ everything since that import.
 - The public demo MCP tokens are read-only.
 - The demo cookies are `Secure` over HTTPS, bounded in time and scoped to the request's host.
 
-[Unreleased]: https://github.com/lroy-stack/admin-os/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/lroy-stack/admin-os/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/lroy-stack/admin-os/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lroy-stack/admin-os/releases/tag/v0.2.0
