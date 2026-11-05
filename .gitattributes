@@ -1,1 +1,1 @@
-src/config/*.generated.ts linguist-generated=true
+src/config/*.generated.* linguist-generated=true
