@@ -1,4 +1,4 @@
-import type { ActionOutcome } from "./outcome";
+import type { ActionOutcome } from "@/ds/forms";
 
 /**
  * The text a failed write shows when it is not in a window with a field to point at: the server's own message when it

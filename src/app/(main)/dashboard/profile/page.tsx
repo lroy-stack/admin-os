@@ -1,12 +1,16 @@
 import { LockKeyhole } from "lucide-react";
 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getLocale } from "@/config/locale.server";
 import { pageMetadata } from "@/config/metadata.server";
-import { homeLevel } from "@/config/trail.server";
-import { getVertical } from "@/config/vertical.server";
-import { PageTrail } from "@/ds/components";
 
 import { profileMessages } from "./_components/messages.server";
 import { localizeProfile } from "./_components/profile-data";
@@ -21,18 +25,35 @@ import { TimeOffDetails } from "./_components/profile-time-off-details";
 export const generateMetadata = () => pageMetadata("/dashboard/profile", profileMessages);
 
 export default async function Page() {
-  const [locale, vertical] = await Promise.all([getLocale(), getVertical()]);
+  const locale = await getLocale();
   const text = profileMessages[locale];
   const profile = localizeProfile(text, locale);
 
   return (
     <div className="flex flex-col gap-4 py-4" data-content-padding="false">
-      <PageTrail
-        className="px-4"
-        current={text.breadcrumb.profile}
-        label={text.breadcrumb.label}
-        levels={[homeLevel(vertical.id, locale)]}
-      />
+      <Breadcrumb className="px-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <span>{text.breadcrumb.dashboard}</span>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <span>{text.breadcrumb.people}</span>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <span>{text.breadcrumb.directory}</span>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <span>{profile.name}</span>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{text.breadcrumb.details}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <ProfileHeader profile={profile} locale={locale} />
 
       <Tabs className="min-h-0 flex-1 gap-0" defaultValue="overview">

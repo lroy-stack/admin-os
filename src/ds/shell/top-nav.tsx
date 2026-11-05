@@ -125,7 +125,6 @@ export function TopNav({
   account,
   demo,
   inboxHref,
-  accountHref,
   settingsHref,
   notifications,
 }: {
@@ -136,8 +135,6 @@ export function TopNav({
   demo?: ShellDemo;
   /** Where the inbox button goes; the app owns its routes. */
   inboxHref: string;
-  /** Where the account menu's Account item goes: the signed-in person's own page. */
-  accountHref: string;
   /** Where the account menu's business settings go. */
   settingsHref: string;
   /** The bell and its panel; omitted when the actor cannot read notifications. */
@@ -199,7 +196,7 @@ export function TopNav({
               {notifications.panel}
             </PopoverOrSheet>
           ) : null}
-          <AccountMenu account={account} demo={demo} accountHref={accountHref} settingsHref={settingsHref} />
+          <AccountMenu account={account} demo={demo} settingsHref={settingsHref} />
         </div>
       </div>
 

@@ -10,7 +10,7 @@ const en: ProfileMessages = {
     description:
       "An employee profile with personal details, employment information, time off, documents and reporting line.",
   },
-  breadcrumb: { label: "Breadcrumb", profile: "Profile" },
+  breadcrumb: { dashboard: "Dashboard", people: "People", directory: "Employee directory", details: "Profile details" },
   tabs: {
     overview: "Overview",
     personal: "Personal",
@@ -150,7 +150,12 @@ const es: ProfileMessages = {
     description:
       "Un perfil de empleado con datos personales, información laboral, permisos, documentos y línea jerárquica.",
   },
-  breadcrumb: { label: "Ruta de navegación", profile: "Perfil" },
+  breadcrumb: {
+    dashboard: "Panel",
+    people: "Personas",
+    directory: "Directorio de empleados",
+    details: "Detalles del perfil",
+  },
   tabs: {
     overview: "Resumen",
     personal: "Personal",
@@ -293,7 +298,12 @@ const de: ProfileMessages = {
     description:
       "Ein Mitarbeiterprofil mit persönlichen Angaben, Beschäftigungsinformationen, Abwesenheiten, Dokumenten und Berichtslinie.",
   },
-  breadcrumb: { label: "Brotkrümelnavigation", profile: "Profil" },
+  breadcrumb: {
+    dashboard: "Dashboard",
+    people: "Mitarbeitende",
+    directory: "Mitarbeiterverzeichnis",
+    details: "Profildetails",
+  },
   tabs: {
     overview: "Übersicht",
     personal: "Persönlich",
@@ -433,7 +443,12 @@ const fr: ProfileMessages = {
     description:
       "Un profil d’employé avec informations personnelles, situation d’emploi, congés, documents et ligne hiérarchique.",
   },
-  breadcrumb: { label: "Fil d’Ariane", profile: "Profil" },
+  breadcrumb: {
+    dashboard: "Tableau de bord",
+    people: "Personnes",
+    directory: "Annuaire des employés",
+    details: "Détails du profil",
+  },
   tabs: {
     overview: "Aperçu",
     personal: "Personnel",

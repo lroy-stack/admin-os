@@ -59,8 +59,7 @@ for (const locale of LOCALES) {
 /**
  * Preset axis: each preset words its own areas (hospitality "Reservations", salon "Appointments"). The nav is
  * filtered by permission, but today owner, manager and staff all hold `read:bookings`, so the three roles see the
- * same entries (the team entry joined with its screen, ADR 0006 and 0020); the test pins that, and that no entry of
- * another module (Menu, Tables...) or another preset's word is in the DOM.
+ * same entries; the test pins that, and that no entry of another module (Team, Menu...) is in the DOM.
  * The permission-gated hiding itself is unit-tested (`visibleNavIds`); a real difference joins with the next gated area.
  */
 const PRESETS = [
@@ -68,15 +67,13 @@ const PRESETS = [
     preset: "hospitality",
     bookings: "Reservations",
     customers: "Guests",
-    staff: "Team",
-    absent: ["Appointments", "Menu", "Clients", "Tables", "Stylists", "Mechanics"],
+    absent: ["Appointments", "Team", "Menu", "Clients", "Tables"],
   },
   {
     preset: "salon",
     bookings: "Appointments",
     customers: "Clients",
-    staff: "Stylists",
-    absent: ["Reservations", "Team", "Menu", "Guests", "Tables", "Mechanics"],
+    absent: ["Reservations", "Team", "Menu", "Guests", "Tables"],
   },
 ] as const;
 
@@ -84,7 +81,7 @@ const PRESETS = [
 const HOSPITALITY_WORDS =
   /\b(reservations?|diner|dining|covers|waiter|allergen|dish(es)?|restaurant|mesa|comensal|carta|guests?|tables?)\b/i;
 
-for (const { preset, bookings, customers, staff, absent } of PRESETS) {
+for (const { preset, bookings, customers, absent } of PRESETS) {
   for (const role of ROLES) {
     test(`${preset} nav as ${role}: same entries, none hidden left in the DOM`, async ({ page, context, baseURL }) => {
       await context.addCookies([
@@ -98,7 +95,6 @@ for (const { preset, bookings, customers, staff, absent } of PRESETS) {
       await expect(sections.getByRole("link", { name: "Home", exact: true })).toBeVisible();
       await expect(sections.getByRole("link", { name: bookings, exact: true })).toBeVisible();
       await expect(sections.getByRole("link", { name: customers, exact: true })).toBeVisible();
-      await expect(sections.getByRole("link", { name: staff, exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: new RegExp(`^(${absent.join("|")})$`) })).toHaveCount(0);
     });
   }
@@ -163,35 +159,6 @@ test("the account menu resets the demo data", async ({ page, context, baseURL })
   await page.getByRole("menuitem", { name: "Reset demo data" }).click();
 
   await expect(page.getByText("Demo data reset.")).toBeVisible();
-});
-
-/**
- * Every item of the account menu has a destination (ADR 0015: a control with no destination is removed; spec 012 R8):
- * a link to a page that exists, or an action the demo answers. The demo's role and preset switches are radio items.
- */
-test("the account menu offers only items with a destination", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
-  await page.goto("/dashboard/default");
-
-  await openAccountMenu(page);
-
-  await expect(page.getByRole("menuitem")).toHaveText(["Account", "Business settings", "Reset demo data"]);
-  await expect(page.getByRole("menuitem", { name: "Account" })).toHaveAttribute("href", "/dashboard/profile");
-  await expect(page.getByRole("menuitem", { name: "Business settings" })).toHaveAttribute(
-    "href",
-    "/dashboard/settings",
-  );
-});
-
-test("the account menu's Account item opens the signed-in person's profile", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
-  await page.goto("/dashboard/default");
-
-  await openAccountMenu(page);
-  await page.getByRole("menuitem", { name: "Account" }).click();
-
-  await expect(page).toHaveURL(/\/dashboard\/profile$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Alex Morgan" })).toBeVisible();
 });
 
 test("a section far to the right scrolls the nav row, never the page", async ({ page, context, baseURL }) => {

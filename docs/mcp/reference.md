@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `16b8aef583b022` | `1751a078cf749b` |
-| salon | `16b8aef583b022` | `1751a078cf749b` |
-| workshop | `16b8aef583b022` | `1751a078cf749b` |
+| hospitality | `0d8e574caf0d3d` | `0b73371ac008ac` |
+| salon | `0d8e574caf0d3d` | `0b73371ac008ac` |
+| workshop | `0d8e574caf0d3d` | `0b73371ac008ac` |
 
 ## Tools by preset
 
@@ -67,9 +67,7 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
-| [`staff_get`](#staff_get) | Get a team member | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
-| [`staff_shifts_list`](#staff_shifts_list) | List a team member's shifts | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ### salon
 
@@ -107,9 +105,7 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
-| [`staff_get`](#staff_get) | Get a team member | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
-| [`staff_shifts_list`](#staff_shifts_list) | List a team member's shifts | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ### workshop
 
@@ -147,9 +143,7 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 | [`resources_list`](#resources_list) | List resources | read | 0 | n/a (read) | false | `read:resources` | owner, manager, staff |
 | [`settings_values_get`](#settings_values_get) | Read settings | read | 0 | n/a (read) | false | `read:settings` | owner, manager, staff |
 | [`settings_values_update`](#settings_values_update) | Change settings | write | 2 | target-state | true | `manage:settings` | owner |
-| [`staff_get`](#staff_get) | Get a team member | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 | [`staff_list`](#staff_list) | List staff | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
-| [`staff_shifts_list`](#staff_shifts_list) | List a team member's shifts | read | 1 | n/a (read) | false | `read:staff` | owner, manager, staff |
 
 ## Tools
 
@@ -1257,38 +1251,13 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
-### `staff_get`
-
-**Get a team member.** Get one team member by id: name, roles, status, locations and skills, without employment terms. Fails with staff.not_found when there is none. Find valid ids: id with staff_list.
-
-- Capability: `staff.get`, permission `read:staff`, tier 1, idempotency n/a (read).
-- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
-- Id hints (field: tools that list valid values):
-  - `id`: `staff_list`
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128
-    }
-  },
-  "required": [
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
 ### `staff_list`
 
-**List staff.** List team members, one page at a time. Employment terms are not included.
+**List staff.** List staff members, one page at a time.
 
 - Capability: `staff.list`, permission `read:staff`, tier 1, idempotency n/a (read).
 - Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
+- Result: concise rows; the full record is one get tool away.
 
 ```json
 {
@@ -1310,53 +1279,6 @@ Each tool's input schema is JSON Schema 2020-12, as `tools/list` sends it (witho
 }
 ```
 
-### `staff_shifts_list`
-
-**List a team member's shifts.** List one team member's planned shifts from one business day to another, covering at most 31 days, both ends included (to at most 30 days after from), ordered by day and start time, one page at a time. Times are minutes from midnight of the shift's business day. Empty when the business plans no shifts. Fails with staff.not_found for an unknown staffId. Find valid ids: staffId with staff_list.
-
-- Capability: `staff.shifts.list`, permission `read:staff`, tier 1, idempotency n/a (read).
-- Annotations: `readOnlyHint` true, `destructiveHint` false, `idempotentHint` true, `openWorldHint` false.
-- Id hints (field: tools that list valid values):
-  - `staffId`: `staff_list`
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "cursor": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 512
-    },
-    "limit": {
-      "default": 50,
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 100
-    },
-    "staffId": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128
-    },
-    "from": {
-      "type": "string",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-    },
-    "to": {
-      "type": "string",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-    }
-  },
-  "required": [
-    "staffId",
-    "from",
-    "to"
-  ],
-  "additionalProperties": false
-}
-```
-
 ## UI-only capabilities
 
 Capabilities only the web app calls; they are never tools.
@@ -1369,4 +1291,3 @@ Capabilities only the web app calls; they are never tools.
 | `approvals.reject` | Rejecting is a person's decision, taken in the web app (D7) |
 | `bookings.status.undo` | The undo affordance of the person who just advanced a status; agents use the forward capabilities (ADR 0016, resolution 3) |
 | `bookings.walk_in.undo` | The undo affordance of the person who just seated a walk-in; agents use the forward capabilities (ADR 0016, resolution 3) |
-| `staff.contract.get` | Employment terms; no assistant job needs them (spec 012) |

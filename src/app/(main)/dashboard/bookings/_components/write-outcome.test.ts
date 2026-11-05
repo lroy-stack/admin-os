@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { failureMessage } from "./failure-message";
+import { failureMessage } from "./write-outcome";
 
 describe("failureMessage", () => {
   it("shows the server's own text for an error", () => {

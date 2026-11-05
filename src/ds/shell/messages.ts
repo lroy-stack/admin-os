@@ -16,6 +16,8 @@ export interface ShellMessages {
     readonly label: string;
     readonly account: string;
     readonly businessSettings: string;
+    readonly notifications: string;
+    readonly logOut: string;
     readonly demo: {
       /** Heading of the demo switches. */
       readonly title: string;

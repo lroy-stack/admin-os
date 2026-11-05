@@ -59,14 +59,6 @@ export function toCreateInput({ name, phone, email }: ContactFormValues) {
 }
 
 /**
- * The input of `customers.contact.update` for a valid form. A blank phone or email is `null`, which clears it: an
- * omitted field would mean "unchanged", so the person who emptied a field would see it come back.
- */
-export function toUpdateInput(id: string, { name, phone, email }: ContactFormValues) {
-  return { id, name, phone: phone ?? null, email: email ?? null };
-}
-
-/**
  * The phone and email a person has typed that are complete enough to look up in `customers.duplicates.check`, or
  * `null` when neither is: a half-typed number or address matches nothing worth showing. The phone is E.164.
  */
