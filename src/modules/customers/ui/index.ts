@@ -6,5 +6,7 @@ export {
   contactQuery,
   EMPTY_CONTACT,
   toCreateInput,
+  toUpdateInput,
 } from "./contact-form";
 export { type ContactFieldsMessages, contactFieldsMessageKey } from "./messages";
+export { blockFormSchema, NOTE_MAX_LENGTH, noteFormSchema, REASON_MAX_LENGTH } from "./text-forms";

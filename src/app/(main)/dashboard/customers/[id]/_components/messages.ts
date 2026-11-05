@@ -1,4 +1,4 @@
-import type { Message, PageMeta } from "@/core/i18n/client";
+import { type Message, type MessageKey, messageKey, type PageMeta } from "@/core/i18n/client";
 
 /**
  * Text of /dashboard/customers/[id] (a customer's record page, ADR 0020). Words the directory already owns (visits,
@@ -39,4 +39,34 @@ export interface CustomerRecordMessages {
     readonly phone: string;
     readonly language: string;
   };
+  /** The window of each write. Each `verb` names its window and its button and repeats on the header control (ADR 0015). */
+  readonly edit: { readonly verb: string; readonly description: string; readonly saved: string };
+  readonly note: {
+    readonly verb: string;
+    readonly description: string;
+    readonly label: string;
+    readonly invalid: string;
+    readonly saved: string;
+  };
+  readonly block: {
+    /** The window's title, which names the object; the button repeats `verb`. */
+    readonly title: string;
+    readonly verb: string;
+    readonly description: string;
+    readonly label: string;
+    readonly invalid: string;
+    /** Placeholders: `{name}`. */
+    readonly done: string;
+  };
+  readonly unblock: {
+    readonly verb: string;
+    /** Placeholders: `{name}` and `{reason}` (the block that Undo restores). */
+    readonly done: string;
+    /** When the block had no reason to restore, so the toast offers no Undo. Placeholders: `{name}`. */
+    readonly doneFinal: string;
+    readonly failed: string;
+  };
 }
+
+export const customerRecordMessageKey: MessageKey<CustomerRecordMessages> =
+  messageKey<CustomerRecordMessages>("customerRecord");

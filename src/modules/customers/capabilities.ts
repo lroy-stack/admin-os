@@ -4,8 +4,10 @@ import { defineCapability } from "@/core/capability";
 import { pageInput, pageOutput } from "@/core/pagination";
 
 import {
+  customerBlockInput,
   customerContactUpdateInput,
   customerCreateInput,
+  customerNoteAddInput,
   customerSchema,
   customerSearchInput,
   customerSummarySchema,
@@ -91,7 +93,7 @@ export const customersContactUpdate = defineCapability({
 export const customersNotesAdd = defineCapability({
   id: "customers.notes.add",
   summary: "Add a dated note to a customer, signed by the acting staff member.",
-  input: z.strictObject({ id: z.string().min(1), text: z.string().trim().min(1).max(2000) }),
+  input: customerNoteAddInput,
   output: customerSchema,
   permission: "update:customers",
   effect: "write",
@@ -104,7 +106,7 @@ export const customersNotesAdd = defineCapability({
 export const customersBlock = defineCapability({
   id: "customers.block",
   summary: "Block a customer from new bookings, with the reason staff will see.",
-  input: z.strictObject({ id: z.string().min(1), reason: z.string().trim().min(1).max(500) }),
+  input: customerBlockInput,
   output: customerSchema,
   permission: "block:customers",
   effect: "write",

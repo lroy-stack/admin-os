@@ -14,6 +14,24 @@ const CALVO_PATH = "/dashboard/customers/C-calvo";
 const ORTEGA_NOTE = "One guest is coeliac";
 const NOTE_BYLINE = "Alex Morgan · Sep 30, 2026, 9:00 PM";
 
+const NEW_EMAIL = "ortega.new@example.com";
+const NEW_NOTE = "Prefers the corner table";
+const BLOCK_REASON = "Left without paying";
+
+const windowOf = (page: Page, name: string) => page.getByRole("dialog", { name });
+const toast = (page: Page) => page.locator("[data-sonner-toast]").first();
+const header = (page: Page, name: string) => page.getByRole("button", { name, exact: true });
+
+/** Blocks the customer through the window, as the owner does, and waits for the page to show it. */
+const block = async (page: Page) => {
+  await header(page, "Block").click();
+  await windowOf(page, "Block customer").getByRole("textbox", { name: "Reason" }).fill(BLOCK_REASON);
+  await windowOf(page, "Block customer").getByRole("button", { name: "Block", exact: true }).click();
+  await expect(windowOf(page, "Block customer")).toBeHidden();
+  await expect(header(page, "Unblock")).toBeVisible();
+  await expect(header(page, "Unblock")).toBeFocused();
+};
+
 const trail = (page: Page) => page.getByRole("navigation", { name: "Breadcrumb" });
 const tab = (page: Page, name: string) => page.getByRole("tab", { name });
 
@@ -109,6 +127,128 @@ test.describe("customer record page", () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
+});
+
+/**
+ * The writes, as the owner (the default demo role). Every test has a browser context of its own, so its first write
+ * starts a demo session of its own and nothing leaks between tests. The default roles all hold `update:customers` and
+ * `block:customers` (the staff role is "reads-and-writes"), so no role hides these controls end to end; the hiding
+ * is covered by `abilitiesOf` in its unit test.
+ */
+test.describe("customer record writes", () => {
+  let problems: string[] = [];
+
+  test.beforeEach(async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
+    problems = watch(page);
+    await page.goto(ORTEGA_PATH);
+    await expect(page.getByRole("heading", { level: 1, name: ORTEGA })).toBeVisible();
+  });
+
+  test.afterEach(() => {
+    expect(problems).toEqual([]);
+  });
+
+  test("edit contact changes the email, and the Contact tab shows it", async ({ page }) => {
+    await header(page, "Edit contact").click();
+    await windowOf(page, "Edit contact").getByRole("textbox", { name: "Email" }).fill(NEW_EMAIL);
+    await windowOf(page, "Edit contact").getByRole("button", { name: "Edit contact", exact: true }).click();
+
+    await expect(windowOf(page, "Edit contact")).toBeHidden();
+    await expect(toast(page)).toContainText("Contact updated");
+    await tab(page, "Contact").click();
+    await expect(page.getByRole("tabpanel", { name: "Contact" }).getByText(NEW_EMAIL)).toBeVisible();
+  });
+
+  test("a cleared phone is removed, not left unchanged", async ({ page }) => {
+    await header(page, "Edit contact").click();
+    await windowOf(page, "Edit contact").getByRole("textbox", { name: "Phone" }).fill("");
+    await windowOf(page, "Edit contact").getByRole("button", { name: "Edit contact", exact: true }).click();
+
+    await expect(windowOf(page, "Edit contact")).toBeHidden();
+    await tab(page, "Contact").click();
+    await expect(page.getByRole("tabpanel", { name: "Contact" }).getByText("Not given")).toHaveCount(1);
+  });
+
+  test("the duplicate notice names another customer with the same phone", async ({ page }) => {
+    await header(page, "Edit contact").click();
+    const edit = windowOf(page, "Edit contact");
+    await edit.getByRole("textbox", { name: "Phone" }).fill("+34 600 000 103");
+
+    await expect(edit.getByRole("link", { name: "Show Bravo" })).toBeVisible();
+  });
+
+  test("the duplicate notice leaves out the customer being edited", async ({ page }) => {
+    await header(page, "Edit contact").click();
+    const edit = windowOf(page, "Edit contact");
+    // The lookup is a Server Action; its answer, not a timer, says it has run. Ortega's own phone matches only Ortega.
+    const lookup = page.waitForResponse((response) => response.request().method() === "POST" && response.ok());
+    await edit.getByRole("textbox", { name: "Phone" }).fill("+34 600 000 102");
+    await lookup;
+
+    await expect(edit.getByRole("link", { name: "Show Ortega" })).toHaveCount(0);
+    await expect(edit.locator('[data-slot="duplicate-notice"]')).toBeEmpty();
+  });
+
+  test("add note puts the note first in Notes", async ({ page }) => {
+    await header(page, "Add note").click();
+    await windowOf(page, "Add note").getByRole("textbox", { name: "Note" }).fill(NEW_NOTE);
+    await windowOf(page, "Add note").getByRole("button", { name: "Add note", exact: true }).click();
+
+    await expect(windowOf(page, "Add note")).toBeHidden();
+    await expect(toast(page)).toContainText("Note added");
+    await tab(page, "Notes").click();
+    await expect(page.getByRole("tabpanel", { name: "Notes" }).getByRole("listitem").first()).toContainText(NEW_NOTE);
+  });
+
+  test("a note needs text", async ({ page }) => {
+    await header(page, "Add note").click();
+    await windowOf(page, "Add note").getByRole("button", { name: "Add note", exact: true }).click();
+
+    await expect(windowOf(page, "Add note").getByText("Enter a note.")).toBeVisible();
+  });
+
+  test("block asks for a reason and the header then shows Blocked and the reason", async ({ page }) => {
+    await block(page);
+
+    await expect(page.getByRole("main").getByText("Blocked").first()).toBeVisible();
+    await expect(page.getByText(`Reason: ${BLOCK_REASON}`)).toBeVisible();
+    await expect(header(page, "Block")).toHaveCount(0);
+  });
+
+  test("unblock acts at once, the toast names the reason, and Undo blocks again", async ({ page }) => {
+    await block(page);
+    await header(page, "Unblock").click();
+
+    await expect(header(page, "Block")).toBeFocused();
+    await expect(toast(page)).toContainText(`Undo blocks again for “${BLOCK_REASON}”`);
+    await expect(page.getByText(`Reason: ${BLOCK_REASON}`)).toHaveCount(0);
+
+    await toast(page).getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByText(`Reason: ${BLOCK_REASON}`)).toBeVisible();
+    await expect(header(page, "Unblock")).toBeVisible();
+  });
+
+  for (const [name, title] of [
+    ["Edit contact", "Edit contact"],
+    ["Add note", "Add note"],
+    ["Block", "Block customer"],
+  ]) {
+    test(`opening ${name} does not move the page`, async ({ page }) => {
+      // CSS locators, not roles: the page behind an open dialog is hidden from the accessibility tree.
+      const heading = page.locator("h1");
+      const tabs = page.locator('[role="tablist"]');
+      const headingBefore = await heading.boundingBox();
+      const tabsBefore = await tabs.boundingBox();
+
+      await header(page, name).click();
+      await expect(windowOf(page, title)).toBeVisible();
+
+      expect(headingBefore).toBeTruthy();
+      expect(await heading.boundingBox()).toEqual(headingBefore);
+      expect(await tabs.boundingBox()).toEqual(tabsBefore);
+    });
+  }
 });
 
 test.describe("customer record page, unknown id", () => {

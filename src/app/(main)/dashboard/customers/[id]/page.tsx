@@ -9,12 +9,15 @@ import { homeLevel } from "@/config/trail.server";
 import { textFor } from "@/config/vocabulary.server";
 import type { Locale } from "@/core/i18n/client";
 import { PageTrail } from "@/ds/components";
+import { contactFieldsBundle, customersErrors } from "@/modules/customers/server";
 
 import { customerHref } from "../_components/customer-card";
 import { toRow } from "../_components/directory-model";
 import { customerDirectoryBundle, customerDirectoryMessages } from "../_components/messages.server";
+import { RecordContactLinks } from "./_components/directory-pieces";
 import { loadCustomer } from "./_components/load-customer.server";
-import { customerRecordMessages } from "./_components/messages.server";
+import { customerRecordBundle, customerRecordMessages } from "./_components/messages.server";
+import { RecordActions } from "./_components/record-actions";
 import { RecordContact } from "./_components/record-contact";
 import { RecordHeader } from "./_components/record-header";
 import { attendanceOf, consentOf, contactOf } from "./_components/record-model";
@@ -22,6 +25,7 @@ import { RecordNotes } from "./_components/record-notes";
 import { RecordOverview } from "./_components/record-overview";
 import { RecordReadState } from "./_components/record-read-state";
 import { RecordStateColumn } from "./_components/record-state-column";
+import { abilitiesOf } from "./_components/record-writes";
 
 const LIST = "/dashboard/customers";
 
@@ -46,7 +50,7 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function Page({ params }: { params: Params }) {
   const { id } = await params;
-  const [{ vertical, locale }, loaded] = await Promise.all([getRuntime(), loadCustomer(id)]);
+  const [{ vertical, locale, actor }, loaded] = await Promise.all([getRuntime(), loadCustomer(id)]);
   if (loaded.status === "missing") notFound();
 
   const text = customerRecordMessages[locale];
@@ -73,7 +77,7 @@ export default async function Page({ params }: { params: Params }) {
   const consent = consentOf(customer.consent);
 
   return (
-    <LocaleBundles bundles={[customerDirectoryBundle]}>
+    <LocaleBundles bundles={[customerDirectoryBundle, customerRecordBundle, contactFieldsBundle]}>
       <div className="flex flex-col gap-4 py-4" data-content-padding="false">
         <PageTrail className="px-4 md:px-6" current={customer.name} label={text.breadcrumb.label} levels={levels} />
         <RecordHeader
@@ -82,6 +86,19 @@ export default async function Page({ params }: { params: Params }) {
           attendance={attendanceOf(customer.figures)}
           text={text.header}
           locale={locale}
+          actions={
+            <RecordActions
+              customerId={customer.id}
+              customerName={customer.name}
+              contact={{ name: customer.name, phone: customer.phone ?? "", email: customer.email ?? "" }}
+              blocked={customer.blocked}
+              blockReason={customer.blockReason}
+              can={abilitiesOf(actor.permissions)}
+              errors={customersErrors}
+            >
+              <RecordContactLinks customer={row} />
+            </RecordActions>
+          }
         />
 
         <Tabs className="min-h-0 flex-1 gap-0" defaultValue="overview">

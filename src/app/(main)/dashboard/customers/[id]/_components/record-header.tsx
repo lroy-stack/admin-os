@@ -1,10 +1,12 @@
+import type { ReactNode } from "react";
+
 import type { Locale } from "@/core/i18n/client";
 import { format } from "@/core/i18n/client";
 
 import { CustomerAvatar } from "../../_components/customer-card";
 import type { CustomerRow } from "../../_components/directory-model";
 import { AttendanceRing } from "./attendance-ring";
-import { RecordContactLinks, RecordTags } from "./directory-pieces";
+import { RecordTags } from "./directory-pieces";
 import type { CustomerRecordMessages } from "./messages";
 import type { Attendance } from "./record-model";
 
@@ -14,10 +16,12 @@ interface RecordHeaderProps {
   attendance: Attendance | null;
   text: CustomerRecordMessages["header"];
   locale: Locale;
+  /** The write controls the actor may use with the contact links (`RecordActions`), in one wrapping row. */
+  actions: ReactNode;
 }
 
 /** Identity and state: the avatar in its attendance ring, the name, the pills, the reason for a block and the contact links. */
-export function RecordHeader({ customer, blockReason, attendance, text, locale }: RecordHeaderProps) {
+export function RecordHeader({ customer, blockReason, attendance, text, locale, actions }: RecordHeaderProps) {
   return (
     <div className="flex flex-col gap-5 px-4 md:px-6 lg:flex-row lg:items-end lg:justify-between">
       <div className="flex min-w-0 items-center gap-4">
@@ -43,7 +47,7 @@ export function RecordHeader({ customer, blockReason, attendance, text, locale }
         </div>
       </div>
 
-      <RecordContactLinks customer={customer} />
+      {actions}
     </div>
   );
 }
