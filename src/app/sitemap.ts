@@ -22,6 +22,7 @@ const PUBLIC_ROUTES = [
   "/dashboard/invoice",
   "/dashboard/profile",
   "/dashboard/customers",
+  "/dashboard/parties",
   "/dashboard/roles",
   "/auth/v1/login",
   "/auth/v2/login",
