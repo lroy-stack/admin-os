@@ -16,6 +16,7 @@ import {
   fetchWith,
   listRequest,
   recordingStore,
+  SETTINGS_CHANGE,
   TEST_RATE_LIMIT,
 } from "./support";
 import { exports } from "cloudflare:workers";
@@ -180,13 +181,14 @@ describe("MCP over the Worker, per role and era (moved from /api/mcp)", () => {
     expect(client.getServerVersion()?.version).toBe(toolListVersion(CATALOG, MCP_MANIFEST));
   });
 
-  it.each(ERAS)("reads bookings over the %s era", async (era) => {
+  // `settings_values_get` reads the session's store, so each era's call goes the whole way (the clock does not).
+  it.each(ERAS)("reads the session's settings over the %s era", async (era) => {
     const client = await connect("reader-token-0001", fetchWith({ MCP_TOKENS: "reader-token-0001:staff" }), era);
     await client.listTools();
 
-    const result = await client.callTool({ name: "bookings_list", arguments: { limit: 2 } });
+    const result = await client.callTool({ name: "settings_values_get", arguments: { keys: ["business.invoicing"] } });
 
-    expect(result).toMatchObject({ structuredContent: { items: expect.any(Array) } });
+    expect(result).toMatchObject({ structuredContent: { values: { "business.invoicing": expect.any(Object) } } });
   });
 
   it("serves /mcp/ with a trailing slash as /mcp", async () => {
@@ -213,42 +215,32 @@ describe("tools/list with a public demo token (AC12)", () => {
     const client = await connect("demo-owner-token", fetchWith({ DEMO_STORE: store }));
 
     await client.listTools();
-    const result = await client.callTool({ name: "customers_list", arguments: { limit: 2 } });
+    const result = await client.callTool({ name: "settings_values_get", arguments: {} });
 
-    // T3's concise rows: a list never carries a customer's notes.
-    expect([result.isError ?? false, names, (result.structuredContent as { items: object[] }).items[0]]).toEqual([
+    expect([result.isError ?? false, names, result.structuredContent]).toEqual([
       false,
       [],
-      expect.not.objectContaining({ notes: expect.anything() }),
+      { values: expect.any(Object) },
     ]);
   });
 });
 
 describe("a writable token (MCP_READ_ONLY=false)", () => {
-  it("writes to its own session in the store, and a second call reads it back with its free text marked", async () => {
+  it("writes to its own session in the store, and a second call reads the held write back", async () => {
     const { store, names } = recordingStore(baseEnv.DEMO_STORE);
     const fetch = fetchWith({ MCP_READ_ONLY: "false", MCP_TOKENS: "writer-token-0001:owner", DEMO_STORE: store });
     const writer = await connect("writer-token-0001", fetch);
     await writer.listTools();
-    const created = await writer.callTool({
-      name: "customers_create",
-      arguments: { name: "Grace Hopper", idempotencyKey: "6f1d7f0e-8f7a-4c1e-9b1a-2d3c4e5f6a7b" },
-    });
-    const id = (created.structuredContent as { id: string }).id;
-    await writer.callTool({
-      name: "customers_notes_add",
-      arguments: { id, text: "Prefers the terrace", idempotencyKey: "0d3b5a1c-6e2f-4a7b-8c9d-1e2f3a4b5c6d" },
-    });
+    const held = await writer.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
+    const { approvalId } = held.structuredContent as { approvalId: string };
     const reader = await connect("writer-token-0001", fetch);
     await reader.listTools();
 
-    const read = await reader.callTool({ name: "customers_get", arguments: { id } });
+    const read = await reader.callTool({ name: "approvals_get", arguments: { approvalId } });
 
-    expect([read.structuredContent, new Set(names)]).toEqual([
-      expect.objectContaining({
-        name: "Grace Hopper",
-        notes: [expect.objectContaining({ text: { untrusted: true, text: "Prefers the terrace" } })],
-      }),
+    expect([held.structuredContent, read.structuredContent, new Set(names)]).toEqual([
+      { status: "awaiting_approval", approvalId: expect.any(String) },
+      expect.objectContaining({ approvalId, capabilityId: "settings.values.update", status: "pending" }),
       new Set([`hospitality:${await demoSessionOf("writer-token-0001")}`]),
     ]);
   });
@@ -306,14 +298,14 @@ describe("logs (AC12)", () => {
     await client.listTools();
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    const result = await client.callTool({ name: "bookings_list", arguments: { limit: 1 } });
+    const result = await client.callTool({ name: "clock_get", arguments: {} });
 
     expect(log.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
       {
         event: "mcp.call",
         correlationId: result._meta?.["admin-os/correlationId"],
         clientId: "demo-manager",
-        tool: "bookings_list",
+        tool: "clock_get",
         status: "ok",
         durationMs: expect.any(Number),
         via: "mcp-worker",
@@ -339,7 +331,7 @@ describe("the surface over HTTP (moved from /api/mcp)", () => {
   });
 
   it.each([
-    ["bookings_cancel", "staff-token-0002"],
+    ["settings_values_update", "staff-token-0002"],
     ["no_such_tool", "staff-token-0003"],
   ])("answers %s, which staff is not offered, with access.forbidden", async (name, token) => {
     const client = await connect(token, fetchWith({ MCP_TOKENS: `${token}:staff` }));
@@ -351,10 +343,10 @@ describe("the surface over HTTP (moved from /api/mcp)", () => {
   });
 
   it("refuses a write with the public demo tokens and says the server is read-only", async () => {
-    const client = await connect("demo-manager-token", selfFetch);
+    const client = await connect("demo-owner-token", selfFetch);
     await client.listTools();
 
-    const result = await client.callTool({ name: "customers_contact_update", arguments: { id: "C-1", name: "Ada" } });
+    const result = await client.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
 
     expect(result).toMatchObject({
       isError: true,
@@ -362,13 +354,17 @@ describe("the surface over HTTP (moved from /api/mcp)", () => {
     });
   });
 
+  // A session read, so the fault travels to the durable store over RPC (`durable-adapter.server.ts`), as the UI's does.
   it("applies MOCK_FAULTS as the UI does", async () => {
-    const fetch = fetchWith({ MCP_TOKENS: "fault-token-0001:owner", MOCK_FAULTS: "bookings.list=bookings.not_found" });
+    const fetch = fetchWith({
+      MCP_TOKENS: "fault-token-0001:owner",
+      MOCK_FAULTS: "settings.values.get=settings.unavailable",
+    });
     const client = await connect("fault-token-0001", fetch);
     await client.listTools();
 
-    const result = await client.callTool({ name: "bookings_list", arguments: {} });
+    const result = await client.callTool({ name: "settings_values_get", arguments: {} });
 
-    expect(result).toMatchObject({ isError: true, structuredContent: { code: "bookings.not_found" } });
+    expect(result).toMatchObject({ isError: true, structuredContent: { code: "settings.unavailable" } });
   });
 });

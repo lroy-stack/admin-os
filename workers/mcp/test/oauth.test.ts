@@ -25,14 +25,12 @@ import {
   spend,
   webClient,
 } from "./oauth-support";
-import { baseEnv, connect, ENDPOINT, fetchWith, recordingStore, TEST_RATE_LIMIT } from "./support";
+import { baseEnv, connect, ENDPOINT, fetchWith, recordingStore, SETTINGS_CHANGE, TEST_RATE_LIMIT } from "./support";
 
 /** The test Worker as clients reach it, with the deployed defaults (`MCP_READ_ONLY` unset). */
 const fetch = fetchWith();
 
 const VISITOR = "6f1c2a9e-3b0d-4c1e-8f6a-1d2e3f4a5b6c";
-/** A seeded hospitality booking that can still be cancelled (as in src/config/approvals.test.ts). */
-const CONFIRMED_BOOKING = "R-1046";
 
 /** The session id a response's `demo_sid` cookie carries, verified with the Worker's own secret. */
 const sessionOfResponse = async (response: Response): Promise<string | undefined> => {
@@ -351,16 +349,13 @@ describe("a grant", () => {
     const agent = await connect(granted.accessToken, fetchStore);
     await agent.listTools();
 
-    const created = await agent.callTool({
-      name: "customers_create",
-      arguments: { name: "Ada Lovelace", idempotencyKey: "a1a-ac6-0001" },
-    });
-    const id = (created.structuredContent as { id: string }).id;
-    const seen = await webClient(session).call("customers.get", { id });
+    const held = await agent.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
+    const { approvalId } = held.structuredContent as { approvalId: string };
+    const seen = await webClient(session).call("approvals.get", { approvalId });
 
     expect([new Set(names), seen]).toEqual([
       new Set([`hospitality:${session}`]),
-      { ok: true, value: expect.objectContaining({ id, name: "Ada Lovelace" }) },
+      { ok: true, value: expect.objectContaining({ approvalId, status: "pending" }) },
     ]);
   });
 
@@ -372,10 +367,7 @@ describe("a grant", () => {
     const agent = await connect(granted.accessToken, fetch);
     await agent.listTools();
 
-    const held = await agent.callTool({
-      name: "bookings_cancel",
-      arguments: { id: CONFIRMED_BOOKING, reason: "The guest called" },
-    });
+    const held = await agent.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
     const queue = await webClient(session).call("approvals.list", { limit: 10 });
 
     expect([held.structuredContent, queue]).toMatchObject([

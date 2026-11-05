@@ -21,7 +21,7 @@ import {
   toolCallRequest,
   webClient,
 } from "./oauth-support";
-import { connect, ENDPOINT, fetchWith } from "./support";
+import { connect, ENDPOINT, fetchWith, SETTINGS_CHANGE } from "./support";
 
 /** The test Worker with the deployed defaults: `MCP_READ_ONLY` unset, the public demo tokens in force. */
 const fetch = fetchWith();
@@ -37,8 +37,6 @@ const toolsOf = (roleId: RoleId, effects: "reads" | "all") => {
 };
 
 const CHALLENGE = `Bearer realm="OAuth", error="insufficient_scope", scope="read write", resource_metadata="${ISSUER}/.well-known/oauth-protected-resource/mcp"`;
-
-const newCustomer = (key: string) => ({ name: "Grace Hopper", idempotencyKey: key });
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -59,7 +57,7 @@ describe("a read grant (AC2)", () => {
     const browser = browserAt("192.0.2.2", await demoCookies(crypto.randomUUID(), "owner"));
     const { accessToken } = await authorize(fetch, browser, await registeredClientId(fetch, browser.ip));
 
-    const response = await fetch(ENDPOINT, toolCallRequest(accessToken, "customers_create", newCustomer("a1b-0002")));
+    const response = await fetch(ENDPOINT, toolCallRequest(accessToken, "settings_values_update", SETTINGS_CHANGE));
 
     expect([response.status, response.headers.get("www-authenticate"), await response.json()]).toEqual([
       403,
@@ -74,14 +72,14 @@ describe("a read grant (AC2)", () => {
     const { accessToken } = await authorize(fetch, browser, clientId);
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    await fetch(ENDPOINT, toolCallRequest(accessToken, "customers_create", newCustomer("a1b-0006")));
+    await fetch(ENDPOINT, toolCallRequest(accessToken, "settings_values_update", SETTINGS_CHANGE));
 
     expect(log.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
       {
         event: "mcp.call",
         correlationId: expect.any(String),
         clientId,
-        tool: "customers_create",
+        tool: "settings_values_update",
         status: "refused",
         code: "insufficient_scope",
         via: "mcp-worker",
@@ -95,7 +93,7 @@ describe("a read grant (AC2)", () => {
     const client = await connect(accessToken, fetch);
     await client.listTools();
 
-    const result = await client.callTool({ name: "bookings_cancel", arguments: { id: "R-1046", reason: "No" } });
+    const result = await client.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
 
     expect(result).toMatchObject({ isError: true, structuredContent: { code: "access.forbidden" } });
   });
@@ -147,18 +145,18 @@ describe("step-up (AC3)", () => {
     const browser = browserAt("192.0.2.20", await demoCookies(session, "owner"));
     const clientId = await registeredClientId(fetch, browser.ip);
     const read = await authorize(fetch, browser, clientId);
-    const refused = await fetch(ENDPOINT, toolCallRequest(read.accessToken, "customers_create", newCustomer("a1b-1")));
+    const refused = await fetch(ENDPOINT, toolCallRequest(read.accessToken, "settings_values_update", SETTINGS_CHANGE));
     const write = await authorize(fetch, browser, clientId, "read write", "allow_write");
     const agent = await connect(write.accessToken, fetch);
     await agent.listTools();
 
-    const created = await agent.callTool({ name: "customers_create", arguments: newCustomer("a1b-2") });
-    const id = (created.structuredContent as { id: string }).id;
+    const held = await agent.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
+    const { approvalId } = held.structuredContent as { approvalId: string };
 
-    expect([refused.status, write.scope, await webClient(session).call("customers.get", { id })]).toEqual([
+    expect([refused.status, write.scope, await webClient(session).call("approvals.get", { approvalId })]).toEqual([
       403,
       "read write",
-      { ok: true, value: expect.objectContaining({ id, name: "Grace Hopper" }) },
+      { ok: true, value: expect.objectContaining({ approvalId, status: "pending" }) },
     ]);
   });
 
@@ -183,7 +181,7 @@ describe("MCP_READ_ONLY with grants", () => {
     const client = await connect(accessToken, readOnly);
 
     const { tools } = await client.listTools();
-    const result = await client.callTool({ name: "customers_create", arguments: newCustomer("a1b-ro") });
+    const result = await client.callTool({ name: "settings_values_update", arguments: SETTINGS_CHANGE });
 
     expect([tools.map((tool) => tool.name), result]).toMatchObject([
       toolsOf("owner", "reads"),

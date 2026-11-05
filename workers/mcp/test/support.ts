@@ -1,5 +1,6 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 
+import { inputFor } from "@/config/adapter-contract.testkit";
 import type { StoreNamespace } from "@/config/durable-adapter.server";
 
 import type { McpWorkerEnv } from "../src/env";
@@ -9,6 +10,9 @@ import { env } from "cloudflare:workers";
 
 /** The production endpoint: tests address the Worker by the URL clients use. */
 export const ENDPOINT = "https://mcp.admin-os.lr0y.dev/mcp";
+
+/** A change the default policy holds for a person when an assistant asks: the kernel's own held write. */
+export const SETTINGS_CHANGE = inputFor("settings.values.update", "hospitality");
 
 /** The bindings and vars of the test Worker (test/wrangler.jsonc). */
 export const baseEnv = env as unknown as McpWorkerEnv;

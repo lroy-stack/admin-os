@@ -82,11 +82,11 @@ describe("durableAdapter", () => {
   it("sends every other capability to the object named vertical:sessionId with the call's context", async () => {
     const { namespace, dispatched, names } = recordingNamespace();
 
-    await clientOver(namespace).call("customers.list", {});
+    await clientOver(namespace).call("access.me.get", {});
 
     expect([names, dispatched.map((call) => call.capabilityId), dispatched[0]?.context]).toEqual([
       ["hospitality:s-1"],
-      ["customers.list"],
+      ["access.me.get"],
       expect.objectContaining({
         vertical: "hospitality",
         sessionId: "s-1",
@@ -101,7 +101,7 @@ describe("durableAdapter", () => {
   it("disposes the stub after a call", async () => {
     const { namespace, disposed } = recordingNamespace();
 
-    await clientOver(namespace).call("customers.list", {});
+    await clientOver(namespace).call("access.me.get", {});
 
     expect(disposed).toHaveBeenCalledTimes(1);
   });
@@ -109,7 +109,7 @@ describe("durableAdapter", () => {
   it("disposes the stub when the call throws", async () => {
     const { namespace, disposed, dispatched } = recordingNamespace({ fail: true });
 
-    await clientOver(namespace).call("customers.list", {});
+    await clientOver(namespace).call("access.me.get", {});
 
     expect([dispatched.length > 0, disposed.mock.calls.length]).toEqual([true, dispatched.length]);
   });
@@ -123,7 +123,7 @@ describe("durableAdapter", () => {
     });
 
     const answer = await adapter.dispatch(
-      CATALOG["customers.list"],
+      CATALOG["access.me.get"],
       {},
       {
         actor,

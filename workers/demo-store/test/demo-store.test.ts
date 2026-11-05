@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 
+import { inputFor } from "@/config/adapter-contract.testkit";
+
 import { MAX_REPLAYS } from "../src/bounds";
 import { SCHEMA_VERSION } from "../src/demo-store";
 import { clientFor, contextFor, stubFor } from "./support";
 import { abortAllDurableObjects, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 
 type Client = ReturnType<typeof clientFor>;
+
+/** A change the default policy holds for a person when an assistant asks: the kernel's own held write. */
+const SETTINGS_CHANGE = inputFor("settings.values.update", "hospitality") as { values: Record<string, unknown> };
+
+// The customers.create cases below (replay, isolation, eviction, alarm, bounds) are kernel cases: the kernel has no
+// write that is idempotent by key. They wait for a customers walk after the module split (ADR 0017 §7).
 
 let customers = 0;
 
@@ -115,9 +123,9 @@ describe("DemoStore", () => {
     const sessionId = crypto.randomUUID();
     await stubFor(sessionId).dispatch("approvals.policy.set", { policy: "all" }, contextFor(sessionId));
     const held = await stubFor(sessionId).dispatch(
-      "bookings.staff_note.add",
-      { id: "R-1046", text: "Window seat" },
-      contextFor(sessionId, { via: "mcp", idempotencyKey: "k-held-note" }),
+      "settings.values.update",
+      SETTINGS_CHANGE,
+      contextFor(sessionId, { via: "mcp" }),
     );
     const approvalId = (held as { approvalId: string }).approvalId;
 
@@ -125,13 +133,23 @@ describe("DemoStore", () => {
     const waiting = await stubFor(sessionId).dispatch("approvals.get", { approvalId }, contextFor(sessionId));
     const approved = await stubFor(sessionId).dispatch("approvals.approve", { approvalId }, contextFor(sessionId));
     await abortAllDurableObjects();
-    const booking = await stubFor(sessionId).dispatch("bookings.get", { id: "R-1046" }, contextFor(sessionId));
+    const settings = await stubFor(sessionId).dispatch(
+      "settings.values.get",
+      { keys: Object.keys(SETTINGS_CHANGE.values) },
+      contextFor(sessionId),
+    );
+    const policy = await stubFor(sessionId).dispatch(
+      "settings.values.get",
+      { keys: ["approvals.policy"] },
+      contextFor(sessionId),
+    );
 
-    expect([held, waiting, approved, booking]).toMatchObject([
+    expect([held, waiting, approved, settings, policy]).toMatchObject([
       { status: "awaiting_approval" },
       { ok: true, value: { status: "pending" } },
       { ok: true, value: { status: "approved" } },
-      { ok: true, value: { staffNote: expect.stringContaining("Window seat") } },
+      { ok: true, value: SETTINGS_CHANGE },
+      { ok: true, value: { values: { "approvals.policy": "all" } } },
     ]);
   });
 
@@ -140,13 +158,13 @@ describe("DemoStore", () => {
     await stubFor(sessionId).dispatch("approvals.policy.set", { policy: "none" }, contextFor(sessionId));
 
     await abortAllDurableObjects();
-    const cancelled = await stubFor(sessionId).dispatch(
-      "bookings.cancel",
-      { id: "R-1046", reason: "Guest called" },
+    const changed = await stubFor(sessionId).dispatch(
+      "settings.values.update",
+      SETTINGS_CHANGE,
       contextFor(sessionId, { via: "mcp" }),
     );
 
-    expect(cancelled).toMatchObject({ ok: true, value: { status: "cancelled" } });
+    expect(changed).toMatchObject({ ok: true, value: SETTINGS_CHANGE });
   });
 
   it("resets to the seed when the saved schemaVersion is not the current one", async () => {
@@ -263,7 +281,11 @@ describe("DemoStore", () => {
   it("answers schema.invalid_input for an input the capability does not accept", async () => {
     const sessionId = crypto.randomUUID();
 
-    const answer = await stubFor(sessionId).dispatch("customers.create", { nonsense: true }, contextFor(sessionId));
+    const answer = await stubFor(sessionId).dispatch(
+      "settings.values.update",
+      { nonsense: true },
+      contextFor(sessionId),
+    );
 
     expect(answer).toMatchObject({ ok: false, error: { code: "schema.invalid_input" } });
   });

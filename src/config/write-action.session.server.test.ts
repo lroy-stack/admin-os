@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { inputFor } from "./adapter-contract.testkit";
 import { DEMO_SESSION_COOKIE } from "./demo-session.server";
 import { runWrite } from "./write-action.server";
 
@@ -26,7 +27,11 @@ beforeEach(() => {
 
 describe("runWrite with a visitor who has no demo session yet (ADR 0005)", () => {
   it("starts the session and the first write succeeds against the mock adapter", async () => {
-    const result = await runWrite("customers.create", { name: "First Write", phone: "+34611111111" }, "attempt-1");
+    const result = await runWrite(
+      "settings.values.update",
+      inputFor("settings.values.update", "hospitality"),
+      "attempt-1",
+    );
 
     expect(result.status).toBe("ok");
     expect(jar.set).toHaveBeenCalledWith(DEMO_SESSION_COOKIE, expect.any(String), expect.any(Object));

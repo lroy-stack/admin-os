@@ -66,7 +66,7 @@ describe("npm run mcp:stdio", () => {
       ]);
       expect([client.getProtocolEra(), tools.map((tool) => tool.name), me.structuredContent]).toEqual([
         era,
-        expect.arrayContaining(["bookings_list", "customers_list"]),
+        expect.arrayContaining(["clock_get", "settings_values_get"]),
         expect.objectContaining({ roleId: "staff" }),
       ]);
     },
@@ -96,7 +96,7 @@ describe("npm run mcp:stdio", () => {
             params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "raw", version: "0" } },
           },
           { jsonrpc: "2.0", method: "notifications/initialized" },
-          { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "bookings_list", arguments: { limit: 1 } } },
+          { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "clock_get", arguments: {} } },
         ],
         2,
       );

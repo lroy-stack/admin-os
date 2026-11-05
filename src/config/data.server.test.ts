@@ -71,17 +71,17 @@ describe("getRuntime", () => {
   });
 
   it("forces a visitor's fault from the demo cookie", async () => {
-    jar.values.set(MOCK_FAULTS_COOKIE, "bookings.list=bookings.not_found");
+    jar.values.set(MOCK_FAULTS_COOKIE, "clock.get=clock.unavailable");
     const { client } = await getRuntime();
-    expect(await client.call("bookings.list", {})).toMatchObject({
+    expect(await client.call("clock.get", {})).toMatchObject({
       ok: false,
-      error: { code: "bookings.not_found" },
+      error: { code: "clock.unavailable" },
     });
   });
 
   it("ignores a malformed fault cookie instead of failing the page", async () => {
     jar.values.set(MOCK_FAULTS_COOKIE, "nonsense");
     const { client } = await getRuntime();
-    expect(await client.call("bookings.list", {})).toMatchObject({ ok: true });
+    expect(await client.call("clock.get", {})).toMatchObject({ ok: true });
   });
 });

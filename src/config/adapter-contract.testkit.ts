@@ -86,7 +86,7 @@ const advancedBooking = async (client: ReturnType<typeof createClient>, vertical
   return inputFor("bookings.status.undo", vertical);
 };
 
-/** A cancel asked by an assistant waits for a person under the default policy; its id is what the approvals take. */
+/** A settings change asked by an assistant waits for a person under the default policy; the approvals take its id. */
 const heldApproval = async (adapter: Adapter, vertical: VerticalId) => {
   const assistant = createClient(CATALOG, adapter, {
     ...quiet,
@@ -94,7 +94,7 @@ const heldApproval = async (adapter: Adapter, vertical: VerticalId) => {
     via: "mcp",
     mode: "production",
   });
-  const held = await assistant.call("bookings.cancel", inputFor("bookings.cancel", vertical));
+  const held = await assistant.call("settings.values.update", inputFor("settings.values.update", vertical));
   return { approvalId: "approvalId" in held ? held.approvalId : "hold-failed" };
 };
 
