@@ -5,18 +5,17 @@ import { cn } from "cn";
 import { LocaleRoot } from "@/app/_components/locale-root";
 import { commonBundle } from "@/components/common-messages.server";
 import { DEMO_PERSON } from "@/config/actor";
+import { bellRuntimeOf, bellUnread } from "@/config/bell.server";
 import { isDemoAdapter } from "@/config/data.server";
 import { getRuntime } from "@/config/runtime";
 import { VERTICALS } from "@/config/vertical";
 import { textFor } from "@/config/vocabulary.server";
 import { AccessProvider } from "@/core/access/client";
 import { visibleNavIds } from "@/core/nav";
-import { isAwaitingApproval } from "@/core/result";
 import { feedbackBundle } from "@/ds/feedback/server";
 import { overlaysBundle } from "@/ds/overlays/server";
 import { AppBackdrop } from "@/ds/shell";
 import { shellBundle } from "@/ds/shell/server";
-import { unreadCountOutput } from "@/modules/notifications";
 
 import { demoMessages } from "./_components/demo-messages.server";
 import { dashboardBundle } from "./_components/messages.server";
@@ -44,14 +43,8 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     showExamples: demo,
   };
 
-  // The bell shows the actor's real unread count; the panel reads the rows only when it opens (one read per page).
-  const unread = actor.permissions.includes("read:notifications")
-    ? await client.call("notifications.unread.count", {})
-    : undefined;
-  const unreadNotifications =
-    unread === undefined || isAwaitingApproval(unread) || !unread.ok
-      ? undefined
-      : unreadCountOutput.parse(unread.value).unreadCount;
+  // The bell shows the actor's real unread count (approvals and feeds); the panel reads the rows only when it opens.
+  const unreadNotifications = await bellUnread(bellRuntimeOf({ client, actor, locale }));
 
   const roles = vertical.roles.map((role) => ({ id: role.id, label: textFor(vertical.id, locale, role.labelKey) }));
   const account = {

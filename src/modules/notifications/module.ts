@@ -18,6 +18,15 @@ export const notificationsModule = defineModule({
       "notifications.read_all": { expose: true, title: "Mark all notifications read" },
     },
   },
+  feeds: [
+    {
+      feed: "notifications",
+      list: "notifications.list",
+      unread: "notifications.unread.count",
+      read: "notifications.read",
+      readAll: "notifications.read_all",
+    },
+  ],
   seed: {},
   // A derived item names the customer of the booking it comes from, so the field is read from bookings' rows and
   // repeats bookings' own reference on purpose; notifications requires bookings (ADR 0017 §2).

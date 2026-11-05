@@ -1,4 +1,3 @@
-import { type ApprovalRecord, effectiveStatus } from "@/core/approvals";
 import type { BusinessClock } from "@/core/clock";
 import { collectionOf } from "@/core/mock";
 import type { BookingInput } from "@/modules/bookings";
@@ -93,65 +92,8 @@ export function deriveNotifications(source: FeedSource, clock: BusinessClock, ru
     .sort(newestFirst);
 }
 
-/** The message of what an assistant asks for, by capability; any other write reads as a change to the record. */
-const APPROVAL_ACTIONS: Readonly<Record<string, string>> = {
-  "bookings.cancel": "bookingsCancel",
-  "bookings.no_show.mark": "bookingsNoShowMark",
-  "bookings.reschedule": "bookingsReschedule",
-  "bookings.table.assign": "bookingsTableAssign",
-  "customers.block": "customersBlock",
-  "customers.unblock": "customersUnblock",
-  "customers.contact.update": "customersContactUpdate",
-};
-
-/** The instant on the business clock's calendar: its day and the minute counted from that day's midnight. */
-function momentOf(instant: string, timeZone: string): NotificationMoment {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(instant));
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((candidate) => candidate.type === type)?.value ?? "";
-  return {
-    day: `${part("year")}-${part("month")}-${part("day")}`,
-    minute: Number(part("hour")) * 60 + Number(part("minute")),
-  };
-}
-
-/**
- * One notification per write an assistant asked for that still waits for a person (ADR 0016, D7). It lasts as long as
- * the request is pending: deciding or expiring it removes it from the feed, and nobody can mark it read. `target` is
- * the record the input names, when it names one, so the text can say "cancel booking R-1043".
- */
-export function deriveApprovalNotifications(
-  approvals: readonly ApprovalRecord[],
-  clock: BusinessClock,
-  nowMs: number,
-): Notification[] {
-  return approvals
-    .filter((record) => effectiveStatus(record, nowMs) === "pending")
-    .map((record) => {
-      const target = (record.input as { id?: unknown } | null)?.id;
-      return {
-        id: `approval.requested:${record.approvalId}`,
-        kind: "approval.requested",
-        titleKey: "notifications.kinds.approvalRequested.title",
-        bodyKey: `notifications.kinds.approvalRequested.body.${APPROVAL_ACTIONS[record.capabilityId] ?? "generic"}`,
-        params: { target: typeof target === "string" ? target : "" },
-        createdAt: momentOf(record.requestedAt, clock.timeZone),
-        link: { entity: "approval", id: record.approvalId },
-      };
-    });
-}
-
 const kindKey = (kind: Notification["kind"]): string => {
   switch (kind) {
-    case "approval.requested":
-      return "approvalRequested";
     case "booking.soon":
       return "bookingSoon";
     case "booking.late":

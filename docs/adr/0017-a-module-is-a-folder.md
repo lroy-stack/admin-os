@@ -91,8 +91,8 @@ The owner approved the direction (O1): manifests, a generator, a registry for `d
   one. `MCP_MANIFEST` already rejects both directions today.
 - **Code stays out of the manifest.** It holds data and descriptors only, because the Workers import it through the
   composition root and must never reach web code (`workers-reach-no-web-code`, ADR 0016). A module's components (view
-  renderers, bell feeds, slot fills) are exported from its `ui.ts`. Their server halves (loaders, the capabilities a
-  feed's actions call) come from its `server.ts`.
+  renderers, slot fills) are exported from its `ui.ts`. Their server halves (loaders, the words of a bell feed's rows)
+  come from its `server.ts`.
 
 ### 2. Every edge counts, and incidental ones are removed
 
@@ -141,7 +141,7 @@ A required reference makes the generator refuse when its target is absent.
 | The bookings route | `bookings`, which therefore requires `resources`. It names a guest through slots (below), so it does not require `customers`. |
 | The customers route | `customers`. |
 | The invoice | `catalog` until `parties` exists (ADR 0019); then `parties`. Its catalog types become local (M2b) and it reads `catalog.list` by id, so the starting lines are optional. |
-| The bell (`layout.tsx`, `notification-actions.ts`, `notification-view.ts`) | The shell. The layout imports no module. The bell shows the kernel's approvals plus the `feeds` the generated lists give it (ADR 0006's notification types). `notifications` owns its feed; removing it leaves the bell with approvals only (task M10). |
+| The bell (`layout.tsx`, `notification-actions.ts`, `notifications-panel.tsx`) | The shell. The layout imports no module. The bell shows the kernel's approvals plus the `feeds` the generated lists give it (ADR 0006's notification types), through one Server Action and `src/config/bell.server.ts`. `notifications` owns its feed; removing it leaves the bell with approvals only (task M10). |
 | The Products route (ADR 0018) | `catalog`. It renders view kinds through a generated client map, so it imports no other module's views. |
 
 **Slots (M9).** A route declares named slots, `<route module>.<name>`, with a local contract. A module fills one through
@@ -192,10 +192,33 @@ The files M9 changes are:
 
 **The bell (M10).**
 
-- **Approvals move to the kernel.** The approval items move out of `notifications/derive.ts`.
-- **One Server Action.** The bell's Server Actions become one shell action that calls a feed's capability by id, from
-  the feed's descriptor.
-- **The feed's server half** comes from the generated server map.
+- **Approvals move to the kernel.** The approval items left `notifications/derive.ts`. `src/core/approvals/bell.ts`
+  derives one row per pending record of `approvals.list`, oldest first, and their sentences live in the kernel's
+  `approvalsMessages.bell`. The bell asks for them only when the actor holds `decide:approvals`, as the feed did. So
+  `notifications.list` no longer carries `approval.requested` (its `kind` enum lost the value, which changes the MCP
+  reference's schema hash), and the rule that an agent cannot mark a waiting write read is moot: it is not in a feed.
+- **A descriptor, not code.** The `feeds` entry of the manifest names four of the module's own capabilities:
+  `list` and `unread` (reads) and `read` and `readAll` (writes), under a feed id. `unread` answers `{ unreadCount }`,
+  `list` takes a `limit`, `read` takes `{ ids }` and `readAll` takes `{ upTo? }`. The generator's checks refuse a
+  capability the module does not declare, a `list` or `unread` that changes something, a `read` or `readAll` that only
+  reads, and a feed id declared twice.
+- **The feed's server half** is `ModuleServer.feeds[<feed id>].rows(page, locale)`: it parses the page `list` answered
+  and words each item in the locale, so the module's dictionary stays on the server. It comes from the generated server
+  map; the shell never imports a module. A feed has no client half in M10, because the panel is the shell's and renders
+  the worded rows, so no `ui.ts` and no new generated file.
+- **One Server Action.** `bellAction` in `notification-actions.ts` replaces the five. Its input is one of
+  `{ op: "load" }`, `{ op: "read" | "readAll", feed, input }` and `{ op: "approve" | "reject", input }`, checked with a
+  schema. `load` reads the approvals and every feed the actor may read (permission of the `list` and `unread`
+  capabilities from the manifest) in module order; a write runs the capability its descriptor names through `runWrite`,
+  or `approvals.approve` and `approvals.reject`. `src/config/bell.server.ts` holds that composition, with the layout's
+  unread count (approvals pending plus each feed's `unread`). "Mark all as read" sends each feed its own newest row as
+  `upTo`.
+- **Behaviour kept:** the account menu's Notifications item still opens the panel through `TopNav`'s `bellOpen`, and a
+  held write that can no longer run still reports its own rule code from `approvals.approve`.
+
+**Verify:** removing `notifications` and regenerating leaves the bell with approvals: `tsc`, the generated lists and
+dependency-cruiser stay clean, and `src/config/approvals.notifications.test.ts` (a path `notifications` owns) loads the
+bell with the feed's manifest and server half left out.
 
 **The boundary, enforced by dependency-cruiser** (M5, whose message cites this record). Outside `src/modules`, only
 these import `@/modules/*`:
@@ -213,7 +236,7 @@ is static.
   - `src/config/modules.generated.ts`: manifests, `MODULE_GRAPH`, `InstalledModuleId` (the union of installed ids;
     `src/core/nav`'s `ModuleId` stays `string`, as core cannot import config), `ExtensionEntity`, the view kinds' ids;
   - `src/config/modules.server.generated.ts`: server halves, including feed and slot loaders;
-  - `src/config/modules.client.generated.ts`: each module's `ui.ts` (view renderers, bell feeds). It and the next file are
+  - `src/config/modules.client.generated.ts`: each module's `ui.ts` (view renderers). It and the next file are
     the only importers of `ui.ts` outside the module;
   - `src/config/modules.slots.generated.ts`: the slot fills of each module's `ui.ts`, apart so that a route that takes a fill
     does not bundle the renderers.

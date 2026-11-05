@@ -5,6 +5,7 @@ import { pageInput, pageOutput } from "@/core/pagination";
 
 import { approvalPolicySchema } from "./policy";
 
+export { APPROVALS_FEED, approvalRows } from "./bell";
 export { approvalsErrors } from "./messages";
 export {
   type ApprovalPolicy,

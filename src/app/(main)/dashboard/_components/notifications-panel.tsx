@@ -1,34 +1,33 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import type { BellRequest } from "@/config/bell";
 import { useCan } from "@/core/access/client";
 import { format, useLocale, useMessages } from "@/core/i18n/client";
+import type { BellRow } from "@/core/module";
 import { useCapabilityAction } from "@/ds/forms";
 import { ConfirmAction, type ConfirmOutcome } from "@/ds/overlays";
 
 import { dashboardMessageKey } from "./messages";
-import {
-  approveHeldWrite,
-  loadNotifications,
-  markAllNotificationsRead,
-  markNotificationsRead,
-  rejectHeldWrite,
-} from "./notification-actions";
-import type { NotificationsAnswer, NotificationView } from "./notification-view";
+import { bellAction } from "./notification-actions";
 
 /** The longest reason `approvals.reject` accepts. */
 const REASON_MAX = 500;
 
-type PanelState = NotificationsAnswer | { readonly status: "loading" };
+/** What the panel shows: the rows, or the worded reason they could not be read (a failure is never an empty list). */
+type PanelState =
+  | { readonly status: "loading" }
+  | { readonly status: "ok"; readonly items: readonly BellRow[] }
+  | { readonly status: "error"; readonly text: string };
 type Deciding = { readonly kind: "approve" | "reject"; readonly approvalId: string } | null;
 
 /**
- * The bell's panel (003 H1b, 004 H1b): the notifications read when it opens, newest first. An unread row marks itself
+ * The bell's panel (003 H1b, 004 H1b): the rows of the kernel's approvals and of each module's feed, read when it opens. An unread row marks itself
  * read; a write an assistant is waiting on offers approve and reject to whoever may decide, each from a
  * `ConfirmAction` (a destructive effect is never one tap).
  */
@@ -39,19 +38,30 @@ export function NotificationsPanel() {
   const [state, setState] = useState<PanelState>({ status: "loading" });
   const [, startLoading] = useTransition();
   const [deciding, setDeciding] = useState<Deciding>(null);
-  const markRead = useCapabilityAction(markNotificationsRead);
-  const markAll = useCapabilityAction(markAllNotificationsRead);
-  const approve = useCapabilityAction(approveHeldWrite);
-  const reject = useCapabilityAction(rejectHeldWrite);
+  const reader = useCapabilityAction<BellRequest>(bellAction);
+  const markRead = useCapabilityAction<BellRequest>(bellAction);
+  const markAll = useCapabilityAction<BellRequest>(bellAction);
+  const approve = useCapabilityAction<BellRequest>(bellAction);
+  const reject = useCapabilityAction<BellRequest>(bellAction);
   const busy: ConfirmOutcome = { status: "error", text: text.failed, code: "client.busy" };
 
-  const load = () =>
-    startLoading(async () => {
-      setState(await loadNotifications());
-    });
+  const { run: readRows } = reader;
+  const failedText = text.failed;
+  const load = useCallback(
+    () =>
+      startLoading(async () => {
+        const outcome = await readRows({ op: "load" });
+        if (outcome === null) return;
+        // The action answers a load with `{ items }`, which only the bell's own server code builds.
+        if (outcome.status === "ok")
+          setState({ status: "ok", items: (outcome.value as { items: readonly BellRow[] }).items });
+        else setState({ status: "error", text: outcome.status === "error" ? outcome.text : failedText });
+      }),
+    [readRows, failedText],
+  );
 
-  // The panel reads its rows once, when it opens.
-  useEffect(load, []);
+  // The panel reads its rows when it opens.
+  useEffect(load, [load]);
 
   if (state.status === "loading") {
     return <p className="text-muted-foreground px-4 py-6 text-sm">{text.loading}</p>;
@@ -72,27 +82,34 @@ export function NotificationsPanel() {
     return <p className="text-muted-foreground px-4 py-6 text-sm">{text.empty}</p>;
   }
 
-  const newest = state.items[0];
   const anyUnread = state.items.some((item) => item.unread);
   const mayDecide = can("decide:approvals");
 
-  const readOne = async (item: NotificationView) => {
-    const outcome = await markRead.run({ ids: [item.id] });
+  const readOne = async (item: BellRow) => {
+    // A waiting write stays unread until a person decides it: there is nothing to mark.
+    if (item.approvalId !== undefined) return;
+    const outcome = await markRead.run({ op: "read", feed: item.feed, input: { ids: [item.id] } });
     if (outcome?.status === "ok") load();
+  };
+
+  // Each feed marks up to the newest of its own rows that the person saw.
+  const readAll = async () => {
+    const feeds = new Set(
+      state.items.filter((item) => item.approvalId === undefined && item.unread).map((i) => i.feed),
+    );
+    for (const feed of feeds) {
+      const upTo = state.items.find((item) => item.feed === feed)?.id;
+      const outcome = await markAll.run({ op: "readAll", feed, input: { upTo } });
+      if (outcome?.status !== "ok") return;
+    }
+    load();
   };
 
   return (
     <div className="flex flex-col">
-      {anyUnread && newest ? (
+      {anyUnread ? (
         <div className="flex justify-end px-3 pt-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={async () => {
-              const outcome = await markAll.run({ upTo: newest.id });
-              if (outcome?.status === "ok") load();
-            }}
-          >
+          <Button size="sm" variant="ghost" onClick={readAll}>
             {text.markAllRead}
           </Button>
         </div>
@@ -146,7 +163,7 @@ export function NotificationsPanel() {
         consequence={text.approve.consequence}
         onConfirm={async () => {
           if (deciding === null) return busy;
-          const outcome = await approve.run({ approvalId: deciding.approvalId });
+          const outcome = await approve.run({ op: "approve", input: { approvalId: deciding.approvalId } });
           if (outcome?.status === "ok") {
             toast.success(text.toast.approved);
             load();
@@ -166,7 +183,10 @@ export function NotificationsPanel() {
         reason={{ label: text.reject.reasonLabel, schema: z.string().trim().max(REASON_MAX) }}
         onConfirm={async (reason) => {
           if (deciding === null) return busy;
-          const outcome = await reject.run({ approvalId: deciding.approvalId, ...(reason ? { reason } : {}) });
+          const outcome = await reject.run({
+            op: "reject",
+            input: { approvalId: deciding.approvalId, ...(reason ? { reason } : {}) },
+          });
           if (outcome?.status === "ok") {
             toast.success(text.toast.rejected);
             load();
@@ -178,7 +198,7 @@ export function NotificationsPanel() {
   );
 }
 
-function NotificationText({ item, unreadLabel }: { item: NotificationView; unreadLabel?: string }) {
+function NotificationText({ item, unreadLabel }: { item: BellRow; unreadLabel?: string }) {
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
       <span className="text-sm font-medium">

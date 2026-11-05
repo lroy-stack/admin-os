@@ -381,9 +381,11 @@ same through both doors. Section "Shape" turns them into module boundaries and c
     (`manage:approvals`, elevated, owner).
   - *Bounds.* 50 records per session. A new hold first drops settled records, oldest first, and at the cap with all
     pending answers `approvals.queue_full`; `boundSession` in the store never drops a pending record.
-  - *Notification.* The feed derives one `approval.requested` item per pending record for actors that hold
-    `decide:approvals`, dated by the request and worded per action. It cannot be marked read (`notifications.read` and
-    `read_all` skip it), so an agent cannot silence it; it disappears when the request is decided or expires.
+  - *Notification.* The shell's bell shows one approval row per pending record to actors that hold
+    `decide:approvals`, dated by the request and worded per action. Since M10 (ADR 0017, "The bell") the kernel derives
+    these rows from `approvals.list`, outside the `notifications` module: `notifications.list` no longer carries an
+    `approval.requested` kind, so no notification capability can mark one read and an agent cannot silence it. A row
+    disappears when the request is decided or expires; an agent checks its own held write with `approvals.get`.
 - **Sources.** S11, S12, S20.
 
 ### D8 — Protocol 2026-07-28, stateless, hardened

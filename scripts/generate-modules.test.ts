@@ -180,3 +180,19 @@ describe("the route slots modules fill (ADR 0017 §4)", () => {
     }
   });
 });
+
+describe("the bell's feeds (ADR 0017 'The bell')", () => {
+  const servers: readonly ModuleServer[] = MODULE_SERVERS;
+  const feeds = (MODULES as readonly ModuleManifest[]).flatMap((module) =>
+    (module.feeds ?? []).map((feed) => ({ module: module.id, ...feed })),
+  );
+
+  it.each(feeds)("$feed, declared by $module, has a server half that words its rows", ({ module, feed }) => {
+    expect(typeof servers.find((server) => server.id === module)?.feeds?.[feed]?.rows).toBe("function");
+  });
+
+  it("holds a server half for each feed a module declares, and no other", () => {
+    const withHalf = servers.flatMap(({ feeds: halves }) => Object.keys(halves ?? {})).sort();
+    expect(withHalf).toEqual(feeds.map(({ feed }) => feed).sort());
+  });
+});

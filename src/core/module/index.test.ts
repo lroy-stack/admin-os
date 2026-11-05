@@ -55,7 +55,26 @@ const plantedMake = defineCapability({
   effect: "write",
   riskTier: 1,
 });
+const plantedUnread = defineCapability({
+  id: "planted.unread",
+  summary: "Count the unread planted items.",
+  input: z.object({}),
+  output: z.object({ unreadCount: z.number() }),
+  permission: "read:planted",
+  effect: "read",
+  riskTier: 0,
+});
+const plantedRead = defineCapability({
+  id: "planted.read",
+  summary: "Mark planted items read.",
+  input: z.object({}),
+  output: z.object({}),
+  permission: "update:planted",
+  effect: "write",
+  riskTier: 1,
+});
 const capabilities = { "planted.item.get": plantedGet, "planted.list": plantedList } as const;
+const feedCapabilities = { ...capabilities, "planted.unread": plantedUnread, "planted.read": plantedRead } as const;
 
 /** A product view kind of the planted module (ADR 0018 §3). */
 const plantedView = defineViewKind({
@@ -101,6 +120,15 @@ const other = defineModule({
   references: [],
   owns: [],
 });
+
+/** A bell feed of the planted module (ADR 0017 "The bell"). */
+const FEED = {
+  feed: "bell",
+  list: "planted.list",
+  unread: "planted.unread",
+  read: "planted.read",
+  readAll: "planted.read",
+} as const;
 
 const EXISTING = new Set(["src/app/planted", "src/app/planted/page.tsx", "src/app/plant", "e2e/planted.spec.ts"]);
 const exists = (path: string) => EXISTING.has(path);
@@ -273,6 +301,11 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
     ).toEqual([]);
   });
 
+  it("accepts a feed whose list and unread read and whose read and readAll change something", () => {
+    const feeder = { ...planted, capabilities: feedCapabilities, feeds: [FEED] };
+    expect(problems(installed(feeder, other), exists)).toEqual([]);
+  });
+
   it("accepts a hint to a kernel tool without a reference, since the kernel is always installed", () => {
     expect(problems(installed(kernelHint, other), exists)).toEqual([]);
   });
@@ -408,6 +441,39 @@ describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
       "a slot whose write only reads",
       installed({ ...planted, slots: [{ slot: "shelf.picker", write: "planted.list" }] }, other),
       "planted's slot shelf.picker writes planted.list, which only reads; name a capability that changes something",
+    ],
+    [
+      "a feed that names a capability the module does not declare",
+      installed({ ...planted, capabilities: feedCapabilities, feeds: [{ ...FEED, unread: "planted.count" }] }, other),
+      "planted's feed bell names planted.count as its unread, which planted does not declare",
+    ],
+    [
+      "a feed that lists with a capability that changes something",
+      installed({ ...planted, capabilities: feedCapabilities, feeds: [{ ...FEED, list: "planted.read" }] }, other),
+      "planted's feed bell reads with planted.read, which changes something; name a read",
+    ],
+    [
+      "a feed that marks read with a capability that only reads",
+      installed({ ...planted, capabilities: feedCapabilities, feeds: [{ ...FEED, readAll: "planted.list" }] }, other),
+      "planted's feed bell writes with planted.list, which only reads; name a capability that changes something",
+    ],
+    [
+      "a feed declared by two modules",
+      installed(
+        { ...planted, capabilities: feedCapabilities, feeds: [FEED] },
+        {
+          ...other,
+          capabilities: {
+            "other.list": otherList,
+            "other.unread": { ...plantedUnread, id: "other.unread" },
+            "other.read": { ...plantedRead, id: "other.read" },
+          },
+          feeds: [
+            { feed: "bell", list: "other.list", unread: "other.unread", read: "other.read", readAll: "other.read" },
+          ],
+        },
+      ),
+      "the feed bell is declared by planted and other; one module declares it",
     ],
     [
       "a slot filled by two modules",

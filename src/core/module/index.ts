@@ -47,6 +47,37 @@ export interface SlotDescriptor {
   readonly write?: string;
 }
 
+/**
+ * A feed the module contributes to the shell's bell (ADR 0017 §1, ADR 0006's notification types): the module's own
+ * capabilities the bell calls by id, so the shell names no module. `list` and `unread` only read: `list` answers a
+ * page of the feed's items (it takes a `limit`), `unread` answers `{ unreadCount }`. `read` and `readAll` change
+ * something: `read` takes `{ ids }` and `readAll` takes `{ upTo? }`, the id of the newest item the person saw. The
+ * words of the items come from the feed's server half (`ModuleServer.feeds`), keyed by `feed`.
+ */
+export interface FeedDescriptor {
+  readonly feed: string;
+  readonly list: string;
+  readonly unread: string;
+  readonly read: string;
+  readonly readAll: string;
+}
+
+/** The answer of a feed's `unread` capability. */
+export const feedUnreadOutput = z.object({ unreadCount: z.number().int().nonnegative() });
+
+/** One row of the bell's panel, already worded for the locale, so a module's dictionary stays on the server. */
+export interface BellRow {
+  /** The feed it belongs to: the `feed` of its descriptor, or `approvals` for the kernel's own. */
+  readonly feed: string;
+  readonly id: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly body: string;
+  readonly unread: boolean;
+  /** Present on a write an assistant is waiting on: the panel offers approve and reject for it. */
+  readonly approvalId?: string;
+}
+
 /** One seed collection of the module: its row schema, and whether every preset that enables the module seeds rows. */
 export interface SeedCollection {
   readonly schema: z.ZodType;
@@ -69,6 +100,7 @@ export interface ModuleManifest<
   S extends IdSources = IdSources,
   V extends readonly ViewKind[] = readonly ViewKind[],
   L extends readonly SlotDescriptor[] = readonly SlotDescriptor[],
+  F extends readonly FeedDescriptor[] = readonly FeedDescriptor[],
 > {
   /** The folder's name, and the first segment of every capability id and setting key. */
   readonly id: Id;
@@ -92,6 +124,8 @@ export interface ModuleManifest<
   readonly views?: V;
   /** The route slots it fills (ADR 0017 §4); each slot has one filler. */
   readonly slots?: L;
+  /** What it contributes to the shell's bell (ADR 0017 §1); each feed id is unique. */
+  readonly feeds?: F;
 }
 
 /** Keys that must not be there: each one is typed `never`, so a value under it does not compile. */
@@ -108,7 +142,8 @@ type UnknownHintFields<C extends Catalog, T> = {
  * Identity helper that keeps the literal id, capability ids and hints the composition root type-checks. None of these
  * compile: a capability outside the module's prefix, an MCP entry for no capability, a capability without an entry,
  * an id hint for a field the capability has no input for, an id source naming a tool the module does not declare,
- * and a slot whose write is not one of the module's capabilities.
+ * a slot whose write is not one of the module's capabilities, and a feed that names a capability the module does not
+ * declare.
  */
 export const defineModule = <
   const Id extends string,
@@ -117,16 +152,33 @@ export const defineModule = <
   const S extends IdSources,
   const V extends readonly ViewKind[] = readonly [],
   const L extends readonly SlotDescriptor[] = readonly [],
+  const F extends readonly FeedDescriptor[] = readonly [],
 >(
-  manifest: ModuleManifest<Id, C, T, S, V, L> & {
+  manifest: ModuleManifest<Id, C, T, S, V, L, F> & {
     readonly capabilities: Refused<Exclude<keyof C, `${Id}.${string}`>>;
     readonly mcp: {
       readonly tools: Refused<Exclude<keyof T, keyof C>> & UnknownHintFields<C, T>;
       readonly idSources: readonly (readonly [string, readonly (keyof C & string)[]])[];
     };
     readonly slots?: readonly { readonly slot: string; readonly write?: keyof C & string }[];
+    readonly feeds?: readonly {
+      readonly feed: string;
+      readonly list: keyof C & string;
+      readonly unread: keyof C & string;
+      readonly read: keyof C & string;
+      readonly readAll: keyof C & string;
+    }[];
   },
-): ModuleManifest<Id, C, T, S, V, L> => manifest;
+): ModuleManifest<Id, C, T, S, V, L, F> => manifest;
+
+/** The server half of a bell feed: it words what the feed's `list` capability answered. */
+export interface FeedServer {
+  /**
+   * The panel's rows for the page `list` answered, newest first, worded in `locale`, or undefined when the answer is
+   * not the feed's page (the shell then reports an invalid output). The shell stamps each row with the feed's id.
+   */
+  readonly rows: (page: unknown, locale: Locale) => readonly Omit<BellRow, "feed">[] | undefined;
+}
 
 /**
  * The server half of a module (ADR 0017 §1), exported from its `server.ts` as `<module>ModuleServer`: the messages of
@@ -147,6 +199,8 @@ export interface ModuleServer<Id extends string = string> {
   readonly slotLoaders?: Readonly<Record<string, ViewLoader>>;
   /** The dictionary each of its slot fills reads, by slot id, so a route delivers the words of the fills it shows. */
   readonly slotBundles?: Readonly<Record<string, MessageBundle<unknown>>>;
+  /** The server half of each bell feed it declares, by feed id (ADR 0017 "The bell"). */
+  readonly feeds?: Readonly<Record<string, FeedServer>>;
   /** The texts of its own error codes, which a route that runs the module's slot write shows (`errorText` takes it). */
   readonly errors?: Readonly<Record<Locale, ErrorMessages>>;
 }
@@ -427,6 +481,45 @@ function slotProblems(modules: readonly InstalledModule[]): Problem[] {
   return [...writes, ...filledTwice.flat()];
 }
 
+/** A feed's `list` and `unread` only read, its `read` and `readAll` change something, and a feed id is unique. */
+function feedProblems(modules: readonly InstalledModule[]): Problem[] {
+  const feeds = modules.flatMap(({ manifest }) =>
+    (manifest.feeds ?? []).map((feed) => ({ id: manifest.id, capabilities: manifest.capabilities, ...feed })),
+  );
+  const roles = [
+    ["list", "read"],
+    ["unread", "read"],
+    ["read", "change"],
+    ["readAll", "change"],
+  ] as const;
+  const capabilityProblems = feeds.flatMap(({ id, capabilities, feed, ...named }) =>
+    roles.flatMap(([role, kind]) => {
+      const capability = capabilities[named[role]];
+      if (capability === undefined) {
+        return about(id, [`${id}'s feed ${feed} names ${named[role]} as its ${role}, which ${id} does not declare`]);
+      }
+      const reads = capability.effect === "read";
+      if (kind === "read" && !reads) {
+        return about(id, [`${id}'s feed ${feed} reads with ${named[role]}, which changes something; name a read`]);
+      }
+      return kind === "change" && reads
+        ? about(id, [
+            `${id}'s feed ${feed} writes with ${named[role]}, which only reads; name a capability that changes something`,
+          ])
+        : [];
+    }),
+  );
+  const declaredTwice = feeds.flatMap((a, index) =>
+    feeds
+      .slice(index + 1)
+      .filter((b) => b.feed === a.feed)
+      .map((b) =>
+        about([a.id, b.id], [`the feed ${a.feed} is declared by ${a.id} and ${b.id}; one module declares it`]),
+      ),
+  );
+  return [...capabilityProblems, ...declaredTwice.flat()];
+}
+
 const byCode = (a: string, b: string): number => Number(a > b) - Number(a < b);
 
 /** An import of one module's code or owned paths by another's: `from` needs `to` installed (ADR 0017 §2). */
@@ -554,6 +647,7 @@ export const compositionProblems = (
     ...hintProblems(modules),
     ...idSourceProblems(modules),
     ...slotProblems(modules),
+    ...feedProblems(modules),
   ].filter(({ modules: about }) => about.some((id) => !quiet(id)));
   return [
     ...requirements.map(

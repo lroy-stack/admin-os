@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { Notification } from "@/modules/notifications";
-import { notificationsMessages } from "@/modules/notifications/server";
-
-import { notificationView, textAt } from "./notification-view";
+import { notificationRow, notificationsFeed, textAt } from "./feed";
+import { notificationsMessages } from "./messages";
+import type { Notification } from "./schema";
 
 const booking: Notification = {
   id: "booking.new:R-1043",
@@ -14,20 +13,11 @@ const booking: Notification = {
   createdAt: { day: "2026-10-31", minute: 1200 },
 };
 
-const held: Notification = {
-  id: "approval.requested:apr-1",
-  kind: "approval.requested",
-  titleKey: "notifications.kinds.approvalRequested.title",
-  bodyKey: "notifications.kinds.approvalRequested.body.bookingsCancel",
-  params: { capability: "bookings.cancel", target: "R-1046" },
-  createdAt: { day: "2026-10-31", minute: 1210 },
-  readAt: { day: "2026-10-31", minute: 1211 },
-  link: { entity: "approval", id: "apr-1" },
-};
+const read: Notification = { ...booking, id: "booking.new:R-1044", readAt: { day: "2026-10-31", minute: 1211 } };
 
-describe("notificationView", () => {
+describe("notificationRow", () => {
   it("words a booking notification in the locale and marks it unread", () => {
-    expect(notificationView(booking, notificationsMessages.en, "en")).toEqual({
+    expect(notificationRow(booking, notificationsMessages.en, "en")).toEqual({
       id: "booking.new:R-1043",
       kind: "booking.new",
       title: "New booking",
@@ -36,16 +26,23 @@ describe("notificationView", () => {
     });
   });
 
-  it("carries the approval id of a held write and its reading state", () => {
-    expect(notificationView(held, notificationsMessages.es, "es")).toMatchObject({
-      approvalId: "apr-1",
-      unread: false,
-      body: expect.stringContaining("R-1046"),
-    });
+  it("carries the reading state", () => {
+    expect(notificationRow(read, notificationsMessages.es, "es")).toMatchObject({ unread: false });
+  });
+});
+
+describe("the notifications feed", () => {
+  const page = { items: [booking, read], nextCursor: null, unreadCount: 1 };
+
+  it("words the rows of a page of notifications.list in the locale, newest first as listed", () => {
+    expect(notificationsFeed.rows(page, "en")?.map(({ id, unread }) => [id, unread])).toEqual([
+      ["booking.new:R-1043", true],
+      ["booking.new:R-1044", false],
+    ]);
   });
 
-  it("keeps a booking without a link free of an approval id", () => {
-    expect(notificationView(booking, notificationsMessages.en, "en")).not.toHaveProperty("approvalId");
+  it("answers undefined for a value that is not a page of notifications", () => {
+    expect(notificationsFeed.rows({ items: [{ id: "x" }] }, "en")).toBeUndefined();
   });
 });
 

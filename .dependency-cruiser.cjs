@@ -22,13 +22,6 @@ const SEE = "docs/adr/0003-package-shaped-layers.md";
 
 /** Paths outside `src/modules` that a module owns, written by `npm run generate:modules` (ADR 0017 §4). */
 const OWNED = require("./src/config/modules.owns.generated.json").owned;
-/** The bell imports `notifications` until plan 006 M10 composes it from the modules' feeds; M10 deletes this list. */
-const PENDING_M10 = [
-  "src/app/(main)/dashboard/layout.tsx",
-  "src/app/(main)/dashboard/_components/notification-actions.ts",
-  "src/app/(main)/dashboard/_components/notification-view.ts",
-  "src/app/(main)/dashboard/_components/notification-view.test.ts",
-];
 const exactPath = (path) => `^${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/|$)`;
 
 const upwardRule = (name, from, higher) => ({
@@ -49,12 +42,7 @@ module.exports = {
         "outside src/modules, only the generated composition, the presets and a module's owned paths import a module; add the path to the module's owns and run npm run generate:modules (docs/adr/0017-a-module-is-a-folder.md §4)",
       from: {
         path: "^(src|workers)/",
-        pathNot: [
-          "^src/modules/",
-          "^src/config/[^/]+\\.generated\\.ts$",
-          "^src/verticals/",
-          ...[...OWNED, ...PENDING_M10].map(exactPath),
-        ],
+        pathNot: ["^src/modules/", "^src/config/[^/]+\\.generated\\.ts$", "^src/verticals/", ...OWNED.map(exactPath)],
       },
       to: { path: "^src/modules/" },
     },

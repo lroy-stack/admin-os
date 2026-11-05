@@ -25,9 +25,9 @@ A hash of the manifest, the read-only switch and every exposed tool: it changes 
 
 | Preset | Read-write | Read-only |
 | --- | --- | --- |
-| hospitality | `1a3e54f7bcd723` | `042822ba6d1a85` |
-| salon | `1a3e54f7bcd723` | `042822ba6d1a85` |
-| workshop | `1a3e54f7bcd723` | `042822ba6d1a85` |
+| hospitality | `007bc6cb2f4c31` | `074fbc3700800a` |
+| salon | `007bc6cb2f4c31` | `074fbc3700800a` |
+| workshop | `007bc6cb2f4c31` | `074fbc3700800a` |
 
 ## Tools by preset
 

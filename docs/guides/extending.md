@@ -7,6 +7,8 @@ Read [Architecture](architecture.md) first for the layers and the data seam.
 - [Add a module](#add-a-module)
 - [Add a preset](#add-a-preset)
 - [Add a product view](#add-a-product-view)
+- [Fill a route slot](#fill-a-route-slot)
+- [Add a bell feed](#add-a-bell-feed)
 - [Configure your business](#configure-your-business)
 - [Wire a control](#wire-a-control)
 - [Swap the adapter](#swap-the-adapter)
@@ -106,6 +108,24 @@ without it.
    - An unfilled slot loads and renders nothing. Hide the controls that need it, as the New reservation openers do.
 4. **Compose.** Run `npm run generate:modules`. It refuses a `write` the module does not declare or that only reads, and a
    slot with two fillers. The route's `guest-slots.test.ts` checks that every slot a module fills is declared.
+
+## Add a bell feed
+
+Decision record: [ADR 0017](../adr/0017-a-module-is-a-folder.md), "The bell". The example is `notifications`. The bell shows
+the kernel's approvals plus the feeds of the installed modules, and the shell imports no module.
+
+1. **Give the module the four capabilities.**
+   - `list` (a read that takes a `limit` and answers a page) and `unread` (a read that answers `{ unreadCount }`).
+   - `read` (takes `{ ids }`) and `readAll` (takes `{ upTo? }`), which change something.
+2. **Declare the feed.** In `module.ts`, add `{ feed, list, unread, read, readAll }` to `feeds`, with the ids of those
+   capabilities. The feed id is unique.
+3. **Word the rows.** `server.ts` gives `feeds: { <feed id>: { rows } }`. `rows(page, locale)` parses the page `list`
+   answered and returns the panel's rows (`id`, `kind`, `title`, `body`, `unread`) worded in the locale, or `undefined`
+   for a page it does not recognise. The words stay on the server, so a feed has no `ui.ts`.
+4. **Compose.** Run `npm run generate:modules`. It refuses a capability the module does not declare, a `list` or
+   `unread` that changes something, a `read` or `readAll` that only reads, and a feed id declared twice. The panel
+   shows the feed to actors who hold the permission of `list` and `unread`, and runs `read` and `readAll` through the
+   bell's one Server Action. `scripts/generate-modules.test.ts` checks that each feed has a server half.
 
 ## Configure your business
 
