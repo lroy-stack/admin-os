@@ -148,7 +148,10 @@ const references = [
     ),
   ).values(),
 ];
-const referencedModules = [...new Set(references.map(([, , module]) => module))].sort();
+/** A target may be an optional module that is not installed: it has no seed to check. */
+const referencedModules = [...new Set(references.map(([, , module]) => module))]
+  .filter((module) => moduleIds.has(module))
+  .sort();
 
 describe("data references (ADR 0017 §3)", () => {
   it.each(referencedModules)("%s seeds the collection named like it, which references point at", (module) => {

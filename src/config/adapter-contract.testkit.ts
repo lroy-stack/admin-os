@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ROLES, permissionsOf } from "@/core/access";
 import { type Actor, type Adapter, createClient } from "@/core/client";
+import { fixedClock } from "@/core/clock";
+import { createMockAdapter, createSessionStore } from "@/core/mock";
 
 import { CATALOG } from "./catalog";
+import { DEMO, type DemoSeed, MOCK_HANDLERS, settingsFor } from "./demo-kernel";
 import { VERTICALS, type VerticalId } from "./vertical";
 
 const verticalIds = Object.keys(VERTICALS) as VerticalId[];
@@ -124,6 +127,23 @@ export const ownerOf = (vertical: VerticalId): Actor => ({
   roleId: "owner",
   permissions: permissionsOf(DEFAULT_ROLES[0], CATALOG, VERTICALS[vertical].modules),
 });
+
+/** A session on the preset's seed without the given collections, as if their modules were not installed (ADR 0017 §3). */
+export function sessionWithout(vertical: VerticalId, absent: ReadonlySet<string>) {
+  const seed = Object.fromEntries(Object.entries(DEMO[vertical].seed).filter(([name]) => !absent.has(name)));
+  const adapter = createMockAdapter({
+    handlers: MOCK_HANDLERS,
+    // The seed lacks the absent modules' collections, which an installed composition's types require: the point here.
+    store: createSessionStore(seed as unknown as DemoSeed),
+    sessionId: crypto.randomUUID(),
+    clock: fixedClock(DEMO[vertical].clock),
+    settings: settingsFor(vertical),
+  });
+  return {
+    adapter,
+    client: createClient(CATALOG, adapter, { ...quiet, mode: "production", actor: ownerOf(vertical) }),
+  };
+}
 
 /** Everything a visitor can read in a preset, as one value, so two moments of a session can be compared. */
 const stateOf = (client: ReturnType<typeof createClient>, ids: readonly string[], vertical: VerticalId) =>

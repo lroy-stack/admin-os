@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import { PAGE_ROUTES } from "./routes";
-import { mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -718,9 +718,10 @@ for (const route of PAGE_ROUTES) {
 
 /**
  * The only controls the sweep may skip, each with the reason it cannot be observed (plan 003, G1). A new
- * `data-inert-reason` fails here until it is reviewed and listed.
+ * `data-inert-reason` fails here until it is reviewed and listed. An exception whose file is gone, because its
+ * module is not installed, is not expected in the source.
  */
-const INERT_EXCEPTIONS = [
+const LISTED_EXCEPTIONS = [
   [
     "src/app/(main)/dashboard/(examples)/patient-monitoring/_components/monitoring-provider.tsx",
     "A tooltip target: the status opens on hover and focus, not on press.",
@@ -738,6 +739,8 @@ const INERT_EXCEPTIONS = [
     "Opens the browser print dialog, which the dead-click sweep cannot observe.",
   ],
 ] as const;
+
+const INERT_EXCEPTIONS = LISTED_EXCEPTIONS.filter(([file]) => existsSync(path.join(process.cwd(), file)));
 
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

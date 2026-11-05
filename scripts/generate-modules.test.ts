@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { MODULE_GRAPH } from "@/config/modules.generated";
 import { compositionProblems } from "@/core/module";
 
 import {
@@ -14,6 +15,39 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 let generated: Generated;
+
+/**
+ * Census C0 (ADR 0017): what each of the first six modules required when the import graph was first counted. A module
+ * that is not installed has no row, and a target that is not installed is dropped from the rows that name it, so the
+ * census still holds after a removal.
+ */
+const C0: Readonly<Record<string, readonly string[]>> = {
+  bookings: ["customers", "resources"],
+  catalog: [],
+  customers: [],
+  notifications: ["bookings"],
+  resources: [],
+  staff: [],
+};
+
+const c0Of = (installed: readonly string[]) =>
+  Object.fromEntries(
+    Object.entries(C0)
+      .filter(([id]) => installed.includes(id))
+      .map(([id, targets]) => [id, targets.filter((target) => installed.includes(target))]),
+  );
+
+/** The graph's rows for the modules the census knows. */
+const censusOf = (graph: Readonly<Record<string, readonly string[]>>) =>
+  Object.fromEntries(Object.entries(graph).filter(([id]) => id in C0));
+
+/** Each installed module, with the refusal that removing it must cause: one line per module that imports it. */
+const removals = Object.keys(MODULE_GRAPH).map((removed) => ({
+  removed,
+  refusals: Object.entries(MODULE_GRAPH)
+    .filter(([, targets]) => (targets as readonly string[]).includes(removed))
+    .map(([id]) => `${id} requires ${removed}; restore src/modules/${removed} or remove ${id}`),
+}));
 
 beforeAll(async () => {
   generated = await generate(ROOT);
@@ -43,22 +77,14 @@ describe("the generated module list (ADR 0017 §5)", () => {
   });
 
   it("requires what the import graph shows (ADR 0017's first test, against census C0)", () => {
-    expect(generated.graph).toEqual({
-      bookings: ["customers", "resources"],
-      catalog: [],
-      customers: [],
-      notifications: ["bookings"],
-      resources: [],
-      staff: [],
-    });
+    const installed = Object.keys(generated.graph);
+    expect(censusOf(generated.graph)).toEqual(c0Of(installed));
   });
 });
 
 describe("removing a module from the installed list (ADR 0017 §5, §9)", () => {
-  it("refuses a module that imports the one removed, and says nothing else", () => {
-    expect(without("bookings")()).toEqual([
-      "notifications requires bookings; restore src/modules/bookings or remove notifications",
-    ]);
+  it.each(removals)("refuses the modules that import $removed, and says nothing else", ({ removed, refusals }) => {
+    expect(without(removed)()).toEqual(refusals);
   });
 
   it("composes without the catalog (walk W1)", () => {

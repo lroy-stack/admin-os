@@ -35,7 +35,8 @@ test.describe("business settings", () => {
   });
 
   test("open from the account menu", async ({ page }) => {
-    await page.goto("/dashboard/customers");
+    // From a page no module owns, so the walk never removes it and the menu really navigates.
+    await page.goto("/dashboard/default");
     await page.getByRole("button", { name: /Account: / }).click();
     await page.getByRole("menuitem", { name: "Business settings" }).click();
 

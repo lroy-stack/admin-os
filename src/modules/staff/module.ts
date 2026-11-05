@@ -25,5 +25,10 @@ export const staffModule = defineModule({
     shifts: { schema: shiftSchema, required: false },
   },
   references: [],
-  owns: ["src/app/(main)/dashboard/staff", "src/config/staff.test.ts", "e2e/smoke/staff.spec.ts"],
+  owns: [
+    "src/app/(main)/dashboard/staff",
+    "src/config/staff.test.ts",
+    "src/config/mcp.server.staff.test.ts",
+    "e2e/smoke/staff.spec.ts",
+  ],
 });

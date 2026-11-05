@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { VERTICALS } from "@/config/vertical";
+
 import { examplesNav } from "../(examples)/_nav/examples-nav";
 import { buildShellNav, type NavData } from "./nav-model";
 
@@ -8,11 +10,17 @@ const text = Object.fromEntries(
 ) as Parameters<typeof buildShellNav>[1]["text"];
 const examples = { groups: examplesNav, text };
 
+/** The fixture is the salon's own nav, so a module that leaves the preset leaves the fixture with it. */
+const presetNav = VERTICALS.salon.nav;
+const shown = presetNav.filter((entry) => entry.placement === "area").slice(0, 2);
+const shownIds = shown.map((entry) => entry.id);
+const shownTitles = shownIds.map((id) => `label:${id}`);
+
 const data = (overrides: Partial<NavData>): NavData => ({
   presetId: "salon",
-  visibleIds: ["home", "bookings"],
-  labels: { home: "Home", bookings: "Appointments" },
-  groupLabels: { overview: "Overview", operations: "Operations" },
+  visibleIds: shownIds,
+  labels: Object.fromEntries(presetNav.map((entry) => [entry.id, `label:${entry.id}`])),
+  groupLabels: Object.fromEntries(presetNav.map((entry) => [entry.group, `group:${entry.group}`])),
   showExamples: false,
   ...overrides,
 });
@@ -21,11 +29,11 @@ const titles = (items: readonly { title: string }[]) => items.map((item) => item
 
 describe("buildShellNav", () => {
   it("lists the preset areas with the labels the server resolved", () => {
-    expect(titles(buildShellNav(data({}), examples).top)).toEqual(["Home", "Appointments"]);
+    expect(titles(buildShellNav(data({}), examples).top)).toEqual(shownTitles);
   });
 
   it.each([
-    ["only home", ["home"], ["Home"]],
+    ["only the first area", shownIds.slice(0, 1), shownTitles.slice(0, 1)],
     ["nothing", [], []],
     ["an id the preset does not define", ["not-an-area"], []],
   ])("hides entries that are not visible: %s", (_name, visibleIds, expected) => {
@@ -33,10 +41,9 @@ describe("buildShellNav", () => {
   });
 
   it("groups the preset entries for the search dialog", () => {
-    expect(buildShellNav(data({}), examples).searchGroups.map((group) => [group.id, group.label])).toEqual([
-      ["overview", "Overview"],
-      ["operations", "Operations"],
-    ]);
+    expect(buildShellNav(data({}), examples).searchGroups.map((group) => [group.id, group.label])).toEqual(
+      [...new Set(shown.map((entry) => entry.group))].map((group) => [group, `group:${group}`]),
+    );
   });
 
   it("leaves the showcase screens out unless asked", () => {
@@ -45,7 +52,7 @@ describe("buildShellNav", () => {
 
   it("puts the preset first and the showcase screens after it", () => {
     const nav = buildShellNav(data({ showExamples: true }), examples);
-    expect([titles(nav.top).slice(0, 2), nav.top.length > 2]).toEqual([["Home", "Appointments"], true]);
+    expect([titles(nav.top).slice(0, shown.length), nav.top.length > shown.length]).toEqual([shownTitles, true]);
   });
 
   it.each([

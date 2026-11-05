@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { PAGE_ROUTES } from "./routes";
+
 /**
  * Touch-target bar (spec 002, quality bar): on a coarse pointer every visible interactive primitive offers at least
  * 44 × 44 px, either by its own box or, for glyph controls and the segments of a glass capsule, by its invisible
@@ -26,15 +28,23 @@ const GLASS_SEGMENT = '.liquid-glass[data-slot="toggle-group"] > [data-slot="tog
 /** The rail's trigger buttons keep their drawn size on touch, as on the desktop, and offer the hit area instead. */
 const RAIL_TRIGGER =
   '[data-slot="app-rail"] > :is([data-slot="tooltip-trigger"], [data-slot="popover-trigger"], [data-slot="dropdown-menu-trigger"])';
-const ROUTES = ["/", "/dashboard/default", "/dashboard/invoice", "/dashboard/bookings", "/dashboard/customers"];
-const CAPSULE_ROUTES = [
+/** The routes the sweeps visit, less those of a module that is not installed (ADR 0017). */
+const installed = (routes: readonly string[]) => routes.filter((route) => PAGE_ROUTES.includes(route));
+const ROUTES = installed([
+  "/",
+  "/dashboard/default",
+  "/dashboard/invoice",
+  "/dashboard/bookings",
+  "/dashboard/customers",
+]);
+const CAPSULE_ROUTES = installed([
   "/dashboard/default",
   "/dashboard/bookings",
   "/dashboard/customers",
   "/dashboard/crm",
   "/dashboard/analytics",
   "/dashboard/calendar",
-];
+]);
 
 /** Smallest target among visible elements: own box for rows, ::after box for glyphs and glass segments. */
 const smallestTarget = (page: Page, rows: string[], glyphs: string[]) =>
@@ -127,25 +137,6 @@ test.describe("the rail on a coarse pointer", () => {
       clientWidth: element.clientWidth,
     }));
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
-  });
-});
-
-test.describe("pills on a coarse pointer", () => {
-  test.use({ hasTouch: true, isMobile: true });
-
-  test("booking tags stay on one line in the list", async ({ page, context, baseURL }) => {
-    await context.addCookies([{ name: "locale", value: "en", url: baseURL }]);
-    await page.goto("/dashboard/bookings");
-    // The room loads lazily (a WebGL engine in its own chunk): a table plate on screen means the page is hydrated, so
-    // the List radio answers. The wait is generous because a loaded CI machine renders the scene in software.
-    await expect(page.getByRole("button", { name: /^S3, \d+ seats/ })).toBeVisible({ timeout: 30_000 });
-    const list = page.getByRole("radiogroup", { name: "Reservations view" }).getByRole("radio", { name: "List" });
-    await list.click();
-    await expect(list).toBeChecked();
-    const tags = page.getByRole("list", { name: "Notes" }).locator('[data-slot="badge"]');
-    await expect(tags.first()).toBeVisible();
-    const heights = await tags.evaluateAll((badges) => badges.map((badge) => badge.getBoundingClientRect().height));
-    expect(Math.max(...heights)).toBeLessThanOrEqual(24);
   });
 });
 

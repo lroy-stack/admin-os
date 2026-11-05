@@ -66,7 +66,10 @@ export const customersModule = defineModule({
   references: [],
   owns: [
     "src/app/(main)/dashboard/customers",
+    "src/config/approvals.customers.test.ts",
     "src/config/customers.test.ts",
+    "src/config/mcp-manifest.customers.test.ts",
+    "src/config/mcp.server.customers.test.ts",
     "e2e/smoke/customers.spec.ts",
     "e2e/smoke/customer-record.spec.ts",
   ],
