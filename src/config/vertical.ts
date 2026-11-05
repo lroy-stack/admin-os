@@ -1,18 +1,19 @@
 import { z } from "zod";
 
 import type { RolePreset } from "@/core/access";
-import type { ModuleId, NavManifest } from "@/core/nav";
+import type { NavManifest } from "@/core/nav";
 import { hospitality } from "@/verticals/hospitality";
 import { salon } from "@/verticals/salon";
 import { workshop } from "@/verticals/workshop";
 
-/** Entities whose `ext` slot a preset may type (ADR 0004). */
-export type ExtensionEntity = "area" | "asset" | "booking" | "catalogItem" | "customer" | "resource" | "staff";
+import type { ExtensionEntity, InstalledModuleId } from "./modules.generated";
+
+export type { ExtensionEntity } from "./modules.generated";
 
 /** The isomorphic half of a preset (ADR 0004); `server.ts` of each preset holds the vocabulary and the seed. */
 export interface VerticalPreset {
   readonly id: string;
-  readonly modules: readonly ModuleId[];
+  readonly modules: readonly InstalledModuleId[];
   readonly nav: NavManifest;
   readonly roles: readonly RolePreset[];
   readonly extensions: Readonly<Partial<Record<ExtensionEntity, z.ZodType>>>;

@@ -4,7 +4,16 @@ import { z } from "zod";
 import { defineCapability } from "@/core/capability";
 import { defineSetting } from "@/core/settings";
 
-import { defineModule, type InstalledModule, isStringField, type ModuleManifest, moduleProblems } from "./index";
+import {
+  compositionProblems,
+  defineModule,
+  type InstalledModule,
+  isStringField,
+  type ModuleEdge,
+  type ModuleManifest,
+  moduleEdges,
+  requiresOf,
+} from "./index";
 
 const plantedGet = defineCapability({
   id: "planted.item.get",
@@ -182,7 +191,10 @@ describe("isStringField (ADR 0017 §3)", () => {
   });
 });
 
-describe("moduleProblems (ADR 0017 §1–§3, §7)", () => {
+describe("compositionProblems (ADR 0017 §1–§3, §7)", () => {
+  const problems = (modules: readonly InstalledModule[], pathExists: (path: string) => boolean) =>
+    compositionProblems(modules, [], pathExists);
+
   const optional = { ...planted, references: planted.references.map((ref) => ({ ...ref, required: false })) };
   const kernelHint = {
     ...planted,
@@ -192,19 +204,19 @@ describe("moduleProblems (ADR 0017 §1–§3, §7)", () => {
   } as const;
 
   it("finds none in consistent manifests", () => {
-    expect(moduleProblems(installed(planted, other), exists)).toEqual([]);
+    expect(problems(installed(planted, other), exists)).toEqual([]);
   });
 
   it("accepts optional references and hints to a module that is not installed", () => {
-    expect(moduleProblems(installed(optional), exists)).toEqual([]);
+    expect(problems(installed(optional), exists)).toEqual([]);
   });
 
   it("accepts a hint to a kernel tool without a reference, since the kernel is always installed", () => {
-    expect(moduleProblems(installed(kernelHint, other), exists)).toEqual([]);
+    expect(problems(installed(kernelHint, other), exists)).toEqual([]);
   });
 
   it("does not take a sibling path for an overlap", () => {
-    expect(moduleProblems(installed(planted, { ...other, owns: ["src/app/plant"] }), exists)).toEqual([]);
+    expect(problems(installed(planted, { ...other, owns: ["src/app/plant"] }), exists)).toEqual([]);
   });
 
   const strayPrefix = defineSetting({
@@ -279,7 +291,7 @@ describe("moduleProblems (ADR 0017 §1–§3, §7)", () => {
     [
       "a required reference to a module that is not installed",
       installed(planted),
-      "planted's reference planted.lines[].otherId → other is required, and other is not installed; restore src/modules/other or remove planted",
+      "planted requires other; restore src/modules/other or remove planted",
     ],
     [
       "a reference in a collection no installed module seeds",
@@ -328,6 +340,170 @@ describe("moduleProblems (ADR 0017 §1–§3, §7)", () => {
       "planted.item.get hints other.list, which other does not declare",
     ],
   ] as const)("reports %s, and only that", (_case, modules, problem) => {
-    expect(moduleProblems(modules, exists)).toEqual([problem]);
+    expect(problems(modules, exists)).toEqual([problem]);
+  });
+});
+
+describe("compositionProblems requirements (ADR 0017 §2, §5)", () => {
+  const edge = (from: string, to: string, file = `src/modules/${from}/x.ts`): ModuleEdge => ({ from, to, file });
+  const REFUSAL = "planted requires other; restore src/modules/other or remove planted";
+  const importOnly = { ...planted, references: planted.references.map((ref) => ({ ...ref, required: false })) };
+
+  it("refuses an import of a module that is not installed", () => {
+    expect(compositionProblems(installed(importOnly), [edge("planted", "other")], exists)).toEqual([REFUSAL]);
+  });
+
+  it("says it once when the import and a required reference name the same module", () => {
+    expect(
+      compositionProblems(installed(planted), [edge("planted", "other"), edge("planted", "other", "a.ts")], exists),
+    ).toEqual([REFUSAL]);
+  });
+
+  it("refuses a required reference without an import", () => {
+    expect(compositionProblems(installed(planted), [], exists)).toEqual([REFUSAL]);
+  });
+
+  it("accepts an import of an installed module", () => {
+    expect(compositionProblems(installed(importOnly, other), [edge("planted", "other")], exists)).toEqual([]);
+  });
+
+  it("ignores an import by a module that is not installed", () => {
+    expect(compositionProblems(installed(other), [edge("planted", "gone")], exists)).toEqual([]);
+  });
+
+  it("hides the other problems of a module that lacks a requirement", () => {
+    const broken = { ...importOnly, owns: ["src/app/gone"] };
+    expect(compositionProblems(installed(broken), [edge("planted", "other")], exists)).toEqual([REFUSAL]);
+  });
+
+  it("keeps the problems of the modules that lack nothing", () => {
+    const broken = { ...other, owns: ["src/app/gone"] };
+    expect(compositionProblems(installed(importOnly, broken), [edge("planted", "gone")], exists)).toEqual([
+      "planted requires gone; restore src/modules/gone or remove planted",
+      "other owns src/app/gone, which does not exist; fix the path or remove it from owns",
+    ]);
+  });
+});
+
+describe("compositionProblems with folders whose manifest does not load (ADR 0017 §5)", () => {
+  const edge = (from: string, to: string): ModuleEdge => ({ from, to, file: `src/modules/${from}/x.ts` });
+  const importOnly = { ...planted, references: planted.references.map((ref) => ({ ...ref, required: false })) };
+  const brokenOther = { folder: "other", problem: "src/modules/other has no manifest" };
+  const brokenGone = { folder: "gone", problem: "src/modules/gone has no manifest; it failed to load" };
+  const strayOwner = { ...importOnly, owns: ["src/app/gone"] };
+
+  it("reports the folder, and does not tell a module that imports it to restore a folder that is there", () => {
+    expect(compositionProblems(installed(importOnly), [edge("planted", "other")], exists, [brokenOther])).toEqual([
+      "src/modules/other has no manifest",
+    ]);
+  });
+
+  it("hides the other problems of a module that waits on that folder", () => {
+    expect(compositionProblems(installed(strayOwner), [edge("planted", "other")], exists, [brokenOther])).toEqual([
+      "src/modules/other has no manifest",
+    ]);
+  });
+
+  it("says a folder that fails to load on a deleted module requires it, instead of its load failure", () => {
+    expect(compositionProblems([], [edge("gone", "staff")], exists, [brokenGone])).toEqual([
+      "gone requires staff; restore src/modules/staff or remove gone",
+    ]);
+  });
+
+  it("lists the requirements first, then the folders without a manifest, then the rest", () => {
+    const broken = { ...other, owns: ["src/app/missing"] };
+    expect(
+      compositionProblems(installed(importOnly, broken), [edge("planted", "deleted")], exists, [brokenGone]),
+    ).toEqual([
+      "planted requires deleted; restore src/modules/deleted or remove planted",
+      "src/modules/gone has no manifest; it failed to load",
+      "other owns src/app/missing, which does not exist; fix the path or remove it from owns",
+    ]);
+  });
+
+  it("keeps a problem between two modules while one of them is not refused", () => {
+    const twice = { ...other, owns: ["src/app/planted"] };
+    expect(compositionProblems(installed(importOnly, twice), [edge("planted", "deleted")], exists)).toEqual([
+      "planted requires deleted; restore src/modules/deleted or remove planted",
+      "src/app/planted (planted) and src/app/planted (other) overlap; a path has one owner",
+    ]);
+  });
+});
+
+describe("moduleEdges (ADR 0017 §2)", () => {
+  const owners = [
+    { id: "bookings", owns: ["src/app/(main)/bookings", "e2e/bookings.spec.ts"] },
+    { id: "customers", owns: ["src/app/(main)/customers"] },
+    { id: "notifications", owns: [] },
+  ];
+  const edges = (...imports: readonly [file: string, specifier: string, resolved?: string][]) =>
+    moduleEdges(
+      imports.map(([file, specifier, resolved]) => ({ file, specifier, ...(resolved ? { resolved } : {}) })),
+      owners,
+    );
+
+  it("takes the target from the resolved path", () => {
+    expect(edges(["src/modules/notifications/mock.ts", "@/modules/bookings", "src/modules/bookings/index.ts"])).toEqual(
+      [{ from: "notifications", to: "bookings", file: "src/modules/notifications/mock.ts" }],
+    );
+  });
+
+  it.each([
+    ["@/modules/bookings"],
+    ["@/modules/bookings/server"],
+    ["@/modules/bookings/ui/deeper/path"],
+    ["../bookings"],
+    ["../bookings/server"],
+    ["../../modules/bookings/ui"],
+  ])("names the module of an unresolved import %s", (specifier) => {
+    expect(edges(["src/modules/notifications/mock.ts", specifier])).toEqual([
+      { from: "notifications", to: "bookings", file: "src/modules/notifications/mock.ts" },
+    ]);
+  });
+
+  it.each([["react"], ["@/core/access"], ["./local"], ["@/modules"]])("ignores %s", (specifier) => {
+    expect(edges(["src/modules/notifications/mock.ts", specifier])).toEqual([]);
+  });
+
+  it("makes no edge for an import within the module", () => {
+    expect(edges(["src/modules/bookings/a.ts", "./b", "src/modules/bookings/b.ts"])).toEqual([]);
+  });
+
+  it("belongs an owned file to its module, and counts an import into an owned path", () => {
+    expect(
+      edges(
+        ["src/app/(main)/bookings/page.tsx", "@/app/(main)/customers/x", "src/app/(main)/customers/x.ts"],
+        ["e2e/bookings.spec.ts", "@/modules/customers"],
+      ),
+    ).toEqual([
+      { from: "bookings", to: "customers", file: "src/app/(main)/bookings/page.tsx" },
+      { from: "bookings", to: "customers", file: "e2e/bookings.spec.ts" },
+    ]);
+  });
+
+  it("ignores a file that no module owns", () => {
+    expect(edges(["src/core/x.ts", "@/modules/bookings", "src/modules/bookings/index.ts"])).toEqual([]);
+  });
+
+  it("lists a file once per target however many imports it has", () => {
+    expect(
+      edges(
+        ["src/modules/notifications/mock.ts", "@/modules/bookings", "src/modules/bookings/index.ts"],
+        ["src/modules/notifications/mock.ts", "@/modules/bookings/server"],
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+describe("requiresOf (ADR 0017 §2)", () => {
+  const edge = (from: string, to: string): ModuleEdge => ({ from, to, file: `src/modules/${from}/x.ts` });
+
+  it("has every installed id as a key, sorted by character code, without duplicates or the module itself", () => {
+    expect(
+      requiresOf(
+        [edge("b", "Z"), edge("b", "a"), edge("b", "a"), edge("b", "b"), edge("c", "a"), edge("gone", "a")],
+        ["a", "b", "c", "d"],
+      ),
+    ).toEqual({ a: [], b: ["Z", "a"], c: ["a"], d: [] });
   });
 });

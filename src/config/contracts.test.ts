@@ -13,12 +13,6 @@ import {
   type Vocabulary,
 } from "@/core/i18n";
 import type { NavEntry } from "@/core/nav";
-import { bookingsModule } from "@/modules/bookings";
-import { catalogModule } from "@/modules/catalog";
-import { customersModule } from "@/modules/customers";
-import { notificationsModule } from "@/modules/notifications";
-import { resourcesModule } from "@/modules/resources";
-import { staffModule } from "@/modules/staff";
 import { hospitality } from "@/verticals/hospitality";
 import { hospitalitySeed, hospitalityVocabulary } from "@/verticals/hospitality/server";
 import { salon } from "@/verticals/salon";
@@ -27,6 +21,7 @@ import { workshop } from "@/verticals/workshop";
 import { workshopSeed, workshopVocabulary } from "@/verticals/workshop/server";
 
 import { CATALOG } from "./catalog";
+import { MODULES } from "./modules.generated";
 import { type ExtensionEntity, VERTICALS, type VerticalId, type VerticalPreset } from "./vertical";
 import { MODULE_MESSAGES } from "./vocabulary.server";
 
@@ -43,11 +38,8 @@ const presets: readonly PresetUnderTest[] = [
   { id: "workshop", preset: workshop, seed: workshopSeed, vocabulary: workshopVocabulary },
 ];
 
-/** The installed modules' manifests, until the generated list replaces this one (ADR 0017 §5). */
-const manifests = [bookingsModule, catalogModule, customersModule, notificationsModule, resourcesModule, staffModule];
-
 /** Every seed collection with the module that declares it: its row schema, whether it is required, its `ext` slot. */
-const collections = manifests.flatMap(({ id, seed }) =>
+const collections = MODULES.flatMap(({ id, seed }) =>
   Object.entries(seed).map(([key, collection]) => ({ module: id, key, ...collection })),
 );
 const seedSchemas = collections.map(({ key, schema }) => [key, schema] as const);

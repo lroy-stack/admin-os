@@ -32,6 +32,7 @@
     "check:bundles": "node scripts/check-worker-bundles.mjs",
     "check:fix": "biome check --write",
     "prepare": "husky",
+    "generate:modules": "tsx scripts/generate-modules.ts",
     "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",

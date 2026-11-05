@@ -146,40 +146,56 @@ const KERNEL: ReadonlySet<string> = new Set(KERNEL_MODULES);
 /** The tools an entry's id hints name; a UI-only entry has none. */
 const hintsOf = (entry: ManifestEntry): string[] => Object.values("ids" in entry ? (entry.ids ?? {}) : {}).flat();
 
-function identityProblems({ folder, manifest }: InstalledModule): string[] {
+/**
+ * A problem with the modules it is about, so a module that lacks a requirement can hide the rest of its own. A
+ * problem between two modules stays while either of them is not refused.
+ */
+interface Problem {
+  readonly modules: readonly string[];
+  readonly message: string;
+}
+
+const about = (modules: string | readonly string[], messages: readonly string[]): Problem[] =>
+  messages.map((message) => ({ modules: typeof modules === "string" ? [modules] : modules, message }));
+
+function identityProblems({ folder, manifest }: InstalledModule): Problem[] {
   const { id } = manifest;
   const strayCapabilities = Object.entries(manifest.capabilities)
     .filter(([key, capability]) => !key.startsWith(`${id}.`) || capability.id !== key)
     .map(([key]) => key);
   const straySettings = manifest.settings.map(({ key }) => key).filter((key) => !key.startsWith(`${id}.`));
-  return [
+  return about(id, [
     ...(id === folder ? [] : [`src/modules/${folder}: the manifest's id is "${id}"; set it to "${folder}"`]),
     ...(strayCapabilities.length > 0
       ? [`${id}: capabilities ${strayCapabilities.join(", ")} must be keyed by their own id, under "${id}."`]
       : []),
     ...(straySettings.length > 0 ? [`${id}: settings ${straySettings.join(", ")} must start with "${id}."`] : []),
-  ];
+  ]);
 }
 
-function ownershipProblems(modules: readonly InstalledModule[], pathExists: (path: string) => boolean): string[] {
+function ownershipProblems(modules: readonly InstalledModule[], pathExists: (path: string) => boolean): Problem[] {
   const owned = modules.flatMap(({ manifest }) => manifest.owns.map((path) => ({ id: manifest.id, path })));
   const crooked = owned
     .filter(({ path }) => !isCanonical(path))
-    .map(({ id, path }) => `${id} owns "${path}"; write it from the repository root, without ".", ".." or an edge "/"`);
+    .map(({ id, path }) =>
+      about(id, [`${id} owns "${path}"; write it from the repository root, without ".", ".." or an edge "/"`]),
+    );
   const canonical = owned.filter(({ path }) => isCanonical(path));
   const missing = canonical
     .filter(({ path }) => !pathExists(path))
-    .map(({ id, path }) => `${id} owns ${path}, which does not exist; fix the path or remove it from owns`);
+    .map(({ id, path }) =>
+      about(id, [`${id} owns ${path}, which does not exist; fix the path or remove it from owns`]),
+    );
   const twice = canonical.flatMap((a, index) =>
     canonical
       .slice(index + 1)
       .filter((b) => overlaps(a.path, b.path))
-      .map((b) => `${a.path} (${a.id}) and ${b.path} (${b.id}) overlap; a path has one owner`),
+      .map((b) => about([a.id, b.id], [`${a.path} (${a.id}) and ${b.path} (${b.id}) overlap; a path has one owner`])),
   );
-  return [...crooked, ...missing, ...twice];
+  return [...crooked, ...missing, ...twice].flat();
 }
 
-function seedProblems(modules: readonly InstalledModule[]): string[] {
+function seedProblems(modules: readonly InstalledModule[]): Problem[] {
   const collections = modules.flatMap(({ manifest }) =>
     Object.entries(manifest.seed).map(([name, collection]) => ({
       id: manifest.id,
@@ -191,41 +207,39 @@ function seedProblems(modules: readonly InstalledModule[]): string[] {
     collections
       .slice(index + 1)
       .filter((b) => b.name === a.name)
-      .map((b) => `the seed collection ${a.name} is declared by ${a.id} and ${b.id}; one module owns it`),
+      .map((b) =>
+        about([a.id, b.id], [`the seed collection ${a.name} is declared by ${a.id} and ${b.id}; one module owns it`]),
+      ),
   );
   const typedTwice = collections.flatMap((a, index) =>
     collections
       .slice(index + 1)
       .filter((b) => a.entity !== undefined && b.entity === a.entity)
-      .map((b) => `the ext entity ${a.entity} is declared by ${a.id} (${a.name}) and ${b.id} (${b.name})`),
+      .map((b) =>
+        about([a.id, b.id], [`the ext entity ${a.entity} is declared by ${a.id} (${a.name}) and ${b.id} (${b.name})`]),
+      ),
   );
-  return [...seededTwice, ...typedTwice];
+  return [...seededTwice, ...typedTwice].flat();
 }
 
-function referenceProblems(modules: readonly InstalledModule[]): string[] {
-  const installed = new Set(modules.map(({ manifest }) => manifest.id));
+function referenceProblems(modules: readonly InstalledModule[]): Problem[] {
   const seeds = new Map(
     modules.flatMap(({ manifest }) => Object.entries(manifest.seed).map(([name, { schema }]) => [name, schema])),
   );
   return modules.flatMap(({ manifest: { id, references } }) =>
-    references.flatMap(({ collection, field, module, required }) => {
+    references.flatMap(({ collection, field, module }) => {
       const where = `${id}'s reference ${collection}.${field} → ${module}`;
       const schema = seeds.get(collection);
-      return [
-        ...(required && !installed.has(module)
-          ? [`${where} is required, and ${module} is not installed; restore src/modules/${module} or remove ${id}`]
-          : []),
-        ...(schema === undefined
-          ? [`${where}: no installed module seeds the collection ${collection}`]
-          : isStringField(schema, field)
-            ? []
-            : [`${where}: ${field} is not a string field of ${collection}'s rows`]),
-      ];
+      if (schema === undefined) return about(id, [`${where}: no installed module seeds the collection ${collection}`]);
+      return about(
+        id,
+        isStringField(schema, field) ? [] : [`${where}: ${field} is not a string field of ${collection}'s rows`],
+      );
     }),
   );
 }
 
-function hintProblems(modules: readonly InstalledModule[]): string[] {
+function hintProblems(modules: readonly InstalledModule[]): Problem[] {
   const catalogs = new Map(modules.map(({ manifest }) => [manifest.id, manifest.capabilities]));
   return modules.flatMap(({ manifest: { id, capabilities, references, mcp } }) => {
     const referenced = new Set(references.map(({ module }) => module));
@@ -234,33 +248,159 @@ function hintProblems(modules: readonly InstalledModule[]): string[] {
       hintsOf(entry).flatMap((hint) => {
         const owner = prefixOf(hint);
         if (owner === id) {
-          return Object.hasOwn(capabilities, hint) ? [] : [`${tool} hints ${hint}, which ${id} does not declare`];
+          return about(
+            id,
+            Object.hasOwn(capabilities, hint) ? [] : [`${tool} hints ${hint}, which ${id} does not declare`],
+          );
         }
         // A kernel tool exists in every composition; the composition root's `satisfies` checks its name.
         if (KERNEL.has(owner)) return [];
         if (!referenced.has(owner)) {
-          return [`${tool} hints ${hint}, but ${id} declares no reference to ${owner}; add the reference`];
+          return about(id, [`${tool} hints ${hint}, but ${id} declares no reference to ${owner}; add the reference`]);
         }
         const target = catalogs.get(owner);
-        return target === undefined || Object.hasOwn(target, hint)
-          ? []
-          : [`${tool} hints ${hint}, which ${owner} does not declare`];
+        return about(
+          id,
+          target === undefined || Object.hasOwn(target, hint)
+            ? []
+            : [`${tool} hints ${hint}, which ${owner} does not declare`],
+        );
       }),
     );
   });
 }
 
+const byCode = (a: string, b: string): number => Number(a > b) - Number(a < b);
+
+/** An import of one module's code or owned paths by another's: `from` needs `to` installed (ADR 0017 §2). */
+export interface ModuleEdge {
+  readonly from: string;
+  readonly to: string;
+  /** The importing file, as a repository path. */
+  readonly file: string;
+}
+
+/** One import as the scanner saw it. `resolved` is a repository path, absent when the import did not resolve. */
+export interface ImportRecord {
+  readonly file: string;
+  readonly specifier: string;
+  readonly resolved?: string;
+}
+
+/** A module and the repository paths outside its folder that go with it. */
+export interface ModuleOwner {
+  readonly id: string;
+  readonly owns: readonly string[];
+}
+
+const FOLDER = /^src\/modules\/([^/]+)(?:\/|$)/;
+const ALIAS = /^@\/modules\/([^/]+)(?:\/|$)/;
+
+/** `a/b/../c` → `a/c`; a path that climbs out of the repository keeps its leading `..`. */
+const normalize = (path: string): string => {
+  const kept: string[] = [];
+  for (const segment of path.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === ".." && kept.length > 0 && kept.at(-1) !== "..") kept.pop();
+    else kept.push(segment);
+  }
+  return kept.join("/");
+};
+
+const dirnameOf = (file: string): string => file.slice(0, Math.max(0, file.lastIndexOf("/")));
+
 /**
- * Manifest bugs the types cannot catch, across the installed modules (ADR 0017 §1–§3, §7). Each message names the
- * module and the fix; `pathExists` answers for a repository path.
+ * The module-to-module import edges (ADR 0017 §2), from every import in the module folders and owned paths: runtime,
+ * type-only and test imports alike, since the record carries no type. A folder that was deleted still names its
+ * module, through the alias or the relative path of an import that no longer resolves. A deleted module's owned paths
+ * outside its folder cannot be named that way, since its manifest is gone with it: `tsc` reports those imports.
  */
-export const moduleProblems = (
+export function moduleEdges(imports: readonly ImportRecord[], owners: readonly ModuleOwner[]): ModuleEdge[] {
+  const ownerOf = (path: string): string | undefined =>
+    FOLDER.exec(path)?.[1] ??
+    owners.find(({ owns }) => owns.some((owned) => path === owned || path.startsWith(`${owned}/`)))?.id;
+  const targetOf = ({ file, specifier, resolved }: ImportRecord): string | undefined => {
+    if (resolved !== undefined) return ownerOf(resolved);
+    const alias = ALIAS.exec(specifier)?.[1];
+    if (alias !== undefined) return alias;
+    return specifier.startsWith(".") ? ownerOf(normalize(`${dirnameOf(file)}/${specifier}`)) : undefined;
+  };
+  const seen = new Set<string>();
+  return imports.flatMap((record) => {
+    const from = ownerOf(record.file);
+    const to = targetOf(record);
+    const key = `${from}\0${to}\0${record.file}`;
+    if (from === undefined || to === undefined || from === to || seen.has(key)) return [];
+    seen.add(key);
+    return [{ from, to, file: record.file }];
+  });
+}
+
+/** What each installed module requires (`MODULE_GRAPH`): the sorted, distinct ids its code imports from. */
+export function requiresOf(edges: readonly ModuleEdge[], installedIds: readonly string[]): Record<string, string[]> {
+  return Object.fromEntries(
+    installedIds.map((id) => [
+      id,
+      [...new Set(edges.filter(({ from, to }) => from === id && to !== id).map(({ to }) => to))].sort(byCode),
+    ]),
+  );
+}
+
+/** A module folder whose manifest could not be read, with the problem that says why. */
+export interface UnloadedModule {
+  readonly folder: string;
+  readonly problem: string;
+}
+
+/**
+ * Why the module folders cannot be composed (ADR 0017 §1–§3, §5, §7), in this order:
+ * 1. a module that needs one whose folder is gone, by an import or a required reference: refused alone, since its
+ *    other problems, and a manifest that fails to load on that import, would only echo the missing module;
+ * 2. a folder whose manifest cannot be read; a module that needs it waits for that fix rather than being told to
+ *    restore a folder that is there;
+ * 3. every other problem of the modules not refused.
+ * Each message names the module and the fix; `pathExists` answers for a repository path.
+ */
+export const compositionProblems = (
   modules: readonly InstalledModule[],
+  edges: readonly ModuleEdge[],
   pathExists: (path: string) => boolean,
-): readonly string[] => [
-  ...modules.flatMap(identityProblems),
-  ...ownershipProblems(modules, pathExists),
-  ...seedProblems(modules),
-  ...referenceProblems(modules),
-  ...hintProblems(modules),
-];
+  unloaded: readonly UnloadedModule[] = [],
+): readonly string[] => {
+  const broken = new Set(unloaded.map(({ folder }) => folder));
+  const present = new Set([...modules.map(({ manifest }) => manifest.id), ...broken]);
+  const needs = [
+    ...modules.map(({ manifest: { id, references } }) => ({
+      id,
+      required: references.filter(({ required }) => required).map(({ module }) => module),
+    })),
+    ...unloaded.map(({ folder }) => ({ id: folder, required: [] as string[] })),
+  ].map(({ id, required }) => ({
+    id,
+    targets: [...new Set([...edges.filter(({ from }) => from === id).map(({ to }) => to), ...required])]
+      .filter((target) => target !== id)
+      .sort(byCode),
+  }));
+  const requirements = needs.flatMap(({ id, targets }) =>
+    targets.filter((target) => !present.has(target)).map((target) => ({ module: id, target })),
+  );
+  const refused = new Set(requirements.map(({ module }) => module));
+  const waiting = new Set(
+    needs.filter(({ targets }) => targets.some((target) => broken.has(target))).map(({ id }) => id),
+  );
+  const quiet = (id: string) => refused.has(id) || waiting.has(id);
+  const rest = [
+    ...modules.flatMap(identityProblems),
+    ...ownershipProblems(modules, pathExists),
+    ...seedProblems(modules),
+    ...referenceProblems(modules),
+    ...hintProblems(modules),
+  ].filter(({ modules: about }) => about.some((id) => !quiet(id)));
+  return [
+    ...requirements.map(
+      ({ module, target }) => `${module} requires ${target}; restore src/modules/${target} or remove ${module}`,
+    ),
+    ...unloaded.filter(({ folder }) => !refused.has(folder)).map(({ problem }) => problem),
+    ...rest.map(({ message }) => message),
+  ];
+};
