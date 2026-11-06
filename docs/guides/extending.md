@@ -5,6 +5,8 @@ Each path below names the files to touch, in order, and the decision record behi
 Read [Architecture](architecture.md) first for the layers and the data seam.
 
 - [Add a module](#add-a-module)
+- [Remove a module](#remove-a-module)
+- [Add a module back](#add-a-module-back)
 - [Add a preset](#add-a-preset)
 - [Add a product view](#add-a-product-view)
 - [Fill a route slot](#fill-a-route-slot)
@@ -47,6 +49,64 @@ example is `src/modules/notifications`.
      `assertDictionaryParity` over its messages. A module sits below the presets and cannot import their seeds.
    - On a preset's seed, test it in `src/config/<domain>.test.ts`, which builds a client with
      `createClient(CATALOG, getAdapter({ vertical, sessionId }), …)`, as `src/config/customers.test.ts` does.
+
+## Remove a module
+
+Decision record: [ADR 0017](../adr/0017-a-module-is-a-folder.md) §5 and §6. A module is installed while its folder
+exists, so removing one is deleting files and regenerating. The edits that remain are in `src/verticals/*`, apart from
+the links listed at the end of this section.
+
+1. **Check what depends on it.** `MODULE_GRAPH` in `src/config/modules.generated.ts` lists each module's requirements.
+   The generator refuses to run while an installed module requires the one you removed ("notifications requires
+   bookings; restore src/modules/bookings or remove notifications"), so remove the dependent first: `bookings` goes
+   together with `notifications`.
+2. **Delete the module.**
+   - The folder `src/modules/<id>`.
+   - Every path in the `owns` of its `module.ts`. They are, for example, its route under `src/app`, its tests under
+     `src/config`, its e2e spec, its evals and `scripts/eval-mcp.<id>.test.ts`. Read the list before you delete the
+     folder.
+3. **Regenerate.** Run `npm run generate:modules`. It rewrites the four `src/config/modules*.generated.ts` files and
+   `modules.owns.generated.json`, and exits 1 naming the module and the fix when something still refers to the removed
+   one.
+4. **Fix what `tsc` and the contract tests name, only in `src/verticals/*`.** Run `npx tsc --noEmit`. `tsc` reports a
+   preset that lists the removed id in `modules` at `src/config/vertical.ts`; remove the id from `modules` in
+   `src/verticals/<preset>/index.ts`. Then fix what the errors name next:
+   - the preset's `productViews`, which `tsc` reports, and its `nav` entries that point at the module's screens, which
+     the contract test `nav entry %s refers only to enabled modules` (`src/config/contracts.test.ts`) reports;
+   - the preset's seed and the seed tests, where they hold rows of the module's collections;
+   - the preset's `extensions` entities and its `contractIds.<id>`, which the same contract test reports, not `tsc`.
+
+   Repeat until the errors are gone. Edit nothing in `src/core`, in the non-generated files of `src/config`, or in
+   another module. If an error asks for that, stop: the removal is not clean. A test outside the module's `owns` and outside
+   `src/verticals/*` that fails to import it means its `owns` is incomplete; stop and report it, do not delete it.
+5. **Regenerate the MCP reference** with `npm run mcp:reference`. The module's tools leave
+   [`docs/mcp/reference.md`](../mcp/reference.md), and its test fails while the file is stale.
+6. **Run the gates.** `npx tsc --noEmit`, `npm test`, `npm run check` and `npm run test:e2e`, because removing a module
+   deletes routes and e2e specs. A contract test that fails names the preset edit still missing.
+
+Removing `bookings` alone is refused (step 1). `customers` and `notifications` leave their callers working: the
+bookings route renders without a filled slot, and the bell shows the approvals alone.
+
+**Dead links the removal leaves.** The sitemap, the example nav and two analytics cards still point at screens the
+removed module owned: `/dashboard/products` (catalog), `/dashboard/invoice` (parties) and `/dashboard/customers`
+(customers) in `src/app/sitemap.ts`; `/dashboard/invoice` in
+`src/app/(main)/dashboard/(examples)/_nav/examples-nav.ts`; `/dashboard/customers` in
+`src/app/(main)/dashboard/analytics/_components/new-customers-chart.tsx` and `lead-sources.tsx`. They lie outside
+`src/verticals/*`, so the removal does not touch them, and the gates end green with these links dead.
+
+## Add a module back
+
+Restore the files from git and undo the preset edits.
+
+1. **Restore the paths.** `git checkout <ref> -- src/modules/<id>` and, for each path in the `owns` of its
+   `module.ts`, `git checkout <ref> -- <path>`, where `<ref>` is the commit before the removal (`HEAD` when the removal
+   is not committed).
+2. **Restore the preset lines** in `src/verticals/*`: the id in `modules`, and the `nav`, `productViews`, `extensions`
+   and `contractIds` entries and seed rows you took out (`git diff` on the removal shows them;
+   `git checkout <ref> -- src/verticals` restores them all).
+3. **Regenerate** with `npm run generate:modules` and `npm run mcp:reference`.
+4. **Run the gates** as in step 6 above. After restoring, `git status` shows no change against the tree before the
+   removal and the gates are green.
 
 ## Add a preset
 

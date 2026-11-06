@@ -9,7 +9,7 @@ reference is generated from the code.
 | --- | --- |
 | [Development](guides/development.md) | Run the app, use the commands, pass the quality gates, run the Cloudflare topology locally |
 | [Architecture](guides/architecture.md) | Understand the layers, the data seam, presets and who owns a control |
-| [Building on the template](guides/extending.md) | Add a module or a preset, wire a control, swap the adapter, expose a capability to MCP |
+| [Building on the template](guides/extending.md) | Add or remove a module, add a preset, wire a control, swap the adapter, expose a capability to MCP |
 | [Deployment](guides/deployment.md) | Deploy the three Workers to Cloudflare and check a deployment |
 | [MCP](guides/mcp.md) | Connect an assistant, understand access and limits, run the agent evals |
 

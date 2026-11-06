@@ -55,6 +55,8 @@ npm run mcp:stdio    # MCP server over stdio
 npm run generate:presets
 ```
 
+To add or remove a module, follow `docs/guides/extending.md` ("Add a module", "Remove a module", "Add a module back").
+
 Run `npm run check`, `npx tsc --noEmit` and `npm test` before you commit; run `npm run test:e2e` when you change the shell, routing or a screen's loading path. When a change alters what a screen looks like, run `npm run media` and commit the updated images with it.
 
 ## Co-location-based structure
