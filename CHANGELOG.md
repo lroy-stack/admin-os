@@ -86,7 +86,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with its reason instead of breaking the page.
 - The "Move to stage" submenu of a deal's menu on the home screen was clipped by its parent menu and could not be
   pressed; it now opens in its own layer. The dead-click sweep now opens every menu and fails an item that does
-  nothing.
+  nothing; it found the tasks table's Reset sort, which is now disabled while the column is unsorted.
 
 ### Removed
 
