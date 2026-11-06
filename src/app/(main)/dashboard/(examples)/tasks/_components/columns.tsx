@@ -66,7 +66,8 @@ function TitleColumnHeader({
           {text.sort.descending}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => column.clearSorting()}>
+        {/* Nothing to reset while the column is unsorted: the item is disabled, never a control that does nothing. */}
+        <DropdownMenuItem disabled={column.getIsSorted() === false} onSelect={() => column.clearSorting()}>
           <RotateCcw />
           {text.sort.reset}
         </DropdownMenuItem>
