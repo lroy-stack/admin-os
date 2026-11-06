@@ -43,7 +43,7 @@ file documents each variable, its default and where it is set on Cloudflare. The
 | `npm run check:fix` | Biome with fixes (formatting, sorted imports) |
 | `npm test` | Unit and contract tests (Vitest) |
 | `npm run test:e2e` | Playwright smoke on a production build; fails on any control that does nothing |
-| `npm run test:dead-clicks` | Reports every control that does nothing, per route |
+| `npm run test:dead-clicks` | Reports every control and menu item that does nothing, per route |
 | `npm run test:e2e:workers` | Cross-door e2e on the Cloudflare topology (see below) |
 | `npm run media` | Rebuilds the README and landing images in `media/` from the running app |
 | `npm run preview` | Cloudflare Workers build, served locally on workerd |

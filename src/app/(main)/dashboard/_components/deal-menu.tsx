@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -52,17 +53,19 @@ export function DealMenu({ deal, className }: { deal: OpenDeal; className?: stri
             <MoveRight aria-hidden="true" />
             {menu.moveTo}
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {openStages.map((stage) => (
-              <DropdownMenuItem
-                key={stage}
-                disabled={stage === deal.stage}
-                onSelect={() => windows.move(deal, stage, trigger.current)}
-              >
-                {text.stages[stage]}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {openStages.map((stage) => (
+                <DropdownMenuItem
+                  key={stage}
+                  disabled={stage === deal.stage}
+                  onSelect={() => windows.move(deal, stage, trigger.current)}
+                >
+                  {text.stages[stage]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
         </DropdownMenuSub>
         <DropdownMenuItem onSelect={() => windows.close(deal, "won", trigger.current)}>
           <Trophy aria-hidden="true" />

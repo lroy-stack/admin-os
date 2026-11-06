@@ -19,7 +19,11 @@ import path from "node:path";
  * Scope notes: the shell (header, sidebar, quick access) is the same on every dashboard page, so it is scanned once,
  * on `/dashboard/default`; the other dashboard routes scan what is outside it. Controls that are already selected
  * (a checked radio, the current tab) do nothing by design and are not activated. Items inside closed menus are not
- * first-level and are not reached.
+ * first-level and are not reached by the control pass; a second pass opens every menu trigger of the route and activates
+ * each item of the menu (and of its submenus), which must lead somewhere (spec 009, V3-AC4). A menu that closes on
+ * selection is not a reaction by itself; a menu with the same items as one already swept (one row menu per table
+ * row) is swept once, its links are still checked. A menu or an item the sweep cannot open or press, even on a fresh
+ * copy of the page, is a finding (`not-swept`), not a skip.
  */
 
 const ENFORCE = process.env.DEAD_CLICKS !== "report";
@@ -47,16 +51,20 @@ type Reason =
   | "clipboard"
   | "download";
 
-type Control = { id: number; key: string; role: string; name: string; locator: string };
+type Control = { id: number; key: string; role: string; name: string; locator: string; menu: boolean };
 type LinkRef = { href: string; role: "link"; name: string; locator: string };
 type Collected = { controls: Control[]; links: LinkRef[] };
+type MenuItem = { id: number; key: string; role: string; name: string; locator: string; sub: boolean };
+type MenuContents = { items: MenuItem[]; links: LinkRef[] };
 type Prepared = { status: "ok"; x: number; y: number } | { status: "gone" | "hidden" | "covered" | "offscreen" };
 
 /** What the page-side probe offers. It is serialised into the page, so it must not use anything from this file. */
 type Probe = {
   collect(scanShell: boolean, idByKey: Record<string, number> | null): Collected;
   prepare(id: number): Prepared;
-  arm(id: number): void;
+  arm(id: number, trigger?: number): void;
+  collectMenu(): MenuContents;
+  menuDepth(): number;
   reacted(): boolean;
   reasons(): Reason[];
   samples(): string[];
@@ -73,6 +81,13 @@ function createProbe(quietMs: number, maxMs: number): Probe {
   const TOOLTIP = "[role=tooltip],[data-slot=tooltip-content]";
   const MODAL = "[role=dialog],[role=alertdialog],[role=menu],[role=listbox]";
   const OVERLAY = `${MODAL},[data-state=open]`;
+  const MENU = "[role=menu]";
+  const OPEN_MENU = "[role=menu][data-state=open]";
+  const MENU_ITEMS = "[role=menuitem],[role=menuitemcheckbox],[role=menuitemradio]";
+  /** Radix keeps these two spans in the body while any menu is mounted and removes them with the last one. */
+  const FOCUS_GUARD = "[data-radix-focus-guard]";
+  /** The attributes the trigger flips when its menu closes. */
+  const TRIGGER_CLOSING = ["aria-expanded", "aria-controls", "data-state"];
   const CONTROLS =
     "button,[role=button],[role=tab],[role=radio],[role=checkbox],[role=switch],a,input[type=submit],input[type=button],input[type=checkbox],input[type=radio],summary";
   const TOOLTIP_STATES = ["delayed-open", "instant-open"];
@@ -122,6 +137,11 @@ function createProbe(quietMs: number, maxMs: number): Probe {
     recent: [] as { at: number; key: number }[],
     lastChange: 0,
     snapshot: null as Snapshot | null,
+    /** True while a menu item is under test: the menu closing on selection is then not a reaction. */
+    menuItem: false as boolean,
+    /** Menu items count down from -1, controls up from 1: the two never share an id. */
+    menuItems: 0,
+    menuTrigger: null as Element | null,
     armed: { net: 0, popups: 0, alerts: 0, clipboard: 0, downloads: 0 },
   };
 
@@ -178,6 +198,13 @@ function createProbe(quietMs: number, maxMs: number): Probe {
     if (!element) return true;
     if (element.closest("head,script,style,link,template,next-route-announcer")) return true;
     if (element.closest(TOOLTIP)) return true;
+    // The portal of the menu being closed by the selection, and the focus guards that leave the body with it.
+    if (
+      state.menuItem &&
+      node instanceof Element &&
+      (node.matches(`${MENU},${FOCUS_GUARD}`) || node.querySelector(MENU))
+    )
+      return true;
     // A portal wrapper that only carries a tooltip.
     return (
       node instanceof Element &&
@@ -193,8 +220,33 @@ function createProbe(quietMs: number, maxMs: number): Probe {
     return Boolean(target?.closest("svg")) && !clicked?.contains(target);
   };
 
-  const matters = (record: MutationRecord) => {
+  const withoutPointerLock = (style: string | null) =>
+    (style ?? "")
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration && !declaration.startsWith("pointer-events"))
+      .join(";");
+
+  // What closing a menu on selection does by itself, and nothing wider: the menu's own markup, the trigger's expanded
+  // state, and the modal layer's bookkeeping on the rest of the page (`aria-hidden` set together with the
+  // `data-aria-hidden` marker of the aria-hidden library, the body's pointer lock). `marked` holds the elements whose
+  // marker changed in the same batch of records.
+  const isMenuClosing = (record: MutationRecord, marked: Set<Node>) => {
+    const target = elementOf(record.target);
+    if (!target) return false;
+    if (target.closest(MENU)) return true;
+    if (record.type !== "attributes") return false;
+    const name = record.attributeName ?? "";
+    if (target === state.menuTrigger) return TRIGGER_CLOSING.includes(name);
+    if (name === "aria-hidden") return marked.has(record.target);
+    if (name === "style" && (target === document.body || target === document.documentElement))
+      return withoutPointerLock(record.oldValue) === withoutPointerLock(target.getAttribute(name));
+    return target.matches("[data-radix-popper-content-wrapper]") && Boolean(target.querySelector(MENU));
+  };
+
+  const matters = (record: MutationRecord, marked: Set<Node>) => {
     if (isChartNoise(record)) return false;
+    if (state.menuItem && isMenuClosing(record, marked)) return false;
     if (record.type === "characterData")
       return !record.target.parentElement?.closest(`${TOOLTIP},next-route-announcer`);
     if (record.type === "childList") {
@@ -222,8 +274,11 @@ function createProbe(quietMs: number, maxMs: number): Probe {
   };
 
   const observer = new MutationObserver((records) => {
+    const marked = new Set(
+      records.filter((record) => record.attributeName === "data-aria-hidden").map((record) => record.target),
+    );
     for (const record of records) {
-      if (state.mode === "off" || !matters(record)) continue;
+      if (state.mode === "off" || !matters(record, marked)) continue;
       const key = nodeId(record.target);
       const now = performance.now();
       state.lastChange = now;
@@ -251,7 +306,10 @@ function createProbe(quietMs: number, maxMs: number): Probe {
   start();
 
   const overlayCount = () =>
-    [...document.querySelectorAll(OVERLAY)].filter((element) => !element.matches(TOOLTIP)).length;
+    [...document.querySelectorAll(OVERLAY)].filter(
+      (element) =>
+        !element.matches(TOOLTIP) && !(state.menuItem && (element === state.menuTrigger || element.closest(MENU))),
+    ).length;
   const toastCount = () => document.querySelectorAll("[data-sonner-toast]").length;
   const scrollSignature = () => `${window.scrollX},${window.scrollY}`;
   const find = (id: number) => document.querySelector<HTMLElement>(`[data-dc-id="${id}"]`);
@@ -365,7 +423,7 @@ function createProbe(quietMs: number, maxMs: number): Probe {
         const id = idByKey ? idByKey[key] : next++;
         if (id === undefined) continue;
         element.setAttribute("data-dc-id", String(id));
-        controls.push({ id, key, role, name, locator: target });
+        controls.push({ id, key, role, name, locator: target, menu: element.getAttribute("aria-haspopup") === "menu" });
       }
       return { controls, links };
     },
@@ -384,7 +442,50 @@ function createProbe(quietMs: number, maxMs: number): Probe {
       return { status: "ok", x, y };
     },
 
-    arm(id) {
+    collectMenu() {
+      const menu = [...document.querySelectorAll<HTMLElement>(OPEN_MENU)].at(-1);
+      const items: MenuItem[] = [];
+      const links: LinkRef[] = [];
+      if (!menu) return { items, links };
+      const seen = new Map<string, number>();
+      for (const element of menu.querySelectorAll<HTMLElement>(MENU_ITEMS)) {
+        if (element.closest(MENU) !== menu || element.closest("[data-inert-reason],[inert]") || !visible(element))
+          continue;
+        const role = roleOf(element);
+        const disabled = element.getAttribute("aria-disabled") === "true" || element.hasAttribute("data-disabled");
+        // The chosen option of a radio group is already where it points.
+        const chosen = role === "menuitemradio" && element.getAttribute("aria-checked") === "true";
+        if (disabled || chosen) continue;
+        const name = nameOf(element);
+        const count = seen.get(`${role}|${name}`) ?? 0;
+        seen.set(`${role}|${name}`, count + 1);
+        const locator = `getByRole("${role}", { name: ${JSON.stringify(name)} })${count > 0 ? `.nth(${count})` : ""}`;
+        const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") : null;
+        if (href && href !== "#" && !href.toLowerCase().startsWith("javascript:")) {
+          links.push({ href: (element as HTMLAnchorElement).href, role: "link", name, locator });
+          continue;
+        }
+        const id = -++state.menuItems;
+        element.setAttribute("data-dc-id", String(id));
+        items.push({
+          id,
+          key: `${role}|${name}|${count}`,
+          role,
+          name,
+          locator,
+          sub: element.getAttribute("aria-haspopup") === "menu",
+        });
+      }
+      return { items, links };
+    },
+
+    menuDepth() {
+      return document.querySelectorAll(OPEN_MENU).length;
+    },
+
+    arm(id, trigger) {
+      state.menuItem = trigger !== undefined;
+      state.menuTrigger = trigger === undefined ? null : find(trigger);
       state.snapshot = {
         url: location.href,
         overlays: overlayCount(),
@@ -417,13 +518,21 @@ function createProbe(quietMs: number, maxMs: number): Probe {
       const found: Reason[] = [];
       if (location.href !== before.url) found.push("url");
       if (overlayCount() !== before.overlays) found.push("overlay");
-      if (ariaSignature(element) !== before.aria) found.push("aria");
+      // A menu item leaves the page with its menu; only an item that stays can have changed its own state.
+      if ((!state.menuItem || element?.isConnected) && ariaSignature(element) !== before.aria) found.push("aria");
       if (toastCount() !== before.toasts) found.push("toast");
       if (state.net !== state.armed.net) found.push("network");
       if (state.dom > 0) found.push("dom");
       if (scrollSignature() !== before.scroll) found.push("scroll");
       const active = document.activeElement;
-      if (active && active !== document.body && active !== before.active && active !== element) found.push("focus");
+      if (
+        active &&
+        active !== document.body &&
+        active !== before.active &&
+        active !== element &&
+        active !== state.menuTrigger
+      )
+        found.push("focus");
       if (state.popups !== state.armed.popups) found.push("popup");
       if (state.alerts !== state.armed.alerts) found.push("alert");
       if (state.clipboard !== state.armed.clipboard) found.push("clipboard");
@@ -479,13 +588,15 @@ type Finding = {
   name: string;
   role: string;
   locator: string;
-  reason: "no-reaction" | "broken-link";
+  /** `not-swept`: a menu or a menu item that could not be reached, so nothing is known about it. */
+  reason: "no-reaction" | "broken-link" | "not-swept";
 };
 
 type RouteReport = {
   route: string;
   viewport: string;
   scanned: number;
+  menuItems: number;
   linksChecked: number;
   skipped: Record<string, number>;
   reactions: Partial<Record<Reason, number>>;
@@ -511,7 +622,16 @@ async function linkWorks(page: Page, href: string) {
 
 async function scanRoute(page: Page, route: string, viewport: string): Promise<RouteReport> {
   const scanShell = route === SHELL_ROUTE;
-  const report: RouteReport = { route, viewport, scanned: 0, linksChecked: 0, skipped: {}, reactions: {}, dead: [] };
+  const report: RouteReport = {
+    route,
+    viewport,
+    scanned: 0,
+    menuItems: 0,
+    linksChecked: 0,
+    skipped: {},
+    reactions: {},
+    dead: [],
+  };
   let nodeEvents = 0;
   page.on("popup", (popup) => {
     nodeEvents++;
@@ -583,11 +703,11 @@ async function scanRoute(page: Page, route: string, viewport: string): Promise<R
   type Outcome = { kind: "skipped"; why: string } | { kind: "done"; reasons: Reason[] };
 
   /** Activates one control the way a pointer does, and reports what followed within the window. */
-  const activate = async (control: Control, windowMs: number): Promise<Outcome> => {
+  const activate = async (control: Pick<Control, "id">, windowMs: number, trigger?: Control): Promise<Outcome> => {
     const prepared = await page.evaluate((id) => window.__dc.prepare(id), control.id);
     if (prepared.status !== "ok") return { kind: "skipped", why: prepared.status };
     await page.mouse.move(prepared.x, prepared.y);
-    await page.evaluate((id) => window.__dc.arm(id), control.id);
+    await page.evaluate(([id, owner]) => window.__dc.arm(id, owner), [control.id, trigger?.id] as const);
     const eventsBefore = nodeEvents;
     const urlBefore = page.url();
     await page.mouse.down();
@@ -646,6 +766,141 @@ async function scanRoute(page: Page, route: string, viewport: string): Promise<R
     }
     await restore(outcome.kind === "done" && outcome.reasons.includes("url"));
   }
+
+  // Menu items (spec 009, V3-AC4): each one has to lead somewhere, or the menu is not finished.
+  type Step = { trigger: Control; path: string[] };
+  const clickAt = async (id: number) => {
+    const prepared = await page.evaluate((target) => window.__dc.prepare(target), id);
+    if (prepared.status !== "ok") return false;
+    await page.mouse.move(prepared.x, prepared.y);
+    await page.mouse.down();
+    await page.mouse.up();
+    return true;
+  };
+  /** Opens the trigger's menu, then each submenu of the path; returns what the last menu offers, or null. */
+  const openMenu = async ({ trigger, path }: Step): Promise<MenuContents | null> => {
+    let menu: MenuContents | null = null;
+    for (let level = 0; level <= path.length; level++) {
+      const target = menu ? menu.items.find((item) => item.sub && item.name === path[level - 1])?.id : trigger.id;
+      if (target === undefined || !(await clickAt(target))) return null;
+      const opened = await page
+        .waitForFunction((depth) => window.__dc.menuDepth() >= depth, level + 1, { timeout: 1500 })
+        .then(
+          () => true,
+          () => false,
+        );
+      if (!opened) return null;
+      await page.evaluate(() => window.__dc.settle(200, 1000));
+      menu = await page.evaluate(() => window.__dc.collectMenu());
+    }
+    return menu;
+  };
+  /** Opens the menu of the step again and presses one item; null when the menu or the item is not there. */
+  const sweepItem = async (step: Step, item: MenuItem, windowMs: number) => {
+    const again = await openMenu(step);
+    const live = again?.items.find((candidate) => candidate.key === item.key);
+    return live ? activate(live, windowMs, step.trigger) : null;
+  };
+  const menuOf = (step: Step) =>
+    `the menu of ${step.trigger.locator}${step.path.length ? ` > ${step.path.join(" > ")}` : ""}`;
+  const where = (step: Step, item: { locator: string }) => `${item.locator} in ${menuOf(step)}`;
+
+  const queue: Step[] = controls.filter((control) => control.menu).map((trigger) => ({ trigger, path: [] }));
+  const swept = new Set<string>();
+  const deadItems: { step: Step; item: MenuItem }[] = [];
+  let stale = queue.length > 0;
+  for (let at = 0; at < queue.length; at++) {
+    const step = queue[at];
+    if (stale) await reload();
+    stale = false;
+    let menu = await openMenu(step);
+    if (!menu) {
+      await reload();
+      menu = await openMenu(step);
+    }
+    if (!menu) {
+      report.dead.push({
+        route,
+        viewport,
+        name: step.path.at(-1) ?? step.trigger.name,
+        role: step.path.length ? "menuitem" : "button",
+        locator: menuOf(step),
+        reason: "not-swept",
+      });
+      await restore(false);
+      continue;
+    }
+    for (const link of menu.links) {
+      report.linksChecked++;
+      if (!(await linkWorks(page, link.href))) {
+        report.dead.push({
+          route,
+          viewport,
+          name: link.name,
+          role: link.role,
+          locator: where(step, link),
+          reason: "broken-link",
+        });
+      }
+    }
+    const signature = [step.path.join(">"), ...menu.items.map((item) => item.key)].join("\n");
+    await restore(false);
+    // Another trigger of the same kind (a row menu) offers the same items: they are swept once.
+    if (swept.has(signature)) continue;
+    swept.add(signature);
+    for (const item of menu.items) if (item.sub) queue.push({ trigger: step.trigger, path: [...step.path, item.name] });
+
+    for (const item of menu.items) {
+      if (stale) await reload();
+      stale = false;
+      let outcome = await sweepItem(step, item, OBSERVE_MS);
+      if (outcome?.kind !== "done") {
+        // An item that cannot be pressed is not a pass: look again on a fresh page, then report it.
+        await reload();
+        outcome = await sweepItem(step, item, OBSERVE_MS);
+      }
+      if (outcome?.kind !== "done") {
+        report.dead.push({
+          route,
+          viewport,
+          name: item.name,
+          role: item.role,
+          locator: where(step, item),
+          reason: "not-swept",
+        });
+        await restore(false);
+        continue;
+      }
+      report.menuItems++;
+      if (process.env.DEAD_CLICKS_DEBUG)
+        console.log(
+          `${viewport} ${route} ${where(step, item)}: ${outcome.reasons.join(",") || "DEAD"} ${outcome.reasons.includes("dom") ? await page.evaluate(() => window.__dc.samples().join(" | ")) : ""}`,
+        );
+      if (outcome.reasons.length === 0) deadItems.push({ step, item });
+      else stale = true;
+      for (const reason of outcome.reasons) report.reactions[reason] = (report.reactions[reason] ?? 0) + 1;
+      await restore(outcome.reasons.includes("url"));
+      if (outcome.reasons.length > 0) await page.evaluate(() => window.__dc.settle(200, 1000));
+    }
+  }
+
+  // The same longer second look as the controls get, on a fresh copy of the page.
+  if (deadItems.length > 0) await reload();
+  for (const { step, item } of deadItems) {
+    const outcome = await sweepItem(step, item, RECHECK_MS);
+    // An item the first look found dead and the second cannot press is reported, never dropped.
+    if (outcome?.kind !== "done" || outcome.reasons.length === 0) {
+      report.dead.push({
+        route,
+        viewport,
+        name: item.name,
+        role: item.role,
+        locator: where(step, item),
+        reason: outcome?.kind === "done" ? "no-reaction" : "not-swept",
+      });
+    }
+    await restore(outcome?.kind === "done" && outcome.reasons.includes("url"));
+  }
   return report;
 }
 
@@ -687,7 +942,7 @@ function publish(report: RouteReport, expected: number) {
       const lines = parts.map(
         (part) =>
           `${part.viewport.padStart(5)}  ${part.route.padEnd(48)} dead ${String(part.dead.length).padStart(2)} of ${String(part.scanned).padStart(3)} controls` +
-          `, ${part.linksChecked} links${part.note ? ` (${part.note})` : ""}`,
+          `, ${part.menuItems ?? 0} menu items, ${part.linksChecked} links${part.note ? ` (${part.note})` : ""}`,
       );
       console.log(
         `\nDead clicks per route (${findings.length} in total), details in test-results/dead-clicks.json\n${lines.join("\n")}\n`,
@@ -715,6 +970,141 @@ for (const route of PAGE_ROUTES) {
     expect(fails.map((finding) => `${finding.role} "${finding.name}" (${finding.locator})`)).toEqual([]);
   });
 }
+
+/**
+ * A menu that behaves like the app's Radix dropdowns, close sequence included: the portal and its popper wrapper, the
+ * focus guards on the body, the page locked behind it (`aria-hidden` with the `data-aria-hidden` marker, the body's
+ * pointer lock). Selecting an item flips the trigger and the menu to closed at once; the Presence exit then keeps the
+ * closed menu for a moment, and only when it unmounts do the guards, the page lock and the trigger focus go.
+ * Items: one that works, a link, a submenu (its own portal, as in Radix) and two items that do nothing, one in the
+ * menu and one in the submenu. Three items whose only effect is easy to mask by mistake: relabelling the trigger,
+ * hiding a node with `aria-hidden` on its own, and a style change on the body. The sweep must name the dead items
+ * and only them; the page is served by the test, it is not a route of the app. Under a path ending in `-covered`
+ * something sits over the Archive item for as long as the menu is open.
+ */
+const MENU_FIXTURE = `<!doctype html><html><body>
+<main id="app"><h1 id="title">Report</h1><p id="note">Note</p>
+<button id="trigger" aria-haspopup="menu" aria-expanded="false" data-state="closed">Actions</button></main>
+<script>
+  const trigger = document.getElementById("trigger");
+  const app = document.getElementById("app");
+  let portals = [];
+  let guards = [];
+  const guard = () => {
+    const element = document.createElement("span");
+    element.setAttribute("data-radix-focus-guard", "");
+    element.tabIndex = 0;
+    return element;
+  };
+  const portal = (menu, top) => {
+    const outer = document.createElement("div");
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-radix-popper-content-wrapper", "");
+    wrapper.style.cssText = "position: fixed; left: 0; top: 0; transform: translate(8px, " + top + "px); z-index: 50;";
+    wrapper.append(menu);
+    outer.append(wrapper);
+    document.body.append(outer);
+    portals.push(outer);
+  };
+  const unmount = () => {
+    for (const outer of portals) outer.remove();
+    portals = [];
+    for (const element of guards) element.remove();
+    guards = [];
+    app.removeAttribute("aria-hidden"); app.removeAttribute("data-aria-hidden");
+    document.body.style.pointerEvents = "";
+    trigger.focus();
+  };
+  const close = () => {
+    trigger.setAttribute("aria-expanded", "false"); trigger.setAttribute("data-state", "closed");
+    trigger.removeAttribute("aria-controls");
+    for (const outer of portals) for (const menu of outer.querySelectorAll("[role=menu]")) menu.setAttribute("data-state", "closed");
+    setTimeout(unmount, 120);
+  };
+  const item = (label, onSelect) => {
+    const element = document.createElement("div");
+    element.setAttribute("role", "menuitem"); element.tabIndex = -1; element.textContent = label;
+    element.addEventListener("click", () => { close(); onSelect(); });
+    return element;
+  };
+  const menuElement = () => {
+    const menu = document.createElement("div");
+    menu.setAttribute("role", "menu"); menu.setAttribute("data-state", "open"); menu.style.pointerEvents = "auto";
+    return menu;
+  };
+  trigger.addEventListener("click", () => {
+    if (portals.length) return;
+    const menu = menuElement();
+    menu.append(
+      item("Rename", () => { document.getElementById("title").textContent = "Renamed"; }),
+      item("Archive", () => {}),
+      item("Relabel", () => { trigger.firstChild.data = "Actions (relabelled)"; }),
+      item("Hide note", () => { document.getElementById("note").setAttribute("aria-hidden", "true"); }),
+      item("Dim page", () => { document.body.style.background = "#ccc"; }),
+    );
+    const more = document.createElement("div");
+    more.setAttribute("role", "menuitem"); more.setAttribute("aria-haspopup", "menu");
+    more.setAttribute("aria-expanded", "false"); more.tabIndex = -1; more.textContent = "Move to";
+    more.addEventListener("click", () => {
+      if (more.getAttribute("aria-expanded") === "true") return;
+      const sub = menuElement();
+      sub.append(
+        item("Trash", () => {}),
+        item("Inbox", () => { document.getElementById("title").textContent = "Moved"; }),
+      );
+      portal(sub, 220);
+      more.setAttribute("aria-expanded", "true"); more.setAttribute("data-state", "open");
+    });
+    menu.append(more);
+    const link = document.createElement("a");
+    link.setAttribute("role", "menuitem"); link.href = "/dashboard/default"; link.textContent = "Open dashboard";
+    menu.append(link);
+    guards = [guard(), guard()];
+    document.body.insertAdjacentElement("afterbegin", guards[0]);
+    document.body.insertAdjacentElement("beforeend", guards[1]);
+    portal(menu, 60);
+    if (location.pathname.endsWith("-covered")) {
+      const archive = [...menu.children].find((child) => child.textContent === "Archive");
+      const cover = document.createElement("div");
+      cover.style.cssText = "position: absolute; z-index: 100; pointer-events: auto; left: " + archive.offsetLeft + "px; top: " + archive.offsetTop + "px; width: " + archive.offsetWidth + "px; height: " + archive.offsetHeight + "px;";
+      menu.parentElement.append(cover);
+    }
+    trigger.setAttribute("aria-expanded", "true"); trigger.setAttribute("data-state", "open");
+    trigger.setAttribute("aria-controls", "menu");
+    app.setAttribute("data-aria-hidden", "true"); app.setAttribute("aria-hidden", "true");
+    document.body.style.pointerEvents = "none";
+  });
+</script></body></html>`;
+
+const serveMenuFixture = (page: Page, pathname: string) =>
+  page.route(`**${pathname}`, (route) => route.fulfill({ contentType: "text/html", body: MENU_FIXTURE }));
+
+test("the sweep names a menu item that leads nowhere and passes one that does", async ({ page, context }, testInfo) => {
+  await context.addInitScript({ content: probeSource });
+  await serveMenuFixture(page, "/dead-click-menu-fixture");
+
+  const report = await scanRoute(page, "/dead-click-menu-fixture", testInfo.project.name);
+
+  expect(report.dead.map((finding) => `${finding.role} "${finding.name}"`)).toEqual([
+    'menuitem "Archive"',
+    'menuitem "Trash"',
+  ]);
+  expect(report.menuItems).toBe(8);
+  expect(report.linksChecked).toBe(1);
+});
+
+test("the sweep reports a menu item it cannot press instead of skipping it", async ({ page, context }, testInfo) => {
+  await context.addInitScript({ content: probeSource });
+  await serveMenuFixture(page, "/dead-click-menu-fixture-covered");
+
+  const report = await scanRoute(page, "/dead-click-menu-fixture-covered", testInfo.project.name);
+
+  expect(report.dead.map((finding) => `${finding.role} "${finding.name}" ${finding.reason}`)).toEqual([
+    'menuitem "Archive" not-swept',
+    'menuitem "Trash" no-reaction',
+  ]);
+  expect(report.menuItems).toBe(7);
+});
 
 /**
  * The only controls the sweep may skip, each with the reason it cannot be observed (plan 003, G1). A new
